@@ -4,8 +4,8 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,8 +16,12 @@ namespace DataAccessLayer
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
 
-        
 
+        public DbSet<SystemLog> SystemLogs { get; set; }
+        public DbSet<SecurityLog> SecurityLogs { get; set; }
+        public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
+        public DbSet<LogCategory> LogCategories { get; set; }
+        public DbSet<LogTag> LogTags { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -25,6 +29,139 @@ namespace DataAccessLayer
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
+
+                b.HasMany(u => u.SystemLogs)
+                 .WithOne(l => l.User)
+                 .HasForeignKey(l => l.UserId)
+                 .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            modelBuilder.Entity<SystemLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Level)
+                     .HasConversion<string>()   // Lưu dưới dạng nvarchar
+                      .HasMaxLength(20)          // Giữ max length 20 như trước
+                      .IsRequired();
+
+                entity.Property(e => e.Source)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.UserName)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.IpAddress)
+                    .HasMaxLength(45);
+
+                entity.Property(e => e.SessionId)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.RequestId)
+                    .HasMaxLength(100);
+
+                // Quan hệ với ApplicationUser
+                entity.HasOne(e => e.User)
+                    .WithMany() // hoặc tạo ICollection<SystemLog> trong ApplicationUser nếu muốn navigation
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // Quan hệ với LogCategory
+                entity.HasOne(e => e.Category)
+                    .WithMany(c => c.SystemLogs)
+                    .HasForeignKey(e => e.CategoryId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Quan hệ với LogTag
+                entity.HasMany(e => e.Tags)
+                    .WithOne(t => t.SystemLog)
+                    .HasForeignKey(t => t.LogId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ với SecurityLogRelation (RelatedLog)
+                entity.HasMany(e => e.SecurityLogRelations)
+                    .WithOne(r => r.RelatedLog)
+                    .HasForeignKey(r => r.RelatedLogId)
+                    .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
+            });
+
+            // =========================
+            // LogCategory
+            // =========================
+            modelBuilder.Entity<LogCategory>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Name)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Description)
+                    .IsRequired(false);
+            });
+
+            // =========================
+            // LogTag
+            // =========================
+            modelBuilder.Entity<LogTag>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.Tag)
+                    .HasConversion<string>()
+                    .HasMaxLength(100);
+            });
+
+            // =========================
+            // SecurityLog
+            // =========================
+            modelBuilder.Entity<SecurityLog>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                entity.Property(e => e.ThreatLevel)
+                    .HasMaxLength(20);
+
+                entity.Property(e => e.Action)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Resource)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.Outcome)
+                    .HasMaxLength(20);
+
+                // Quan hệ 1-1 với SystemLog
+                entity.HasOne(e => e.SystemLog)
+                    .WithOne()
+                    .HasForeignKey<SecurityLog>(e => e.Id)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ với SecurityLogRelation
+                entity.HasMany(e => e.Relations)
+                    .WithOne(r => r.SecurityLog)
+                    .HasForeignKey(r => r.SecurityLogId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // =========================
+            // SecurityLogRelation
+            // =========================
+            modelBuilder.Entity<SecurityLogRelation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+
+                // Quan hệ với SecurityLog
+                entity.HasOne(e => e.SecurityLog)
+                    .WithMany(s => s.Relations)
+                    .HasForeignKey(e => e.SecurityLogId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ với RelatedLog (SystemLog)
+                entity.HasOne(e => e.RelatedLog)
+                    .WithMany(l => l.SecurityLogRelations)
+                    .HasForeignKey(e => e.RelatedLogId)
+                    .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
             });
 
         }

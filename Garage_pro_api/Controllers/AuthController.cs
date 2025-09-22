@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Services;
 using Dtos.Auth;
+using Services.EmailSenders;
 
 namespace Garage_pro_api.Controllers
 {
@@ -17,15 +18,17 @@ namespace Garage_pro_api.Controllers
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ITokenService _tokenService;
+        private readonly IEmailSender _emailSender;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService)
+            ITokenService tokenService,IEmailSender emailSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
+            _emailSender = emailSender;
         }
 
         [HttpPost("register")]
@@ -51,7 +54,28 @@ namespace Garage_pro_api.Controllers
             // Assign default role
             await _userManager.AddToRoleAsync(user, "Customer");
 
-            return Ok(new { Message = "User registered successfully" });
+            // ✅ Tạo token xác thực email
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            // Encode token để gắn vào URL
+            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
+
+            // URL xác nhận (Frontend sẽ có 1 trang gọi API xác nhận)
+            var confirmationLink = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
+
+            // Gửi mail
+            await _emailSender.SendEmailAsync(
+                user.Email,
+                "Confirm your email",
+                $@"
+                <p>Hello {user.FirstName},</p>
+                <p>Please confirm your email by clicking the link below:</p>
+                <p><a href='{confirmationLink}'>Confirm Email</a></p>
+                <p>If you did not register, you can safely ignore this email.</p>
+                "
+                    );
+
+            return Ok(new { Message = "User registered successfully. Please check your email to confirm your account." });
         }
 
         [HttpPost("login")]
@@ -141,6 +165,21 @@ namespace Garage_pro_api.Controllers
             {
                 return Unauthorized();
             }
+        }
+
+        [HttpGet("confirm-email")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ConfirmEmail([FromQuery] string userId, [FromQuery] string token)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return BadRequest(new { Message = "Invalid user" });
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            if (!result.Succeeded)
+                return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
+
+            return Ok(new { Message = "Email confirmed successfully" });
         }
     }
 }

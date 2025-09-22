@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250922075825_createSystemLog")]
+    partial class createSystemLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -112,7 +115,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+            modelBuilder.Entity("BusinessObject.LogCategory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -133,7 +136,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("LogCategories");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
+            modelBuilder.Entity("BusinessObject.LogTag", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -156,7 +159,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("LogTags");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
                 {
                     b.Property<long>("Id")
                         .HasColumnType("bigint");
@@ -186,7 +189,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("SecurityLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
+            modelBuilder.Entity("BusinessObject.SecurityLogRelation", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -209,7 +212,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("SecurityLogRelations");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLog", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -233,7 +236,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(45)");
 
                     b.Property<string>("Level")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -415,9 +417,9 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
+            modelBuilder.Entity("BusinessObject.LogTag", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
+                    b.HasOne("BusinessObject.SystemLog", "SystemLog")
                         .WithMany("Tags")
                         .HasForeignKey("LogId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -426,26 +428,26 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SystemLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
+                    b.HasOne("BusinessObject.SystemLog", "SystemLog")
                         .WithOne()
-                        .HasForeignKey("BusinessObject.SystemLogs.SecurityLog", "Id")
+                        .HasForeignKey("BusinessObject.SecurityLog", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("SystemLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
+            modelBuilder.Entity("BusinessObject.SecurityLogRelation", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "RelatedLog")
+                    b.HasOne("BusinessObject.SystemLog", "RelatedLog")
                         .WithMany("SecurityLogRelations")
                         .HasForeignKey("RelatedLogId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.SystemLogs.SecurityLog", "SecurityLog")
+                    b.HasOne("BusinessObject.SecurityLog", "SecurityLog")
                         .WithMany("Relations")
                         .HasForeignKey("SecurityLogId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -456,13 +458,13 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SecurityLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLog", b =>
                 {
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
                         .WithMany("SystemLogs")
                         .HasForeignKey("ApplicationUserId");
 
-                    b.HasOne("BusinessObject.SystemLogs.LogCategory", "Category")
+                    b.HasOne("BusinessObject.LogCategory", "Category")
                         .WithMany("SystemLogs")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -534,17 +536,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SystemLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+            modelBuilder.Entity("BusinessObject.LogCategory", b =>
                 {
                     b.Navigation("SystemLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
                 {
                     b.Navigation("Relations");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLog", b =>
                 {
                     b.Navigation("SecurityLogRelations");
 

@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
 
-namespace BusinessObject
+namespace BusinessObject.SystemLogs
 {
     public class SystemLog
     {
@@ -16,8 +16,7 @@ namespace BusinessObject
 
         public DateTimeOffset Timestamp { get; set; }
 
-        [MaxLength(20)]
-        public string Level { get; set; }  // debug, info, warning, error, critical
+        public LogLevel Level { get; set; }
 
         [ForeignKey(nameof(Category))]
         public int CategoryId { get; set; }
@@ -27,10 +26,9 @@ namespace BusinessObject
 
         public string Message { get; set; }
 
-        public string Details { get; set; } // JSONB → lưu chuỗi JSON
+        public string Details { get; set; }
         [ForeignKey(nameof(User))]
-
-        public long? UserId { get; set; }
+        public string? UserId { get; set; }
 
         [MaxLength(255)]
         public string UserName { get; set; }
@@ -49,8 +47,8 @@ namespace BusinessObject
         // Navigation
         public ApplicationUser User { get; set; }
         public LogCategory Category { get; set; }
-        public ICollection<LogTag> Tags { get; set; }
-        public SecurityLog SecurityLog { get; set; }
-       
+        public ICollection<LogTag>? Tags { get; set; }
+        public ICollection<SecurityLogRelation> SecurityLogRelations { get; set; }
+
     }
 }
