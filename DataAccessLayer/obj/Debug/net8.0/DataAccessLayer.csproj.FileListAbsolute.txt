@@ -15,3 +15,4 @@ D:\Workspace\DO An\garagepro_backend\DataAccessLayer\obj\Debug\net8.0\refint\Dat
 D:\Workspace\DO An\garagepro_backend\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.pdb
 D:\Workspace\DO An\garagepro_backend\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.genruntimeconfig.cache
 D:\Workspace\DO An\garagepro_backend\DataAccessLayer\obj\Debug\net8.0\ref\DataAccessLayer.dll
+D:\Workspace\DO An\garagepro_backend\DataAccessLayer\obj\Debug\net8.0\DataAccessLayer.sourcelink.json

@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Authentication;
 
 namespace BusinessObject
 {
@@ -46,7 +47,7 @@ namespace BusinessObject
         public string RequestId { get; set; }
 
         // Navigation
-        public User User { get; set; }
+        public ApplicationUser User { get; set; }
         public LogCategory Category { get; set; }
         public ICollection<LogTag> Tags { get; set; }
         public SecurityLog SecurityLog { get; set; }

@@ -9,3 +9,4 @@ D:\Workspace\DO An\garagepro_backend\Dtos\obj\Debug\net8.0\Dtos.dll
 D:\Workspace\DO An\garagepro_backend\Dtos\obj\Debug\net8.0\refint\Dtos.dll
 D:\Workspace\DO An\garagepro_backend\Dtos\obj\Debug\net8.0\Dtos.pdb
 D:\Workspace\DO An\garagepro_backend\Dtos\obj\Debug\net8.0\ref\Dtos.dll
+D:\Workspace\DO An\garagepro_backend\Dtos\obj\Debug\net8.0\Dtos.sourcelink.json

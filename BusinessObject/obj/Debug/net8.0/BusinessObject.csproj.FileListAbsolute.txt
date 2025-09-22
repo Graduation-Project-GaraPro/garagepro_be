@@ -9,3 +9,5 @@ D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\BusinessObj
 D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\refint\BusinessObject.dll
 D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\BusinessObject.pdb
 D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\ref\BusinessObject.dll
+D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\BusinessObject.csproj.AssemblyReference.cache
+D:\Workspace\DO An\garagepro_backend\BusinessObject\obj\Debug\net8.0\BusinessObject.sourcelink.json

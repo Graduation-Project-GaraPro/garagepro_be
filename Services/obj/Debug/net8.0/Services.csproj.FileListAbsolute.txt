@@ -9,3 +9,8 @@ D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\Services.dll
 D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\refint\Services.dll
 D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\Services.pdb
 D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\ref\Services.dll
+D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\Services.sourcelink.json
+D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\Services.csproj.AssemblyReference.cache
+D:\Workspace\DO An\garagepro_backend\Services\bin\Debug\net8.0\BusinessObject.dll
+D:\Workspace\DO An\garagepro_backend\Services\bin\Debug\net8.0\BusinessObject.pdb
+D:\Workspace\DO An\garagepro_backend\Services\obj\Debug\net8.0\Services.csproj.Up2Date
