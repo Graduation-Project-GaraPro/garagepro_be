@@ -1,7 +1,6 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
@@ -18,23 +17,42 @@ namespace DataAccessLayer
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
 
-
-        public DbSet<SystemLog> SystemLogs { get; set; }
-        public DbSet<SecurityLog> SecurityLogs { get; set; }
-        public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
-        public DbSet<LogCategory> LogCategories { get; set; }
-        public DbSet<LogTag> LogTags { get; set; }
-        public DbSet<FeedBack> FeedBacks { get; set; }
+        // Manager-related entities
+        public DbSet<RepairOrder> RepairOrders { get; set; }
+        public DbSet<OrderStatus> OrderStatuses { get; set; }
+        public DbSet<Label> Labels { get; set; }
         public DbSet<Branch> Branches { get; set; }
-        public DbSet<Customer> Customers { get; set; }
+        public DbSet<Vehicle> Vehicles { get; set; }
+        public DbSet<Service> Services { get; set; }
+        public DbSet<ServiceCategory> ServiceCategories { get; set; }
+        public DbSet<Inspection> Inspections { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Part> Parts { get; set; }
+        public DbSet<PartCategory> PartCategories { get; set; }
+        public DbSet<PartSpecification> PartSpecifications { get; set; }
+        public DbSet<Job> Jobs { get; set; }
+        
+        // Junction tables
+        public DbSet<RepairOrderService> RepairOrderServices { get; set; }
+        public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
+        public DbSet<ServiceInspection> ServiceInspections { get; set; }
+        public DbSet<PartInspection> PartInspections { get; set; }
+        public DbSet<JobPart> JobParts { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            
+            // ApplicationUser configuration
             modelBuilder.Entity<ApplicationUser>(b =>
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
+                b.Property(u => u.FullName).HasMaxLength(100).IsRequired();
+                b.Property(u => u.Email).HasMaxLength(100).IsRequired();
+                b.Property(u => u.PhoneNumber).HasMaxLength(20);
+                b.Property(u => u.AvatarUrl).HasMaxLength(200);
+                b.Property(u => u.Status).HasMaxLength(50);
 
                 b.HasMany(u => u.SystemLogs)
                  .WithOne(l => l.User)
@@ -170,21 +188,60 @@ namespace DataAccessLayer
                     .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
             });
 
+            // Configure relationships to prevent cascade delete cycles
+            
+            // RepairOrder relationships - prevent cascade delete conflicts
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.User)
+                .WithMany()
+                .HasForeignKey(ro => ro.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Customer>()
-                .HasOne(c => c.User)
-                .WithOne()
-                .HasForeignKey<Customer>(c => c.UserId);
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.OrderStatus)
+                .WithMany(os => os.RepairOrders)
+                .HasForeignKey(ro => ro.StatusId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<FeedBack>()
-                .HasOne(f => f.Customer)
-                .WithMany(c => c.Feedbacks)
-                .HasForeignKey(f => f.CustomerId);
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.Vehicle)
+                .WithMany(v => v.RepairOrders)
+                .HasForeignKey(ro => ro.VehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Customer>()
-                .HasOne(c => c.Branch)
-                .WithMany(b => b.Customers)
-                .HasForeignKey(c => c.BranchId);
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.Branch)
+                .WithMany(b => b.RepairOrders)
+                .HasForeignKey(ro => ro.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Vehicle-User relationship
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment-User relationship
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Part-Branch relationship
+            modelBuilder.Entity<Part>()
+                .HasOne(p => p.Branch)
+                .WithMany(b => b.Parts)
+                .HasForeignKey(p => p.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ServiceCategory self-referencing relationship
+            modelBuilder.Entity<ServiceCategory>()
+                .HasOne(sc => sc.ParentServiceCategory)
+                .WithMany(sc => sc.ChildServiceCategories)
+                .HasForeignKey(sc => sc.ParentServiceCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
