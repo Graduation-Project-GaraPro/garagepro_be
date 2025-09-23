@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -47,6 +47,11 @@ namespace DataAccessLayer
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
+                b.Property(u => u.FullName).HasMaxLength(100).IsRequired();
+                b.Property(u => u.Email).HasMaxLength(100).IsRequired();
+                b.Property(u => u.PhoneNumber).HasMaxLength(20);
+                b.Property(u => u.AvatarUrl).HasMaxLength(200);
+                b.Property(u => u.Status).HasMaxLength(50);
 
                 b.HasMany(u => u.SystemLogs)
                  .WithOne(l => l.User)
