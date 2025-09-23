@@ -26,7 +26,7 @@ namespace BusinessObject
         public decimal ActualDuration { get; set; } // in hours
 
         [MaxLength(500)]
-        public string Notes { get; set; }
+        public string? Notes { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
