@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,7 +25,6 @@ namespace DataAccessLayer
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
         public DbSet<Inspection> Inspections { get; set; }
-        public DbSet<Customer> Customers { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }
@@ -187,9 +186,15 @@ namespace DataAccessLayer
             
             // RepairOrder relationships - prevent cascade delete conflicts
             modelBuilder.Entity<RepairOrder>()
-                .HasOne(ro => ro.Customer)
-                .WithMany(c => c.RepairOrders)
-                .HasForeignKey(ro => ro.CustomerId)
+                .HasOne(ro => ro.User)
+                .WithMany()
+                .HasForeignKey(ro => ro.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.OrderStatus)
+                .WithMany(os => os.RepairOrders)
+                .HasForeignKey(ro => ro.StatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<RepairOrder>()
@@ -204,18 +209,18 @@ namespace DataAccessLayer
                 .HasForeignKey(ro => ro.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Customer-Branch relationship
-            modelBuilder.Entity<Customer>()
-                .HasOne(c => c.Branch)
-                .WithMany(b => b.Customers)
-                .HasForeignKey(c => c.BranchId)
+            // Vehicle-User relationship
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Vehicle-Customer relationship
-            modelBuilder.Entity<Vehicle>()
-                .HasOne(v => v.Customer)
-                .WithMany(c => c.Vehicles)
-                .HasForeignKey(v => v.CustomerId)
+            // Payment-User relationship
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Part-Branch relationship

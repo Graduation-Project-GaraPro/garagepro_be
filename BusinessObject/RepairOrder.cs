@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Authentication;
 
 namespace BusinessObject
 {
@@ -55,7 +56,7 @@ namespace BusinessObject
         public Guid VehicleId { get; set; }
 
         [Required]
-        public Guid CustomerId { get; set; }
+        public string UserId { get; set; }
 
         [Required]
         public Guid RepairRequestId { get; set; }
@@ -64,7 +65,7 @@ namespace BusinessObject
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
         public virtual Vehicle Vehicle { get; set; }
-        public virtual Customer Customer { get; set; }
+        public virtual ApplicationUser User { get; set; } = null!;
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; }
         public virtual ICollection<Inspection> Inspections { get; set; }
         public virtual ICollection<Job> Jobs { get; set; }

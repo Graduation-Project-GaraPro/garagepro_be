@@ -40,8 +40,7 @@ namespace BusinessObject
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
-        public virtual ICollection<RepairOrder> RepairOrders { get; set; }
-        public virtual ICollection<Part> Parts { get; set; }
-        public virtual ICollection<Customer> Customers { get; set; }
+        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
+        public virtual ICollection<Part> Parts { get; set; } = null!;
     }
 }

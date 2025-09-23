@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Authentication;
 
 namespace BusinessObject
 {
@@ -16,7 +17,7 @@ namespace BusinessObject
         public Guid BrandId { get; set; }
 
         [Required]
-        public Guid CustomerId { get; set; }
+        public string UserId { get; set; }
 
         [Required]
         public Guid ModelId { get; set; }
@@ -34,7 +35,7 @@ namespace BusinessObject
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        public virtual ICollection<RepairOrder> RepairOrders { get; set; }
-        public virtual Customer Customer { get; set; }
+        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
+        public virtual ApplicationUser User { get; set; } = null!;
     }
 }

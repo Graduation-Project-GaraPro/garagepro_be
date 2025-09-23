@@ -17,7 +17,7 @@ namespace BusinessObject
         public string StatusName { get; set; }
 
         // Navigation property
-        public virtual ICollection<RepairOrder> RepairOrders { get; set; }
-        public virtual ICollection<Label> Labels { get; set; }
+        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
+        public virtual ICollection<Label> Labels { get; set; } = null!;
     }
 }

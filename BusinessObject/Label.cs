@@ -24,6 +24,6 @@ namespace BusinessObject
         [MaxLength(500)]
         public string Description { get; set; }
         // Navigation properties
-        public virtual OrderStatus OrderStatus { get; set; }
+        public virtual OrderStatus OrderStatus { get; set; } = null!;
     }
 }
