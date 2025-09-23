@@ -30,6 +30,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
+                    b.Property<string>("Avatar")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -92,6 +95,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("dateOfBirth")
+                        .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
@@ -588,7 +594,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Notes")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
@@ -768,6 +773,176 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("ServiceInspections");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LogCategory");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("LogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Tag")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LogId");
+
+                    b.ToTable("LogTag");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Outcome")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Resource")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("ThreatLevel")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SecurityLog");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("RelatedLogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("SecurityLogId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedLogId");
+
+                    b.HasIndex("SecurityLogId");
+
+                    b.ToTable("SecurityLogRelation");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RequestId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SessionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SystemLog");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
@@ -1193,6 +1368,69 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
+                {
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
+                        .WithMany("Tags")
+                        .HasForeignKey("LogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SystemLog");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+                {
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
+                        .WithOne()
+                        .HasForeignKey("BusinessObject.SystemLogs.SecurityLog", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("SystemLog");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
+                {
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "RelatedLog")
+                        .WithMany("SecurityLogRelations")
+                        .HasForeignKey("RelatedLogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.SystemLogs.SecurityLog", "SecurityLog")
+                        .WithMany("Relations")
+                        .HasForeignKey("SecurityLogId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RelatedLog");
+
+                    b.Navigation("SecurityLog");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
+                        .WithMany("SystemLogs")
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("BusinessObject.SystemLogs.LogCategory", "Category")
+                        .WithMany("SystemLogs")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
                     b.HasOne("BusinessObject.Customer", "Customer")
@@ -1253,6 +1491,11 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
+                {
+                    b.Navigation("SystemLogs");
                 });
 
             modelBuilder.Entity("BusinessObject.Branch", b =>
@@ -1336,6 +1579,23 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ChildServiceCategories");
 
                     b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+                {
+                    b.Navigation("SystemLogs");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
+                {
+                    b.Navigation("Relations");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
+                {
+                    b.Navigation("SecurityLogRelations");
+
+                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>

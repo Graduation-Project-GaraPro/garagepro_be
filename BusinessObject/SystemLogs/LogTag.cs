@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject
+namespace BusinessObject.SystemLogs
 {
     public class LogTag
     {
@@ -17,7 +17,7 @@ namespace BusinessObject
         public long LogId { get; set; }
 
         [MaxLength(100)]
-        public string Tag { get; set; }
+        public LogTagType Tag { get; set; }
 
         // Navigation
         public SystemLog SystemLog { get; set; }

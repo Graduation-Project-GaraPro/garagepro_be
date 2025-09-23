@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject
+namespace BusinessObject.SystemLogs
 {
     public class SecurityLog
     {

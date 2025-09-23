@@ -8,6 +8,8 @@ using Microsoft.IdentityModel.Tokens;
 using Services;
 using BusinessObject;
 using Garage_pro_api.DbInit;
+using Repositories;
+using Services.EmailSenders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,6 +87,12 @@ builder.Services.ConfigureApplicationCookie(options =>
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddScoped<DbInitializer>();
+
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();
 var app = builder.Build();
