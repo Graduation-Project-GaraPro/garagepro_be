@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.Manager;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +24,10 @@ namespace DataAccessLayer
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
         public DbSet<LogCategory> LogCategories { get; set; }
         public DbSet<LogTag> LogTags { get; set; }
+        public DbSet<FeedBack> FeedBacks { get; set; }
+        public DbSet<Branch> Branches { get; set; }
+        public DbSet<Customer> Customers { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -164,6 +170,21 @@ namespace DataAccessLayer
                     .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
             });
 
+
+            modelBuilder.Entity<Customer>()
+                .HasOne(c => c.User)
+                .WithOne()
+                .HasForeignKey<Customer>(c => c.UserId);
+
+            modelBuilder.Entity<FeedBack>()
+                .HasOne(f => f.Customer)
+                .WithMany(c => c.Feedbacks)
+                .HasForeignKey(f => f.CustomerId);
+
+            modelBuilder.Entity<Customer>()
+                .HasOne(c => c.Branch)
+                .WithMany(b => b.Customers)
+                .HasForeignKey(c => c.BranchId);
         }
     }
 }
