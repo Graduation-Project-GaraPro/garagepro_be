@@ -1,11 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace BusinessObject
 {
     public class Inspection
@@ -34,7 +33,9 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual RepairOrder RepairOrder { get; set; }
+        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<PartInspection> PartInspections { get; set; }
+       
     }
 }

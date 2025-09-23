@@ -1,3 +1,4 @@
+﻿using BusinessObject.Technician;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -45,5 +46,7 @@ namespace BusinessObject
         public virtual Service Service { get; set; }
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual ICollection<JobPart> JobParts { get; set; }
+        public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
+        public virtual ICollection<Repair> Repairs { get; set; } = new List<Repair>();
     }
 }

@@ -6,11 +6,13 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity;
-
+using BusinessObject.Notifications;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
     {
+        [Key]
+        public Guid UserId { get; set; } = Guid.NewGuid();
         [Required]
         public Guid RoleId { get; set; }
 
@@ -57,6 +59,8 @@ namespace BusinessObject.Authentication
         public DateTime? dateOfBirth { get; set; }
 
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
+        public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
+        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
         // Custom claims
         //public virtual ICollection<ApplicationUserClaim> Claims { get; set; }
     }
