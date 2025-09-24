@@ -48,7 +48,7 @@ namespace BusinessObject.SystemLogs
         public ApplicationUser User { get; set; }
         public LogCategory Category { get; set; }
         public ICollection<LogTag>? Tags { get; set; }
-        public ICollection<SecurityLogRelation> SecurityLogRelations { get; set; }
+        public ICollection<SecurityLogRelation>? SecurityLogRelations { get; set; }
 
     }
 }

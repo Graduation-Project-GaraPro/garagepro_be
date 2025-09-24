@@ -5,6 +5,7 @@ using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using BusinessObject.Policies;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -22,6 +23,10 @@ namespace DataAccessLayer
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
         public DbSet<LogCategory> LogCategories { get; set; }
         public DbSet<LogTag> LogTags { get; set; }
+        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
+        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -147,6 +152,7 @@ namespace DataAccessLayer
             // =========================
             // SecurityLogRelation
             // =========================
+
             modelBuilder.Entity<SecurityLogRelation>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -163,6 +169,69 @@ namespace DataAccessLayer
                     .HasForeignKey(e => e.RelatedLogId)
                     .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
             });
+
+            // -------- SecurityPolicies --------
+            modelBuilder.Entity<SecurityPolicy>(entity =>
+            {
+                entity.ToTable("SecurityPolicies");
+
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id)
+                      .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.MinPasswordLength).IsRequired();
+                entity.Property(e => e.RequireSpecialChar).IsRequired();
+                entity.Property(e => e.RequireNumber).IsRequired();
+                entity.Property(e => e.RequireUppercase).IsRequired();
+                entity.Property(e => e.SessionTimeout).IsRequired();
+                entity.Property(e => e.MaxLoginAttempts).IsRequired();
+                entity.Property(e => e.AccountLockoutTime).IsRequired();
+                entity.Property(e => e.MfaRequired).IsRequired();
+                entity.Property(e => e.PasswordExpiryDays).IsRequired();
+                entity.Property(e => e.EnableBruteForceProtection).IsRequired();
+
+                entity.Property(e => e.CreatedAt)
+                      .HasDefaultValueSql("SYSUTCDATETIME()")
+                      .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.UpdatedAt)
+                      .HasDefaultValueSql("SYSUTCDATETIME()")
+                      .ValueGeneratedOnAddOrUpdate();
+
+                entity.HasOne(e => e.UpdatedByUser)
+                      .WithMany()
+                      .HasForeignKey(e => e.UpdatedBy)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+            });
+
+            // -------- SecurityPolicyHistories --------
+            modelBuilder.Entity<SecurityPolicyHistory>(entity =>
+            {
+                entity.ToTable("SecurityPolicyHistories");
+
+                entity.HasKey(e => e.HistoryId);
+                entity.Property(e => e.HistoryId)
+                      .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.ChangeSummary)
+                      .HasMaxLength(500);
+
+                entity.Property(e => e.ChangedAt)
+                      .HasDefaultValueSql("SYSUTCDATETIME()")
+                      .ValueGeneratedOnAdd();
+
+                entity.HasOne(e => e.Policy)
+                      .WithMany(p => p.Histories)
+                      .HasForeignKey(e => e.PolicyId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.ChangedByUser)
+                      .WithMany()
+                      .HasForeignKey(e => e.ChangedBy)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
 
         }
     }

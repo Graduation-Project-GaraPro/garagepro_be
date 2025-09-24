@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20250922075825_createSystemLog")]
-    partial class createSystemLog
+    [Migration("20250923025039_addPolicySecurityNoSeeding")]
+    partial class addPolicySecurityNoSeeding
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -115,7 +115,100 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.LogCategory", b =>
+            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("AccountLockoutTime")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<bool>("EnableBruteForceProtection")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MaxLoginAttempts")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("MfaRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("MinPasswordLength")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PasswordExpiryDays")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("RequireNumber")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequireSpecialChar")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("RequireUppercase")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SessionTimeout")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.ToTable("SecurityPolicies", (string)null);
+                });
+
+            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicyHistory", b =>
+                {
+                    b.Property<Guid>("HistoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ChangeSummary")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSUTCDATETIME()");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("PolicyId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("PreviousValues")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("HistoryId");
+
+                    b.HasIndex("ChangedBy");
+
+                    b.HasIndex("PolicyId");
+
+                    b.ToTable("SecurityPolicyHistories", (string)null);
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -136,7 +229,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("LogCategories");
                 });
 
-            modelBuilder.Entity("BusinessObject.LogTag", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -159,7 +252,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("LogTags");
                 });
 
-            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
                 {
                     b.Property<long>("Id")
                         .HasColumnType("bigint");
@@ -189,7 +282,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("SecurityLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.SecurityLogRelation", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -212,7 +305,7 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("SecurityLogRelations");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -236,6 +329,7 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(45)");
 
                     b.Property<string>("Level")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -417,9 +511,38 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.LogTag", b =>
+            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLog", "SystemLog")
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("UpdatedByUser");
+                });
+
+            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicyHistory", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Policies.SecurityPolicy", "Policy")
+                        .WithMany("Histories")
+                        .HasForeignKey("PolicyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("Policy");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
+                {
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
                         .WithMany("Tags")
                         .HasForeignKey("LogId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -428,26 +551,26 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SystemLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLog", "SystemLog")
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
                         .WithOne()
-                        .HasForeignKey("BusinessObject.SecurityLog", "Id")
+                        .HasForeignKey("BusinessObject.SystemLogs.SecurityLog", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("SystemLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SecurityLogRelation", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
                 {
-                    b.HasOne("BusinessObject.SystemLog", "RelatedLog")
+                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "RelatedLog")
                         .WithMany("SecurityLogRelations")
                         .HasForeignKey("RelatedLogId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.SecurityLog", "SecurityLog")
+                    b.HasOne("BusinessObject.SystemLogs.SecurityLog", "SecurityLog")
                         .WithMany("Relations")
                         .HasForeignKey("SecurityLogId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -458,13 +581,13 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SecurityLog");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
                         .WithMany("SystemLogs")
                         .HasForeignKey("ApplicationUserId");
 
-                    b.HasOne("BusinessObject.LogCategory", "Category")
+                    b.HasOne("BusinessObject.SystemLogs.LogCategory", "Category")
                         .WithMany("SystemLogs")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -536,17 +659,22 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SystemLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.LogCategory", b =>
+            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
+                {
+                    b.Navigation("Histories");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
                 {
                     b.Navigation("SystemLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.SecurityLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
                 {
                     b.Navigation("Relations");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLog", b =>
+            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.Navigation("SecurityLogRelations");
 

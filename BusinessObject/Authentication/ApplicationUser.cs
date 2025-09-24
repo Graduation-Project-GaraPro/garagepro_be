@@ -18,6 +18,7 @@ namespace BusinessObject.Authentication
         public string? Avatar { get; set; }
         public DateTime? dateOfBirth { get; set; }
 
+        public DateTime? LastPasswordChangeDate { get; set; }
         public IEnumerable<SystemLog> SystemLogs { get; set; }
         // Custom claims
         //public virtual ICollection<ApplicationUserClaim> Claims { get; set; }

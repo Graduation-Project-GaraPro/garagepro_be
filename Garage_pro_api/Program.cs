@@ -10,6 +10,11 @@ using BusinessObject;
 using Garage_pro_api.DbInit;
 using Repositories;
 using Services.EmailSenders;
+using Repositories.PolicyRepositories;
+using Services.PolicyServices;
+using Services.Authentication;
+using Garage_pro_api.Middlewares;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,24 +29,21 @@ builder.Services.AddDbContext<MyAppDbContext>(options =>
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
-    // Password Policy
+    options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
-    options.Password.RequireNonAlphanumeric = true;
-    options.Password.RequireUppercase = true;
-    options.Password.RequireLowercase = true;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequireNonAlphanumeric = false;
 
-    // Lockout Policy
-    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
-    options.Lockout.MaxFailedAccessAttempts = 5;
-    options.Lockout.AllowedForNewUsers = true;
-
+    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromDays(1);
+    options.Lockout.MaxFailedAccessAttempts = int.MaxValue;
     // User Policy
     options.User.RequireUniqueEmail = true;
     options.SignIn.RequireConfirmedEmail = false;
 })
 .AddEntityFrameworkStores<MyAppDbContext>()
-.AddDefaultTokenProviders();
+.AddDefaultTokenProviders()
+.AddPasswordValidator<RealTimePasswordValidator<ApplicationUser>>();
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -88,10 +90,22 @@ builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddScoped<DbInitializer>();
 
+builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
+builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
+builder.Services.AddMemoryCache(); // Cho IMemoryCache
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+
+builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
+builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
+builder.Services.AddScoped<DynamicAuthenticationService>();
+
+//builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
+//builder.Services.AddScoped<ISystemLogService, SystemLogService>();
+
+builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -103,7 +117,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseSecurityPolicyEnforcement();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
