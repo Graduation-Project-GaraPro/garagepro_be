@@ -1,14 +1,16 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Policies;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using BusinessObject.Notifications;
+using BusinessObject.Technician;
 
 namespace DataAccessLayer
 {
@@ -17,7 +19,29 @@ namespace DataAccessLayer
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
 
-
+        // Manager-related entities
+        public DbSet<RepairOrder> RepairOrders { get; set; }
+        public DbSet<OrderStatus> OrderStatuses { get; set; }
+        public DbSet<Label> Labels { get; set; }
+        public DbSet<Branch> Branches { get; set; }
+        public DbSet<Vehicle> Vehicles { get; set; }
+        public DbSet<Service> Services { get; set; }
+        public DbSet<ServiceCategory> ServiceCategories { get; set; }
+        public DbSet<Inspection> Inspections { get; set; }
+        public DbSet<Payment> Payments { get; set; }
+        public DbSet<Part> Parts { get; set; }
+        public DbSet<PartCategory> PartCategories { get; set; }
+        public DbSet<PartSpecification> PartSpecifications { get; set; }
+        public DbSet<Job> Jobs { get; set; }
+        
+        // Junction tables
+        public DbSet<RepairOrderService> RepairOrderServices { get; set; }
+        public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
+        public DbSet<ServiceInspection> ServiceInspections { get; set; }
+        public DbSet<PartInspection> PartInspections { get; set; }
+        public DbSet<JobPart> JobParts { get; set; }
+        
+        //Logs Admin 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<SecurityLog> SecurityLogs { get; set; }
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
@@ -27,20 +51,231 @@ namespace DataAccessLayer
         public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
 
+
+        // Notification
+        public DbSet<CategoryNotification> CategoryNotifications { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+
+        //Technician
+        public DbSet<Technician> Technicians { get; set; }
+        public DbSet<JobTechnician> JobTechnicians { get; set; }
+        public DbSet<Repair> Repairs { get; set; }
+        public DbSet<VehicleLookup> VehicleLookups { get; set; }
+        public DbSet<Specifications> Specifications { get; set; } 
+        public DbSet<SpecificationsData> SpecificationsData { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            
+            // ApplicationUser configuration
             modelBuilder.Entity<ApplicationUser>(b =>
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
+                b.Property(u => u.FullName).HasMaxLength(100).IsRequired();
+                b.Property(u => u.Email).HasMaxLength(100).IsRequired();
+                b.Property(u => u.PhoneNumber).HasMaxLength(20);
+                b.Property(u => u.AvatarUrl).HasMaxLength(200);
+                b.Property(u => u.Status).HasMaxLength(50);
 
                 b.HasMany(u => u.SystemLogs)
                  .WithOne(l => l.User)
                  .HasForeignKey(l => l.UserId)
                  .OnDelete(DeleteBehavior.SetNull);
+
+                b.HasMany(u => u.Notifications) // Quan hệ với Notifications
+                 .WithOne(n => n.User)
+                 .HasForeignKey(n => n.UserID)
+                 .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
+
+                b.HasOne(u => u.Technician) // Quan hệ một-một với Technician
+                 .WithOne(t => t.User)
+                 .HasForeignKey<Technician>(t => t.UserId)
+                 .OnDelete(DeleteBehavior.Cascade); // Xóa Technician nếu User bị xóa
             });
 
+            // CategoryNotification configuration
+            modelBuilder.Entity<CategoryNotification>(entity =>
+            {
+                entity.HasKey(e => e.CategoryID);
+                entity.Property(e => e.CategoryName)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.HasMany(e => e.Notifications)
+                      .WithOne(n => n.CategoryNotification)
+                      .HasForeignKey(n => n.CategoryID)
+                      .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
+            });
+
+           
+            // Notifications configuration
+            modelBuilder.Entity<Notification>(entity =>
+            {
+                entity.HasKey(e => e.NotificationID);
+                entity.Property(e => e.Content)
+                      .IsRequired()
+                      .HasMaxLength(500);
+                entity.Property(e => e.Type)
+                      .HasConversion<string>()
+                      .IsRequired();
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .IsRequired();
+                entity.Property(e => e.Target)
+                      .HasMaxLength(200);
+                entity.Property(e => e.TimeSent)
+                      .IsRequired();
+
+                // Quan hệ với CategoryNotification
+                entity.HasOne(e => e.CategoryNotification)
+                      .WithMany(c => c.Notifications)
+                      .HasForeignKey(e => e.CategoryID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Quan hệ với ApplicationUser
+                entity.HasOne(e => e.User)
+                      .WithMany(u => u.Notifications)
+                      .HasForeignKey(e => e.UserID)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Technician configuration
+            modelBuilder.Entity<Technician>(entity =>
+            {
+                entity.HasKey(e => e.TechnicianId);
+                entity.Property(e => e.Quality).HasColumnType("float");
+                entity.Property(e => e.Speed).HasColumnType("float");
+                entity.Property(e => e.Efficiency).HasColumnType("float");
+                entity.Property(e => e.Score).HasColumnType("float");
+
+                entity.HasMany(t => t.Inspections)
+                      .WithOne(i => i.Technician)
+                      .HasForeignKey(i => i.TechnicianId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(t => t.JobTechnicians)
+                      .WithOne(jt => jt.Technician)
+                      .HasForeignKey(jt => jt.TechnicianId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+            // JobTechnician configuration
+            modelBuilder.Entity<JobTechnician>(entity =>
+            {
+                entity.HasKey(e => e.JobTechnicianId);
+
+                entity.HasOne(jt => jt.Job)
+                      .WithMany(j => j.JobTechnicians)
+                      .HasForeignKey(jt => jt.JobId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(jt => jt.Technician)
+                      .WithMany(t => t.JobTechnicians)
+                      .HasForeignKey(jt => jt.TechnicianId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+            // Job configuration
+            modelBuilder.Entity<Job>(entity =>
+            {
+                entity.HasKey(e => e.JobId);
+                entity.Property(e => e.JobName).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt).IsRequired();
+
+                entity.HasMany(j => j.JobTechnicians)
+                      .WithOne(jt => jt.Job)
+                      .HasForeignKey(jt => jt.JobId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(j => j.Repairs) // Quan hệ một-nhiều với Repair
+                      .WithOne(r => r.Job)
+                      .HasForeignKey(r => r.JobId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+            // Repair configuration
+            modelBuilder.Entity<Repair>(entity =>
+            {
+                entity.HasKey(e => e.RepairId);
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.Notes).HasMaxLength(500);
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .IsRequired();
+
+                entity.HasOne(r => r.Job)
+                      .WithMany(j => j.Repairs)
+                      .HasForeignKey(r => r.JobId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+            // Inspection configuration
+            modelBuilder.Entity<Inspection>(entity =>
+            {
+                entity.HasKey(e => e.InspectionId);
+                entity.Property(e => e.CustomerConcern).HasMaxLength(500);
+                entity.Property(e => e.Finding).HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).IsRequired();
+
+                entity.HasOne(i => i.Technician)
+                      .WithMany(t => t.Inspections)
+                      .HasForeignKey(i => i.TechnicianId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            // VehicleLookup configuration
+            modelBuilder.Entity<VehicleLookup>(entity =>
+            {
+                entity.HasKey(e => e.LookupID);
+                entity.Property(e => e.Automaker)
+                      .IsRequired()
+                      .HasMaxLength(100);
+                entity.Property(e => e.NameCar)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.HasMany(e => e.Specifications)
+                      .WithOne(s => s.VehicleLookup)
+                      .HasForeignKey(s => s.LookupID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // Specifications configuration
+            modelBuilder.Entity<Specifications>(entity =>
+            {
+                entity.HasKey(e => e.SpecificationsID);
+                entity.Property(e => e.Title)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.HasOne(s => s.VehicleLookup)
+                      .WithMany(v => v.Specifications)
+                      .HasForeignKey(s => s.LookupID)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasMany(s => s.SpecificationsData)
+                      .WithOne(d => d.Specifications)
+                      .HasForeignKey(d => d.SpecificationsID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // SpecificationsData configuration
+            modelBuilder.Entity<SpecificationsData>(entity =>
+            {
+                entity.HasKey(e => e.DataID);
+                entity.Property(e => e.Label)
+                      .IsRequired()
+                      .HasMaxLength(100);
+                entity.Property(e => e.Value)
+                      .IsRequired()
+                      .HasMaxLength(200);
+
+                entity.HasOne(d => d.Specifications)
+                      .WithMany(s => s.SpecificationsData)
+                      .HasForeignKey(d => d.SpecificationsID)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            //Log System
             modelBuilder.Entity<SystemLog>(entity =>
             {
                 entity.HasKey(e => e.Id);
@@ -233,6 +468,60 @@ namespace DataAccessLayer
             });
 
 
+            // Configure relationships to prevent cascade delete cycles
+            
+            // RepairOrder relationships - prevent cascade delete conflicts
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.User)
+                .WithMany()
+                .HasForeignKey(ro => ro.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.OrderStatus)
+                .WithMany(os => os.RepairOrders)
+                .HasForeignKey(ro => ro.StatusId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.Vehicle)
+                .WithMany(v => v.RepairOrders)
+                .HasForeignKey(ro => ro.VehicleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<RepairOrder>()
+                .HasOne(ro => ro.Branch)
+                .WithMany(b => b.RepairOrders)
+                .HasForeignKey(ro => ro.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Vehicle-User relationship
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment-User relationship
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Part-Branch relationship
+            modelBuilder.Entity<Part>()
+                .HasOne(p => p.Branch)
+                .WithMany(b => b.Parts)
+                .HasForeignKey(p => p.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ServiceCategory self-referencing relationship
+            modelBuilder.Entity<ServiceCategory>()
+                .HasOne(sc => sc.ParentServiceCategory)
+                .WithMany(sc => sc.ChildServiceCategories)
+                .HasForeignKey(sc => sc.ParentServiceCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

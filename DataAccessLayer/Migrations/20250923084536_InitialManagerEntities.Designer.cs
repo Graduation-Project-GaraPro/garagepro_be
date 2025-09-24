@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250923084536_InitialManagerEntities")]
+    partial class InitialManagerEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,9 +65,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("LastPasswordChangeDate")
-                        .HasColumnType("datetime2");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -115,96 +115,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("AccountLockoutTime")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<bool>("EnableBruteForceProtection")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MaxLoginAttempts")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("MfaRequired")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("MinPasswordLength")
-                        .HasColumnType("int");
-
-                    b.Property<int>("PasswordExpiryDays")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("RequireNumber")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RequireSpecialChar")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("RequireUppercase")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("SessionTimeout")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<string>("UpdatedBy")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UpdatedBy");
-
-                    b.ToTable("SecurityPolicies", (string)null);
-                });
-
-            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicyHistory", b =>
-                {
-                    b.Property<Guid>("HistoryId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ChangeSummary")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime>("ChangedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("SYSUTCDATETIME()");
-
-                    b.Property<string>("ChangedBy")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("NewValues")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("PolicyId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("PreviousValues")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("HistoryId");
-
-                    b.HasIndex("ChangedBy");
-
-                    b.HasIndex("PolicyId");
-
-                    b.ToTable("SecurityPolicyHistories", (string)null);
             modelBuilder.Entity("BusinessObject.Branch", b =>
                 {
                     b.Property<Guid>("BranchId")
@@ -1190,32 +1100,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
-                {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "UpdatedByUser")
-                        .WithMany()
-                        .HasForeignKey("UpdatedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("UpdatedByUser");
-                });
-
-            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicyHistory", b =>
-                {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "ChangedByUser")
-                        .WithMany()
-                        .HasForeignKey("ChangedBy")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("BusinessObject.Policies.SecurityPolicy", "Policy")
-                        .WithMany("Histories")
-                        .HasForeignKey("PolicyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("ChangedByUser");
-
-                    b.Navigation("Policy");
             modelBuilder.Entity("BusinessObject.Inspection", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
@@ -1587,9 +1471,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("SystemLogs");
                 });
 
-            modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
-                {
-                    b.Navigation("Histories");
             modelBuilder.Entity("BusinessObject.Branch", b =>
                 {
                     b.Navigation("Parts");
