@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject.Notifications;
+using BusinessObject.Customers;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
@@ -17,7 +18,7 @@ namespace BusinessObject.Authentication
         public Guid RoleId { get; set; }
 
         [Required]
-        public Guid BranchId { get; set; }
+        public Guid? BranchId { get; set; }
 
         [Required]
         [MaxLength(100)]
@@ -61,6 +62,9 @@ namespace BusinessObject.Authentication
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
         public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
         public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
+        public virtual IEnumerable<Vehicle> Vehicles { get; set; } = new List<Vehicle>();// expect chứa nhiều vehicles 
+        public virtual IEnumerable<Feedback> Feedbacks { get; set; } = new List<Feedback>();
+        public virtual IEnumerable<RepairRequest> RepairRequests { get; set; }
         // Custom claims
         //public virtual ICollection<ApplicationUserClaim> Claims { get; set; }
     }

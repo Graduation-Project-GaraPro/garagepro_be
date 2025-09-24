@@ -70,5 +70,6 @@ namespace BusinessObject
         public virtual ICollection<Inspection> Inspections { get; set; }
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
+        public virtual ICollection<Feedback> Feedbacks { get; set; }//customer
     }
 }

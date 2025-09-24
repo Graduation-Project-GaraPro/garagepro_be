@@ -1,3 +1,4 @@
+using BusinessObject.Customers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -50,5 +51,6 @@ namespace BusinessObject
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; }
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<Job> Jobs { get; set; }
+        public virtual ICollection<RequestService> RequestServices { get; set; }//customer 
     }
 }
