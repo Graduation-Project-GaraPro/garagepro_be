@@ -66,7 +66,10 @@ namespace DataAccessLayer
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
             
+
+
             // ApplicationUser configuration
             modelBuilder.Entity<ApplicationUser>(b =>
             {

@@ -15,6 +15,7 @@ using Services.PolicyServices;
 using Services.Authentication;
 using Garage_pro_api.Middlewares;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using BusinessObject.Policies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -109,6 +110,11 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();
+
+
+
+
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -124,6 +130,34 @@ app.UseAuthorization();
 
 app.MapControllers();
 // Initialize database
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+
+    if (!dbContext.SecurityPolicies.Any())
+    {
+        dbContext.SecurityPolicies.Add(new SecurityPolicy
+        {
+            Id = Guid.NewGuid(),
+            MinPasswordLength = 8,
+            RequireSpecialChar = true,
+            RequireNumber = true,
+            RequireUppercase = true,
+            SessionTimeout = 30,
+            MaxLoginAttempts = 5,
+            AccountLockoutTime = 15,
+            MfaRequired = false,
+            PasswordExpiryDays = 90,
+            EnableBruteForceProtection = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
+
+        dbContext.SaveChanges();
+    }
+}
+
 using (var scope = app.Services.CreateScope())
 {
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
