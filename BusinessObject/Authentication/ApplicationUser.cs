@@ -11,8 +11,6 @@ namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
     {
-        [Key]
-        public Guid UserId { get; set; } = Guid.NewGuid();
         [Required]
         public Guid RoleId { get; set; }
 

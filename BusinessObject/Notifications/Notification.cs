@@ -40,7 +40,7 @@ namespace BusinessObject.Notifications
         // FK -> User
         [Required]
         [ForeignKey(nameof(ApplicationUser))]
-        public Guid UserID { get; set; }
+        public string UserID { get; set; }
         public virtual ApplicationUser User { get; set; }
     }
 }
