@@ -14,9 +14,11 @@ namespace BusinessObject
         public Guid ServiceInspectionId { get; set; } = Guid.NewGuid();
 
         [Required]
+        [ForeignKey(nameof(Service))]
         public Guid ServiceId { get; set; }
 
         [Required]
+        [ForeignKey(nameof(Inspection))]
         public Guid InspectionId { get; set; }
 
         [MaxLength(100)]

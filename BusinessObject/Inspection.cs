@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -18,7 +18,7 @@ namespace BusinessObject
         [Required]
         public Guid TechnicianId { get; set; }
 
-        public int Status { get; set; }
+        public InspectionStatus Status { get; set; } = InspectionStatus.Pending;
 
         [MaxLength(500)]
         public string CustomerConcern { get; set; }

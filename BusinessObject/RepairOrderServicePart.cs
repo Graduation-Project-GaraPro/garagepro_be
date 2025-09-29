@@ -14,9 +14,11 @@ namespace BusinessObject
         public Guid RepairOrderServicePartId { get; set; } = Guid.NewGuid();
 
         [Required]
+        [ForeignKey(nameof(RepairOrderService))]
         public Guid RepairOrderServiceId { get; set; }
 
         [Required]
+        [ForeignKey(nameof(Part))]
         public Guid PartId { get; set; }
 
         public int Quantity { get; set; }

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -182,7 +182,9 @@ namespace DataAccessLayer
             {
                 entity.HasKey(e => e.JobId);
                 entity.Property(e => e.JobName).IsRequired().HasMaxLength(100);
-                entity.Property(e => e.Status).HasMaxLength(50);
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .IsRequired();
                 entity.Property(e => e.Note).HasMaxLength(500);
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CreatedAt).IsRequired();
@@ -218,6 +220,9 @@ namespace DataAccessLayer
                 entity.HasKey(e => e.InspectionId);
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .IsRequired();
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)

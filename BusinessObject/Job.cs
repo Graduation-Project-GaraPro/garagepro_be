@@ -1,4 +1,4 @@
-﻿using BusinessObject.Technician;
+﻿﻿using BusinessObject.Technician;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -24,8 +24,7 @@ namespace BusinessObject
         [MaxLength(100)]
         public string JobName { get; set; }
 
-        [MaxLength(50)]
-        public string Status { get; set; }
+        public JobStatus Status { get; set; } = JobStatus.Pending;
 
         public DateTime? Deadline { get; set; }
 

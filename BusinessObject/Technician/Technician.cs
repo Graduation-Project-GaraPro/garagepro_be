@@ -1,4 +1,4 @@
-﻿using BusinessObject.Authentication;
+﻿﻿using BusinessObject.Authentication;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -16,10 +16,7 @@ namespace BusinessObject.Technician
 
         // Foreign Keys
         [Required]
-        public string UserId { get; set; }     
-
-        [Required]
-        public Guid JobId { get; set; }
+        public string UserId { get; set; }
 
         [Range(0, 10)]
         public float Quality { get; set; }
