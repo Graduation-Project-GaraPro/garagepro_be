@@ -232,8 +232,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("TechnicianId")
                         .HasColumnType("uniqueidentifier");
@@ -283,8 +284,7 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("TotalAmount")
                         .HasColumnType("decimal(18,2)");
@@ -1284,9 +1284,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<double>("Efficiency")
                         .HasColumnType("float");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<double>("Quality")
                         .HasColumnType("float");
