@@ -12,6 +12,7 @@ namespace Dtos.Auth
         public int ExpiresIn { get; set; }
         public string UserId { get; set; }
         public string Email { get; set; }
+        public bool RequiresMfa { get; set; }
         public IList<string> Roles { get; set; }
     }
 }

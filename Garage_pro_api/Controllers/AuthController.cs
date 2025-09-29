@@ -8,6 +8,10 @@ using Microsoft.IdentityModel.Tokens;
 using Services;
 using Dtos.Auth;
 using Services.EmailSenders;
+using Services.Authentication;
+using Azure.Core;
+using System.Data;
+using System.Net;
 
 namespace Garage_pro_api.Controllers
 {
@@ -19,16 +23,18 @@ namespace Garage_pro_api.Controllers
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ITokenService _tokenService;
         private readonly IEmailSender _emailSender;
+        private readonly DynamicAuthenticationService _authService;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService,IEmailSender emailSender)
+            ITokenService tokenService,IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _emailSender = emailSender;
+            _authService = dynamicAuthenticationService;
         }
 
         [HttpPost("register")]
@@ -38,14 +44,23 @@ namespace Garage_pro_api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            // ✅ GIỜ ĐÂY Identity sẽ tự động gọi RealTimePasswordValidator
+            // Không cần validate thủ công nữa!
+
+            var existingUser = await _userManager.FindByEmailAsync(model.Email);
+            if (existingUser != null)
+                return BadRequest(new { error = "Email already exists" });
+
             var user = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
                 FirstName = model.FirstName,
-                LastName = model.LastName
+                LastName = model.LastName,
+                CreatedAt = DateTime.UtcNow
             };
 
+            // ✅ CreateAsync sẽ tự động trigger password validator
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (!result.Succeeded)
@@ -54,28 +69,24 @@ namespace Garage_pro_api.Controllers
             // Assign default role
             await _userManager.AddToRoleAsync(user, "Customer");
 
-            // ✅ Tạo token xác thực email
+            // Send confirmation email
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var encodedToken = WebUtility.UrlEncode(token);
 
-            // Encode token để gắn vào URL
-            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
-
-            // URL xác nhận (Frontend sẽ có 1 trang gọi API xác nhận)
             var confirmationLink = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
 
-            // Gửi mail
             await _emailSender.SendEmailAsync(
                 user.Email,
                 "Confirm your email",
-                $@"
-                <p>Hello {user.FirstName},</p>
-                <p>Please confirm your email by clicking the link below:</p>
-                <p><a href='{confirmationLink}'>Confirm Email</a></p>
-                <p>If you did not register, you can safely ignore this email.</p>
-                "
-                    );
+                $@"<p>Hello {user.FirstName}, please confirm your email.</p>
+           <p><a href='{confirmationLink}'>Confirm Email</a></p>"
+            );
 
-            return Ok(new { Message = "User registered successfully. Please check your email to confirm your account." });
+            return Ok(new
+            {
+                Message = "User registered successfully. Please check your email to confirm your account.",
+                UserId = user.Id
+            });
         }
 
         [HttpPost("login")]
@@ -85,41 +96,135 @@ namespace Garage_pro_api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _signInManager.PasswordSignInAsync(
-                model.Email, model.Password, model.RememberMe, lockoutOnFailure: true);
+            var result = await _authService.PasswordSignInAsync(
+                model.Email, model.Password, model.RememberMe);
 
             if (result.IsLockedOut)
-                return BadRequest(new { Error = "Account locked out due to multiple failed login attempts" });
+            {
+                var user = await _userManager.FindByNameAsync(model.Email);
+                var lockoutInfo = await _authService.GetLockoutInfoAsync(user);
+
+                return BadRequest(new
+                {
+                    error = "Account is temporarily locked due to failed login attempts",
+                    lockoutEnd = lockoutInfo.LockoutEnd,
+                    remainingMinutes = lockoutInfo.RemainingMinutes
+                });
+            }   
 
             if (!result.Succeeded)
-                return BadRequest(new { Error = "Invalid login attempt" });
+                return BadRequest(new { error = "Invalid login attempt" });
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-
-            // Update last login
-            user.LastLogin = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
-
-            // Generate JWT token
-            var token = await _tokenService.GenerateJwtToken(user);
-
-            // Set refresh token in cookie if needed
-            Response.Cookies.Append("X-Refresh-Token", token, new CookieOptions
+            try
             {
-                HttpOnly = true,
-                Expires = DateTime.UtcNow.AddDays(7),
-                Secure = true,
-                SameSite = SameSiteMode.Strict
-            });
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                    return BadRequest(new { error = "User not found" });
+                //if (await _authService.RequiresMfaAsync(user))
+                //{
+                //    return Ok(new
+                //    {
+                //        success = true,
+                //        requiresMfa = true,
+                //        message = "MFA authentication required",
+                //        tempToken = "GenerateTempToken(user)"
+                //    });
+                //}
+                // Update last login
+                user.LastLogin = DateTime.UtcNow;
+                await _userManager.UpdateAsync(user);
 
-            return Ok(new AuthResponseDto
+                // Generate Access & Refresh Tokens
+                var accessToken = await _tokenService.GenerateJwtToken(user);
+                //var refreshToken = await _tokenService.GenerateRefreshTokenAsync(user);
+
+                Response.Cookies.Append("X-Refresh-Token", accessToken, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.None, // use Strict only if same-site
+                    Expires = DateTimeOffset.UtcNow.AddDays(7)
+                });
+
+                var response = new AuthResponseDto
+                {
+                    Token = accessToken,
+                    ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Roles = await _userManager.GetRolesAsync(user),
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
             {
-                Token = token,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
-                UserId = user.Id,
-                Email = user.Email,
-                Roles = await _userManager.GetRolesAsync(user)
-            });
+                // Log exception
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { error = "An error occurred while processing your login" });
+            }
+        }
+
+
+        [HttpPost("change-password")]
+        [Authorize]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+        {
+            // SỬ DỤNG PHƯƠNG THỨC GetUserAsync MỚI
+            var user = await _authService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+           
+            var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+            if (!passwordValid)
+                return BadRequest(new { error = "Current password is incorrect" });
+
+            // Đổi mật khẩu
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+
+            if (result.Succeeded)
+            {
+                // Cập nhật last password change sử dụng phương thức mới
+                await _authService.UpdateLastPasswordChangeAsync(user);
+
+                // Đăng xuất tất cả các session cũ (tùy chọn)
+                await _userManager.UpdateSecurityStampAsync(user);
+
+                return Ok(new
+                {
+                    message = "Password changed successfully",
+                    passwordChangedAt = DateTime.UtcNow
+                });
+            }
+
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+        }
+
+        [HttpPost("force-password-change")]
+        [Authorize]
+        public async Task<IActionResult> ForcePasswordChange([FromBody] ForcePasswordChangeRequest request)
+        {
+            var user = await _authService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+          
+            // Reset password mà không cần mật khẩu cũ
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
+
+            if (result.Succeeded)
+            {
+                
+                await _authService.UpdateLastPasswordChangeAsync(user);
+                await _userManager.UpdateSecurityStampAsync(user);
+
+                return Ok(new
+                {
+                    message = "Password changed successfully",
+                    passwordChangedAt = user.LastPasswordChangeDate ?? DateTime.UtcNow
+                });
+            }
+
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
         }
 
         [HttpPost("logout")]
@@ -181,5 +286,13 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { Message = "Email confirmed successfully" });
         }
+        private string GenerateTempToken(IdentityUser user)
+        {
+            // Tạo token tạm cho MFA flow
+            return Guid.NewGuid().ToString();
+        }
+
     }
+
+             
 }
