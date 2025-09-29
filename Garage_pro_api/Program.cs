@@ -92,6 +92,18 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+// OrderStatus and Label repositories and services
+builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
+builder.Services.AddScoped<ILabelRepository, LabelRepository>();
+builder.Services.AddScoped<IColorRepository, ColorRepository>();
+builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
+builder.Services.AddScoped<ILabelService, LabelService>();
+builder.Services.AddScoped<IColorService, ColorService>();
+
+// RepairOrder repository and service
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
+builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
+
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();

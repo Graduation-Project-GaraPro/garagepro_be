@@ -1,0 +1,17 @@
+using BusinessObject;
+using ColorEntity = BusinessObject.Color;
+
+namespace Services
+{
+    public interface ILabelService
+    {
+        Task<IEnumerable<Label>> GetAllLabelsAsync();
+        Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(Guid orderStatusId);
+        Task<Label?> GetLabelByIdAsync(Guid id);
+        Task<Label> CreateLabelAsync(Label label);
+        Task<Label> UpdateLabelAsync(Label label);
+        Task<bool> DeleteLabelAsync(Guid id);
+        Task<bool> LabelExistsAsync(Guid id);
+        Task<IEnumerable<ColorEntity>> GetAvailableColorsAsync();
+    }
+}

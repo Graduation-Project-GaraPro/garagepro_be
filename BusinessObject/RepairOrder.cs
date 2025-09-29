@@ -46,6 +46,18 @@ namespace BusinessObject
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime? UpdatedAt { get; set; }
+
+        // Archive Management
+        public bool IsArchived { get; set; } = false;
+
+        public DateTime? ArchivedAt { get; set; }
+
+        [MaxLength(500)]
+        public string ArchiveReason { get; set; }
+
+        public string ArchivedByUserId { get; set; }
+
         [Required]
         public Guid BranchId { get; set; }
 

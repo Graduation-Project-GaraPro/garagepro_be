@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -20,6 +20,7 @@ namespace DataAccessLayer
         public DbSet<RepairOrder> RepairOrders { get; set; }
         public DbSet<OrderStatus> OrderStatuses { get; set; }
         public DbSet<Label> Labels { get; set; }
+        public DbSet<Color> Colors { get; set; }
         public DbSet<Branch> Branches { get; set; }
         public DbSet<Vehicle> Vehicles { get; set; }
         public DbSet<Service> Services { get; set; }
@@ -31,12 +32,18 @@ namespace DataAccessLayer
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         
-        // Junction tables
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
         public DbSet<JobPart> JobParts { get; set; }
+        // =============================
+
+        public DbSet<SystemLog> SystemLogs { get; set; }
+        public DbSet<SecurityLog> SecurityLogs { get; set; }
+        public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
+        public DbSet<LogCategory> LogCategories { get; set; }
+        public DbSet<LogTag> LogTags { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -240,6 +247,74 @@ namespace DataAccessLayer
                 .HasOne(sc => sc.ParentServiceCategory)
                 .WithMany(sc => sc.ChildServiceCategories)
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Color-Label relationship
+            modelBuilder.Entity<Label>()
+                .HasOne(l => l.Color)
+                .WithMany(c => c.Labels)
+                .HasForeignKey(l => l.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Job relationships - prevent cascade delete conflicts
+            modelBuilder.Entity<Job>()
+                .HasOne(j => j.RepairOrder)
+                .WithMany(ro => ro.Jobs)
+                .HasForeignKey(j => j.RepairOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Job>()
+                .HasOne(j => j.Service)
+                .WithMany(s => s.Jobs)
+                .HasForeignKey(j => j.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // JobPart relationships
+            modelBuilder.Entity<JobPart>()
+                .HasOne(jp => jp.Job)
+                .WithMany(j => j.JobParts)
+                .HasForeignKey(jp => jp.JobId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<JobPart>()
+                .HasOne(jp => jp.Part)
+                .WithMany(p => p.JobParts)
+                .HasForeignKey(jp => jp.PartId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Payment-RepairOrder relationship
+            modelBuilder.Entity<Payment>()
+                .HasOne(p => p.RepairOrder)
+                .WithMany(ro => ro.Payments)
+                .HasForeignKey(p => p.RepairOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Service-ServiceCategory relationship
+            modelBuilder.Entity<Service>()
+                .HasOne(s => s.ServiceCategory)
+                .WithMany(sc => sc.Services)
+                .HasForeignKey(s => s.ServiceCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Part-PartCategory relationship
+            modelBuilder.Entity<Part>()
+                .HasOne(p => p.PartCategory)
+                .WithMany(pc => pc.Parts)
+                .HasForeignKey(p => p.PartCategoryId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Inspection-RepairOrder relationship
+            modelBuilder.Entity<Inspection>()
+                .HasOne(i => i.RepairOrder)
+                .WithMany(ro => ro.Inspections)
+                .HasForeignKey(i => i.RepairOrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Label-OrderStatus relationship
+            modelBuilder.Entity<Label>()
+                .HasOne(l => l.OrderStatus)
+                .WithMany(os => os.Labels)
+                .HasForeignKey(l => l.OrderStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

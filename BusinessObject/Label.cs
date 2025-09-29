@@ -23,7 +23,13 @@ namespace BusinessObject
 
         [MaxLength(500)]
         public string Description { get; set; }
+
+        [Required]
+        [ForeignKey(nameof(Color))]
+        public Guid ColorId { get; set; }
+
         // Navigation properties
         public virtual OrderStatus OrderStatus { get; set; } = null!;
+        public virtual Color Color { get; set; } = null!;
     }
 }
