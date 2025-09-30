@@ -31,7 +31,8 @@ namespace DataAccessLayer
         public DbSet<PartCategory> PartCategories { get; set; }
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
-        
+        public DbSet<FeedBack> FeedBacks { get; set; }
+
         // Junction tables
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
@@ -242,6 +243,39 @@ namespace DataAccessLayer
                 .WithMany(sc => sc.ChildServiceCategories)
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
-        }
+
+           
+
+                
+                modelBuilder.Entity<FeedBack>(entity =>
+                {
+                    entity.ToTable("FeedBacks");                
+                    entity.HasKey(f => f.FeedBackId);           
+
+                    entity.Property(f => f.Description)
+                          .HasMaxLength(1000);                  
+
+                    entity.Property(f => f.Rating)
+                          .IsRequired();                        
+
+                    entity.Property(f => f.CreatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");   
+
+                    entity.Property(f => f.UpdatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");
+
+                    
+                    entity.HasOne(f => f.User)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.UserId)
+                          .OnDelete(DeleteBehavior.Cascade);
+
+                   
+                    entity.HasOne(f => f.RepairOrder)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.RepairOrderId)
+                          .OnDelete(DeleteBehavior.Cascade);
+                });
+            }
     }
 }

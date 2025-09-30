@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20250923084536_InitialManagerEntities")]
-    partial class InitialManagerEntities
+    [Migration("20250924022101_Feedback")]
+    partial class Feedback
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -36,6 +36,16 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("Avatar")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime?>("Birthday")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -44,8 +54,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("bit");
@@ -54,6 +65,14 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("Gender")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -81,19 +100,31 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Status")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("bit");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
@@ -311,6 +342,46 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Labels");
                 });
 
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.Property<Guid>("FeedBackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("FeedBackId");
+
+                    b.HasIndex("RepairOrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FeedBacks", (string)null);
+                });
+
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
                 {
                     b.Property<Guid>("OrderStatusId")
@@ -517,6 +588,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<long?>("EstimatedRepairTime")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("FeedBackId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("FeedBackId1")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -554,6 +631,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("FeedBackId1");
 
                     b.HasIndex("StatusId");
 
@@ -1160,6 +1239,25 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("OrderStatus");
                 });
 
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepairOrder");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Part", b =>
                 {
                     b.HasOne("BusinessObject.Branch", "Branch")
@@ -1236,6 +1334,10 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
+                        .WithMany()
+                        .HasForeignKey("FeedBackId1");
+
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")
@@ -1255,6 +1357,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
 

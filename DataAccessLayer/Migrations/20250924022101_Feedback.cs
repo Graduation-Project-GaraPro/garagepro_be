@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialManagerEntities : Migration
+    public partial class Feedback : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -30,22 +30,30 @@ namespace DataAccessLayer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    PasswordHash = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<bool>(type: "bit", nullable: false),
+                    Birthday = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false),
                     Avatar = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     dateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
                     TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
                     LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
@@ -392,57 +400,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RepairOrders",
-                columns: table => new
-                {
-                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ReceiveDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    RepairOrderType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    EstimatedCompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Cost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    EstimatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    PaidStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    EstimatedRepairTime = table.Column<long>(type: "bigint", nullable: true),
-                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    StatusId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RepairRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RepairOrders", x => x.RepairOrderId);
-                    table.ForeignKey(
-                        name: "FK_RepairOrders_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_RepairOrders_Branches_BranchId",
-                        column: x => x.BranchId,
-                        principalTable: "Branches",
-                        principalColumn: "BranchId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_RepairOrders_OrderStatuses_StatusId",
-                        column: x => x.StatusId,
-                        principalTable: "OrderStatuses",
-                        principalColumn: "OrderStatusId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_RepairOrders_Vehicles_VehicleId",
-                        column: x => x.VehicleId,
-                        principalTable: "Vehicles",
-                        principalColumn: "VehicleId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "LogTag",
                 columns: table => new
                 {
@@ -503,6 +460,113 @@ namespace DataAccessLayer.Migrations
                         principalTable: "Parts",
                         principalColumn: "PartId",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SecurityLogRelation",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SecurityLogId = table.Column<long>(type: "bigint", nullable: false),
+                    RelatedLogId = table.Column<long>(type: "bigint", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SecurityLogRelation", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SecurityLogRelation_SecurityLog_SecurityLogId",
+                        column: x => x.SecurityLogId,
+                        principalTable: "SecurityLog",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_SecurityLogRelation_SystemLog_RelatedLogId",
+                        column: x => x.RelatedLogId,
+                        principalTable: "SystemLog",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "FeedBacks",
+                columns: table => new
+                {
+                    FeedBackId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Rating = table.Column<int>(type: "int", nullable: false),
+                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_FeedBacks", x => x.FeedBackId);
+                    table.ForeignKey(
+                        name: "FK_FeedBacks_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RepairOrders",
+                columns: table => new
+                {
+                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ReceiveDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RepairOrderType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    EstimatedCompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Cost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    EstimatedAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaidAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PaidStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    EstimatedRepairTime = table.Column<long>(type: "bigint", nullable: true),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    StatusId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RepairRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    FeedBackId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    FeedBackId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RepairOrders", x => x.RepairOrderId);
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "BranchId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_FeedBacks_FeedBackId1",
+                        column: x => x.FeedBackId1,
+                        principalTable: "FeedBacks",
+                        principalColumn: "FeedBackId");
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_OrderStatuses_StatusId",
+                        column: x => x.StatusId,
+                        principalTable: "OrderStatuses",
+                        principalColumn: "OrderStatusId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_Vehicles_VehicleId",
+                        column: x => x.VehicleId,
+                        principalTable: "Vehicles",
+                        principalColumn: "VehicleId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -620,32 +684,6 @@ namespace DataAccessLayer.Migrations
                         principalTable: "Services",
                         principalColumn: "ServiceId",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SecurityLogRelation",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    SecurityLogId = table.Column<long>(type: "bigint", nullable: false),
-                    RelatedLogId = table.Column<long>(type: "bigint", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SecurityLogRelation", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SecurityLogRelation_SecurityLog_SecurityLogId",
-                        column: x => x.SecurityLogId,
-                        principalTable: "SecurityLog",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_SecurityLogRelation_SystemLog_RelatedLogId",
-                        column: x => x.RelatedLogId,
-                        principalTable: "SystemLog",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -802,6 +840,16 @@ namespace DataAccessLayer.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_FeedBacks_RepairOrderId",
+                table: "FeedBacks",
+                column: "RepairOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_FeedBacks_UserId",
+                table: "FeedBacks",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Inspections_RepairOrderId",
                 table: "Inspections",
                 column: "RepairOrderId");
@@ -875,6 +923,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_RepairOrders_BranchId",
                 table: "RepairOrders",
                 column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RepairOrders_FeedBackId1",
+                table: "RepairOrders",
+                column: "FeedBackId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepairOrders_StatusId",
@@ -960,11 +1013,35 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Vehicles_UserId",
                 table: "Vehicles",
                 column: "UserId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_FeedBacks_RepairOrders_RepairOrderId",
+                table: "FeedBacks",
+                column: "RepairOrderId",
+                principalTable: "RepairOrders",
+                principalColumn: "RepairOrderId",
+                onDelete: ReferentialAction.Cascade);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_FeedBacks_AspNetUsers_UserId",
+                table: "FeedBacks");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_RepairOrders_AspNetUsers_UserId",
+                table: "RepairOrders");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_Vehicles_AspNetUsers_UserId",
+                table: "Vehicles");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_FeedBacks_RepairOrders_RepairOrderId",
+                table: "FeedBacks");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -1035,25 +1112,28 @@ namespace DataAccessLayer.Migrations
                 name: "SystemLog");
 
             migrationBuilder.DropTable(
-                name: "RepairOrders");
-
-            migrationBuilder.DropTable(
                 name: "ServiceCategories");
 
             migrationBuilder.DropTable(
                 name: "LogCategory");
 
             migrationBuilder.DropTable(
+                name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "RepairOrders");
+
+            migrationBuilder.DropTable(
                 name: "Branches");
+
+            migrationBuilder.DropTable(
+                name: "FeedBacks");
 
             migrationBuilder.DropTable(
                 name: "OrderStatuses");
 
             migrationBuilder.DropTable(
                 name: "Vehicles");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUsers");
         }
     }
 }

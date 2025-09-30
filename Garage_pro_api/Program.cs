@@ -92,6 +92,9 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
+builder.Services.AddScoped<IFeedBackService, FeedBackService>();
+
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();
