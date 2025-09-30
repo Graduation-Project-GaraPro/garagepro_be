@@ -1,4 +1,5 @@
 ﻿using BusinessObject.Authentication;
+using BusinessObject.Roles;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 
@@ -8,13 +9,13 @@ namespace Garage_pro_api.DbInit
     {
         private readonly MyAppDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
-        private readonly RoleManager<IdentityRole> _roleManager;
+        private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IConfiguration _configuration;
 
         public DbInitializer(
             MyAppDbContext context,
             UserManager<ApplicationUser> userManager,
-            RoleManager<IdentityRole> roleManager,
+            RoleManager<ApplicationRole> roleManager,
             IConfiguration configuration)
         {
             _context = context;
@@ -35,7 +36,17 @@ namespace Garage_pro_api.DbInit
                 var roleExist = await _roleManager.RoleExistsAsync(roleName);
                 if (!roleExist)
                 {
-                    await _roleManager.CreateAsync(new IdentityRole(roleName));
+                    var role = new ApplicationRole
+                    {
+                        Name = roleName,
+                        Users=0,
+                        NormalizedName = roleName.ToUpper(),
+                        Description = $"Default {roleName} role",
+                        IsDefault = true, // ví dụ: Customer là mặc định
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await _roleManager.CreateAsync(role);
                 }
             }
 

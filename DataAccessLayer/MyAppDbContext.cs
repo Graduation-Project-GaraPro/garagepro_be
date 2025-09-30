@@ -11,10 +11,11 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using BusinessObject.Notifications;
 using BusinessObject.Technician;
+using BusinessObject.Roles;
 
 namespace DataAccessLayer
 {
-    public class MyAppDbContext : IdentityDbContext<ApplicationUser>
+    public class MyAppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
@@ -63,11 +64,131 @@ namespace DataAccessLayer
         public DbSet<VehicleLookup> VehicleLookups { get; set; }
         public DbSet<Specifications> Specifications { get; set; } 
         public DbSet<SpecificationsData> SpecificationsData { get; set; }
+
+        public DbSet<PermissionCategory> PermissionCategories { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            
+            // 🔑 Composite key cho RolePermission
+            modelBuilder.Entity<RolePermission>()
+                .HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+            // Quan hệ RolePermission -> Role
+            modelBuilder.Entity<RolePermission>()
+                .HasOne(rp => rp.Role)
+                .WithMany()
+                .HasForeignKey(rp => rp.RoleId);
+
+            // Quan hệ RolePermission -> Permission
+            modelBuilder.Entity<RolePermission>()
+                .HasOne(rp => rp.Permission)
+                .WithMany(p => p.RolePermissions)
+                .HasForeignKey(rp => rp.PermissionId);
+
+            // Quan hệ Permission -> Category
+            modelBuilder.Entity<Permission>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Permissions)
+                .HasForeignKey(p => p.CategoryId);
+
+            // 🔧 Cấu hình tự sinh Guid cho PermissionCategory.Id
+            modelBuilder.Entity<PermissionCategory>()
+                .Property(pc => pc.Id)
+                .HasDefaultValueSql("NEWSEQUENTIALID()"); // hoặc NEWID()
+
+            // 🔧 Cấu hình tự sinh Guid cho Permission.Id
+            modelBuilder.Entity<Permission>()
+                .Property(p => p.Id)
+                .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+            // Fixed GUIDs (hardcoded)
+            var userManagementCategoryId = new Guid("11111111-1111-1111-1111-111111111111");
+            var bookingManagementCategoryId = new Guid("22222222-2222-2222-2222-222222222222");
+
+            var viewUsersPermissionId = new Guid("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+            var editUsersPermissionId = new Guid("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+            var deleteUsersPermissionId = new Guid("cccccccc-cccc-cccc-cccc-cccccccccccc");
+            var viewBookingsPermissionId = new Guid("dddddddd-dddd-dddd-dddd-dddddddddddd");
+            var manageBookingsPermissionId = new Guid("eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee");
+
+            // Seed Permission Categories
+            modelBuilder.Entity<PermissionCategory>().HasData(
+                new PermissionCategory
+                {
+                    Id = userManagementCategoryId,
+                    Name = "User Management",
+                    Description = "Manage application users"
+                },
+                new PermissionCategory
+                {
+                    Id = bookingManagementCategoryId,
+                    Name = "Booking Management",
+                    Description = "Manage bookings and reservations"
+                }
+            );
+
+            // Seed Permissions
+            modelBuilder.Entity<Permission>().HasData(
+                new Permission
+                {
+                    Id = viewUsersPermissionId,
+                    Code = "USER_VIEW",
+                    Name = "View Users",
+                    Description = "Can view users",
+                    CategoryId = userManagementCategoryId,
+                    CreatedAt = new DateTime(2025, 01, 01),
+                    UpdatedAt = new DateTime(2025, 01, 01),
+                    Deprecated = false
+                },
+                new Permission
+                {
+                    Id = editUsersPermissionId,
+                    Code = "USER_EDIT",
+                    Name = "Edit Users",
+                    Description = "Can edit users",
+                    CategoryId = userManagementCategoryId,
+                    CreatedAt = new DateTime(2025, 01, 01),
+                    UpdatedAt = new DateTime(2025, 01, 01),
+                    Deprecated = false
+                },
+                new Permission
+                {
+                    Id = deleteUsersPermissionId,
+                    Code = "USER_DELETE",
+                    Name = "Delete Users",
+                    Description = "Can delete users",
+                    CategoryId = userManagementCategoryId,
+                    CreatedAt = new DateTime(2025, 01, 01),
+                    UpdatedAt = new DateTime(2025, 01, 01),
+                    Deprecated = false
+                },
+                new Permission
+                {
+                    Id = viewBookingsPermissionId,
+                    Code = "BOOKING_VIEW",
+                    Name = "View Bookings",
+                    Description = "Can view bookings",
+                    CategoryId = bookingManagementCategoryId,
+                    CreatedAt = new DateTime(2025, 01, 01),
+                    UpdatedAt = new DateTime(2025, 01, 01),
+                    Deprecated = false
+                },
+                new Permission
+                {
+                    Id = manageBookingsPermissionId,
+                    Code = "BOOKING_MANAGE",
+                    Name = "Manage Bookings",
+                    Description = "Can manage bookings",
+                    CategoryId = bookingManagementCategoryId,
+                    CreatedAt = new DateTime(2025, 01, 01),
+                    UpdatedAt = new DateTime(2025, 01, 01),
+                    Deprecated = false
+                }
+            );
+
 
 
             // ApplicationUser configuration

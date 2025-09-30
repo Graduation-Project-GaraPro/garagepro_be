@@ -7,16 +7,13 @@ using System.Threading.Tasks;
 
 namespace Dtos.Auth
 {
-    public class LoginDto
+    public class VerifyOtpDto
     {
         [Required]
         [Phone]
         public string PhoneNumber { get; set; }
 
         [Required]
-        [DataType(DataType.Password)]
-        public string Password { get; set; }
-
-        public bool RememberMe { get; set; }
+        public string Token { get; set; }
     }
 }

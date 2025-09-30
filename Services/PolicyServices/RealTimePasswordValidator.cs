@@ -8,7 +8,8 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Services.PolicyServices
 {
-    public class RealTimePasswordValidator<TUser> : IPasswordValidator<TUser> where TUser : ApplicationUser
+    public class RealTimePasswordValidator<TUser> : IPasswordValidator<TUser>
+    where TUser : ApplicationUser
     {
         private readonly ISecurityPolicyService _securityPolicyService;
 
@@ -17,20 +18,35 @@ namespace Services.PolicyServices
             _securityPolicyService = securityPolicyService;
         }
 
-        public async Task<IdentityResult> ValidateAsync(UserManager<TUser> manager, TUser user, string password)
+        public async Task<IdentityResult> ValidateAsync(
+             UserManager<TUser> manager,
+             TUser user,
+             string password)
         {
+            // Gọi service để validate password theo custom security policy
             var result = await _securityPolicyService.ValidatePasswordAsync(password);
 
             if (result.IsValid)
-                return IdentityResult.Success;
-
-            var identityErrors = result.Errors.Select(error => new IdentityError
             {
-                Code = "PasswordPolicyViolation",
-                Description = error
-            });
+                // Password hợp lệ
+                return IdentityResult.Success;
+            }
 
-            return IdentityResult.Failed(identityErrors.ToArray());
+            // Gom tất cả thông báo lỗi từ service
+            var allErrors = result.Errors
+                .SelectMany(kvp => kvp.Value)
+                .ToList();
+
+            // Convert sang IdentityError để Identity xử lý chuẩn
+            var identityErrors = allErrors
+                .Select(msg => new IdentityError
+                {
+                    Code = nameof(RealTimePasswordValidator<TUser>), // hoặc "PasswordPolicyViolation"
+                    Description = msg
+                })
+                .ToArray();
+
+            return IdentityResult.Failed(identityErrors);
         }
     }
-}
+    }
