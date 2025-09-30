@@ -6,32 +6,12 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity;
-
+using BusinessObject.Notifications;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
     {
-        [Required]
-        public Guid RoleId { get; set; }
-
-        [Required]
-        public Guid BranchId { get; set; }
-
-        [Required]
-        [MaxLength(100)]
-        public string FullName { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(100)]
-        [EmailAddress]
-        public override string Email { get; set; } = string.Empty;
-
-        [MaxLength(20)]
-        public override string? PhoneNumber { get; set; }
-
-        [MaxLength(255)]
-        public override string? PasswordHash { get; set; }
-
+        
         [MaxLength(200)]
         public string? AvatarUrl { get; set; }
 
@@ -52,11 +32,16 @@ namespace BusinessObject.Authentication
         // Legacy properties for compatibility
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
         public DateTime? dateOfBirth { get; set; }
 
+        public DateTime? LastPasswordChangeDate { get; set; }
+        
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
+        public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
+        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
         // Custom claims
         //public virtual ICollection<ApplicationUserClaim> Claims { get; set; }
     }

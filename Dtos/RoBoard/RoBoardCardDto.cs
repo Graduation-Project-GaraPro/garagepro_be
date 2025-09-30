@@ -1,0 +1,141 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+
+namespace Dtos.RoBoard
+{
+    public class RoBoardCardDto
+    {
+        public Guid RepairOrderId { get; set; }
+        
+        [Required]
+        [MaxLength(50)]
+        public string RepairOrderType { get; set; }
+        
+        public DateTime ReceiveDate { get; set; }
+        
+        public DateTime? EstimatedCompletionDate { get; set; }
+        
+        public DateTime? CompletionDate { get; set; }
+        
+        public decimal Cost { get; set; }
+        
+        public decimal EstimatedAmount { get; set; }
+        
+        public decimal PaidAmount { get; set; }
+        
+        [Required]
+        [MaxLength(50)]
+        public string PaidStatus { get; set; }
+        
+        public long? EstimatedRepairTime { get; set; }
+        
+        public string Note { get; set; }
+        
+        public DateTime CreatedAt { get; set; }
+        
+        public DateTime? UpdatedAt { get; set; }
+        
+        // Archive Management
+        public bool IsArchived { get; set; }
+        
+        public DateTime? ArchivedAt { get; set; }
+        
+        public string ArchiveReason { get; set; }
+        
+        public string ArchivedBy { get; set; }
+        
+        // Current status information
+        public Guid StatusId { get; set; }
+        
+        public string StatusName { get; set; }
+        
+        // Vehicle information for display
+        public RoBoardVehicleDto Vehicle { get; set; }
+        
+        // Customer information for display
+        public RoBoardCustomerDto Customer { get; set; }
+        
+        // Branch information
+        public RoBoardBranchDto Branch { get; set; }
+        
+        // Current labels assigned to this repair order
+        public List<RoBoardLabelDto> AssignedLabels { get; set; } = new List<RoBoardLabelDto>();
+        
+        // Priority or order within the column
+        public int OrderIndex { get; set; }
+        
+        // Additional display properties
+        public bool IsOverdue => EstimatedCompletionDate.HasValue && 
+                                EstimatedCompletionDate.Value < DateTime.UtcNow && 
+                                CompletionDate == null;
+        
+        public decimal CompletionPercentage => EstimatedAmount > 0 ? (PaidAmount / EstimatedAmount) * 100 : 0;
+        
+        public int DaysInCurrentStatus { get; set; }
+        
+        // Archive and completion tracking (properties defined above in archive management section)
+        
+        // Completion sub-state tracking
+        public bool IsVehiclePickedUp { get; set; }
+        
+        public DateTime? VehiclePickupDate { get; set; }
+        
+        public bool IsFullyPaid { get; set; }
+        
+        public DateTime? FullPaymentDate { get; set; }
+        
+        // Computed completion properties
+        public bool CanBeArchived => StatusName == "Completed" && IsFullyPaid && IsVehiclePickedUp;
+        
+        public string CompletionSubStatus => GetCompletionSubStatus();
+        
+        private string GetCompletionSubStatus()
+        {
+            if (StatusName != "Completed") return "";
+            
+            if (IsFullyPaid && IsVehiclePickedUp) return "Ready to Archive";
+            if (!IsFullyPaid && !IsVehiclePickedUp) return "Pending Payment & Pickup";
+            if (!IsFullyPaid) return "Pending Payment";
+            if (!IsVehiclePickedUp) return "Pending Vehicle Pickup";
+            return "";
+        }
+    }
+    
+    public class RoBoardVehicleDto
+    {
+        public Guid VehicleId { get; set; }
+        
+        public string LicensePlate { get; set; }
+        
+        public string VIN { get; set; }
+        
+        public string BrandName { get; set; }
+        
+        public string ModelName { get; set; }
+        
+        public string ColorName { get; set; }
+    }
+    
+    public class RoBoardCustomerDto
+    {
+        public string UserId { get; set; }
+        
+        public string FullName { get; set; }
+        
+        public string Email { get; set; }
+        
+        public string PhoneNumber { get; set; }
+    }
+    
+    public class RoBoardBranchDto
+    {
+        public Guid BranchId { get; set; }
+        
+        public string BranchName { get; set; }
+        
+        public string Address { get; set; }
+        
+        public string PhoneNumber { get; set; }
+    }
+}

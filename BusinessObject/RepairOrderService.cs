@@ -14,9 +14,11 @@ namespace BusinessObject
         public Guid RepairOrderServiceId { get; set; } = Guid.NewGuid();
 
         [Required]
+        [ForeignKey(nameof(RepairOrder))]
         public Guid RepairOrderId { get; set; }
 
         [Required]
+        [ForeignKey(nameof(Service))]
         public Guid ServiceId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
