@@ -38,16 +38,24 @@ namespace Garage_pro_api.Authorization
                 var role = await _roleManager.FindByNameAsync(roleName);
                 if (role == null) continue;
 
-                // 3. Kiểm tra quyền qua PermissionService (có cache)
-                if (await _permissionService.RoleHasPermissionAsync(role.Id, requirement.PermissionCode))
+                // 3. Kiểm tra nếu role có đủ tất cả quyền
+                bool hasAllPermissions = true;
+                foreach (var code in requirement.PermissionCodes)
+                {
+                    if (!await _permissionService.RoleHasPermissionAsync(role.Id, code))
+                    {
+                        hasAllPermissions = false;
+                        break;
+                    }
+                }
+
+                if (hasAllPermissions)
                 {
                     context.Succeed(requirement);
                     return;
                 }
             }
-
-            // Nếu không role nào có quyền => không set succeed
-            // Authorization sẽ fail tự động
+            // Nếu không role nào đủ quyền => Authorization fail
         }
     }
 }

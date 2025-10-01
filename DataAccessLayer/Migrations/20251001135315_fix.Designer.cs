@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251001135315_fix")]
+    partial class fix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1007,12 +1010,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("GrantedUserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("RoleId", "PermissionId");
-
-                    b.HasIndex("GrantedUserId");
 
                     b.HasIndex("PermissionId");
 
@@ -1886,11 +1884,6 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
                 {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
-                        .WithMany()
-                        .HasForeignKey("GrantedUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("BusinessObject.Roles.Permission", "Permission")
                         .WithMany("RolePermissions")
                         .HasForeignKey("PermissionId")
@@ -1906,8 +1899,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Permission");
 
                     b.Navigation("Role");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>

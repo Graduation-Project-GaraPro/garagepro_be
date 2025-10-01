@@ -72,21 +72,39 @@ namespace DataAccessLayer
         {
             base.OnModelCreating(modelBuilder);
 
-            // 🔑 Composite key cho RolePermission
-            modelBuilder.Entity<RolePermission>()
-                .HasKey(rp => new { rp.RoleId, rp.PermissionId });
+            // Cấu hình bảng RolePermission
+            modelBuilder.Entity<RolePermission>(entity =>
+            {
+                // Khóa chính composite: RoleId + PermissionId
+                entity.HasKey(rp => new { rp.RoleId, rp.PermissionId });
 
-            // Quan hệ RolePermission -> Role
-            modelBuilder.Entity<RolePermission>()
-                .HasOne(rp => rp.Role)
-                .WithMany()
-                .HasForeignKey(rp => rp.RoleId);
+                // Quan hệ RolePermission -> Role
+                entity.HasOne(rp => rp.Role)
+                      .WithMany(r => r.RolePermissions) // chỉ rõ navigation property
+                      .HasForeignKey(rp => rp.RoleId)
+                      .OnDelete(DeleteBehavior.Cascade); // tùy chọn xóa
 
-            // Quan hệ RolePermission -> Permission
-            modelBuilder.Entity<RolePermission>()
-                .HasOne(rp => rp.Permission)
-                .WithMany(p => p.RolePermissions)
-                .HasForeignKey(rp => rp.PermissionId);
+                // Quan hệ RolePermission -> Permission
+                entity.HasOne(rp => rp.Permission)
+                      .WithMany(p => p.RolePermissions)
+                      .HasForeignKey(rp => rp.PermissionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ RolePermission -> User (ai gán quyền)
+                entity.HasOne(rp => rp.User)
+                      .WithMany() // nếu ApplicationUser không có collection RolePermissions
+                      .HasForeignKey(rp => rp.GrantedUserId)
+                      .OnDelete(DeleteBehavior.Restrict); // không xóa user thì quyền vẫn giữ
+            });
+
+            // --- Nếu muốn, bạn có thể cấu hình thêm default value cho CreatedAt/UpdatedAt ---
+            modelBuilder.Entity<ApplicationRole>()
+                .Property(r => r.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            modelBuilder.Entity<Permission>()
+                .Property(p => p.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
 
             // Quan hệ Permission -> Category
             modelBuilder.Entity<Permission>()

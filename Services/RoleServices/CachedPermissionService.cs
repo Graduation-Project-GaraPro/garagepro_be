@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Roles;
+using Dtos.Roles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 
 namespace Services.RoleServices
@@ -23,7 +26,10 @@ namespace Services.RoleServices
             var permissions = await GetPermissionsByRoleIdAsync(roleId);
             return permissions.Contains(permissionCode);
         }
-
+        public async Task<List<Permission>> GetAllPermissionsAsync()
+        {
+            return await _innerService.GetAllPermissionsAsync();
+        }
         public async Task<HashSet<string>> GetPermissionsByRoleIdAsync(string roleId)
         {
             var cacheKey = $"role_permissions_{roleId}";
@@ -39,6 +45,11 @@ namespace Services.RoleServices
         {
             var cacheKey = $"role_permissions_{roleId}";
             _cache.Remove(cacheKey);
+        }
+
+        public async Task<List<PermissionCategoryDto>> GetAllPermissionsGroupedAsync()
+        {
+            return await _innerService.GetAllPermissionsGroupedAsync();
         }
     }
 }

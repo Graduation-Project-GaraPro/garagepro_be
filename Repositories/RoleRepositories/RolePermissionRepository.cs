@@ -19,10 +19,15 @@ namespace Repositories.RoleRepositories
         }
 
         public async Task<List<Permission>> GetPermissionsForRoleAsync(string roleId)
-            => await _context.RolePermissions
+        {
+            return await _context.RolePermissions
                 .Where(rp => rp.RoleId == roleId)
+                .Include(rp => rp.Permission) // include Permission
+                    .ThenInclude(p => p.Category) // include Category của Permission
                 .Select(rp => rp.Permission)
                 .ToListAsync();
+        }
+
 
         public async Task<List<Permission>> GetByRoleIdAsync(string roleId)
         {
@@ -32,7 +37,7 @@ namespace Repositories.RoleRepositories
                 .ToListAsync();
         }
 
-        public async Task AssignPermissionAsync(string roleId, Guid permissionId, string grantedBy)
+        public async Task AssignPermissionAsync(string roleId, Guid permissionId, string grantedBy, string grantedUserId = null)
         {
             var exists = await _context.RolePermissions
                 .AnyAsync(rp => rp.RoleId == roleId && rp.PermissionId == permissionId);
@@ -43,6 +48,7 @@ namespace Repositories.RoleRepositories
                     RoleId = roleId,
                     PermissionId = permissionId,
                     GrantedBy = grantedBy,
+                    GrantedUserId = grantedUserId,
                     GrantedAt = DateTime.UtcNow
                 });
                 await _context.SaveChangesAsync();
@@ -62,6 +68,20 @@ namespace Repositories.RoleRepositories
             await _context.RolePermissions.AddRangeAsync(newRolePermissions);
             await _context.SaveChangesAsync();
         }
+
+        public async Task RemoveAllPermissionsAsync(string roleId)
+        {
+            var rolePermissions = await _context.RolePermissions
+                .Where(rp => rp.RoleId == roleId)
+                .ToListAsync();
+
+            if (rolePermissions.Any())
+            {
+                _context.RolePermissions.RemoveRange(rolePermissions);
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task RemovePermissionAsync(string roleId, Guid permissionId)
         {
             var entity = await _context.RolePermissions

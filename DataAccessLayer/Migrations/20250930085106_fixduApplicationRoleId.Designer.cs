@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250930085106_fixduApplicationRoleId")]
+    partial class fixduApplicationRoleId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1005,14 +1008,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<string>("GrantedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("GrantedUserId")
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("RoleId", "PermissionId");
 
-                    b.HasIndex("GrantedUserId");
+                    b.HasIndex("GrantedBy");
 
                     b.HasIndex("PermissionId");
 
@@ -1888,8 +1888,9 @@ namespace DataAccessLayer.Migrations
                 {
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany()
-                        .HasForeignKey("GrantedUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("GrantedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("BusinessObject.Roles.Permission", "Permission")
                         .WithMany("RolePermissions")

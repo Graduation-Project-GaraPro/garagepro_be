@@ -22,10 +22,15 @@ namespace BusinessObject.Roles
         // Quan hệ tới Permission
         public Permission Permission { get; set; } = null!;
 
-        
+
         public string GrantedBy { get; set; } = null!;
 
-        [ForeignKey(nameof(GrantedBy))]
+
+        public string? GrantedUserId { get; set;  }
+
+
+
+        [ForeignKey(nameof(GrantedUserId))]
         public ApplicationUser User { get; set; } = null!;
 
         // Ngày giờ gán quyền

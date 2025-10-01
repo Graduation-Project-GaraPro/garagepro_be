@@ -4,16 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Roles;
+using Dtos.Auth;
+using Dtos.Roles;
 using Microsoft.AspNetCore.Identity;
 
 namespace Services.RoleServices
 {
     public interface IRoleService
     {
-        Task<List<ApplicationRole>> GetAllRolesAsync();
-        Task<ApplicationRole?> GetRoleByIdAsync(string roleId);
-        Task<ApplicationRole> CreateRoleAsync(string name, string description = "", bool isDefault = false);
-        Task UpdateRoleAsync(string roleId, string newName, string? description = null);
+        Task<List<RoleDto>> GetAllRolesAsync();
+        Task<RoleDto?> GetRoleByIdAsync(string roleId);
+        Task<RoleDto> UpdateRoleAsync(UpdateRoleDto dto);
+        Task<RoleDto> CreateRoleAsync(CreateRoleDto dto);
         Task DeleteRoleAsync(string roleId);
 
         Task<List<Permission>> GetPermissionsForRoleAsync(string roleId);
@@ -24,5 +26,7 @@ namespace Services.RoleServices
 
 
         Task RemovePermissionAsync(string roleId, Guid permissionId);
+
+        Task<List<UserDto>> GetUsersByRoleIdAsync(string roleId);
     }
 }

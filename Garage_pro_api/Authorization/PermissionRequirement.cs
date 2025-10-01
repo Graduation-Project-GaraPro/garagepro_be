@@ -4,11 +4,11 @@ namespace Garage_pro_api.Authorization
 {
     public class PermissionRequirement : IAuthorizationRequirement
     {
-        public string PermissionCode { get; }
+        public IReadOnlyCollection<string> PermissionCodes { get; }
 
-        public PermissionRequirement(string permissionCode)
+        public PermissionRequirement(params string[] permissionCodes)
         {
-            PermissionCode = permissionCode;
+            PermissionCodes = permissionCodes;
         }
     }
 }
