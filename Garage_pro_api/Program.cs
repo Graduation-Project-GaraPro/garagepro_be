@@ -110,6 +110,10 @@ builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
 builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
+// Job repository and service
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobService, Services.JobService>();
+
 
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();

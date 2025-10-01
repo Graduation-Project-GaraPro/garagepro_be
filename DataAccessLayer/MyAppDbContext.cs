@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -188,6 +188,11 @@ namespace DataAccessLayer
                 entity.Property(e => e.Note).HasMaxLength(500);
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CreatedAt).IsRequired();
+                
+                // Customer approval workflow properties
+                entity.Property(e => e.CustomerApprovalNote).HasMaxLength(1000);
+                entity.Property(e => e.AssignedByManagerId).HasMaxLength(450); // Standard ASP.NET Identity user ID length
+                entity.Property(e => e.RevisionReason).HasMaxLength(500); // Reason for estimate revision
 
                 entity.HasMany(j => j.JobTechnicians)
                       .WithOne(jt => jt.Job)
