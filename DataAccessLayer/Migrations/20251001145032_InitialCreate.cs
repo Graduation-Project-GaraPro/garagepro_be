@@ -757,7 +757,16 @@ namespace DataAccessLayer.Migrations
                     Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Level = table.Column<int>(type: "int", nullable: false)
+                    Level = table.Column<int>(type: "int", nullable: false),
+                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CustomerApprovalNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    AssignedByManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RevisionCount = table.Column<int>(type: "int", nullable: false),
+                    OriginalJobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RevisionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>
                 {
