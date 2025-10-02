@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using BusinessObject.Notifications;
 using BusinessObject.Technician;
 using BusinessObject.Roles;
+using BusinessObject.Branches;
 
 namespace DataAccessLayer
 {
@@ -65,7 +66,7 @@ namespace DataAccessLayer
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-        
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -166,7 +167,7 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
             });
 
-           
+
             // Notifications configuration
             modelBuilder.Entity<Notification>(entity =>
             {
@@ -243,7 +244,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.Note).HasMaxLength(500);
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CreatedAt).IsRequired();
-                
+
                 // Customer approval workflow properties
                 entity.Property(e => e.CustomerApprovalNote).HasMaxLength(1000);
                 entity.Property(e => e.AssignedByManagerId).HasMaxLength(450); // Standard ASP.NET Identity user ID length
@@ -536,7 +537,7 @@ namespace DataAccessLayer
             });
 
             // Configure relationships to prevent cascade delete cycles
-            
+
             // RepairOrder relationships - prevent cascade delete conflicts
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
@@ -751,6 +752,35 @@ namespace DataAccessLayer
                       .HasForeignKey(ps => ps.PartId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+
+
+            // Many-to-many Branch <-> Service
+            modelBuilder.Entity<BranchService>()
+                .HasKey(bs => new { bs.BranchId, bs.ServiceId });
+
+            modelBuilder.Entity<BranchService>()
+                .HasOne(bs => bs.Branch)
+                .WithMany(b => b.BranchServices)
+                .HasForeignKey(bs => bs.BranchId);
+
+            modelBuilder.Entity<BranchService>()
+                .HasOne(bs => bs.Service)
+                .WithMany(s => s.BranchServices)
+                .HasForeignKey(bs => bs.ServiceId);
+
+            // Cấu hình OperatingHours
+            modelBuilder.Entity<Branch>()
+                .OwnsOne(b => b.OperatingHours, oh =>
+                {
+                    oh.OwnsOne(d => d.Monday);
+                    oh.OwnsOne(d => d.Tuesday);
+                    oh.OwnsOne(d => d.Wednesday);
+                    oh.OwnsOne(d => d.Thursday);
+                    oh.OwnsOne(d => d.Friday);
+                    oh.OwnsOne(d => d.Saturday);
+                    oh.OwnsOne(d => d.Sunday);
+                });
+           
         }
     }
 }

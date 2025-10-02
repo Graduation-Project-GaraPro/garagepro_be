@@ -5,6 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Branches;
 
 namespace BusinessObject
 {
@@ -50,5 +51,7 @@ namespace BusinessObject
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
         public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
+        // Many-to-many
+        public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
     }
 }

@@ -5,25 +5,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject
+namespace BusinessObject.Branches
 {
     public class Branch
     {
         [Key]
         public Guid BranchId { get; set; } = Guid.NewGuid();
 
-        [Required]
-        public Guid UserId { get; set; }
-
-        [Required]
-        [MaxLength(100)]
+        [Required, MaxLength(100)]
         public string BranchName { get; set; }
 
         [MaxLength(20)]
         public string PhoneNumber { get; set; }
 
-        [MaxLength(100)]
-        [EmailAddress]
+        [MaxLength(100), EmailAddress]
         public string Email { get; set; }
 
         [MaxLength(200)]
@@ -39,8 +34,13 @@ namespace BusinessObject
 
         public DateTime? UpdatedAt { get; set; }
 
+        public OperatingHours OperatingHours { get; set; } = new OperatingHours();
+
         // Navigation properties
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
         public virtual ICollection<Part> Parts { get; set; } = null!;
+
+        // Many-to-many
+        public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
     }
 }
