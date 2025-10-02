@@ -13,9 +13,6 @@ namespace BusinessObject
         public Guid BranchId { get; set; } = Guid.NewGuid();
 
         [Required]
-        public Guid UserId { get; set; }
-
-        [Required]
         [MaxLength(100)]
         public string BranchName { get; set; }
 
@@ -42,5 +39,6 @@ namespace BusinessObject
         // Navigation properties
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
         public virtual ICollection<Part> Parts { get; set; } = null!;
+        public virtual ICollection<Service> Services { get; set; } = new List<Service>();
     }
 }

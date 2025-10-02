@@ -53,9 +53,6 @@ namespace BusinessObject
 
         public DateTime? ArchivedAt { get; set; }
 
-        [MaxLength(500)]
-        public string ArchiveReason { get; set; }
-
         public string ArchivedByUserId { get; set; }
 
         [Required]
