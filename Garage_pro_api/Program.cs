@@ -101,12 +101,14 @@ builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
 
 if (builder.Environment.IsDevelopment())
 {
-    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
+    //builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
+    builder.Services.AddHttpClient<SpeedSmsSender>();
+    builder.Services.AddTransient<ISmsSender, SpeedSmsSender>();
 }
 else
 {
-    // Production: ??ng ký Twilio ho?c d?ch v? SMS th?t
-    // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+    builder.Services.AddHttpClient<SpeedSmsSender>();
+    builder.Services.AddTransient<ISmsSender, SpeedSmsSender>();
 }
 
 // JWT Authentication
@@ -176,6 +178,8 @@ builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
+
+
 
 //builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
 //builder.Services.AddScoped<ISystemLogService, SystemLogService>();
