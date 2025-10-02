@@ -90,14 +90,63 @@ namespace Garage_pro_api.DbInit
                 }
             }
 
-            // 3. Assign default permissions to roles
+            // 3. Seed Permission Categories
+            var categories = new List<PermissionCategory>
+                {
+                    new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
+                    new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
+                    new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" }
+                };
+
+            foreach (var cat in categories)
+            {
+                if (!await _context.PermissionCategories.AnyAsync(c => c.Name == cat.Name))
+                {
+                    await _context.PermissionCategories.AddAsync(cat);
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            // Lấy lại categories để đảm bảo có Id từ DB
+            categories = await _context.PermissionCategories.ToListAsync();
+            var userCatId = categories.First(c => c.Name == "User Management").Id;
+            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
+            var RoleCatId = categories.First(c => c.Name == "Role Management").Id;
+
+            // 4. Seed Permissions
+            var defaultPermissions = new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
+
+
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Role create", Description = "Can create role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_UPDATE", Name = "Role update", Description = "Can update role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Role delete", Description = "Can delete role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "Role View", Description = "Can View role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASIGN", Name = "permission asign", Description = "Can view role", CategoryId = RoleCatId },
+
+                new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view bookings", CategoryId = bookingCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage bookings", CategoryId = bookingCatId }
+            };
+
+            foreach (var perm in defaultPermissions)
+            {
+                if (!await _context.Permissions.AnyAsync(p => p.Code == perm.Code))
+                {
+                    await _context.Permissions.AddAsync(perm);
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            // 5. Assign default permissions to roles
             var roles = await _roleManager.Roles.ToListAsync();
             var permissions = await _context.Permissions.ToListAsync();
 
-            // Mapping: ai có quyền gì
             var rolePermissionMap = new Dictionary<string, string[]>
             {
-                { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE" } },
+                { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE", "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN" } },
                 { "Manager", new[] { "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE" } },
                 { "Customer", new[] { "BOOKING_VIEW" } },
                 { "Technician", new[] { "BOOKING_MANAGE" } }
@@ -124,7 +173,7 @@ namespace Garage_pro_api.DbInit
                         {
                             RoleId = role.Id,
                             PermissionId = perm.Id,
-                            GrantedBy = "SYSTEM", // hoặc AdminId nếu có
+                            GrantedBy = "SYSTEM",
                             GrantedAt = DateTime.UtcNow
                         };
 
@@ -135,6 +184,7 @@ namespace Garage_pro_api.DbInit
 
             await _context.SaveChangesAsync();
         }
+
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Authentication;
 using Dtos.Roles;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -19,13 +20,13 @@ namespace Garage_pro_api.Controllers
             _roleService = roleService;
             _userManager = userManager;
         }
-
+        [Authorize(Policy = "ROLE_VIEW")]
         [HttpGet]
         public async Task<IActionResult> GetAllRoles()
             => Ok(await _roleService.GetAllRolesAsync());
 
-        
 
+        [Authorize(Policy = "ROLE_VIEW")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetRoleById(string id)
         {
@@ -33,6 +34,7 @@ namespace Garage_pro_api.Controllers
             if (role == null) return NotFound();
             return Ok(role);
         }
+        [Authorize(Policy = "ROLE_CREATE")]
 
         [HttpPost]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto request)
@@ -57,6 +59,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message});
             }
         }
+        [Authorize(Policy = "ROLE_UPDATE")]
 
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateRole(string id, [FromBody] UpdateRoleDto request)
@@ -84,14 +87,14 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message =  ex.Message });
             }
         }
-
+        [Authorize(Policy = "ROLE_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(string id)
         {
             await _roleService.DeleteRoleAsync(id);
             return NoContent();
         }
-
+        [Authorize(Policy = "ROLE_VIEW")]
         [HttpGet("{roleId}/users")]
         public async Task<IActionResult> GetUsersByRole(string roleId)
         {

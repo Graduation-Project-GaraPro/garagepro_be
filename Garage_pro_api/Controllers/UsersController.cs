@@ -15,7 +15,7 @@ namespace Garage_pro_api.Controllers
         {
             _userService = userService;
         }
-        [Authorize(Policy = "USER_VIEW,USER_CREATE")]
+        [Authorize(Policy = "USER_VIEW")]
         // GET: api/users
         [HttpGet]
         public async Task<IActionResult> GetUsers()
