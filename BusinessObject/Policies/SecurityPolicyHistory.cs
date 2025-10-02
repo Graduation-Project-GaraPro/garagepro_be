@@ -17,9 +17,9 @@ namespace BusinessObject.Policies
 
         // FK đến Users (người thực hiện thay đổi)
         public string? ChangedBy { get; set; }
-        public virtual ApplicationUser ChangedByUser { get; set; }
+        public virtual ApplicationUser? ChangedByUser { get; set; }
 
-        public DateTime ChangedAt { get; set; } = DateTime.UtcNow;
+        public DateTime ChangedAt { get; set; } = DateTime.Now;
 
         public string? ChangeSummary { get; set; }
         public string? PreviousValues { get; set; } // JSON cũ

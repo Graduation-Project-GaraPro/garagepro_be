@@ -1,4 +1,5 @@
-﻿﻿using BusinessObject.Technician;
+﻿﻿﻿﻿﻿using BusinessObject.Enums;
+using BusinessObject.Technician;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -40,6 +41,19 @@ namespace BusinessObject
         public DateTime? UpdatedAt { get; set; }
 
         public int Level { get; set; }
+
+        // Customer approval workflow properties
+        public DateTime? SentToCustomerAt { get; set; }
+        public DateTime? CustomerResponseAt { get; set; }
+        public string? CustomerApprovalNote { get; set; }
+        public string? AssignedByManagerId { get; set; }  // UserId of manager who assigned
+        public DateTime? AssignedAt { get; set; }
+        
+        // Estimate expiration and revision properties
+        public DateTime? EstimateExpiresAt { get; set; }
+        public int RevisionCount { get; set; } = 0;  // Track how many times estimate was revised
+        public Guid? OriginalJobId { get; set; }  // Link to original job if this is a revision
+        public string? RevisionReason { get; set; }  // Why the estimate was revised
 
         // Navigation properties
         public virtual Service Service { get; set; }

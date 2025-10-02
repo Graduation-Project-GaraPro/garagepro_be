@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 
 namespace Dtos.Auth
 {
-    public class RegisterDto
+    public class RegisterByPhoneDto
     {
         [Required]
-        [EmailAddress]
-        public string Email { get; set; }
+        [Phone(ErrorMessage = "Invalid phone number")]
+        public string PhoneNumber { get; set; }
 
         [Required]
         [DataType(DataType.Password)]

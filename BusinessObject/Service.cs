@@ -47,8 +47,8 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual ServiceCategory ServiceCategory { get; set; }
-        public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; }
-        public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
-        public virtual ICollection<Job> Jobs { get; set; }
+        public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
+        public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
+        public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
     }
 }

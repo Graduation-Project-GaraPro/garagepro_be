@@ -27,8 +27,7 @@ namespace Dtos.Policies
 
         public bool MfaRequired { get; set; }
 
-        [Range(1, 365, ErrorMessage = "Password expiry must be between 1 and 365 days")]
-        public int PasswordExpiryDays { get; set; }
+        [Range(1, 365, ErrorMessage = "Password expiry must be between 1 and 365 days")] public int PasswordExpiryDays { get; set; }
 
         public bool EnableBruteForceProtection { get; set; }
 
