@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251002080720_RemoveUserIdFromBranch")]
+    partial class RemoveUserIdFromBranch
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1143,39 +1146,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("ServiceInspections");
                 });
 
-            modelBuilder.Entity("BusinessObject.ServicePart", b =>
-                {
-                    b.Property<Guid>("ServicePartId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("PartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ServicePartId");
-
-                    b.HasIndex("PartId");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("ServiceParts");
-                });
-
             modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
                 {
                     b.Property<int>("Id")
@@ -2001,25 +1971,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Service");
                 });
 
-            modelBuilder.Entity("BusinessObject.ServicePart", b =>
-                {
-                    b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-
-                    b.Navigation("Service");
-                });
-
             modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
                 {
                     b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
@@ -2269,8 +2220,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("PartSpecifications");
 
                     b.Navigation("RepairOrderServiceParts");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
@@ -2321,8 +2270,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderServices");
 
                     b.Navigation("ServiceInspections");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceCategory", b =>

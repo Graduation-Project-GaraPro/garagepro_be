@@ -42,6 +42,7 @@ namespace DataAccessLayer
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
         public DbSet<JobPart> JobParts { get; set; }
+        public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<SecurityLog> SecurityLogs { get; set; }
@@ -638,6 +639,13 @@ namespace DataAccessLayer
                 .HasForeignKey(s => s.ServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Service-Branch relationship
+            modelBuilder.Entity<Service>()
+                .HasOne(s => s.Branch)
+                .WithMany(b => b.Services)
+                .HasForeignKey(s => s.BranchId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Part-PartCategory relationship
             modelBuilder.Entity<Part>()
                 .HasOne(p => p.PartCategory)
@@ -781,6 +789,23 @@ namespace DataAccessLayer
                     oh.OwnsOne(d => d.Sunday);
                 });
            
+            // ServicePart configuration
+            modelBuilder.Entity<ServicePart>(entity =>
+            {
+                entity.HasKey(e => e.ServicePartId);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt).IsRequired();
+
+                entity.HasOne(sp => sp.Service)
+                      .WithMany(s => s.ServiceParts)
+                      .HasForeignKey(sp => sp.ServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sp => sp.Part)
+                      .WithMany(p => p.ServiceParts)
+                      .HasForeignKey(sp => sp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
         }
     }
 }

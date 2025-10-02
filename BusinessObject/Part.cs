@@ -40,9 +40,7 @@ namespace BusinessObject
         public virtual ICollection<JobPart> JobParts { get; set; } = new List<JobPart>();
         public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
-
-        // Many-to-many with Branch
-        public virtual ICollection<BranchPart> BranchParts { get; set; } = new List<BranchPart>();
+        public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
     }
 
 }
