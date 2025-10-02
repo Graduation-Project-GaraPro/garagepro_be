@@ -41,8 +41,8 @@ namespace BusinessObject
 
         public bool IsAdvanced { get; set; } = false;
 
-        [Required]
-        public Guid BranchId { get; set; }
+        
+        public Guid? BranchId { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -51,7 +51,7 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual ServiceCategory ServiceCategory { get; set; }
-        public virtual Branch Branch { get; set; }
+        public virtual Branch? Branch { get; set; }
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
         public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();

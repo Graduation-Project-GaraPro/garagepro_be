@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Authentication;
 
 namespace BusinessObject.Branches
 {
@@ -22,7 +23,13 @@ namespace BusinessObject.Branches
         public string Email { get; set; }
 
         [MaxLength(200)]
-        public string Address { get; set; }
+        public string Street { get; set; }
+        [MaxLength(100)]
+        public string Ward { get; set; }
+        [MaxLength(100)]
+        public string District { get; set; }
+        [MaxLength(100)]
+        public string City { get; set; }
 
         [MaxLength(500)]
         public string Description { get; set; }
@@ -34,13 +41,17 @@ namespace BusinessObject.Branches
 
         public DateTime? UpdatedAt { get; set; }
 
-        public OperatingHours OperatingHours { get; set; } = new OperatingHours();
+        public virtual ICollection<OperatingHour> OperatingHours { get; set; } = new List<OperatingHour>();
 
         // Navigation properties
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
         public virtual ICollection<Part> Parts { get; set; } = null!;
+        public virtual ICollection<ApplicationUser> Staffs { get; set; } = new List<ApplicationUser>();
 
         // Many-to-many
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
+        
     }
+
+
 }

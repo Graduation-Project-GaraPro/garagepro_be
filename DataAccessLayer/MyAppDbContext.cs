@@ -639,12 +639,12 @@ namespace DataAccessLayer
                 .HasForeignKey(s => s.ServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Service-Branch relationship
-            modelBuilder.Entity<Service>()
-                .HasOne(s => s.Branch)
-                .WithMany(b => b.Services)
-                .HasForeignKey(s => s.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
+            //// Service-Branch relationship
+            //modelBuilder.Entity<Service>()
+            //    .HasOne(s => s.Branch)
+            //    .WithMany(b => b.Services)
+            //    .HasForeignKey(s => s.BranchId)
+            //    .OnDelete(DeleteBehavior.Restrict);
 
             // Part-PartCategory relationship
             modelBuilder.Entity<Part>()
@@ -769,25 +769,14 @@ namespace DataAccessLayer
             modelBuilder.Entity<BranchService>()
                 .HasOne(bs => bs.Branch)
                 .WithMany(b => b.BranchServices)
-                .HasForeignKey(bs => bs.BranchId);
+                .HasForeignKey(bs => bs.BranchId)
+                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
 
             modelBuilder.Entity<BranchService>()
                 .HasOne(bs => bs.Service)
                 .WithMany(s => s.BranchServices)
-                .HasForeignKey(bs => bs.ServiceId);
-
-            // Cấu hình OperatingHours
-            modelBuilder.Entity<Branch>()
-                .OwnsOne(b => b.OperatingHours, oh =>
-                {
-                    oh.OwnsOne(d => d.Monday);
-                    oh.OwnsOne(d => d.Tuesday);
-                    oh.OwnsOne(d => d.Wednesday);
-                    oh.OwnsOne(d => d.Thursday);
-                    oh.OwnsOne(d => d.Friday);
-                    oh.OwnsOne(d => d.Saturday);
-                    oh.OwnsOne(d => d.Sunday);
-                });
+                .HasForeignKey(bs => bs.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
            
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
@@ -806,6 +795,13 @@ namespace DataAccessLayer
                       .HasForeignKey(sp => sp.PartId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+            // branch 1 -> application User
+
+            modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.Branch)
+            .WithMany(b => b.Staffs)
+            .HasForeignKey(u => u.BranchId)
+            .OnDelete(DeleteBehavior.SetNull); // Hoặc Cascade nếu muốn xóa user khi branch bị xóa
         }
     }
 }
