@@ -16,7 +16,15 @@ using Services.Authentication;
 using Garage_pro_api.Middlewares;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using BusinessObject.Policies;
-
+using Repositories.RoleRepositories;
+using Services.RoleServices;
+using Garage_pro_api.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using Garage_pro_api.Mapper;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Google;
+using Services.SmsSenders;
+using BusinessObject.Roles;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -24,11 +32,52 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    // Thêm thông tin cho Swagger UI
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "My API",
+        Version = "v1"
+    });
+
+    // Thêm cấu hình cho Bearer Token
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+});
+
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
 {
     options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
@@ -45,6 +94,16 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<MyAppDbContext>()
 .AddDefaultTokenProviders()
 .AddPasswordValidator<RealTimePasswordValidator<ApplicationUser>>();
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
+}
+else
+{
+    // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
+    // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+}
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -66,20 +125,25 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero // No tolerance for expiration time
+        ClockSkew = TimeSpan.Zero
     };
 
     options.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = context =>
         {
-            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            if (context.Exception is SecurityTokenExpiredException)
             {
                 context.Response.Headers.Add("Token-Expired", "true");
             }
             return Task.CompletedTask;
         }
     };
+})
+.AddGoogle(googleOptions =>
+{
+    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -114,7 +178,10 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService, Services.JobService>();
 
-
+// Role and Permission services
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+builder.Services.AddScoped<IPermissionService, PermissionService>(); // This was missing
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -126,13 +193,24 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+// Đăng ký Authorization Handler
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+// Đăng ký Policy Provider thay thế mặc định
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder  
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 
-
-
-
-
 var app = builder.Build();
+app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -144,7 +222,6 @@ app.UseSecurityPolicyEnforcement();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 // Initialize database
 

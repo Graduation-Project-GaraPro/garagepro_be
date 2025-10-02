@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,10 +11,11 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using BusinessObject.Notifications;
 using BusinessObject.Technician;
+using BusinessObject.Roles;
 
 namespace DataAccessLayer
 {
-    public class MyAppDbContext : IdentityDbContext<ApplicationUser>
+    public class MyAppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
     {
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
@@ -49,9 +50,6 @@ namespace DataAccessLayer
         public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
         public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
-
-
-
         // Notification
         public DbSet<CategoryNotification> CategoryNotifications { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -63,12 +61,69 @@ namespace DataAccessLayer
         public DbSet<VehicleLookup> VehicleLookups { get; set; }
         public DbSet<Specifications> Specifications { get; set; } 
         public DbSet<SpecificationsData> SpecificationsData { get; set; }
+
+        public DbSet<PermissionCategory> PermissionCategories { get; set; }
+        public DbSet<Permission> Permissions { get; set; }
+        public DbSet<RolePermission> RolePermissions { get; set; }
+        
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            
+            // Explicitly configure the ApplicationRole properties to ensure they map correctly
+            modelBuilder.Entity<ApplicationRole>(entity =>
+            {
+                entity.Property(e => e.Description).HasMaxLength(500);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(e => e.UpdatedAt).IsRequired(false);
+                entity.Property(e => e.Users).HasDefaultValue(0);
+            });
 
+            // Cấu hình bảng RolePermission
+            modelBuilder.Entity<RolePermission>(entity =>
+            {
+                // Khóa chính composite: RoleId + PermissionId
+                entity.HasKey(rp => new { rp.RoleId, rp.PermissionId });
+
+                // Quan hệ RolePermission -> Role
+                entity.HasOne(rp => rp.Role)
+                      .WithMany(r => r.RolePermissions) // chỉ rõ navigation property
+                      .HasForeignKey(rp => rp.RoleId)
+                      .OnDelete(DeleteBehavior.Cascade); // tùy chọn xóa
+
+                // Quan hệ RolePermission -> Permission
+                entity.HasOne(rp => rp.Permission)
+                      .WithMany(p => p.RolePermissions)
+                      .HasForeignKey(rp => rp.PermissionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Quan hệ RolePermission -> User (ai gán quyền)
+                entity.HasOne(rp => rp.User)
+                      .WithMany() // nếu ApplicationUser không có collection RolePermissions
+                      .HasForeignKey(rp => rp.GrantedUserId)
+                      .OnDelete(DeleteBehavior.Restrict); // không xóa user thì quyền vẫn giữ
+            });
+
+            // --- Nếu muốn, bạn có thể cấu hình thêm default value cho CreatedAt/UpdatedAt ---
+            modelBuilder.Entity<Permission>()
+                .Property(p => p.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            // Quan hệ Permission -> Category
+            modelBuilder.Entity<Permission>()
+                .HasOne(p => p.Category)
+                .WithMany(c => c.Permissions)
+                .HasForeignKey(p => p.CategoryId);
+
+            // 🔧 Cấu hình tự sinh Guid cho PermissionCategory.Id
+            modelBuilder.Entity<PermissionCategory>()
+                .Property(pc => pc.Id)
+                .HasDefaultValueSql("NEWSEQUENTIALID()"); // hoặc NEWID()
+
+            // 🔧 Cấu hình tự sinh Guid cho Permission.Id
+            modelBuilder.Entity<Permission>()
+                .Property(p => p.Id)
+                .HasDefaultValueSql("NEWSEQUENTIALID()");
 
             // ApplicationUser configuration
             modelBuilder.Entity<ApplicationUser>(b =>
@@ -480,7 +535,6 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-
             // Configure relationships to prevent cascade delete cycles
             
             // RepairOrder relationships - prevent cascade delete conflicts
@@ -619,7 +673,7 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(ros => ros.Service)
-                      .WithMany()
+                      .WithMany(s => s.RepairOrderServices)
                       .HasForeignKey(ros => ros.ServiceId)
                       .OnDelete(DeleteBehavior.Restrict);
 
@@ -644,7 +698,7 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(rosp => rosp.Part)
-                      .WithMany()
+                      .WithMany(p => p.RepairOrderServiceParts)
                       .HasForeignKey(rosp => rosp.PartId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
@@ -657,7 +711,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(si => si.Service)
-                      .WithMany()
+                      .WithMany(s => s.ServiceInspections)
                       .HasForeignKey(si => si.ServiceId)
                       .OnDelete(DeleteBehavior.Restrict);
 
@@ -675,7 +729,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(pi => pi.Part)
-                      .WithMany()
+                      .WithMany(p => p.PartInspections)
                       .HasForeignKey(pi => pi.PartId)
                       .OnDelete(DeleteBehavior.Restrict);
 

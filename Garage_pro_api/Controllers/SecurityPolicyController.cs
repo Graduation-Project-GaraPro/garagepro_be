@@ -1,4 +1,6 @@
-﻿using BusinessObject.Authentication;
+﻿using System.Text.Json;
+using BusinessObject;
+using BusinessObject.Authentication;
 using BusinessObject.Policies;
 using Dtos.Policies;
 using Microsoft.AspNetCore.Http;
@@ -34,6 +36,45 @@ namespace Garage_pro_api.Controllers
             return Ok(MapToResponse(policy));
         }
 
+
+        // PUT: api/securitypolicies/{policyId}/revert-to-snapshot/{historyId}
+        [HttpPut("revert-to-snapshot/{historyId}")]
+        public async Task<IActionResult> RevertToSnapshot(Guid historyId)
+        {
+            try
+            {
+                var policy = await _securityPolicyService.RevertToSnapshotAsync(historyId);
+                return Ok(policy);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // PUT: api/securitypolicies/revert-to-previous/{historyId}
+        [HttpPut("revert-to-previous/{historyId}")]
+        public async Task<IActionResult> RevertToPrevious(Guid historyId)
+        {
+            try
+            {
+                var policy = await _securityPolicyService.UndoChangeAsync(historyId);
+                return Ok(policy);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         // PUT: api/admin/securitypolicy
         [HttpPut]
         public async Task<IActionResult> UpdateSecurityPolicy(UpdateSecurityPolicyRequest request)
@@ -67,7 +108,7 @@ namespace Garage_pro_api.Controllers
                     request.ChangeSummary
                 );
 
-                return Ok(new { message = "Security policy updated successfully" });
+                return Ok(new { message = "Security policy updated successfully" , updatedPolicy});
             }
             catch (ArgumentException ex)
             {
@@ -77,6 +118,28 @@ namespace Garage_pro_api.Controllers
             {
                 return BadRequest(new { error = ex.Message });
             }
+        }
+
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetAllHistory([FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? search = null,
+            [FromQuery] string? changedBy = null,
+            [FromQuery] DateTime? dateFrom = null,
+            [FromQuery] DateTime? dateTo = null)
+        {
+            var response = await _securityPolicyService.GetAuditHistoryAsync(page, pageSize, search, changedBy, dateFrom, dateTo);
+            return Ok(response);
+        }
+        [HttpGet("{historyId}/history")]
+        public async Task<IActionResult> GetHistory(Guid historyId)
+        {
+            var history = await _securityPolicyService.GetHistoryAsync(historyId);
+            if (history == null)
+                return NotFound("No history found for this policy.");
+
+            return Ok(history);
         }
 
         // GET: api/admin/securitypolicy/history

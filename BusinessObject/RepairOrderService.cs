@@ -36,6 +36,6 @@ namespace BusinessObject
         // Navigation properties
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual Service Service { get; set; }
-        public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
+        public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
     }
 }

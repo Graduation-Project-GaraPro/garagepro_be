@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BusinessObject.Policies;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Repositories.PolicyRepositories
 {
@@ -30,10 +31,66 @@ namespace Repositories.PolicyRepositories
         {
             await _db.SecurityPolicyHistories.AddAsync(history);
         }
+        public async Task<SecurityPolicyHistory> GetHistoryAsync(Guid historyId)
+        {
+            return await _db.SecurityPolicyHistories
+                .FirstOrDefaultAsync(ht => ht.HistoryId == historyId)
+                ;
+        }
 
+
+        public async Task<IEnumerable<SecurityPolicyHistory>> GetAllHistoryAsync()
+        {
+            return await _db.SecurityPolicyHistories
+
+                .Include(h => h.ChangedByUser)
+                .OrderByDescending(h => h.ChangedAt)
+                .ToListAsync();
+        }
         public async Task SaveChangesAsync()
         {
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<(IEnumerable<SecurityPolicyHistory> Items, int TotalCount)> GetAuditHistoryAsync(
+             int page, int pageSize, string? search, string? changedBy, DateTime? dateFrom, DateTime? dateTo)
+        {
+            var query = _db.SecurityPolicyHistories
+                .Include(h => h.Policy)
+                .Include(h => h.ChangedByUser)
+                .AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(changedBy))
+                query = query.Where(h => h.ChangedBy == changedBy);
+
+            if (dateFrom.HasValue)
+                query = query.Where(h => h.ChangedAt >= dateFrom.Value);
+
+            if (dateTo.HasValue)
+                query = query.Where(h => h.ChangedAt <= dateTo.Value);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(h =>
+                    (h.ChangeSummary != null && EF.Functions.Like(h.ChangeSummary, $"%{search}%")) ||
+                    (h.PreviousValues != null && EF.Functions.Like(h.PreviousValues, $"%{search}%")) ||
+                    (h.NewValues != null && EF.Functions.Like(h.NewValues, $"%{search}%")));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(h => h.ChangedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _db.Database.BeginTransactionAsync();
         }
     }
 }

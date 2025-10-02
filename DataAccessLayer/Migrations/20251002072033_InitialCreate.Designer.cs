@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251002062006_InitialCreate")]
+    [Migration("20251002072033_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -842,9 +842,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ServiceId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<decimal>("ServicePrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -853,8 +850,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("RepairOrderId");
 
                     b.HasIndex("ServiceId");
-
-                    b.HasIndex("ServiceId1");
 
                     b.ToTable("RepairOrderServices");
                 });
@@ -876,9 +871,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("PartId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
@@ -898,11 +890,144 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.HasIndex("PartId1");
-
                     b.HasIndex("RepairOrderServiceId");
 
                     b.ToTable("RepairOrderServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Users")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("Deprecated")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.PermissionCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PermissionCategories");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("GrantedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GrantedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GrantedUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("GrantedUserId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>
@@ -1010,9 +1135,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ServiceId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1023,8 +1145,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("InspectionId");
 
                     b.HasIndex("ServiceId");
-
-                    b.HasIndex("ServiceId1");
 
                     b.ToTable("ServiceInspections");
                 });
@@ -1399,33 +1519,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Vehicles");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -1655,7 +1748,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
+                        .WithMany("PartInspections")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1767,14 +1860,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany()
+                        .WithMany("RepairOrderServices")
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", null)
-                        .WithMany("RepairOrderServices")
-                        .HasForeignKey("ServiceId1");
 
                     b.Navigation("RepairOrder");
 
@@ -1784,14 +1873,10 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.RepairOrderServicePart", b =>
                 {
                     b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
+                        .WithMany("RepairOrderServiceParts")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Part", null)
-                        .WithMany("RepairOrderServiceParts")
-                        .HasForeignKey("PartId1");
 
                     b.HasOne("BusinessObject.RepairOrderService", "RepairOrderService")
                         .WithMany("RepairOrderServiceParts")
@@ -1802,6 +1887,43 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Part");
 
                     b.Navigation("RepairOrderService");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.HasOne("BusinessObject.Roles.PermissionCategory", "Category")
+                        .WithMany("Permissions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("GrantedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BusinessObject.Roles.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>
@@ -1834,14 +1956,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany()
+                        .WithMany("ServiceInspections")
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", null)
-                        .WithMany("ServiceInspections")
-                        .HasForeignKey("ServiceId1");
 
                     b.Navigation("Inspection");
 
@@ -1987,7 +2105,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2014,7 +2132,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2090,6 +2208,8 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("JobParts");
 
+                    b.Navigation("PartInspections");
+
                     b.Navigation("PartSpecifications");
 
                     b.Navigation("RepairOrderServiceParts");
@@ -2119,6 +2239,21 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.RepairOrderService", b =>
                 {
                     b.Navigation("RepairOrderServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.PermissionCategory", b =>
+                {
+                    b.Navigation("Permissions");
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>
