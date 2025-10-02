@@ -16,6 +16,8 @@ using Services.Authentication;
 using Garage_pro_api.Middlewares;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using BusinessObject.Policies;
+using Repositories.Technician;
+using Services.Technician;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +26,48 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    // Thêm thông tin cho Swagger UI
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "My API",
+        Version = "v1"
+    });
+
+    // Thêm c?u hình cho Bearer Token
+    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
+    });
+
+    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
+
+//builder.Services.AddAutoMapper(cfg =>
+//{
+//    cfg.AddProfile<MappingProfile>();
+//});
+
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -66,7 +109,8 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero // No tolerance for expiration time
+        // ClockSkew = TimeSpan.Zero // No tolerance for expiration time
+        ClockSkew = TimeSpan.FromMinutes(5)
     };
 
     options.Events = new JwtBearerEvents
@@ -110,7 +154,9 @@ builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
 builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
-
+// Technician repository and service
+builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
+builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -123,9 +169,6 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
 builder.Services.AddEndpointsApiExplorer();
-
-
-
 
 
 var app = builder.Build();

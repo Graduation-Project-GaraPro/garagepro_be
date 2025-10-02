@@ -24,7 +24,7 @@ namespace BusinessObject
         [MaxLength(100)]
         public string JobName { get; set; }
 
-        public JobStatus Status { get; set; } = JobStatus.Pending;
+        public JobStatus Status { get; set; } = JobStatus.New;
 
         public DateTime? Deadline { get; set; }
 

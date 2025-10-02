@@ -12,6 +12,7 @@ namespace BusinessObject
         InProgress = 1,
         Completed = 2,
         ReviewRequired = 3,
-        Approved = 4
+        Approved = 4, 
+        New = 5
     }
 }

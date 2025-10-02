@@ -9,7 +9,8 @@ namespace BusinessObject
     public enum JobStatus
     {
         Pending = 0,
-        InProgress = 1,
-        Completed = 2
+        New = 1,
+        InProgress = 2,
+        Completed = 3
     }
 }

@@ -18,7 +18,7 @@ namespace BusinessObject
         [Required]
         public Guid TechnicianId { get; set; }
 
-        public InspectionStatus Status { get; set; } = InspectionStatus.Pending;
+        public InspectionStatus Status { get; set; } = InspectionStatus.New;
 
         [MaxLength(500)]
         public string CustomerConcern { get; set; }
