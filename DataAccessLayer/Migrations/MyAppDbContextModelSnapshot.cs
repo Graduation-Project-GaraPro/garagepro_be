@@ -40,9 +40,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("Birthday")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("BranchId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -100,8 +97,7 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
@@ -109,9 +105,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -410,6 +403,8 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("FeedBacks", (string)null);
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
                 {
                     b.Property<Guid>("CategoryID")
@@ -784,6 +779,7 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<Guid?>("FeedBackId1")
                         .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
@@ -1642,6 +1638,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("RepairOrder");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
                     b.HasOne("BusinessObject.Notifications.CategoryNotification", "CategoryNotification")

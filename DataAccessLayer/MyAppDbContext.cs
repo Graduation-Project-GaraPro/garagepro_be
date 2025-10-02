@@ -567,7 +567,7 @@ namespace DataAccessLayer
                           .HasForeignKey(f => f.RepairOrderId)
                           .OnDelete(DeleteBehavior.Cascade);
                 });
-            }
+   
             // Color-Label relationship
             modelBuilder.Entity<Label>()
                 .HasOne(l => l.Color)

@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20250924022101_Feedback.Designer.cs
-    [Migration("20250924022101_Feedback")]
-    partial class Feedback
-========
-    [Migration("20250929154542_InitialCreate")]
+    [Migration("20250930020406_InitialCreate")]
     partial class InitialCreate
->>>>>>>> quanhd:DataAccessLayer/Migrations/20250929154542_InitialCreate.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -48,12 +43,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("Birthday")
                         .HasColumnType("datetime2");
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20250924022101_Feedback.Designer.cs
-                    b.Property<Guid>("BranchId")
-                        .HasColumnType("uniqueidentifier");
-
-========
->>>>>>>> quanhd:DataAccessLayer/Migrations/20250929154542_InitialCreate.Designer.cs
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
@@ -111,8 +100,7 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<string>("PasswordHash")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
                         .HasMaxLength(20)
@@ -120,9 +108,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<Guid>("RoleId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
@@ -383,7 +368,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Labels");
                 });
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20250924022101_Feedback.Designer.cs
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
                     b.Property<Guid>("FeedBackId")
@@ -422,7 +406,8 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("FeedBacks", (string)null);
-========
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
                 {
                     b.Property<Guid>("CategoryID")
@@ -480,7 +465,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("UserID");
 
                     b.ToTable("Notifications");
->>>>>>>> quanhd:DataAccessLayer/Migrations/20250929154542_InitialCreate.Designer.cs
                 });
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
@@ -793,16 +777,14 @@ namespace DataAccessLayer.Migrations
                     b.Property<long?>("EstimatedRepairTime")
                         .HasColumnType("bigint");
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20250924022101_Feedback.Designer.cs
                     b.Property<Guid?>("FeedBackId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid?>("FeedBackId1")
                         .HasColumnType("uniqueidentifier");
-========
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
->>>>>>>> quanhd:DataAccessLayer/Migrations/20250929154542_InitialCreate.Designer.cs
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -1644,7 +1626,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("OrderStatus");
                 });
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20250924022101_Feedback.Designer.cs
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
@@ -1660,7 +1641,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("RepairOrder");
-========
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
                     b.HasOne("BusinessObject.Notifications.CategoryNotification", "CategoryNotification")
@@ -1676,7 +1660,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("CategoryNotification");
->>>>>>>> quanhd:DataAccessLayer/Migrations/20250929154542_InitialCreate.Designer.cs
 
                     b.Navigation("User");
                 });
