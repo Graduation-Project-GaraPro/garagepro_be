@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using BusinessObject.Notifications;
 using BusinessObject.Technician;
 using BusinessObject.Roles;
+using BusinessObject.Branches;
 
 namespace DataAccessLayer
 {
@@ -41,6 +42,7 @@ namespace DataAccessLayer
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
         public DbSet<JobPart> JobParts { get; set; }
+        public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<SecurityLog> SecurityLogs { get; set; }
@@ -65,7 +67,7 @@ namespace DataAccessLayer
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
-        
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -166,7 +168,7 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
             });
 
-           
+
             // Notifications configuration
             modelBuilder.Entity<Notification>(entity =>
             {
@@ -243,7 +245,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.Note).HasMaxLength(500);
                 entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.CreatedAt).IsRequired();
-                
+
                 // Customer approval workflow properties
                 entity.Property(e => e.CustomerApprovalNote).HasMaxLength(1000);
                 entity.Property(e => e.AssignedByManagerId).HasMaxLength(450); // Standard ASP.NET Identity user ID length
@@ -536,7 +538,7 @@ namespace DataAccessLayer
             });
 
             // Configure relationships to prevent cascade delete cycles
-            
+
             // RepairOrder relationships - prevent cascade delete conflicts
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
@@ -637,12 +639,12 @@ namespace DataAccessLayer
                 .HasForeignKey(s => s.ServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Service-Branch relationship
-            modelBuilder.Entity<Service>()
-                .HasOne(s => s.Branch)
-                .WithMany(b => b.Services)
-                .HasForeignKey(s => s.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
+            //// Service-Branch relationship
+            //modelBuilder.Entity<Service>()
+            //    .HasOne(s => s.Branch)
+            //    .WithMany(b => b.Services)
+            //    .HasForeignKey(s => s.BranchId)
+            //    .OnDelete(DeleteBehavior.Restrict);
 
             // Part-PartCategory relationship
             modelBuilder.Entity<Part>()
@@ -758,6 +760,48 @@ namespace DataAccessLayer
                       .HasForeignKey(ps => ps.PartId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+
+
+            // Many-to-many Branch <-> Service
+            modelBuilder.Entity<BranchService>()
+                .HasKey(bs => new { bs.BranchId, bs.ServiceId });
+
+            modelBuilder.Entity<BranchService>()
+                .HasOne(bs => bs.Branch)
+                .WithMany(b => b.BranchServices)
+                .HasForeignKey(bs => bs.BranchId)
+                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
+
+            modelBuilder.Entity<BranchService>()
+                .HasOne(bs => bs.Service)
+                .WithMany(s => s.BranchServices)
+                .HasForeignKey(bs => bs.ServiceId)
+                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
+           
+            // ServicePart configuration
+            modelBuilder.Entity<ServicePart>(entity =>
+            {
+                entity.HasKey(e => e.ServicePartId);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CreatedAt).IsRequired();
+
+                entity.HasOne(sp => sp.Service)
+                      .WithMany(s => s.ServiceParts)
+                      .HasForeignKey(sp => sp.ServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(sp => sp.Part)
+                      .WithMany(p => p.ServiceParts)
+                      .HasForeignKey(sp => sp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            // branch 1 -> application User
+
+            modelBuilder.Entity<ApplicationUser>()
+            .HasOne(u => u.Branch)
+            .WithMany(b => b.Staffs)
+            .HasForeignKey(u => u.BranchId)
+            .OnDelete(DeleteBehavior.SetNull); // Hoặc Cascade nếu muốn xóa user khi branch bị xóa
         }
     }
 }

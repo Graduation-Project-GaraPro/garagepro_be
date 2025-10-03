@@ -7,11 +7,11 @@ using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject.Notifications;
+using BusinessObject.Branches;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
     {
-        
         [MaxLength(200)]
         public string? AvatarUrl { get; set; }
 
@@ -29,20 +29,24 @@ namespace BusinessObject.Authentication
         [MaxLength(50)]
         public string? Status { get; set; }
 
-        // Legacy properties for compatibility
+        // Legacy properties
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
-        public DateTime? dateOfBirth { get; set; }
+        public DateTime? DateOfBirth { get; set; }
 
         public DateTime? LastPasswordChangeDate { get; set; }
-        
+
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
         public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
-        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
-        // Custom claims
-        //public virtual ICollection<ApplicationUserClaim> Claims { get; set; }
+        public virtual Technician.Technician Technician { get; set; }
+
+        // --------------------------
+        // Branch relationship
+        public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
+        public virtual Branch Branch { get; set; }
     }
+
 }

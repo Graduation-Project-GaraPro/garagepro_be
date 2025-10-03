@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.Branches;
 using Dtos.RoBoard;
 using Repositories;
 
@@ -547,7 +548,7 @@ namespace Services
                 VehicleModel = "Unknown Model", // TODO: Add model navigation when available
                 VehicleColor = "Unknown Color", // TODO: Add color navigation when available
                 BranchName = repairOrder.Branch?.BranchName ?? "Unknown Branch",
-                BranchAddress = repairOrder.Branch?.Address ?? "",
+                //BranchAddress = repairOrder.Branch?.Address ?? "",
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 StatusDuration = GetStatusDurationText((int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays),
                 Priority = GetPriorityLevel(repairOrder),
@@ -598,7 +599,7 @@ namespace Services
             {
                 BranchId = branch.BranchId,
                 BranchName = branch.BranchName ?? "Unknown Branch",
-                Address = branch.Address ?? "",
+                //Address = branch.Address ?? "",
                 PhoneNumber = branch.PhoneNumber ?? ""
             };
         }
