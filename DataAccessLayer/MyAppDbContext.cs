@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -41,7 +41,6 @@ namespace DataAccessLayer
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
         public DbSet<JobPart> JobParts { get; set; }
-        public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<SecurityLog> SecurityLogs { get; set; }
@@ -758,24 +757,6 @@ namespace DataAccessLayer
                       .WithMany(p => p.PartSpecifications)
                       .HasForeignKey(ps => ps.PartId)
                       .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // ServicePart configuration
-            modelBuilder.Entity<ServicePart>(entity =>
-            {
-                entity.HasKey(e => e.ServicePartId);
-                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.CreatedAt).IsRequired();
-
-                entity.HasOne(sp => sp.Service)
-                      .WithMany(s => s.ServiceParts)
-                      .HasForeignKey(sp => sp.ServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(sp => sp.Part)
-                      .WithMany(p => p.ServiceParts)
-                      .HasForeignKey(sp => sp.PartId)
-                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

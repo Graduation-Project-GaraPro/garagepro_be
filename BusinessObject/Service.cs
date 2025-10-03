@@ -54,6 +54,5 @@ namespace BusinessObject
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
         public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
-        public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
     }
 }

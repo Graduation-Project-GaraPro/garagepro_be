@@ -16,6 +16,12 @@ namespace Services
         Task<bool> DeleteJobAsync(Guid jobId);
         Task<bool> JobExistsAsync(Guid jobId);
 
+        // NEW: Get all jobs with OData support
+        Task<IEnumerable<Job>> GetAllJobsAsync();
+        
+        // NEW: Get jobs by status
+        Task<IEnumerable<Job>> GetJobsByStatusIdAsync(JobStatus status);
+
         // Job Queries by Context
         Task<IEnumerable<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<Job>> GetJobsByServiceIdAsync(Guid serviceId);

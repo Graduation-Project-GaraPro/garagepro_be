@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
+using BusinessObject.Authentication;
 using Dtos.RoBoard;
 using Repositories;
 
@@ -292,6 +293,17 @@ namespace Services
             return await _repairOrderRepository.DeleteAsync(repairOrderId);
         }
 
+        public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync()
+        {
+            return await _repairOrderRepository.GetRepairOrdersWithNavigationPropertiesAsync();
+        }
+
+        // NEW: Get repair orders by status
+        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId)
+        {
+            return await _repairOrderRepository.GetRepairOrdersByStatusAsync(statusId);
+        }
+
         public async Task<bool> RepairOrderExistsAsync(Guid repairOrderId)
         {
             return await _repairOrderRepository.ExistsAsync(repairOrderId);
@@ -506,7 +518,6 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
-                ArchiveReason = repairOrder.ArchiveReason,
                 ArchivedBy = repairOrder.ArchivedByUserId
             };
         }
@@ -548,7 +559,6 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
-                ArchiveReason = repairOrder.ArchiveReason
             };
         }
 

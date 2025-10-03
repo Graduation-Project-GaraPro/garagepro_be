@@ -24,6 +24,12 @@ namespace Services
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<bool> RepairOrderExistsAsync(Guid repairOrderId);
         
+        // NEW: Get all repair orders with OData support
+        Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
+        
+        // NEW: Get repair orders by status
+        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId);
+        
         // Statistics and Analytics
         Task<RoBoardStatisticsDto> GetBoardStatisticsAsync(RoBoardFiltersDto filters = null);
         Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null);

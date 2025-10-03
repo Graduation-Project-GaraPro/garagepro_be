@@ -76,6 +76,18 @@ namespace Services
             return await _jobRepository.ExistsAsync(jobId);
         }
 
+        // NEW: Get all jobs with OData support
+        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+        {
+            return await _jobRepository.GetJobsWithNavigationPropertiesAsync();
+        }
+        
+        // NEW: Get jobs by status
+        public async Task<IEnumerable<Job>> GetJobsByStatusIdAsync(JobStatus status)
+        {
+            return await _jobRepository.GetJobsByStatusAsync(status);
+        }
+
         #endregion
 
         #region Job Queries by Context
