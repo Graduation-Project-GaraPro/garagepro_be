@@ -75,5 +75,10 @@ namespace Services
 
             return true;
         }
+
+        public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
+        {
+            return await _repository.GetByIdAsync(userId);
+        }
     }
 }
