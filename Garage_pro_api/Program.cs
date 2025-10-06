@@ -29,6 +29,7 @@ using Repositories.BranchRepositories;
 using Services.BranchServices;
 using Repositories.ServiceRepositories;
 using Services.ServiceServices;
+using Microsoft.AspNetCore.Authentication.Cookies;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -115,10 +116,25 @@ var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = "SmartScheme";          // mặc định chọn scheme "thông minh"
+    options.DefaultChallengeScheme = "SmartScheme";
 })
-.AddJwtBearer(options =>
+.AddPolicyScheme("SmartScheme", "JWT or Cookie", options =>
+{
+    options.ForwardDefaultSelector = context =>
+    {
+        // Ưu tiên JWT nếu có header Bearer
+        string authorization = context.Request.Headers["Authorization"];
+        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
+        // Nếu không thì fallback về Cookie
+        return CookieAuthenticationDefaults.AuthenticationScheme;
+    };
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -144,11 +160,19 @@ builder.Services.AddAuthentication(options =>
         }
     };
 })
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/api/auth/login";   // đường dẫn login
+    options.LogoutPath = "/api/auth/logout"; // đường dẫn logout
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
+})
 .AddGoogle(googleOptions =>
 {
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -234,10 +258,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseSecurityPolicyEnforcement();
 app.UseHttpsRedirection();
 app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
+app.UseSecurityPolicyEnforcement();
+
 app.MapControllers();
 // Initialize database
 

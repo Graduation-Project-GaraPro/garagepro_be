@@ -77,8 +77,12 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000003", "Default", "Customer", "Customer"),
-                ("0900000004", "Default", "Technician", "Technician")
+                ("0900000013", "System", "Manager1", "Manager"),
+                ("0900000014", "System", "Manager2", "Manager"),
+                ("0900000005", "Default", "Customer", "Customer"),
+                ("0900000006", "Default", "Technician", "Technician"),
+                ("0900000007", "Default", "Technician1", "Technician"),
+                ("0900000008", "Default", "Technician2", "Technician")
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";

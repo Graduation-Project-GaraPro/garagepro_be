@@ -19,5 +19,9 @@ namespace Services
         Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();
         Task<List<ApplicationUser>> GetManagersAsync();
         Task<List<ApplicationUser>> GetTechniciansAsync();
+
+        // 👇 Thêm 2 method mới
+        Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
+        Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
     }
 }

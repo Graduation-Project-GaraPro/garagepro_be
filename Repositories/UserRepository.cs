@@ -106,6 +106,42 @@ namespace Repositories
                 .ToListAsync();
         }
 
+        // Lấy tất cả Manager chưa thuộc branch nào
+        public async Task<List<ApplicationUser>> GetManagersWithoutBranchAsync()
+        {
+            var managerRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Manager");
+
+            if (managerRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == managerRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
+                .ToListAsync();
+        }
+
+        // Lấy tất cả Technician chưa thuộc branch nào
+        public async Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync()
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == technicianRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
+                .ToListAsync();
+        }
+
         public async Task<ApplicationUser> GetByIdAsync(string userId)
         {
             return await _context.Users.FindAsync(userId);

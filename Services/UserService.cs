@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.EmailSenders;
 
@@ -90,6 +91,17 @@ namespace Services
         public async Task<List<ApplicationUser>> GetTechniciansAsync()
         {
             return await _repository.GetTechniciansAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetManagersWithoutBranchAsync()
+        {
+            return await _repository.GetManagersWithoutBranchAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync()
+        {
+            return await _repository.GetTechniciansWithoutBranchAsync();
+
         }
     }
 }

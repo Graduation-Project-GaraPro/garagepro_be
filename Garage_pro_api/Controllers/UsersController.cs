@@ -87,6 +87,38 @@ namespace Garage_pro_api.Controllers
             }));
         }
 
+        // GET: api/users/managers/without-branch
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("managers/without-branch")]
+        public async Task<IActionResult> GetManagersWithoutBranch()
+        {
+            var users = await _userService.GetManagersWithoutBranchAsync();
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin
+            }));
+        }
+
+        // GET: api/users/technicians/without-branch
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("technicians/without-branch")]
+        public async Task<IActionResult> GetTechniciansWithoutBranch()
+        {
+            var users = await _userService.GetTechniciansWithoutBranchAsync();
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin
+            }));
+        }
+
         // PUT: api/users/{id}/ban
         [HttpPut("{id}/ban")]
         public async Task<IActionResult> BanUser(string id ,string message)

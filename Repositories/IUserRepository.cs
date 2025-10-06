@@ -18,6 +18,9 @@ namespace Repositories
         Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();
         Task<List<ApplicationUser>> GetTechniciansAsync();
         Task<List<ApplicationUser>> GetManagersAsync();
+
+        Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
+        Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
         Task UpdateAsync(ApplicationUser user);
     }
 }
