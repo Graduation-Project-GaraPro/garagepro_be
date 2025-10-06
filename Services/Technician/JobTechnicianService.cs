@@ -10,16 +10,16 @@ namespace Services.Technician
 {
     public class JobTechnicianService : IJobTechnicianService
     {
-        private readonly IJobTechnicianRepository _technicianRepository;
+        private readonly IJobTechnicianRepository _jobTechnicianRepository;
 
-        public JobTechnicianService(IJobTechnicianRepository technicianRepository)
+        public JobTechnicianService(IJobTechnicianRepository jobTechnicianRepository)
         {
-            _technicianRepository = technicianRepository;
+            _jobTechnicianRepository = jobTechnicianRepository;
         }
 
         public async Task<List<Job>> GetJobsByTechnicianAsync(string userId)
         {
-            return await _technicianRepository.GetJobsByTechnicianAsync(userId);
+            return await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
         }
     }
 }

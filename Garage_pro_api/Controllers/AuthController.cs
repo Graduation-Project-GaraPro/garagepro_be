@@ -12,6 +12,11 @@ using Services.Authentication;
 using Azure.Core;
 using System.Data;
 using System.Net;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
+using Google.Apis.Auth;
+using Microsoft.EntityFrameworkCore;
+using Services.SmsSenders;
 
 namespace Garage_pro_api.Controllers
 {
@@ -24,22 +29,115 @@ namespace Garage_pro_api.Controllers
         private readonly ITokenService _tokenService;
         private readonly IEmailSender _emailSender;
         private readonly DynamicAuthenticationService _authService;
-
+        private readonly IConfiguration _config;
+        private readonly ISmsSender _smsSender;
+        // Lưu OTP tạm thời (dev/test)
+        private static readonly Dictionary<string, string> _otpTempStore = new();
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService,IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService)
+            ITokenService tokenService, IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _tokenService = tokenService;
             _emailSender = emailSender;
             _authService = dynamicAuthenticationService;
+            _config = config;
+            _smsSender = smsSender;
+        }
+
+        //  Gửi OTP
+        [HttpPost("send-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> SendOtp([FromBody] SendOtpDto model)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            // Kiểm tra số điện thoại đã tồn tại chưa
+            var existingUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+
+            if (existingUser != null)
+            {
+                // Nếu đã có thì trả lỗi theo format model validation
+                
+                return BadRequest(new { error = "Phone number already existing!" });
+            }
+
+            // Tạo OTP 6 số
+            var otp = new Random().Next(100000, 999999).ToString();
+
+            // Lưu OTP tạm
+            _otpTempStore[model.PhoneNumber] = otp;
+
+            // Gửi SMS (Fake)
+            await _smsSender.SendSmsAsync(model.PhoneNumber, otp);
+
+            return Ok(new { Message = "OTP sent successfully (dev/fake)" });
+        }
+        // 2Xác thực OTP
+        [HttpPost("verify-otp")]
+        [AllowAnonymous]
+        public IActionResult VerifyOtp([FromBody] VerifyOtpDto model)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var valid = FakeSmsSender.VerifyOtp(model.PhoneNumber, model.Token);
+            if (!valid) return BadRequest(new { error = "Invalid or expired OTP" });
+
+            return Ok(new { Message = "OTP verified successfully" });
+        }
+        // Hoàn tất đăng ký
+        [HttpPost("complete-registration")]
+        [AllowAnonymous]
+        public async Task<IActionResult> CompleteRegistration([FromBody] CompleteRegistrationDto model)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            if (!FakeSmsSender.IsVerified(model.PhoneNumber))
+                return BadRequest(new { error = "Phone number not verified" });
+
+            var existingUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+            if (existingUser != null)
+                return BadRequest(new { error = "Phone number already registered" });
+
+            if (!string.IsNullOrEmpty(model.Email))
+            {
+                var existingEmailUser = await _userManager.FindByEmailAsync(model.Email);
+                if (existingEmailUser != null)
+                    return BadRequest(new { error = "Email already in use" });
+            }
+
+            var user = new ApplicationUser
+            {
+                UserName = model.PhoneNumber,
+                PhoneNumber = model.PhoneNumber,
+                FirstName = model.FirstName,
+                LastName = model.LastName,
+                CreatedAt = DateTime.UtcNow,
+                Email = model.Email
+            };
+
+            var result = await _userManager.CreateAsync(user, model.Password);
+            if (!result.Succeeded)
+                return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
+
+            await _userManager.AddToRoleAsync(user, "Customer");
+
+          
+
+            return Ok(new
+            {
+                Message = "User registered successfully",
+                UserId = user.Id
+            });
         }
 
         [HttpPost("register")]
         [AllowAnonymous]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model)
+        public async Task<IActionResult> Register([FromBody] CompleteRegistrationDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -64,7 +162,19 @@ namespace Garage_pro_api.Controllers
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (!result.Succeeded)
-                return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
+            {
+                var errorDict = new Dictionary<string, string[]>();
+
+                // gom tất cả lỗi IdentityError lại
+                var passwordErrors = result.Errors.Select(e => e.Description).ToArray();
+
+                if (passwordErrors.Any())
+                {
+                    errorDict["Password"] = passwordErrors;
+                }
+
+                return BadRequest(new { Errors = errorDict });
+            }
 
             // Assign default role
             await _userManager.AddToRoleAsync(user, "Customer");
@@ -96,72 +206,128 @@ namespace Garage_pro_api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var result = await _authService.PasswordSignInAsync(
-                model.Email, model.Password, model.RememberMe);
+            // Lấy user theo số điện thoại
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
 
-            if (result.IsLockedOut)
+            if (user == null)
+                return BadRequest(new { error = "User not found" });
+
+            // Kiểm tra mật khẩu
+            var passwordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+            if (!passwordValid)
             {
-                var user = await _userManager.FindByNameAsync(model.Email);
-                var lockoutInfo = await _authService.GetLockoutInfoAsync(user);
+                // Tăng số lần đăng nhập thất bại nếu cần
+                await _userManager.AccessFailedAsync(user);
+                return BadRequest(new { error = "Invalid login attempt" });
+            }
+
+            // Reset failed count nếu login thành công
+            await _userManager.ResetAccessFailedCountAsync(user);
+
+            // Kiểm tra lockout
+            if (await _userManager.IsLockedOutAsync(user))
+            {
+                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+                var remainingMinutes = lockoutEnd.HasValue
+                    ? (lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes
+                    : 0;
 
                 return BadRequest(new
                 {
                     error = "Account is temporarily locked due to failed login attempts",
-                    lockoutEnd = lockoutInfo.LockoutEnd,
-                    remainingMinutes = lockoutInfo.RemainingMinutes
+                    lockoutEnd,
+                    remainingMinutes
                 });
-            }   
+            }
 
-            if (!result.Succeeded)
-                return BadRequest(new { error = "Invalid login attempt" });
+            // Cập nhật LastLogin
+            user.LastLogin = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
 
+            // Tạo JWT token
+            var accessToken = await _tokenService.GenerateJwtToken(user);
+
+            Response.Cookies.Append("X-Refresh-Token", accessToken, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddDays(7)
+            });
+
+            var response = new AuthResponseDto
+            {
+                Token = accessToken,
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                UserId = user.Id,
+                Email = user.Email,
+                Roles = await _userManager.GetRolesAsync(user),
+            };
+
+            return Ok(response);
+        }
+
+        [HttpPost("google-login")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginDto dto)
+        {
+            var payload = await VerifyGoogleToken(dto);
+            if (payload == null)
+            {
+                return BadRequest("Invalid Google token");
+            }
+
+            // Kiểm tra người dùng có tồn tại chưa
+            var user = await _userManager.FindByEmailAsync(payload.Email);
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = payload.Email,
+                    Email = payload.Email,
+                    FirstName = payload.GivenName,
+                    LastName = payload.FamilyName,
+                    EmailConfirmed = true // Google đã xác minh email
+                };
+                var result = await _userManager.CreateAsync(user);
+                if (!result.Succeeded)
+                {
+                    return BadRequest(result.Errors);
+                }
+
+                // Gán role mặc định
+                await _userManager.AddToRoleAsync(user, "Customer");
+            }
+
+            var accessToken = await _tokenService.GenerateJwtToken(user);
+
+            var response = new AuthResponseDto
+            {
+                Token = accessToken,
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                UserId = user.Id,
+                Email = user.Email,
+                Roles = await _userManager.GetRolesAsync(user),
+            };
+
+            return Ok(response);
+        }
+        //https://developers.google.com/oauthplayground
+        private async Task<GoogleJsonWebSignature.Payload?> VerifyGoogleToken(GoogleLoginDto dto)
+        {
             try
             {
-                var user = await _userManager.FindByEmailAsync(model.Email);
-                if (user == null)
-                    return BadRequest(new { error = "User not found" });
-                //if (await _authService.RequiresMfaAsync(user))
-                //{
-                //    return Ok(new
-                //    {
-                //        success = true,
-                //        requiresMfa = true,
-                //        message = "MFA authentication required",
-                //        tempToken = "GenerateTempToken(user)"
-                //    });
-                //}
-                // Update last login
-                user.LastLogin = DateTime.UtcNow;
-                await _userManager.UpdateAsync(user);
-
-                // Generate Access & Refresh Tokens
-                var accessToken = await _tokenService.GenerateJwtToken(user);
-                //var refreshToken = await _tokenService.GenerateRefreshTokenAsync(user);
-
-                Response.Cookies.Append("X-Refresh-Token", accessToken, new CookieOptions
+                var settings = new GoogleJsonWebSignature.ValidationSettings()
                 {
-                    HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.None, // use Strict only if same-site
-                    Expires = DateTimeOffset.UtcNow.AddDays(7)
-                });
-
-                var response = new AuthResponseDto
-                {
-                    Token = accessToken,
-                    ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
-                    UserId = user.Id,
-                    Email = user.Email,
-                    Roles = await _userManager.GetRolesAsync(user),
+                    Audience = new List<string>() { _config["Authentication:Google:ClientId"] }
                 };
-
-                return Ok(response);
+                var payload = await GoogleJsonWebSignature.ValidateAsync(dto.IdToken, settings);
+                return payload;
             }
-            catch (Exception ex)
+            catch
             {
-                // Log exception
-                return StatusCode(StatusCodes.Status500InternalServerError,
-                    new { error = "An error occurred while processing your login" });
+                return null;
             }
         }
 
@@ -286,11 +452,16 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { Message = "Email confirmed successfully" });
         }
-        private string GenerateTempToken(IdentityUser user)
+        // 3 Dev helper: lấy OTP trực tiếp (chỉ dev)
+        [HttpGet("dev/last-otp")]
+        public IActionResult GetLastOtp([FromQuery] string phoneNumber)
         {
-            // Tạo token tạm cho MFA flow
-            return Guid.NewGuid().ToString();
+            if (FakeSmsSender.TryGetLastOtp(phoneNumber, out var otp))
+                return Ok(new { phoneNumber, otp });
+
+            return NotFound(new { error = "No OTP found for this number" });
         }
+
 
     }
 

@@ -4,12 +4,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject
+namespace BusinessObject.Enums
 {
-    public enum JobStatus
+    public enum InspectionStatus
     {
-        Pending = 0,
-        New = 1,
+        New = 0,
+        Pending = 1,
         InProgress = 2,
         Completed = 3
     }

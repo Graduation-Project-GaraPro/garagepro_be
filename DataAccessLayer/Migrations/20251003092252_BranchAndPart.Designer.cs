@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20250929154542_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251003092252_BranchAndPart")]
+    partial class BranchAndPart
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,6 +42,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("Birthday")
                         .HasColumnType("datetime2");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -131,6 +134,8 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("BranchId");
+
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -142,18 +147,18 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.Branch", b =>
+            modelBuilder.Entity("BusinessObject.Branches.Branch", b =>
                 {
                     b.Property<Guid>("BranchId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Address")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
                     b.Property<string>("BranchName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("City")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -165,6 +170,11 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Email")
                         .IsRequired()
@@ -179,15 +189,102 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("Street")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("Ward")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("BranchId");
 
                     b.ToTable("Branches");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.BranchService", b =>
+                {
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("BranchId", "ServiceId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("BranchServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CloseTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("OpenTime")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("nvarchar(5)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("OperatingHour");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
+                {
+                    b.Property<Guid>("ServicePartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ServicePartId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.Color", b =>
@@ -260,10 +357,27 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("AssignedByManagerId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CustomerApprovalNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("CustomerResponseAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("Deadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("EstimateExpiresAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("JobName")
@@ -279,8 +393,21 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<Guid?>("OriginalJobId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RevisionCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RevisionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("SentToCustomerAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
@@ -449,7 +576,7 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BranchId")
+                    b.Property<Guid?>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -704,11 +831,6 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ArchiveReason")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<DateTime?>("ArchivedAt")
                         .HasColumnType("datetime2");
 
@@ -812,9 +934,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ServiceId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<decimal>("ServicePrice")
                         .HasColumnType("decimal(18,2)");
 
@@ -823,8 +942,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("RepairOrderId");
 
                     b.HasIndex("ServiceId");
-
-                    b.HasIndex("ServiceId1");
 
                     b.ToTable("RepairOrderServices");
                 });
@@ -846,9 +963,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("PartId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
 
@@ -868,17 +982,153 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.HasIndex("PartId1");
-
                     b.HasIndex("RepairOrderServiceId");
 
                     b.ToTable("RepairOrderServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Users")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<bool>("Deprecated")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Permissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.PermissionCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWSEQUENTIALID()");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PermissionCategories");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("PermissionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("GrantedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("GrantedBy")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("GrantedUserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("RoleId", "PermissionId");
+
+                    b.HasIndex("GrantedUserId");
+
+                    b.HasIndex("PermissionId");
+
+                    b.ToTable("RolePermissions");
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>
                 {
                     b.Property<Guid>("ServiceId")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -921,6 +1171,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ServiceId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ServiceCategoryId");
 
@@ -980,9 +1232,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ServiceId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -993,8 +1242,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("InspectionId");
 
                     b.HasIndex("ServiceId");
-
-                    b.HasIndex("ServiceId1");
 
                     b.ToTable("ServiceInspections");
                 });
@@ -1369,33 +1616,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Vehicles");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -1502,6 +1722,65 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("Staffs")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.BranchService", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("BranchServices")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Service", "Service")
+                        .WithMany("BranchServices")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("OperatingHours")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
+                {
+                    b.HasOne("BusinessObject.Part", "Part")
+                        .WithMany("ServiceParts")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Service", "Service")
+                        .WithMany("ServiceParts")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("Service");
+                });
+
             modelBuilder.Entity("BusinessObject.Inspection", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
@@ -1599,11 +1878,10 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Part", b =>
                 {
-                    b.HasOne("BusinessObject.Branch", "Branch")
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("Parts")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BusinessObject.PartCategory", "PartCategory")
                         .WithMany("Parts")
@@ -1625,7 +1903,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
+                        .WithMany("PartInspections")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -1695,7 +1973,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
                 {
-                    b.HasOne("BusinessObject.Branch", "Branch")
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("RepairOrders")
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -1737,14 +2015,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany()
+                        .WithMany("RepairOrderServices")
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", null)
-                        .WithMany("RepairOrderServices")
-                        .HasForeignKey("ServiceId1");
 
                     b.Navigation("RepairOrder");
 
@@ -1754,14 +2028,10 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.RepairOrderServicePart", b =>
                 {
                     b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
+                        .WithMany("RepairOrderServiceParts")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Part", null)
-                        .WithMany("RepairOrderServiceParts")
-                        .HasForeignKey("PartId1");
 
                     b.HasOne("BusinessObject.RepairOrderService", "RepairOrderService")
                         .WithMany("RepairOrderServiceParts")
@@ -1774,13 +2044,56 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderService");
                 });
 
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.HasOne("BusinessObject.Roles.PermissionCategory", "Category")
+                        .WithMany("Permissions")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("GrantedUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("BusinessObject.Roles.Permission", "Permission")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("PermissionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", "Role")
+                        .WithMany("RolePermissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Permission");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Service", b =>
                 {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId");
+
                     b.HasOne("BusinessObject.ServiceCategory", "ServiceCategory")
                         .WithMany("Services")
                         .HasForeignKey("ServiceCategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("ServiceCategory");
                 });
@@ -1804,14 +2117,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany()
+                        .WithMany("ServiceInspections")
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", null)
-                        .WithMany("ServiceInspections")
-                        .HasForeignKey("ServiceId1");
 
                     b.Navigation("Inspection");
 
@@ -1957,7 +2266,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -1984,7 +2293,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -2016,11 +2325,17 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BusinessObject.Branch", b =>
+            modelBuilder.Entity("BusinessObject.Branches.Branch", b =>
                 {
+                    b.Navigation("BranchServices");
+
+                    b.Navigation("OperatingHours");
+
                     b.Navigation("Parts");
 
                     b.Navigation("RepairOrders");
+
+                    b.Navigation("Staffs");
                 });
 
             modelBuilder.Entity("BusinessObject.Color", b =>
@@ -2060,9 +2375,13 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("JobParts");
 
+                    b.Navigation("PartInspections");
+
                     b.Navigation("PartSpecifications");
 
                     b.Navigation("RepairOrderServiceParts");
+
+                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
@@ -2091,13 +2410,32 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderServiceParts");
                 });
 
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
+            modelBuilder.Entity("BusinessObject.Roles.PermissionCategory", b =>
+                {
+                    b.Navigation("Permissions");
+                });
+
             modelBuilder.Entity("BusinessObject.Service", b =>
                 {
+                    b.Navigation("BranchServices");
+
                     b.Navigation("Jobs");
 
                     b.Navigation("RepairOrderServices");
 
                     b.Navigation("ServiceInspections");
+
+                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceCategory", b =>

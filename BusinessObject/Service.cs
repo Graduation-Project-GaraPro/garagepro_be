@@ -5,6 +5,8 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Branches;
+using BusinessObject.Enums;
 
 namespace BusinessObject
 {
@@ -23,9 +25,7 @@ namespace BusinessObject
         [MaxLength(100)]
         public string ServiceName { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string ServiceStatus { get; set; }
+        public ServiceStatus ServiceStatus { get; set; } = ServiceStatus.Active;
 
         [MaxLength(500)]
         public string Description { get; set; }
@@ -40,6 +40,9 @@ namespace BusinessObject
 
         public bool IsAdvanced { get; set; } = false;
 
+
+        public Guid? BranchId { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
@@ -47,8 +50,12 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual ServiceCategory ServiceCategory { get; set; }
-        public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; }
-        public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
-        public virtual ICollection<Job> Jobs { get; set; }
+        public virtual Branch? Branch { get; set; }
+        public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
+        public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
+        public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
+        // Many-to-many
+        public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
+        public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
     }
 }

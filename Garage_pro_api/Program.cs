@@ -16,10 +16,36 @@ using Services.Authentication;
 using Garage_pro_api.Middlewares;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using BusinessObject.Policies;
+
 using Repositories.Technician;
 using Services.Technician;
 
+using Repositories.RoleRepositories;
+using Services.RoleServices;
+using Garage_pro_api.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using Garage_pro_api.Mapper;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Google;
+using Services.SmsSenders;
+using BusinessObject.Roles;
+using Microsoft.OData.ModelBuilder;
+using Microsoft.AspNetCore.OData;
 var builder = WebApplication.CreateBuilder(args);
+
+// OData Model Configuration
+var modelBuilder = new ODataConventionModelBuilder();
+builder.Services.AddControllers()
+    .AddOData(options => options
+        .Select()           
+        .Filter()           
+        .OrderBy()          
+        .Expand()           
+        .Count()            
+        .SetMaxTop(100)     
+        .AddRouteComponents("odata", modelBuilder.GetEdmModel())
+    );
+
 
 // Add services to the container.
 
@@ -63,15 +89,17 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-//builder.Services.AddAutoMapper(cfg =>
-//{
-//    cfg.AddProfile<MappingProfile>();
-//});
+
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+});
+
 
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
+builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
 {
     options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
@@ -88,6 +116,17 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<MyAppDbContext>()
 .AddDefaultTokenProviders()
 .AddPasswordValidator<RealTimePasswordValidator<ApplicationUser>>();
+
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
+}
+else
+{
+    // Production: ??ng ký Twilio ho?c d?ch v? SMS th?t
+    // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+}
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -109,21 +148,25 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        // ClockSkew = TimeSpan.Zero // No tolerance for expiration time
-        ClockSkew = TimeSpan.FromMinutes(5)
+        ClockSkew = TimeSpan.Zero
     };
 
     options.Events = new JwtBearerEvents
     {
         OnAuthenticationFailed = context =>
         {
-            if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            if (context.Exception is SecurityTokenExpiredException)
             {
                 context.Response.Headers.Add("Token-Expired", "true");
             }
             return Task.CompletedTask;
         }
     };
+})
+.AddGoogle(googleOptions =>
+{
+    googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+    googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -142,6 +185,7 @@ builder.Services.AddMemoryCache(); // Cho IMemoryCache
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
+
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
 builder.Services.AddScoped<ILabelRepository, LabelRepository>();
@@ -157,6 +201,16 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 // Technician repository and service
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
+
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+
+builder.Services.AddScoped<IPermissionService, PermissionService>(); // g?c
+builder.Services.Decorate<IPermissionService, CachedPermissionService>();
+
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -168,10 +222,26 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+// ??ng ký Authorization Handler
+builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
+
+
+// ??ng ký Policy Provider thay th? m?c ??nh
+builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder  
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 
 
 var app = builder.Build();
+app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -183,7 +253,6 @@ app.UseSecurityPolicyEnforcement();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 // Initialize database
 

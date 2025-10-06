@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using AutoMapper;
 using BusinessObject.Authentication;
 using BusinessObject.Policies;
+using Dtos;
+using Dtos.Policies;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -18,16 +21,19 @@ namespace Services.PolicyServices
         private readonly ISecurityPolicyRepository _repo;
         private readonly IMemoryCache _cache;
         private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
+
+        private readonly IMapper _mapper;
         private readonly ILogger<SecurityPolicyService> _logger;
         private const string CacheKey = "CurrentSecurityPolicy";
 
         public SecurityPolicyService(ISecurityPolicyRepository repo, IMemoryCache cache,
-            IPasswordHasher<ApplicationUser> passwordHasher, ILogger<SecurityPolicyService> logger)
+            IPasswordHasher<ApplicationUser> passwordHasher, ILogger<SecurityPolicyService> logger, IMapper mapper)
         {
             _repo = repo;
             _cache = cache;
             _passwordHasher = passwordHasher;
             _logger = logger;
+            _mapper = mapper;
         }
 
         public async Task<SecurityPolicy?> GetCurrentAsync()
@@ -66,7 +72,7 @@ namespace Services.PolicyServices
             existing.PasswordExpiryDays = updatedPolicy.PasswordExpiryDays;
             existing.EnableBruteForceProtection = updatedPolicy.EnableBruteForceProtection;
             existing.UpdatedBy = adminId;
-            existing.UpdatedAt = DateTime.UtcNow;
+            existing.UpdatedAt = DateTime.Now;
 
             var newJson = JsonSerializer.Serialize(existing);
 
@@ -76,7 +82,7 @@ namespace Services.PolicyServices
                 HistoryId = Guid.NewGuid(),
                 PolicyId = existing.Id,
                 ChangedBy = adminId,
-                ChangedAt = DateTime.UtcNow,
+                ChangedAt = DateTime.Now,
                 ChangeSummary = summary ?? "Admin updated security policy",
                 PreviousValues = previousJson,
                 NewValues = newJson
@@ -94,6 +100,13 @@ namespace Services.PolicyServices
             // Kích hoạt event để áp dụng real-time
             await OnPolicyUpdatedAsync(existing);
         }
+
+        public async Task<SecurityPolicyHistory> GetHistoryAsync(Guid historyId)
+            => await _repo.GetHistoryAsync(historyId);
+
+
+        public async Task<IEnumerable<SecurityPolicyHistory>> GetAllHistoryAsync()
+            => await _repo.GetAllHistoryAsync();
 
         private void ValidatePolicy(SecurityPolicy policy)
         {
@@ -124,7 +137,19 @@ namespace Services.PolicyServices
         public async Task<PasswordValidationResult> ValidatePasswordAsync(string password)
         {
             var policy = await GetCurrentAsync();
-            if (policy == null) return new PasswordValidationResult { IsValid = true };
+            if (policy == null)
+            {
+                return new PasswordValidationResult
+                {
+                    IsValid = true,
+                    Errors = new Dictionary<string, List<string>>()
+                };
+            }
+
+            var result = new PasswordValidationResult
+            {
+                Errors = new Dictionary<string, List<string>>()
+            };
 
             var errors = new List<string>();
 
@@ -140,17 +165,178 @@ namespace Services.PolicyServices
             if (policy.RequireUppercase && !password.Any(char.IsUpper))
                 errors.Add("Password must contain at least one uppercase letter");
 
-            return new PasswordValidationResult
+            // Cập nhật kết quả
+            result.IsValid = errors.Count == 0;
+
+            if (errors.Count > 0)
             {
-                IsValid = errors.Count == 0,
-                Errors = errors
+                result.Errors["Password"] = errors;
+            }
+
+            return result;
+        }
+
+        public async Task<PaginatedResponse<AuditHistoryDto>> GetAuditHistoryAsync(
+        int page, int pageSize, string? search, string? changedBy, DateTime? dateFrom, DateTime? dateTo)
+        {
+            var (items, totalCount) = await _repo.GetAuditHistoryAsync(page, pageSize, search, changedBy, dateFrom, dateTo);
+
+            var dtos = items.Select(h => new AuditHistoryDto
+            {
+                HistoryId = h.HistoryId,
+                PolicyId = h.PolicyId,
+                Policy = h.Policy?.ToString(), // hoặc null
+                ChangedBy = h.ChangedBy,
+                ChangedByUser = h.ChangedByUser?.UserName,
+                ChangedAt = h.ChangedAt,
+                ChangeSummary = h.ChangeSummary,
+                PreviousValues = h.PreviousValues,
+                NewValues = h.NewValues
+            }).ToList();
+
+            return new PaginatedResponse<AuditHistoryDto>
+            {
+                Data = dtos,
+                Total = totalCount,
+                Page = page,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
             };
         }
-    }
+
+        public async Task<SecurityPolicyDto> RevertToSnapshotAsync(Guid historyId)
+        {
+            await using var transaction = await _repo.BeginTransactionAsync(); // giả sử repo có wrapper
+            try
+            {
+                var history = await _repo.GetHistoryAsync(historyId);
+                if (history == null)
+                    throw new KeyNotFoundException("Audit history not found");
+
+                var snapshot = JsonSerializer.Deserialize<SecurityPolicy>(history.NewValues);
+                if (snapshot == null)
+                    throw new InvalidOperationException("Snapshot values are invalid");
+
+                var policy = await _repo.GetCurrentAsync();
+                if (policy == null)
+                    throw new KeyNotFoundException("Policy not found");
+                var policyDto = _mapper.Map<SecurityPolicyDto>(policy);
+
+                var oldValuesJson = JsonSerializer.Serialize(policyDto);
+
+                // update policy
+                policy.MinPasswordLength = snapshot.MinPasswordLength;
+                policy.RequireSpecialChar = snapshot.RequireSpecialChar;
+                policy.RequireNumber = snapshot.RequireNumber;
+                policy.RequireUppercase = snapshot.RequireUppercase;
+                policy.SessionTimeout = snapshot.SessionTimeout;
+                policy.MaxLoginAttempts = snapshot.MaxLoginAttempts;
+                policy.AccountLockoutTime = snapshot.AccountLockoutTime;
+                policy.MfaRequired = snapshot.MfaRequired;
+                policy.PasswordExpiryDays = snapshot.PasswordExpiryDays;
+                policy.EnableBruteForceProtection = snapshot.EnableBruteForceProtection;
+                policy.UpdatedBy = null;
+                policy.UpdatedAt = DateTime.Now;
+
+                await _repo.UpdateAsync(policy);
+
+                var newHistory = new SecurityPolicyHistory
+                {
+                    HistoryId = Guid.NewGuid(),
+                    PolicyId = policy.Id,
+                    ChangedBy = null,
+                    ChangedAt = DateTime.Now,
+                    ChangeSummary = $"Reverted to snapshot at {history.ChangedAt}",
+                    PreviousValues = oldValuesJson,
+                    NewValues = history.NewValues
+                };
+                await _repo.AddHistoryAsync(newHistory);
+
+
+
+                await _repo.SaveChangesAsync();
+
+                // Xóa cache để áp dụng ngay
+                _cache.Remove(CacheKey);
+                await transaction.CommitAsync();
+
+                return _mapper.Map<SecurityPolicyDto>(policy);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+        public async Task<SecurityPolicyDto> UndoChangeAsync(Guid historyId)
+        {
+            await using var transaction = await _repo.BeginTransactionAsync();
+            try
+            {
+                var history = await _repo.GetHistoryAsync(historyId);
+                if (history == null)
+                    throw new KeyNotFoundException("Audit history not found");
+
+                var prevValues = JsonSerializer.Deserialize<SecurityPolicy>(history.PreviousValues);
+                if (prevValues == null)
+                    throw new InvalidOperationException("Previous values are invalid");
+
+                var policy = await _repo.GetCurrentAsync();
+                if (policy == null)
+                    throw new KeyNotFoundException("Policy not found");
+                var policyDto = _mapper.Map<SecurityPolicyDto>(policy);
+
+                // lưu lại trạng thái trước khi undo
+                var oldValuesJson = JsonSerializer.Serialize(policyDto);
+
+                // cập nhật theo previous values
+                policy.MinPasswordLength = prevValues.MinPasswordLength;
+                policy.RequireSpecialChar = prevValues.RequireSpecialChar;
+                policy.RequireNumber = prevValues.RequireNumber;
+                policy.RequireUppercase = prevValues.RequireUppercase;
+                policy.SessionTimeout = prevValues.SessionTimeout;
+                policy.MaxLoginAttempts = prevValues.MaxLoginAttempts;
+                policy.AccountLockoutTime = prevValues.AccountLockoutTime;
+                policy.MfaRequired = prevValues.MfaRequired;
+                policy.PasswordExpiryDays = prevValues.PasswordExpiryDays;
+                policy.EnableBruteForceProtection = prevValues.EnableBruteForceProtection;
+                policy.UpdatedBy = null;
+                policy.UpdatedAt = DateTime.Now;
+
+                await _repo.UpdateAsync(policy);
+
+                var newHistory = new SecurityPolicyHistory
+                {
+                    HistoryId = Guid.NewGuid(),
+                    PolicyId = policy.Id,
+                    ChangedBy = null,
+                    ChangedAt = DateTime.Now,
+                    ChangeSummary = $"Undid change made at {history.ChangedAt}",
+                    PreviousValues = oldValuesJson,
+                    NewValues = history.PreviousValues
+                };
+                await _repo.AddHistoryAsync(newHistory);
+
+                await _repo.SaveChangesAsync();
+
+                // Xóa cache để áp dụng ngay
+                _cache.Remove(CacheKey);
+
+                await transaction.CommitAsync();
+
+                return _mapper.Map<SecurityPolicyDto>(policy);
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+      }
 
     public class PasswordValidationResult
     {
         public bool IsValid { get; set; }
-        public List<string> Errors { get; set; } = new();
+        public Dictionary<string, List<string>> Errors { get; set; } = new();
     }
 }
