@@ -42,6 +42,51 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("managers-technicians")]
+        public async Task<IActionResult> GetManagersAndTechnicians()
+        {
+            var users = await _userService.GetManagersAndTechniciansAsync();
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin
+            }));
+        }
+
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("managers")]
+        public async Task<IActionResult> GetManagers()
+        {
+            var users = await _userService.GetManagersAsync();
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin
+            }));
+        }
+
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("technicians")]
+        public async Task<IActionResult> GetTechnicians()
+        {
+            var users = await _userService.GetTechniciansAsync();
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin
+            }));
+        }
+
         // PUT: api/users/{id}/ban
         [HttpPut("{id}/ban")]
         public async Task<IActionResult> BanUser(string id ,string message)

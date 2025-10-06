@@ -216,7 +216,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("BranchService");
+                    b.ToTable("BranchServices");
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
@@ -228,10 +228,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("CloseTime")
-                        .IsRequired()
+                    b.Property<TimeSpan>("CloseTime")
                         .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
+                        .HasColumnType("time");
 
                     b.Property<int>("DayOfWeek")
                         .HasColumnType("int");
@@ -239,16 +238,15 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
-                    b.Property<string>("OpenTime")
-                        .IsRequired()
+                    b.Property<TimeSpan>("OpenTime")
                         .HasMaxLength(5)
-                        .HasColumnType("nvarchar(5)");
+                        .HasColumnType("time");
 
                     b.HasKey("Id");
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("OperatingHour");
+                    b.ToTable("OperatingHours");
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
@@ -282,6 +280,78 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("ServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DiscountType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaximumDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MinimumOrderValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PromotionalCampaign");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
+                {
+                    b.Property<Guid>("PromotionalCampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PromotionalCampaignId", "ServiceId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("PromotionalCampaignService");
                 });
 
             modelBuilder.Entity("BusinessObject.Color", b =>
@@ -1734,13 +1804,13 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("BranchServices")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
                         .WithMany("BranchServices")
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Branch");
@@ -1774,6 +1844,25 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Part");
+
+                    b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
+                {
+                    b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "PromotionalCampaign")
+                        .WithMany("PromotionalCampaignServices")
+                        .HasForeignKey("PromotionalCampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Service", "Service")
+                        .WithMany("PromotionalCampaignServices")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PromotionalCampaign");
 
                     b.Navigation("Service");
                 });
@@ -2335,6 +2424,11 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Staffs");
                 });
 
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
+                {
+                    b.Navigation("PromotionalCampaignServices");
+                });
+
             modelBuilder.Entity("BusinessObject.Color", b =>
                 {
                     b.Navigation("Labels");
@@ -2427,6 +2521,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("BranchServices");
 
                     b.Navigation("Jobs");
+
+                    b.Navigation("PromotionalCampaignServices");
 
                     b.Navigation("RepairOrderServices");
 

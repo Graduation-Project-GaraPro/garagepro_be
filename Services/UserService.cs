@@ -75,5 +75,21 @@ namespace Services
 
             return true;
         }
+
+        // 👇 Thêm các method mới
+        public async Task<List<ApplicationUser>> GetManagersAndTechniciansAsync()
+        {
+            return await _repository.GetManagersAndTechniciansAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetManagersAsync()
+        {
+            return await _repository.GetManagersAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetTechniciansAsync()
+        {
+            return await _repository.GetTechniciansAsync();
+        }
     }
 }

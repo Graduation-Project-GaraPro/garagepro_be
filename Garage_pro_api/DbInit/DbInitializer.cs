@@ -351,8 +351,8 @@ namespace Garage_pro_api.DbInit
                     {
                         DayOfWeek = day,
                         IsOpen = true,
-                        OpenTime = "08:00",
-                        CloseTime = "17:00"
+                        OpenTime = new TimeSpan(8, 0, 0),   // 08:00
+                        CloseTime = new TimeSpan(17, 0, 0)  // 17:00
                     });
                 }
 

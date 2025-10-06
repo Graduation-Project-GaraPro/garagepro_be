@@ -25,6 +25,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.Google;
 using Services.SmsSenders;
 using BusinessObject.Roles;
+using Repositories.BranchRepositories;
+using Services.BranchServices;
+using Repositories.ServiceRepositories;
+using Services.ServiceServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -158,7 +162,7 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
 builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
 builder.Services.AddMemoryCache(); // Cho IMemoryCache
-
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
@@ -192,6 +196,18 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+
+
+builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+
+builder.Services.AddScoped<IBranchService, BranchService>();
+
+builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+
+
+builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

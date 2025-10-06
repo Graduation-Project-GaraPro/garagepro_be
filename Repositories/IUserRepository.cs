@@ -14,6 +14,10 @@ namespace Repositories
         Task<List<ApplicationUser>> GetAllAsync();
         Task<ApplicationUser> GetByIdAsync(string userId);
         Task<IList<string>> GetRolesAsync(ApplicationUser user);
+
+        Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();
+        Task<List<ApplicationUser>> GetTechniciansAsync();
+        Task<List<ApplicationUser>> GetManagersAsync();
         Task UpdateAsync(ApplicationUser user);
     }
 }

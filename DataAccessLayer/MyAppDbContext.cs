@@ -13,6 +13,7 @@ using BusinessObject.Notifications;
 using BusinessObject.Technician;
 using BusinessObject.Roles;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 
 namespace DataAccessLayer
 {
@@ -67,6 +68,8 @@ namespace DataAccessLayer
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<BranchService> BranchServices { get; set; }
+        public DbSet<OperatingHour> OperatingHours { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -761,23 +764,24 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-
+            // Many-to-many Branch <-> Service
+            modelBuilder.Entity<BranchService>() .HasKey(bs => new { bs.BranchId, bs.ServiceId });
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>()
-                .HasKey(bs => new { bs.BranchId, bs.ServiceId });
-
-            modelBuilder.Entity<BranchService>()
-                .HasOne(bs => bs.Branch)
-                .WithMany(b => b.BranchServices)
-                .HasForeignKey(bs => bs.BranchId)
-                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
+             .HasOne(bs => bs.Branch)
+             .WithMany(b => b.BranchServices)
+             .HasForeignKey(bs => bs.BranchId)
+             .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<BranchService>()
                 .HasOne(bs => bs.Service)
                 .WithMany(s => s.BranchServices)
                 .HasForeignKey(bs => bs.ServiceId)
-                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
-           
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            
+
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
             {
@@ -802,6 +806,22 @@ namespace DataAccessLayer
             .WithMany(b => b.Staffs)
             .HasForeignKey(u => u.BranchId)
             .OnDelete(DeleteBehavior.SetNull); // Hoặc Cascade nếu muốn xóa user khi branch bị xóa
+
+            // PromotionalCampaignService n-n Branch
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+            .HasKey(pcs => new { pcs.PromotionalCampaignId, pcs.ServiceId });
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+                .HasOne(pcs => pcs.PromotionalCampaign)
+                .WithMany(pc => pc.PromotionalCampaignServices)
+                .HasForeignKey(pcs => pcs.PromotionalCampaignId);
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+                .HasOne(pcs => pcs.Service)
+                .WithMany(s => s.PromotionalCampaignServices)
+                .HasForeignKey(pcs => pcs.ServiceId);
+
         }
     }
 }

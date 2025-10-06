@@ -31,12 +31,10 @@ namespace Services.PolicyServices
                 // Password hợp lệ
                 return IdentityResult.Success;
             }
-
             // Gom tất cả thông báo lỗi từ service
             var allErrors = result.Errors
                 .SelectMany(kvp => kvp.Value)
                 .ToList();
-
             // Convert sang IdentityError để Identity xử lý chuẩn
             var identityErrors = allErrors
                 .Select(msg => new IdentityError

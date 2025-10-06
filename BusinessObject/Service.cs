@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 
 namespace BusinessObject
 {
@@ -41,7 +42,7 @@ namespace BusinessObject
 
         public bool IsAdvanced { get; set; } = false;
 
-        
+
         public Guid? BranchId { get; set; }
 
         [Required]
@@ -58,5 +59,9 @@ namespace BusinessObject
         // Many-to-many
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
         public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
+
+        // Many-to-many
+        public virtual ICollection<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
+            = new List<PromotionalCampaignService>();
     }
 }

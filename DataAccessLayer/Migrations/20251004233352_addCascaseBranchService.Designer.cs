@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251002090631_addGrantedUser")]
-    partial class addGrantedUser
+    [Migration("20251004233352_addCascaseBranchService")]
+    partial class addCascaseBranchService
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -219,7 +219,37 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("BranchService");
+                    b.ToTable("BranchServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeSpan>("CloseTime")
+                        .HasMaxLength(5)
+                        .HasColumnType("time");
+
+                    b.Property<int>("DayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsOpen")
+                        .HasColumnType("bit");
+
+                    b.Property<TimeSpan>("OpenTime")
+                        .HasMaxLength(5)
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BranchId");
+
+                    b.ToTable("OperatingHours");
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
@@ -253,6 +283,78 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("ServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("DiscountType")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaximumDiscount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("MinimumOrderValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("UsageLimit")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UsedCount")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PromotionalCampaign");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
+                {
+                    b.Property<Guid>("PromotionalCampaignId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("PromotionalCampaignId", "ServiceId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("PromotionalCampaignService");
                 });
 
             modelBuilder.Entity("BusinessObject.Color", b =>
@@ -544,7 +646,7 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BranchId")
+                    b.Property<Guid?>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1096,7 +1198,7 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("BranchId")
+                    b.Property<Guid?>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
@@ -1700,231 +1802,34 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("BusinessObject.Branches.Branch", b =>
-                {
-                    b.OwnsOne("BusinessObject.Branches.OperatingHours", "OperatingHours", b1 =>
-                        {
-                            b1.Property<Guid>("BranchId")
-                                .HasColumnType("uniqueidentifier");
-
-                            b1.HasKey("BranchId");
-
-                            b1.ToTable("Branches");
-
-                            b1.WithOwner()
-                                .HasForeignKey("BranchId");
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Friday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Monday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Saturday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Sunday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Thursday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Tuesday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.OwnsOne("BusinessObject.Branches.DaySchedule", "Wednesday", b2 =>
-                                {
-                                    b2.Property<Guid>("OperatingHoursBranchId")
-                                        .HasColumnType("uniqueidentifier");
-
-                                    b2.Property<string>("CloseTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.Property<bool>("IsOpen")
-                                        .HasColumnType("bit");
-
-                                    b2.Property<string>("OpenTime")
-                                        .IsRequired()
-                                        .HasColumnType("nvarchar(max)");
-
-                                    b2.HasKey("OperatingHoursBranchId");
-
-                                    b2.ToTable("Branches");
-
-                                    b2.WithOwner()
-                                        .HasForeignKey("OperatingHoursBranchId");
-                                });
-
-                            b1.Navigation("Friday")
-                                .IsRequired();
-
-                            b1.Navigation("Monday")
-                                .IsRequired();
-
-                            b1.Navigation("Saturday")
-                                .IsRequired();
-
-                            b1.Navigation("Sunday")
-                                .IsRequired();
-
-                            b1.Navigation("Thursday")
-                                .IsRequired();
-
-                            b1.Navigation("Tuesday")
-                                .IsRequired();
-
-                            b1.Navigation("Wednesday")
-                                .IsRequired();
-                        });
-
-                    b.Navigation("OperatingHours")
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("BusinessObject.Branches.BranchService", b =>
                 {
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("BranchServices")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
                         .WithMany("BranchServices")
                         .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Branch");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("OperatingHours")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
@@ -1942,6 +1847,25 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Part");
+
+                    b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
+                {
+                    b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "PromotionalCampaign")
+                        .WithMany("PromotionalCampaignServices")
+                        .HasForeignKey("PromotionalCampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Service", "Service")
+                        .WithMany("PromotionalCampaignServices")
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PromotionalCampaign");
 
                     b.Navigation("Service");
                 });
@@ -2046,8 +1970,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("Parts")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BusinessObject.PartCategory", "PartCategory")
                         .WithMany("Parts")
@@ -2251,9 +2174,7 @@ namespace DataAccessLayer.Migrations
                 {
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany()
-                        .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("BranchId");
 
                     b.HasOne("BusinessObject.ServiceCategory", "ServiceCategory")
                         .WithMany("Services")
@@ -2497,11 +2418,18 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("BranchServices");
 
+                    b.Navigation("OperatingHours");
+
                     b.Navigation("Parts");
 
                     b.Navigation("RepairOrders");
 
                     b.Navigation("Staffs");
+                });
+
+            modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
+                {
+                    b.Navigation("PromotionalCampaignServices");
                 });
 
             modelBuilder.Entity("BusinessObject.Color", b =>
@@ -2596,6 +2524,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("BranchServices");
 
                     b.Navigation("Jobs");
+
+                    b.Navigation("PromotionalCampaignServices");
 
                     b.Navigation("RepairOrderServices");
 
