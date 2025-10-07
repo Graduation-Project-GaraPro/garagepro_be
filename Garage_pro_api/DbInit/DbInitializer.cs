@@ -45,6 +45,10 @@ namespace Garage_pro_api.DbInit
             await SeedServicesAsync();
             await SeedServicePartsAsync();
             await SeedBranchesAsync();
+            await SeedOrderStatusesAsync();
+            await SeedLabelsAsync();
+            await SeedVehiclesAsync();
+            await SeedRepairOrdersAsync();
 
         }
 
@@ -115,7 +119,8 @@ namespace Garage_pro_api.DbInit
     {
         new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" }
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Vehicle Management" }
     };
 
             foreach (var cat in categories)
@@ -134,6 +139,7 @@ namespace Garage_pro_api.DbInit
             var userCatId = categories.First(c => c.Name == "User Management").Id;
             var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
             var roleCatId = categories.First(c => c.Name == "Role Management").Id;
+            var vehicleCatId = categories.First(c => c.Name == "Vehicle Management").Id;
 
             var defaultPermissions = new List<Permission>
     {
@@ -148,7 +154,14 @@ namespace Garage_pro_api.DbInit
         new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASIGN", Name = "Permission assign", Description = "Can assign permission", CategoryId = roleCatId },
 
         new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view bookings", CategoryId = bookingCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage bookings", CategoryId = bookingCatId }
+        new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage bookings", CategoryId = bookingCatId },
+
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = vehicleCatId },
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicles", Description = "Can create vehicles", CategoryId = vehicleCatId },
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_EDIT", Name = "Edit Vehicles", Description = "Can edit vehicles", CategoryId = vehicleCatId },
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicles", Description = "Can delete vehicles", CategoryId = vehicleCatId },
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_WARRANTY", Name = "Manage Vehicle Warranty", Description = "Can manage vehicle warranty", CategoryId = vehicleCatId },
+        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Manage Vehicle Schedule", Description = "Can manage vehicle service schedule", CategoryId = vehicleCatId }
     };
 
             foreach (var perm in defaultPermissions)
@@ -168,10 +181,10 @@ namespace Garage_pro_api.DbInit
 
             var rolePermissionMap = new Dictionary<string, string[]>
     {
-        { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE", "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN" } },
-        { "Manager", new[] { "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE" } },
-        { "Customer", new[] { "BOOKING_VIEW" } },
-        { "Technician", new[] { "BOOKING_MANAGE" } }
+        { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE", "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN", "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_EDIT", "VEHICLE_DELETE", "VEHICLE_WARRANTY", "VEHICLE_SCHEDULE" } },
+        { "Manager", new[] { "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE", "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_EDIT", "VEHICLE_DELETE", "VEHICLE_WARRANTY", "VEHICLE_SCHEDULE" } },
+        { "Customer", new[] { "BOOKING_VIEW", "VEHICLE_VIEW" } },
+        { "Technician", new[] { "BOOKING_MANAGE", "VEHICLE_VIEW" } }
     };
 
             foreach (var role in roles)
@@ -379,6 +392,262 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+        private async Task SeedOrderStatusesAsync()
+        {
+            if (!_context.OrderStatuses.Any())
+            {
+                var orderStatuses = new List<OrderStatus>
+                {
+                    new OrderStatus { StatusName = "Pending" },
+                    new OrderStatus { StatusName = "In Progress" },
+                    new OrderStatus { StatusName = "Completed" }
+                };
 
+                _context.OrderStatuses.AddRange(orderStatuses);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+        private async Task SeedLabelsAsync()
+        {
+            if (!_context.Labels.Any())
+            {
+                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
+                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
+                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
+
+                if (pendingStatus != null && inProgressStatus != null && completedStatus != null)
+                {
+                    // Create default colors if they don't exist
+                    var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ?? 
+                                  new Color { ColorName = "Red", HexCode = "#FF0000" };
+                    var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ?? 
+                                     new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
+                    var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ?? 
+                                    new Color { ColorName = "Green", HexCode = "#00FF00" };
+
+                    // Add colors to context if they were newly created
+                    if (!_context.Colors.Any(c => c.ColorName == "Red"))
+                        _context.Colors.Add(redColor);
+                    if (!_context.Colors.Any(c => c.ColorName == "Yellow"))
+                        _context.Colors.Add(yellowColor);
+                    if (!_context.Colors.Any(c => c.ColorName == "Green"))
+                        _context.Colors.Add(greenColor);
+
+                    await _context.SaveChangesAsync();
+
+                    // Get the actual color entities from DB
+                    redColor = await _context.Colors.FirstAsync(c => c.ColorName == "Red");
+                    yellowColor = await _context.Colors.FirstAsync(c => c.ColorName == "Yellow");
+                    greenColor = await _context.Colors.FirstAsync(c => c.ColorName == "Green");
+
+                    var labels = new List<Label>
+                    {
+                        new Label 
+                        { 
+                            LabelName = "New", 
+                            Description = "Newly created order", 
+                            OrderStatusId = pendingStatus.OrderStatusId,
+                            ColorId = redColor.ColorId
+                        },
+                        new Label 
+                        { 
+                            LabelName = "In Progress", 
+                            Description = "Order is being worked on", 
+                            OrderStatusId = inProgressStatus.OrderStatusId,
+                            ColorId = yellowColor.ColorId
+                        },
+                        new Label 
+                        { 
+                            LabelName = "Done", 
+                            Description = "Order completed", 
+                            OrderStatusId = completedStatus.OrderStatusId,
+                            ColorId = greenColor.ColorId
+                        }
+                    };
+
+                    _context.Labels.AddRange(labels);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        private async Task SeedVehiclesAsync()
+        {
+            if (!_context.Vehicles.Any())
+            {
+                // Get required entities
+                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000003"); // Default Customer
+                
+                // Create default colors if they don't exist
+                var whiteColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "White") ?? 
+                                new Color { ColorName = "White", HexCode = "#FFFFFF" };
+                var blackColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Black") ?? 
+                                new Color { ColorName = "Black", HexCode = "#000000" };
+                var silverColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Silver") ?? 
+                                 new Color { ColorName = "Silver", HexCode = "#C0C0C0" };
+
+                // Add colors to context if they were newly created
+                if (!_context.Colors.Any(c => c.ColorName == "White"))
+                    _context.Colors.Add(whiteColor);
+                if (!_context.Colors.Any(c => c.ColorName == "Black"))
+                    _context.Colors.Add(blackColor);
+                if (!_context.Colors.Any(c => c.ColorName == "Silver"))
+                    _context.Colors.Add(silverColor);
+
+                await _context.SaveChangesAsync();
+
+                // Get the actual color entities from DB
+                whiteColor = await _context.Colors.FirstAsync(c => c.ColorName == "White");
+                blackColor = await _context.Colors.FirstAsync(c => c.ColorName == "Black");
+                silverColor = await _context.Colors.FirstAsync(c => c.ColorName == "Silver");
+
+                if (customerUser != null)
+                {
+                    var vehicles = new List<Vehicle>
+                    {
+                        new Vehicle
+                        {
+                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            UserId = customerUser.Id,
+                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
+                            ColorId = whiteColor.ColorId,
+                            LicensePlate = "51F12345",
+                            VIN = "1HGBH41JXMN109186",
+                            Year = 2020,
+                            Mileage = 15000,
+                            OwnerEmail = customerUser.Email,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-30),
+                            NextServiceDate = DateTime.UtcNow.AddDays(30),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-30)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            UserId = customerUser.Id,
+                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
+                            ColorId = blackColor.ColorId,
+                            LicensePlate = "51F67890",
+                            VIN = "2T1BURHE5JC012345",
+                            Year = 2018,
+                            Mileage = 25000,
+                            OwnerEmail = customerUser.Email,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-60),
+                            NextServiceDate = DateTime.UtcNow.AddDays(15),
+                            WarrantyStatus = "Expired",
+                            CreatedAt = DateTime.UtcNow.AddDays(-60)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            UserId = customerUser.Id,
+                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
+                            ColorId = silverColor.ColorId,
+                            LicensePlate = "51F54321",
+                            VIN = "3VWBP29M85M000001",
+                            Year = 2022,
+                            Mileage = 8000,
+                            OwnerEmail = customerUser.Email,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-15),
+                            NextServiceDate = DateTime.UtcNow.AddDays(45),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-15)
+                        }
+                    };
+
+                    _context.Vehicles.AddRange(vehicles);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        private async Task SeedRepairOrdersAsync()
+        {
+            if (!_context.RepairOrders.Any())
+            {
+                // Get required entities
+                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
+                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
+                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
+                
+                var branch = await _context.Branches.FirstOrDefaultAsync();
+                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000003"); // Default Customer
+                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
+                var vehicles = await _context.Vehicles.ToListAsync();
+                
+                if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
+                    branch != null && customerUser != null && vehicles.Any())
+                {
+                    var repairOrders = new List<RepairOrder>
+                    {
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Standard Service",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-5),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+                            Cost = 1500000,
+                            EstimatedAmount = 2000000,
+                            PaidAmount = 0,
+                            PaidStatus = "Unpaid",
+                            EstimatedRepairTime = 120,
+                            Note = "Regular maintenance service",
+                            CreatedAt = DateTime.UtcNow.AddDays(-5),
+                            BranchId = branch.BranchId,
+                            StatusId = pendingStatus.OrderStatusId,
+                            VehicleId = vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        },
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Emergency Repair",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-3),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+                            Cost = 3000000,
+                            EstimatedAmount = 3500000,
+                            PaidAmount = 1000000,
+                            PaidStatus = "Partial",
+                            EstimatedRepairTime = 180,
+                            Note = "Brake system repair",
+                            CreatedAt = DateTime.UtcNow.AddDays(-3),
+                            BranchId = branch.BranchId,
+                            StatusId = inProgressStatus.OrderStatusId,
+                            VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        },
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Complete Service",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-10),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
+                            CompletionDate = DateTime.UtcNow.AddDays(-1),
+                            Cost = 5000000,
+                            EstimatedAmount = 5000000,
+                            PaidAmount = 5000000,
+                            PaidStatus = "Paid",
+                            EstimatedRepairTime = 240,
+                            Note = "Complete vehicle overhaul",
+                            CreatedAt = DateTime.UtcNow.AddDays(-10),
+                            BranchId = branch.BranchId,
+                            StatusId = completedStatus.OrderStatusId,
+                            VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        }
+                    };
+
+                    _context.RepairOrders.AddRange(repairOrders);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
     }
 }

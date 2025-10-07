@@ -26,6 +26,8 @@ using Microsoft.AspNetCore.Authentication.Google;
 using Services.SmsSenders;
 using BusinessObject.Roles;
 using Microsoft.AspNetCore.OData;
+using Repositories.VehicleRepositories;
+using Services.VehicleServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -179,12 +181,26 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobService, Services.JobService>();
+builder.Services.AddScoped<IJobService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var quotationRepository = provider.GetRequiredService<IQuotationRepository>();
+    return new Services.JobService(jobRepository, quotationRepository);
+});
 
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>(); // This was missing
+
+// Vehicle repository and services
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
+
+// Quotation repositories and services
+builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
+builder.Services.AddScoped<IQuotationService, Services.QuotationService>();
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();

@@ -3,6 +3,10 @@ using BusinessObject.Policies;
 using BusinessObject.Roles;
 using Dtos.Policies;
 using Dtos.Roles;
+using BusinessObject;
+using Dtos.Vehicle;
+using BusinessObject.Authentication;
+using Dtos.Quotation; // Add this line
 
 namespace Garage_pro_api.Mapper
 {
@@ -42,6 +46,25 @@ namespace Garage_pro_api.Mapper
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,
                     opt => opt.Ignore()); // mình sẽ gán thủ công sau
+
+            // Vehicle mappings
+            CreateMap<Vehicle, VehicleDto>().ReverseMap();
+            CreateMap<CreateVehicleDto, Vehicle>();
+            CreateMap<UpdateVehicleDto, Vehicle>();
+            
+            // User mappings
+            CreateMap<ApplicationUser, CustomerDto>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
+                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => ""));
+
+            // Quotation mappings
+            CreateMap<Quotation, QuotationDto>().ReverseMap();
+            CreateMap<QuotationService, QuotationServiceDto>().ReverseMap();
+            CreateMap<QuotationServicePart, QuotationServicePartDto>().ReverseMap();
         }
     }
 }

@@ -1,5 +1,6 @@
 using BusinessObject;
 using Repositories;
+using Dtos.RoBoard; // Add this using statement
 
 namespace Services
 {
@@ -25,11 +26,27 @@ namespace Services
             var allStatuses = await _orderStatusRepository.GetAllAsync();
             
             // Group statuses into 3 columns based on predefined names
+            // Create DTOs to avoid circular references
             var result = new
             {
-                Pending = allStatuses.Where(s => s.StatusName == "Pending").ToList(),
-                InProgress = allStatuses.Where(s => s.StatusName == "In Progress").ToList(),
-                Completed = allStatuses.Where(s => s.StatusName == "Completed").ToList()
+                Pending = allStatuses.Where(s => s.StatusName == "Pending")
+                    .Select(s => new { 
+                        s.OrderStatusId, 
+                        s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList(),
+                InProgress = allStatuses.Where(s => s.StatusName == "In Progress")
+                    .Select(s => new { 
+                        s.OrderStatusId, 
+                        s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList(),
+                Completed = allStatuses.Where(s => s.StatusName == "Completed")
+                    .Select(s => new { 
+                        s.OrderStatusId, 
+                        s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList()
             };
 
             return result;

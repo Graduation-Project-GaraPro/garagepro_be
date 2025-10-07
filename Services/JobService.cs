@@ -12,10 +12,12 @@ namespace Services
     public class JobService : IJobService
     {
         private readonly IJobRepository _jobRepository;
+        private readonly IQuotationRepository _quotationRepository; // Add this
 
-        public JobService(IJobRepository jobRepository)
+        public JobService(IJobRepository jobRepository, IQuotationRepository quotationRepository) // Update constructor
         {
             _jobRepository = jobRepository;
+            _quotationRepository = quotationRepository;
         }
 
         #region Basic CRUD Operations
@@ -629,6 +631,49 @@ namespace Services
                 CreatedAt = DateTime.UtcNow,
                 Note = $"Job created by manager {managerId}"
                 // TotalAmount will be calculated when parts are added or from Service.Price
+            };
+
+            return await _jobRepository.CreateAsync(job);
+        }
+        
+        public async Task<Job> CreateJobFromQuotationAsync(Guid quotationId, Guid serviceId, string managerId)
+        {
+            if (quotationId == Guid.Empty)
+                throw new ArgumentException("Quotation ID is required", nameof(quotationId));
+
+            if (serviceId == Guid.Empty)
+                throw new ArgumentException("Service ID is required", nameof(serviceId));
+
+            if (string.IsNullOrWhiteSpace(managerId))
+                throw new ArgumentException("Manager ID is required", nameof(managerId));
+
+            // Get quotation details
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (quotation == null)
+                throw new ArgumentException("Quotation not found", nameof(quotationId));
+
+            // Verify the quotation is approved
+            if (quotation.Status != QuotationStatus.Approved)
+                throw new InvalidOperationException("Quotation must be approved before creating a job");
+
+            // Verify the service exists in the quotation
+            var quotationService = quotation.QuotationServices.FirstOrDefault(qs => qs.ServiceId == serviceId);
+            if (quotationService == null)
+                throw new ArgumentException("Service not found in quotation", nameof(serviceId));
+
+            // Create job from quotation
+            var job = new Job
+            {
+                ServiceId = serviceId,
+                RepairOrderId = quotation.Inspection.RepairOrderId, // Get RepairOrderId from inspection
+                JobName = $"Job from Quotation - {quotationService.Service.ServiceName}", // Use service name
+                Status = JobStatus.Pending,
+                Level = 1, // Default priority
+                CreatedAt = DateTime.UtcNow,
+                Note = $"Job created from quotation #{quotation.QuotationId} by manager {managerId}",
+                QuotationId = quotationId, // Link to the quotation
+                TotalAmount = quotationService.ServicePrice // Set initial amount from quotation
+                // Additional job parts will be added separately based on QuotationServicePart
             };
 
             return await _jobRepository.CreateAsync(job);

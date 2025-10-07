@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class addGrantedUser : Migration
+    public partial class UpdateVehicleSchema : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -45,28 +45,7 @@ namespace DataAccessLayer.Migrations
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    OperatingHours_Monday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Monday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Monday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Tuesday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Tuesday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Tuesday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Wednesday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Wednesday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Wednesday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Thursday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Thursday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Thursday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Friday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Friday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Friday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Saturday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Saturday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Saturday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Sunday_IsOpen = table.Column<bool>(type: "bit", nullable: false),
-                    OperatingHours_Sunday_OpenTime = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    OperatingHours_Sunday_CloseTime = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -257,6 +236,28 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "OperatingHour",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    DayOfWeek = table.Column<int>(type: "int", nullable: false),
+                    IsOpen = table.Column<bool>(type: "bit", nullable: false),
+                    OpenTime = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false),
+                    CloseTime = table.Column<string>(type: "nvarchar(5)", maxLength: 5, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OperatingHour", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OperatingHour_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "BranchId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Labels",
                 columns: table => new
                 {
@@ -289,7 +290,7 @@ namespace DataAccessLayer.Migrations
                 {
                     PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     Stock = table.Column<int>(type: "int", nullable: false),
@@ -351,7 +352,7 @@ namespace DataAccessLayer.Migrations
                     EstimatedDuration = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     IsActive = table.Column<bool>(type: "bit", nullable: false),
                     IsAdvanced = table.Column<bool>(type: "bit", nullable: false),
-                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -362,8 +363,7 @@ namespace DataAccessLayer.Migrations
                         name: "FK_Services_Branches_BranchId",
                         column: x => x.BranchId,
                         principalTable: "Branches",
-                        principalColumn: "BranchId",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "BranchId");
                     table.ForeignKey(
                         name: "FK_Services_ServiceCategories_ServiceCategoryId",
                         column: x => x.ServiceCategoryId,
@@ -610,8 +610,15 @@ namespace DataAccessLayer.Migrations
                     ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ColorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     LicensePlate = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    VIN = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    VIN = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: false),
+                    Year = table.Column<int>(type: "int", nullable: false),
+                    Mileage = table.Column<long>(type: "bigint", nullable: false),
+                    OwnerEmail = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    LastServiceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    NextServiceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    WarrantyStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1314,6 +1321,11 @@ namespace DataAccessLayer.Migrations
                 column: "UserID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OperatingHour_BranchId",
+                table: "OperatingHour",
+                column: "BranchId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PartInspections_InspectionId",
                 table: "PartInspections",
                 column: "InspectionId");
@@ -1540,6 +1552,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "Notifications");
+
+            migrationBuilder.DropTable(
+                name: "OperatingHour");
 
             migrationBuilder.DropTable(
                 name: "PartInspections");

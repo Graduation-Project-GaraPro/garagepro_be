@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿using BusinessObject.Enums;
+﻿﻿using BusinessObject.Enums;
 using BusinessObject.Technician;
 using System;
 using System.Collections.Generic;
@@ -55,11 +55,15 @@ namespace BusinessObject
         public Guid? OriginalJobId { get; set; }  // Link to original job if this is a revision
         public string? RevisionReason { get; set; }  // Why the estimate was revised
 
+        // Quotation reference
+        public Guid? QuotationId { get; set; } // Link to the quotation this job was created from
+
         // Navigation properties
         public virtual Service Service { get; set; }
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual ICollection<JobPart> JobParts { get; set; }
         public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
         public virtual ICollection<Repair> Repairs { get; set; } = new List<Repair>();
+        public virtual Quotation Quotation { get; set; } // Add this line
     }
 }

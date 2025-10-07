@@ -1,22 +1,22 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BusinessObject;
+﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Policies;
 using BusinessObject.SystemLogs;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using BusinessObject.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
 using BusinessObject.Notifications;
 using BusinessObject.Technician;
 using BusinessObject.Roles;
-using BusinessObject.Branches;
+using BusinessObject.Policies;
+using BusinessObject.SystemLogs;
+using BusinessObject.Enums;
 
 namespace DataAccessLayer
 {
-    public class MyAppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+    public class MyAppDbContext : IdentityDbContext<ApplicationUser>
     {
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
@@ -36,12 +36,22 @@ namespace DataAccessLayer
         public DbSet<PartCategory> PartCategories { get; set; }
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
+        public DbSet<JobPart> JobParts { get; set; }
+        public DbSet<JobTechnician> JobTechnicians { get; set; }
+        public DbSet<Repair> Repairs { get; set; }
+        public DbSet<Specifications> Specifications { get; set; }
+        public DbSet<SpecificationsData> SpecificationsData { get; set; }
+        public DbSet<VehicleLookup> VehicleLookups { get; set; }
+        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
+        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
+        public DbSet<Quotation> Quotations { get; set; }
+        public DbSet<QuotationService> QuotationServices { get; set; }
+        public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
         
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
-        public DbSet<JobPart> JobParts { get; set; }
         public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
@@ -49,8 +59,6 @@ namespace DataAccessLayer
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
         public DbSet<LogCategory> LogCategories { get; set; }
         public DbSet<LogTag> LogTags { get; set; }
-        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
-        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
         // Notification
         public DbSet<CategoryNotification> CategoryNotifications { get; set; }
@@ -58,11 +66,6 @@ namespace DataAccessLayer
 
         //Technician
         public DbSet<Technician> Technicians { get; set; }
-        public DbSet<JobTechnician> JobTechnicians { get; set; }
-        public DbSet<Repair> Repairs { get; set; }
-        public DbSet<VehicleLookup> VehicleLookups { get; set; }
-        public DbSet<Specifications> Specifications { get; set; } 
-        public DbSet<SpecificationsData> SpecificationsData { get; set; }
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -260,7 +263,85 @@ namespace DataAccessLayer
                       .WithOne(r => r.Job)
                       .HasForeignKey(r => r.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                entity.HasOne(j => j.Quotation)
+                      .WithOne(q => q.Job)
+                      .HasForeignKey<Job>(j => j.QuotationId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
+            
+            // Quotation configuration
+            modelBuilder.Entity<Quotation>(entity =>
+            {
+                entity.HasKey(e => e.QuotationId);
+                entity.Property(e => e.CustomerNote).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.ChangeRequestDetails).IsRequired().HasMaxLength(1000);
+                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .IsRequired();
+
+                entity.HasOne(q => q.Inspection)
+                      .WithOne() // One-to-one relationship with Inspection
+                      .HasForeignKey<Quotation>(q => q.InspectionId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(q => q.User)
+                      .WithMany()
+                      .HasForeignKey(q => q.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(q => q.QuotationServices)
+                      .WithOne(qs => qs.Quotation)
+                      .HasForeignKey(qs => qs.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+                      
+                entity.HasOne(q => q.Job)
+                      .WithOne(j => j.Quotation)
+                      .HasForeignKey<Job>(j => j.QuotationId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // QuotationService configuration
+            modelBuilder.Entity<QuotationService>(entity =>
+            {
+                entity.HasKey(e => e.QuotationServiceId);
+                entity.Property(e => e.ServicePrice).HasColumnType("decimal(18,2)");
+                entity.Property(e => e.CustomerRequestedParts).HasMaxLength(1000);
+
+                entity.HasOne(qs => qs.Quotation)
+                      .WithMany(q => q.QuotationServices)
+                      .HasForeignKey(qs => qs.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qs => qs.Service)
+                      .WithMany()
+                      .HasForeignKey(qs => qs.ServiceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(qs => qs.QuotationServiceParts)
+                      .WithOne(qsp => qsp.QuotationService)
+                      .HasForeignKey(qsp => qsp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // QuotationServicePart configuration
+            modelBuilder.Entity<QuotationServicePart>(entity =>
+            {
+                entity.HasKey(e => e.QuotationServicePartId);
+                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+
+                entity.HasOne(qsp => qsp.QuotationService)
+                      .WithMany(qs => qs.QuotationServiceParts)
+                      .HasForeignKey(qsp => qsp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qsp => qsp.Part)
+                      .WithMany()
+                      .HasForeignKey(qsp => qsp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            
             // Repair configuration
             modelBuilder.Entity<Repair>(entity =>
             {
