@@ -80,6 +80,7 @@ namespace Services
         public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
         {
             return await _repository.GetByIdAsync(userId);
+        }
         // 👇 Thêm các method mới
         public async Task<List<ApplicationUser>> GetManagersAndTechniciansAsync()
         {

@@ -48,7 +48,7 @@ namespace Garage_pro_api.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
-            
+
             var user = await _authorizationService.GetUserAsync(User);
             if (user == null) return NotFound(new { message = "User not found" });
             var roles = await _userService.GetUserRolesAsync(user);
@@ -64,6 +64,7 @@ namespace Garage_pro_api.Controllers
                 Roles = roles
             };
             return Ok(result);
+        }
         //[Authorize(Policy = "USER_VIEW")]
         [HttpGet("managers-technicians")]
         public async Task<IActionResult> GetManagersAndTechnicians()

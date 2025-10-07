@@ -228,7 +228,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<TimeSpan>("CloseTime")
+                    b.Property<TimeSpan?>("CloseTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 
@@ -238,7 +238,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
-                    b.Property<TimeSpan>("OpenTime")
+                    b.Property<TimeSpan?>("OpenTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 

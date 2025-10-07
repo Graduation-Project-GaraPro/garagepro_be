@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251002075228_InitialCreate.Designer.cs
-    [Migration("20251002075228_InitialCreate")]
+    [Migration("20251007020539_InitialCreate")]
     partial class InitialCreate
-========
-    [Migration("20251004233352_addCascaseBranchService")]
-    partial class addCascaseBranchService
->>>>>>>> main:DataAccessLayer/Migrations/20251004233352_addCascaseBranchService.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -236,7 +231,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<TimeSpan>("CloseTime")
+                    b.Property<TimeSpan?>("CloseTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 
@@ -246,7 +241,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
-                    b.Property<TimeSpan>("OpenTime")
+                    b.Property<TimeSpan?>("OpenTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 
