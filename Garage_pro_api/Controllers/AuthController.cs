@@ -187,6 +187,8 @@ namespace Garage_pro_api.Controllers
 
             var confirmationLink = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
 
+            Console.WriteLine($"Confirmation Link: {confirmationLink}"); // For debugging
+
             await _emailSender.SendEmailAsync(
                 user.Email,
                 "Confirm your email",

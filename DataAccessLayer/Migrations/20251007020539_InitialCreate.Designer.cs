@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251004233352_addCascaseBranchService")]
-    partial class addCascaseBranchService
+    [Migration("20251007020539_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -231,7 +231,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<TimeSpan>("CloseTime")
+                    b.Property<TimeSpan?>("CloseTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 
@@ -241,7 +241,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsOpen")
                         .HasColumnType("bit");
 
-                    b.Property<TimeSpan>("OpenTime")
+                    b.Property<TimeSpan?>("OpenTime")
                         .HasMaxLength(5)
                         .HasColumnType("time");
 
@@ -563,6 +563,46 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("OrderStatusId");
 
                     b.ToTable("Labels");
+                });
+
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.Property<Guid>("FeedBackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("FeedBackId");
+
+                    b.HasIndex("RepairOrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FeedBacks", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
@@ -929,6 +969,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<long?>("EstimatedRepairTime")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("FeedBackId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("FeedBackId1")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
@@ -972,6 +1018,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("FeedBackId1");
 
                     b.HasIndex("StatusId");
 
@@ -1946,6 +1994,25 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("OrderStatus");
                 });
 
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepairOrder");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
                     b.HasOne("BusinessObject.Notifications.CategoryNotification", "CategoryNotification")
@@ -2068,6 +2135,10 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
+                        .WithMany()
+                        .HasForeignKey("FeedBackId1");
+
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")
@@ -2087,6 +2158,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
 

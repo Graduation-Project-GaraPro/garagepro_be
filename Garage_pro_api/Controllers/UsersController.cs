@@ -1,7 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Dtos.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using Services.Authentication;
 
 namespace Garage_pro_api.Controllers
 {
@@ -10,10 +13,16 @@ namespace Garage_pro_api.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly DynamicAuthenticationService _authorizationService;
+        private readonly IMapper _mapper;
 
-        public UsersController(IUserService userService)
+        public UsersController(IUserService userService, 
+            DynamicAuthenticationService authorizationService,
+            IMapper mapper)
         {
             _userService = userService;
+            _authorizationService = authorizationService;
+            _mapper = mapper;
         }
         [Authorize(Policy = "USER_VIEW")]
         // GET: api/users
@@ -41,6 +50,39 @@ namespace Garage_pro_api.Controllers
 
             return Ok(result);
         }
+
+  
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+            var result = await _userService.GetUserByIdAsync(user.Id);
+            
+            return Ok(_mapper.Map<UserDto>(result));
+        }
+
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserDto model)
+        {
+            // Lấy user hiện tại từ token (User.Claims)
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found" });
+
+            _mapper.Map(model, user);
+
+            if (await _userService.UpdateUserAsync(user))
+            {
+                return Ok(_mapper.Map<UserDto>(user));
+            }
+            else
+            {
+                return BadRequest(new { message = "Update failed" });
+            }
+        }
+
 
         //[Authorize(Policy = "USER_VIEW")]
         [HttpGet("managers-technicians")]

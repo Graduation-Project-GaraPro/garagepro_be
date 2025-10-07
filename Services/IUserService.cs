@@ -13,6 +13,8 @@ namespace Services
         Task<IList<string>> GetUserRolesAsync(ApplicationUser user);
         Task<bool> BanUserAsync(string userId, string message);
         Task<bool> UnbanUserAsync(string userId, string message);
+        Task<ApplicationUser?> GetUserByIdAsync(string userId);
+        Task<bool> UpdateUserAsync(ApplicationUser user);
 
 
         // 👇 Thêm 3 method mới

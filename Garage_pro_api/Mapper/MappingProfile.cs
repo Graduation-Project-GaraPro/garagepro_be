@@ -14,6 +14,7 @@ using Dtos.Services;
 using Dtos.Parts;
 using Dtos.Vehicles;
 
+using Dtos.Auth;
 
 namespace Garage_pro_api.Mapper
 {
@@ -54,6 +55,11 @@ namespace Garage_pro_api.Mapper
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,
                     opt => opt.Ignore()); // mình sẽ gán thủ công sau
+
+            CreateMap<ApplicationUser, UserDto>().ReverseMap();
+            CreateMap<UpdateUserDto, ApplicationUser>()
+    .ForAllMembers(opt =>
+        opt.Condition((src, dest, srcMember) => srcMember != null));
 
 
             // Service -> ServiceDto

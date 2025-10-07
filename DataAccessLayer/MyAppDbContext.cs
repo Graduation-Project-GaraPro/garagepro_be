@@ -17,6 +17,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Manager;
+using BusinessObject.Policies;
+using BusinessObject.SystemLogs;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using BusinessObject.Notifications;
+using BusinessObject.Technician;
+using BusinessObject.Roles;
+using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 
 namespace DataAccessLayer
 {
@@ -40,6 +52,9 @@ namespace DataAccessLayer
         public DbSet<PartCategory> PartCategories { get; set; }
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
+        public DbSet<FeedBack> FeedBacks { get; set; }
+
+        // Junction tables
         
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
@@ -643,6 +658,39 @@ namespace DataAccessLayer
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+           
+
+                
+                modelBuilder.Entity<FeedBack>(entity =>
+                {
+                    entity.ToTable("FeedBacks");                
+                    entity.HasKey(f => f.FeedBackId);           
+
+                    entity.Property(f => f.Description)
+                          .HasMaxLength(1000);                  
+
+                    entity.Property(f => f.Rating)
+                          .IsRequired();                        
+
+                    entity.Property(f => f.CreatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");   
+
+                    entity.Property(f => f.UpdatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");
+
+                    
+                    entity.HasOne(f => f.User)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.UserId)
+                          .OnDelete(DeleteBehavior.Cascade);
+
+                   
+                    entity.HasOne(f => f.RepairOrder)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.RepairOrderId)
+                          .OnDelete(DeleteBehavior.Cascade);
+                });
+   
             // Color-Label relationship
             modelBuilder.Entity<Label>()
                 .HasOne(l => l.Color)

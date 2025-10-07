@@ -77,6 +77,10 @@ namespace Services
             return true;
         }
 
+        public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
+        {
+            return await _repository.GetByIdAsync(userId);
+        }
         // 👇 Thêm các method mới
         public async Task<List<ApplicationUser>> GetManagersAndTechniciansAsync()
         {
@@ -103,5 +107,23 @@ namespace Services
             return await _repository.GetTechniciansWithoutBranchAsync();
 
         }
+
+        public async Task<bool> UpdateUserAsync(ApplicationUser user)
+        {
+            try
+            {
+                var existingUser = await _repository.GetByIdAsync(user.Id);
+                if (existingUser == null)
+                {
+                    return false; // User không tồn tại
+                }
+                await _repository.UpdateAsync(user);
+                return true;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return false; // Xử lý lỗi concurrency nếu cần
+            }
+        }   
     }
 }
