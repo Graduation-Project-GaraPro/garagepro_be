@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using AutoMapper;
+using Dtos.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services;
@@ -12,11 +14,15 @@ namespace Garage_pro_api.Controllers
     {
         private readonly IUserService _userService;
         private readonly DynamicAuthenticationService _authorizationService;
+        private readonly IMapper _mapper;
 
-        public UsersController(IUserService userService, DynamicAuthenticationService authorizationService)
+        public UsersController(IUserService userService, 
+            DynamicAuthenticationService authorizationService,
+            IMapper mapper)
         {
             _userService = userService;
             _authorizationService = authorizationService;
+            _mapper = mapper;
         }
         [Authorize(Policy = "USER_VIEW")]
         // GET: api/users
@@ -54,48 +60,28 @@ namespace Garage_pro_api.Controllers
             if (user == null) return Unauthorized();
             var result = await _userService.GetUserByIdAsync(user.Id);
             
-            return Ok(result);
+            return Ok(_mapper.Map<UserDto>(result));
         }
 
-        //[HttpPut("me")]
-        //public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserDto model)
-        //{
-        //    // Lấy user hiện tại từ token (User.Claims)
-        //    var user = await _authorizationService.GetUserAsync(User);
-        //    if (user == null)
-        //        return NotFound(new { message = "User not found" });
+        [HttpPut("me")]
+        public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserDto model)
+        {
+            // Lấy user hiện tại từ token (User.Claims)
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found" });
 
-        //    // Cập nhật thông tin (chỉ những field được phép)
-        //    if (!string.IsNullOrWhiteSpace(model.FirstName))
-        //        user.FirstName = model.FirstName;
+            _mapper.Map(model, user);
 
-        //    if (!string.IsNullOrWhiteSpace(model.LastName))
-        //        user.LastName = model.LastName;
-
-        //    if (!string.IsNullOrWhiteSpace(model.PhoneNumber))
-        //        user.PhoneNumber = model.PhoneNumber;
-
-        //    // Nếu bạn muốn cho phép đổi email (cân nhắc xác thực lại)
-        //    if (!string.IsNullOrWhiteSpace(model.Email))
-        //        user.Email = model.Email;
-
-        //    // Cập nhật vào DB
-        //    await _userService.UpdateUserAsync(user);
-
-        //    return Ok(new
-        //    {
-        //        message = "Profile updated successfully",
-        //        user = new
-        //        {
-        //            user.Id,
-        //            FullName = $"{user.FirstName} {user.LastName}",
-        //            user.Email,
-        //            user.PhoneNumber,
-        //            user.IsActive,
-        //            user.UpdatedAt
-        //        }
-        //    });
-        //}
+            if (await _userService.UpdateUserAsync(user))
+            {
+                return Ok(_mapper.Map<UserDto>(user));
+            }
+            else
+            {
+                return BadRequest(new { message = "Update failed" });
+            }
+        }
 
 
         //[Authorize(Policy = "USER_VIEW")]

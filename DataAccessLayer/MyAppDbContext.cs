@@ -823,7 +823,7 @@ namespace DataAccessLayer
             modelBuilder.Entity<ServicePart>(entity =>
             {
                 entity.HasKey(e => e.ServicePartId);
-                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+               
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(sp => sp.Service)
