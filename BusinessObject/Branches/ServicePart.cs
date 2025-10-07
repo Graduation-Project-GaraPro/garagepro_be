@@ -10,8 +10,7 @@ namespace BusinessObject.Branches
 {
     public class ServicePart
     {
-        [Key]
-        public Guid ServicePartId { get; set; } = Guid.NewGuid();
+        
 
         [Required]
         public Guid ServiceId { get; set; }
@@ -25,7 +24,7 @@ namespace BusinessObject.Branches
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
-        public virtual Service Service { get; set; }
-        public virtual Part Part { get; set; }
+        public virtual Service? Service { get; set; }
+        public virtual Part? Part { get; set; }
     }
 }

@@ -71,7 +71,9 @@ namespace Garage_pro_api.Mapper
 
             CreateMap<Service, Dtos.Services.ServiceDto>()
                 .ForMember(dest => dest.Branches,
-                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)));
+                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)))
+                .ForMember(dest => dest.Parts,
+                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)));
 
 
             CreateMap<ServiceCategory, ServiceCategoryDto>().ReverseMap();
@@ -104,6 +106,7 @@ namespace Garage_pro_api.Mapper
 
             // Part -> PartDto
             CreateMap<Part, PartDto>();
+            CreateMap<Part, PartServiceRelatedDto>().ReverseMap();
 
             // PartCategory -> PartCategoryWithPartsDto
             CreateMap<PartCategory, PartCategoryWithPartsDto>()

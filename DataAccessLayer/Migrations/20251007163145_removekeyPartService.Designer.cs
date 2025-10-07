@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251007034151_removeServiceTypeInService")]
-    partial class removeServiceTypeInService
+    [Migration("20251007163145_removekeyPartService")]
+    partial class removekeyPartService
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,173 @@ namespace DataAccessLayer.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenderType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MessageId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("AiChatMessages");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIChatSession", b =>
+                {
+                    b.Property<Guid>("SessionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DiagnosisResult")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("SessionName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TotalMessages")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("SessionId");
+
+                    b.ToTable("AiChatSessions");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
+                {
+                    b.Property<Guid>("KeywordId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AIChatMessageMessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AIDiagnostic_KeywordKeywordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreateAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("MessageText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("SenderType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("KeywordId");
+
+                    b.HasIndex("AIChatMessageMessageId");
+
+                    b.HasIndex("AIDiagnostic_KeywordKeywordId");
+
+                    b.HasIndex("SessionId");
+
+                    b.ToTable("AIDiagnostic_Keywords");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIResponseTemplate", b =>
+                {
+                    b.Property<Guid>("TemplateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AIDiagnostic_KeywordKeywordId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Template")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UsageCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Variables")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("TemplateId");
+
+                    b.HasIndex("AIDiagnostic_KeywordKeywordId");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("AIResponseTemplates");
+                });
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
@@ -254,33 +421,21 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
                 {
-                    b.Property<Guid>("ServicePartId")
-                        .ValueGeneratedOnAdd()
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("PartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("ServicePartId");
+                    b.HasKey("ServiceId", "PartId");
 
                     b.HasIndex("PartId");
-
-                    b.HasIndex("ServiceId");
 
                     b.ToTable("ServiceParts");
                 });
@@ -379,6 +534,122 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("ColorId");
 
                     b.ToTable("Colors");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RepairImage", b =>
+                {
+                    b.Property<Guid>("ImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid>("RepairRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ImageId");
+
+                    b.HasIndex("RepairRequestId");
+
+                    b.ToTable("RepairImages");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
+                {
+                    b.Property<Guid>("RepairRequestID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsCompleted")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("RequestDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserID")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<Guid>("VehicleID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RepairRequestID");
+
+                    b.HasIndex("UserID");
+
+                    b.HasIndex("VehicleID");
+
+                    b.ToTable("RepairRequests");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RequestPart", b =>
+                {
+                    b.Property<Guid>("RequestPartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RepairRequestID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("number")
+                        .HasColumnType("int");
+
+                    b.Property<long>("totalAmount")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("RequestPartId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("RepairRequestID");
+
+                    b.ToTable("RequestParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RequestService", b =>
+                {
+                    b.Property<Guid>("RequestServiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RepairRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<long>("TotalAmount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("numberService")
+                        .HasColumnType("int");
+
+                    b.HasKey("RequestServiceId");
+
+                    b.HasIndex("RepairRequestId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.ToTable("RequestServices");
                 });
 
             modelBuilder.Entity("BusinessObject.Inspection", b =>
@@ -563,6 +834,46 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("OrderStatusId");
 
                     b.ToTable("Labels");
+                });
+
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.Property<Guid>("FeedBackId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("FeedBackId");
+
+                    b.HasIndex("RepairOrderId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FeedBacks", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
@@ -929,6 +1240,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<long?>("EstimatedRepairTime")
                         .HasColumnType("bigint");
 
+                    b.Property<Guid?>("FeedBackId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("FeedBackId1")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
@@ -972,6 +1289,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("FeedBackId1");
 
                     b.HasIndex("StatusId");
 
@@ -1198,9 +1517,6 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("BranchId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1238,8 +1554,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("ServiceId");
-
-                    b.HasIndex("BranchId");
 
                     b.HasIndex("ServiceCategoryId");
 
@@ -1664,6 +1978,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("ModelId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
@@ -1675,9 +1992,113 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("VehicleId");
 
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("ColorId");
+
+                    b.HasIndex("ModelId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Vehicles");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleBrand", b =>
+                {
+                    b.Property<Guid>("BrandID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("BrandName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("BrandID");
+
+                    b.ToTable("VehicleBrands");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleColor", b =>
+                {
+                    b.Property<Guid>("ColorID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ColorName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("HexCode")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
+                    b.HasKey("ColorID");
+
+                    b.ToTable("VehicleColors");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleModel", b =>
+                {
+                    b.Property<Guid>("ModelID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BrandID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ManufacturingYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ModelID");
+
+                    b.HasIndex("BrandID");
+
+                    b.ToTable("VehicleModels");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleModelColor", b =>
+                {
+                    b.Property<Guid>("VehicleModelColorID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ColorID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ModelID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("VehicleModelColorID");
+
+                    b.HasIndex("ColorID");
+
+                    b.HasIndex("ModelID");
+
+                    b.ToTable("VehicleModelColors");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -1786,6 +2207,51 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
+                {
+                    b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
+                        .WithMany("Messages")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
+                {
+                    b.HasOne("BusinessObject.AiChat.AIChatMessage", null)
+                        .WithMany("Keywords")
+                        .HasForeignKey("AIChatMessageMessageId");
+
+                    b.HasOne("BusinessObject.AiChat.AIDiagnostic_Keyword", null)
+                        .WithMany("Keywords")
+                        .HasForeignKey("AIDiagnostic_KeywordKeywordId");
+
+                    b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIResponseTemplate", b =>
+                {
+                    b.HasOne("BusinessObject.AiChat.AIDiagnostic_Keyword", null)
+                        .WithMany("ResponseTemplates")
+                        .HasForeignKey("AIDiagnostic_KeywordKeywordId");
+
+                    b.HasOne("BusinessObject.AiChat.AIChatMessage", "Message")
+                        .WithMany("ResponseTemplates")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
+                });
+
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
@@ -1864,6 +2330,74 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("BusinessObject.Customers.RepairImage", b =>
+                {
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithMany("RepairImages")
+                        .HasForeignKey("RepairRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepairRequest");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("UserID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Vehicle", "Vehicle")
+                        .WithMany()
+                        .HasForeignKey("VehicleID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Vehicle");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RequestPart", b =>
+                {
+                    b.HasOne("BusinessObject.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithMany("RequestParts")
+                        .HasForeignKey("RepairRequestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("RepairRequest");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RequestService", b =>
+                {
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithMany("RequestServices")
+                        .HasForeignKey("RepairRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Service", "Service")
+                        .WithMany()
+                        .HasForeignKey("ServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepairRequest");
+
+                    b.Navigation("Service");
+                });
+
             modelBuilder.Entity("BusinessObject.Inspection", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
@@ -1938,6 +2472,25 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Color");
 
                     b.Navigation("OrderStatus");
+                });
+
+            modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
+                {
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RepairOrder");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
@@ -2062,6 +2615,10 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
+                        .WithMany()
+                        .HasForeignKey("FeedBackId1");
+
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")
@@ -2081,6 +2638,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
 
@@ -2166,17 +2725,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Service", b =>
                 {
-                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
-                        .WithMany()
-                        .HasForeignKey("BranchId");
-
                     b.HasOne("BusinessObject.ServiceCategory", "ServiceCategory")
                         .WithMany("Services")
                         .HasForeignKey("ServiceCategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Branch");
 
                     b.Navigation("ServiceCategory");
                 });
@@ -2338,13 +2891,67 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
+                    b.HasOne("BusinessObject.Vehicles.VehicleBrand", "Brand")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Vehicles.VehicleColor", "Color")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("ColorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Vehicles.VehicleModel", "Model")
+                        .WithMany("Vehicles")
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Brand");
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Model");
+
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleModel", b =>
+                {
+                    b.HasOne("BusinessObject.Vehicles.VehicleBrand", "Brand")
+                        .WithMany("VehicleModels")
+                        .HasForeignKey("BrandID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Brand");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleModelColor", b =>
+                {
+                    b.HasOne("BusinessObject.Vehicles.VehicleColor", "Color")
+                        .WithMany("VehicleModelColors")
+                        .HasForeignKey("ColorID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Vehicles.VehicleModel", "Model")
+                        .WithMany("VehicleModelColors")
+                        .HasForeignKey("ModelID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Model");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -2398,6 +3005,25 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
+                {
+                    b.Navigation("Keywords");
+
+                    b.Navigation("ResponseTemplates");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIChatSession", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
+                {
+                    b.Navigation("Keywords");
+
+                    b.Navigation("ResponseTemplates");
+                });
+
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
                     b.Navigation("Notifications");
@@ -2429,6 +3055,15 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Color", b =>
                 {
                     b.Navigation("Labels");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
+                {
+                    b.Navigation("RepairImages");
+
+                    b.Navigation("RequestParts");
+
+                    b.Navigation("RequestServices");
                 });
 
             modelBuilder.Entity("BusinessObject.Inspection", b =>
@@ -2572,6 +3207,27 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
                     b.Navigation("RepairOrders");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleBrand", b =>
+                {
+                    b.Navigation("VehicleModels");
+
+                    b.Navigation("Vehicles");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleColor", b =>
+                {
+                    b.Navigation("VehicleModelColors");
+
+                    b.Navigation("Vehicles");
+                });
+
+            modelBuilder.Entity("BusinessObject.Vehicles.VehicleModel", b =>
+                {
+                    b.Navigation("VehicleModelColors");
+
+                    b.Navigation("Vehicles");
                 });
 #pragma warning restore 612, 618
         }

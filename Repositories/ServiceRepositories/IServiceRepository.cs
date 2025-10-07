@@ -11,6 +11,7 @@ namespace Repositories.ServiceRepositories
     {
         Task<IEnumerable<Service>> GetAllAsync();
         Task<Service> GetByIdAsync(Guid id);
+        Task<Service?> GetByIdWithRelationsAsync(Guid id);
         IQueryable<Service> Query();
         Task AddAsync(Service service);
         void Update(Service service);

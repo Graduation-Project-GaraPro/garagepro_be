@@ -881,8 +881,8 @@ namespace DataAccessLayer
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
             {
-                entity.HasKey(e => e.ServicePartId);
-               
+                entity.HasKey(e => new { e.ServiceId, e.PartId });
+
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(sp => sp.Service)

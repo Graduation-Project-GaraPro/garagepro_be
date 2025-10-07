@@ -10,6 +10,7 @@ using Dtos.Services;
 
 using Microsoft.EntityFrameworkCore;
 using Repositories.BranchRepositories;
+using Repositories.PartRepositories;
 using Repositories.ServiceRepositories;
 
 namespace Services.ServiceServices
@@ -20,14 +21,16 @@ namespace Services.ServiceServices
         private readonly IServiceRepository _repository;
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
         private readonly IBranchRepository _branchRepository;
+        private readonly IPartRepository _partRepository;
 
         private readonly IMapper _mapper;
 
-        public ServiceService(IServiceRepository repository, IMapper mapper, IServiceCategoryRepository serviceCategoryRepository, IBranchRepository branchRepository)
+        public ServiceService(IServiceRepository repository, IMapper mapper, IServiceCategoryRepository serviceCategoryRepository, IBranchRepository branchRepository, IPartRepository partRepository)
         {
             _repository = repository;
             _serviceCategoryRepository = serviceCategoryRepository;
             _branchRepository = branchRepository;
+            _partRepository = partRepository;
             _mapper = mapper;
         }
 
@@ -94,13 +97,11 @@ namespace Services.ServiceServices
 
         public async Task<ServiceDto> UpdateServiceAsync(Guid id, UpdateServiceDto dto)
         {
-            var existing = await _repository.Query()
-                .Include(s => s.BranchServices) // load navigation
-                .FirstOrDefaultAsync(s => s.ServiceId == id);
+            var existing = await _repository.GetByIdWithRelationsAsync(id);
 
             if (existing == null) return null;
 
-            // Check trùng tên (ngoại trừ chính nó)
+            // Check trùng tên
             var exists = await _repository.Query()
                 .AnyAsync(s => s.ServiceName == dto.ServiceName
                             && s.ServiceCategoryId == dto.ServiceCategoryId
@@ -115,7 +116,6 @@ namespace Services.ServiceServices
             if (!categoryExists)
                 throw new ApplicationException($"ServiceCategoryId '{dto.ServiceCategoryId}' does not exist.");
 
-            // Check tất cả BranchId có tồn tại không
             foreach (var branchId in dto.BranchIds ?? new List<Guid>())
             {
                 var branchExists = await _branchRepository.ExistsAsync(b => b.BranchId == branchId);
@@ -123,32 +123,27 @@ namespace Services.ServiceServices
                     throw new ApplicationException($"BranchId '{branchId}' does not exist.");
             }
 
-            // Check tất cả PartId có tồn tại không (nếu bạn có PartRepository)
-            //foreach (var partId in dto.PartIds ?? new List<Guid>())
-            //{
-            //    var partExists = await _partRepository.ExistsAsync(p => p.PartId == partId);
-            //    if (!partExists)
-            //        throw new ApplicationException($"PartId '{partId}' does not exist.");
-            //}
-            // Map DTO -> entity (các field cơ bản)
-            _mapper.Map(dto, existing);
+            // Map DTO -> entity
+            existing.ServiceName = dto.ServiceName;
+            existing.Description = dto.Description;
+            existing.Price = dto.Price;
+            existing.EstimatedDuration = dto.EstimatedDuration;
+            existing.ServiceStatus = dto.ServiceStatus;
+            existing.ServiceCategoryId = dto.ServiceCategoryId;
+            existing.IsActive = dto.IsActive;
+            existing.IsAdvanced = dto.IsAdvanced;
             existing.UpdatedAt = DateTime.UtcNow;
 
-            // Đồng bộ BranchServices
+            // --- Đồng bộ BranchServices ---
             var currentBranchIds = existing.BranchServices.Select(bs => bs.BranchId).ToList();
             var newBranchIds = dto.BranchIds;
 
-            // Xoá những branch không còn trong danh sách mới
-            
             foreach (var bs in existing.BranchServices.ToList())
             {
                 if (!newBranchIds.Contains(bs.BranchId))
-                {
                     existing.BranchServices.Remove(bs);
-                }
             }
 
-            // Thêm những branch mới chưa có
             foreach (var branchId in newBranchIds.Except(currentBranchIds))
             {
                 existing.BranchServices.Add(new BranchService
@@ -158,22 +153,23 @@ namespace Services.ServiceServices
                 });
             }
 
-           
-            // Đồng bộ ServiceParts
-           
+            // --- Đồng bộ ServiceParts ---
             var currentPartIds = existing.ServiceParts.Select(sp => sp.PartId).ToList();
             var newPartIds = dto.PartIds;
 
             foreach (var sp in existing.ServiceParts.ToList())
             {
                 if (!newPartIds.Contains(sp.PartId))
-                {
                     existing.ServiceParts.Remove(sp);
-                }
             }
 
             foreach (var partId in newPartIds.Except(currentPartIds))
             {
+                // ✅ Check part tồn tại
+                var partExists = await _partRepository.ExistsAsync(p => p.PartId == partId);
+                if (!partExists)
+                    throw new ApplicationException($"PartId '{partId}' does not exist.");
+
                 existing.ServiceParts.Add(new ServicePart
                 {
                     ServiceId = existing.ServiceId,
@@ -181,12 +177,13 @@ namespace Services.ServiceServices
                     CreatedAt = DateTime.UtcNow
                 });
             }
-
             _repository.Update(existing);
             await _repository.SaveChangesAsync();
 
             return _mapper.Map<ServiceDto>(existing);
         }
+
+
 
 
         public async Task<bool> DeleteServiceAsync(Guid id)

@@ -25,6 +25,7 @@ namespace Dtos.Services
         public virtual GetCategoryForServiceDto ServiceCategory { get; set; }
 
         public virtual ICollection<BranchServiceRelatedDto>? Branches { get; set; } = new List<BranchServiceRelatedDto>();
+        public virtual ICollection<PartServiceRelatedDto>? Parts { get; set; } = new List<PartServiceRelatedDto>();
 
     }
 }

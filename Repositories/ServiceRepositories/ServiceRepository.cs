@@ -21,7 +21,7 @@ namespace Repositories.ServiceRepositories
         public async Task<IEnumerable<Service>> GetAllAsync()
         {
             return await _context.Services
-                .Include(s => s.ServiceCategory).Include(s=>s.BranchServices).ThenInclude(bs=>bs.Branch)
+                .Include(s => s.ServiceCategory).Include(s=>s.BranchServices).ThenInclude(bs=>bs.Branch).Include(s => s.ServiceParts).ThenInclude(sp => sp.Part).AsNoTracking()
                 .ToListAsync();
         }
 
@@ -29,6 +29,17 @@ namespace Repositories.ServiceRepositories
         {
             return await _context.Services
                 .Include(s => s.ServiceCategory).Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
+                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .FirstOrDefaultAsync(s => s.ServiceId == id);
+        }
+
+        public async Task<Service?> GetByIdWithRelationsAsync(Guid id)
+        {
+            return await _context.Services
+                 .Include(s => s.ServiceCategory)
+                .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
+                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+
                 .FirstOrDefaultAsync(s => s.ServiceId == id);
         }
         public IQueryable<Service> Query()
