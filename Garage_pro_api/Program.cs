@@ -110,13 +110,14 @@ else
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
 }
 
-// JWT Authentication
+// ================== JWT SETTINGS ==================
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
+// ================== AUTHENTICATION CONFIG ==================
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = "SmartScheme";          // mặc định chọn scheme "thông minh"
+    options.DefaultScheme = "SmartScheme";
     options.DefaultChallengeScheme = "SmartScheme";
 })
 .AddPolicyScheme("SmartScheme", "JWT or Cookie", options =>
@@ -130,7 +131,7 @@ builder.Services.AddAuthentication(options =>
             return JwtBearerDefaults.AuthenticationScheme;
         }
 
-        // Nếu không thì fallback về Cookie
+        // Nếu không có → dùng Cookie
         return CookieAuthenticationDefaults.AuthenticationScheme;
     };
 })
@@ -145,7 +146,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero
+        ClockSkew = TimeSpan.Zero // bỏ delay mặc định
     };
 
     options.Events = new JwtBearerEvents
@@ -162,8 +163,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
-    options.LoginPath = "/api/auth/login";   // đường dẫn login
-    options.LogoutPath = "/api/auth/logout"; // đường dẫn logout
+    options.LoginPath = "/api/auth/login";
+    options.LogoutPath = "/api/auth/logout";
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.SlidingExpiration = true;
 })
@@ -172,6 +173,7 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
+
 
 builder.Services.ConfigureApplicationCookie(options =>
 {

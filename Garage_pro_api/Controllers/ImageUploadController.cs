@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Dtos.FileUploads;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.Cloudinaries;
 
@@ -16,14 +17,15 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPost("upload")]
-        public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImage([FromForm] FileUploadDto dto)
         {
-            if (file == null || file.Length == 0)
+            if (dto.File == null || dto.File.Length == 0)
                 return BadRequest("No file provided.");
 
             try
             {
-                var imageUrl = await _cloudinaryService.UploadImageAsync(file);
+                var imageUrl = await _cloudinaryService.UploadImageAsync(dto.File);
                 return Ok(new { imageUrl });
             }
             catch (Exception ex)
@@ -31,15 +33,17 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+
         [HttpPost("upload-multiple")]
-        public async Task<IActionResult> UploadImages([FromForm] List<IFormFile> files)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadImages([FromForm] MultipleFileUploadDto dto)
         {
-            if (files == null || !files.Any())
+            if (dto.Files == null || !dto.Files.Any())
                 return BadRequest("No files provided.");
 
             try
             {
-                var imageUrls = await _cloudinaryService.UploadImagesAsync(files);
+                var imageUrls = await _cloudinaryService.UploadImagesAsync(dto.Files);
                 return Ok(new { imageUrls });
             }
             catch (Exception ex)
