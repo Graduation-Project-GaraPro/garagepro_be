@@ -238,6 +238,11 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 // Đăng ký Policy Provider thay thế mặc định
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
