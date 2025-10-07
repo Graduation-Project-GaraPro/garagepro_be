@@ -10,5 +10,11 @@ namespace Repositories.ServiceRepositories
     public interface IServiceRepository
     {
         Task<IEnumerable<Service>> GetAllAsync();
+        Task<Service> GetByIdAsync(Guid id);
+        IQueryable<Service> Query();
+        Task AddAsync(Service service);
+        void Update(Service service);
+        void Delete(Service service);
+        Task SaveChangesAsync();
     }
 }

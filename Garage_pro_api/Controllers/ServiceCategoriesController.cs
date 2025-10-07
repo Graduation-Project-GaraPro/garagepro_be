@@ -36,10 +36,58 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/ServiceCategories/{id}/services
         [HttpGet("{id}/services")]
-        public async Task<ActionResult<IEnumerable<ServiceDto>>> GetServicesByCategoryId(Guid id)
+        public async Task<ActionResult<IEnumerable<Dtos.Branches.ServiceDto>>> GetServicesByCategoryId(Guid id)
         {
             var services = await _service.GetServicesByCategoryIdAsync(id);
             return Ok(services);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<ServiceCategoryDto>> Create(CreateServiceCategoryDto dto)
+        {
+            try
+            {
+                var created = await _service.CreateCategoryAsync(dto);
+                return CreatedAtAction(nameof(GetById), new { id = created.ServiceCategoryId }, created);
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // log ex nếu cần
+                return StatusCode(500, new { message = "An unexpected error occurred.", detail = ex.Message });
+            }
+        }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<ServiceCategoryDto>> Update(Guid id, UpdateServiceCategoryDto dto)
+        {
+            try
+            {
+                var updated = await _service.UpdateCategoryAsync(id, dto);
+                if (updated == null) return NotFound();
+
+                return Ok(updated);
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // log ex nếu cần
+                return StatusCode(500, new { message = "An unexpected error occurred.", detail = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            var success = await _service.DeleteCategoryAsync(id);
+            if (!success) return NotFound();
+            return NoContent();
         }
     }
 }

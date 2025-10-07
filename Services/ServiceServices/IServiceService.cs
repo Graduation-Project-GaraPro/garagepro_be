@@ -4,11 +4,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
+using Dtos.Services;
 
 namespace Services.ServiceServices
 {
     public interface IServiceService
     {
-        Task<IEnumerable<Service>> GetAllServicesAsync();
+        Task<IEnumerable<ServiceDto>> GetAllServicesAsync();
+        Task<ServiceDto> GetServiceByIdAsync(Guid id);
+        Task<ServiceDto> CreateServiceAsync(CreateServiceDto dto);
+        Task<ServiceDto> UpdateServiceAsync(Guid id, UpdateServiceDto dto);
+        Task<bool> DeleteServiceAsync(Guid id);
     }
+
 }

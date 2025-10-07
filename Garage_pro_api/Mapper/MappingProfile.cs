@@ -8,6 +8,7 @@ using Dtos.Policies;
 using Dtos.Roles;
 using BusinessObject.Authentication;
 using Dtos.Services;
+using Dtos.Parts;
 
 namespace Garage_pro_api.Mapper
 {
@@ -51,9 +52,27 @@ namespace Garage_pro_api.Mapper
 
 
             // Service -> ServiceDto
-            
-            CreateMap<Service, ServiceDto>();
-            CreateMap<ServiceCategory, ServiceCategoryDto>();
+
+            CreateMap<Service, Dtos.Branches.ServiceDto>();
+            CreateMap<Service, Dtos.Services.ServiceDto>();
+            CreateMap<Service, CreateServiceDto>().ReverseMap();
+            CreateMap<Service, UpdateServiceDto>().ReverseMap().ForMember(dest => dest.ServiceId, opt => opt.Ignore()); ;
+
+            CreateMap<Service, Dtos.Services.ServiceDto>()
+                .ForMember(dest => dest.Branches,
+                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)));
+
+
+            CreateMap<ServiceCategory, ServiceCategoryDto>().ReverseMap();
+            CreateMap<ServiceCategory, GetCategoryForServiceDto>().ReverseMap();
+
+            // DTO -> Entity (Create)
+            CreateMap<CreateServiceCategoryDto, ServiceCategory>();
+
+            // DTO -> Entity (Update)
+            CreateMap<UpdateServiceCategoryDto, ServiceCategory>();
+
+
             // Branch -> BranchReadDto
             CreateMap<Branch, BranchReadDto>()
                 .ForMember(dest => dest.Services,
@@ -61,13 +80,23 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.OperatingHours,
                            opt => opt.MapFrom(src => src.OperatingHours)).ReverseMap();
 
+            CreateMap<Branch, BranchServiceRelatedDto>().ReverseMap();
+
+
             CreateMap<Branch, BranchCreateDto>()
                .ReverseMap();
 
-                CreateMap<Branch, BranchUpdateDto>()
-               .ReverseMap();
+            CreateMap<Branch, BranchUpdateDto>()
+           .ReverseMap();
             // OperatingHour -> OperatingHourDto
             CreateMap<OperatingHour, OperatingHourDto>();
+
+            // Part -> PartDto
+            CreateMap<Part, PartDto>();
+
+            // PartCategory -> PartCategoryWithPartsDto
+            CreateMap<PartCategory, PartCategoryWithPartsDto>()
+                .ForMember(dest => dest.PartCategoryId, opt => opt.MapFrom(src => src.LaborCategoryId));
         }
     }
 }

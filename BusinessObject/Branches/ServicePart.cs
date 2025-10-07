@@ -20,12 +20,6 @@ namespace BusinessObject.Branches
         public Guid PartId { get; set; }
 
         [Required]
-        public int Quantity { get; set; } = 1;
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal UnitPrice { get; set; }
-
-        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

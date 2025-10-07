@@ -273,7 +273,7 @@ namespace Garage_pro_api.DbInit
                 ServiceName = "Oil Change",
                 Description = "This is Oil Change",
                 ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
-                ServiceTypeId = defaultServiceTypeId,
+               
                 ServiceStatus = "Active",
                 Price = 300000,
                 EstimatedDuration = 1,
@@ -285,7 +285,7 @@ namespace Garage_pro_api.DbInit
                 ServiceName = "Brake Repair",
                 Description = "This is Brake Repair",
                 ServiceCategoryId = repairCategory.ServiceCategoryId,
-                ServiceTypeId = defaultServiceTypeId,
+               
                 ServiceStatus = "Active",
                 Price = 1200000,
                 EstimatedDuration = 2,
@@ -312,8 +312,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = oilChange.ServiceId,
                     PartId = airFilter.PartId,
-                    Quantity = 1,
-                    UnitPrice = airFilter.Price,
+                   
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -321,8 +320,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = brakeRepair.ServiceId,
                     PartId = brakePad.PartId,
-                    Quantity = 2,
-                    UnitPrice = brakePad.Price,
+                   
                     CreatedAt = DateTime.UtcNow
                 });
 

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
+using BusinessObject.Branches;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 
@@ -45,6 +46,35 @@ namespace Repositories.ServiceRepositories
             return await _context.Services
                 .Where(s => s.ServiceCategoryId == categoryId)
                 .ToListAsync();
+        }
+
+        public void Add(ServiceCategory category)
+        {
+            _context.ServiceCategories.Add(category);
+        }
+
+        public void Update(ServiceCategory category)
+        {
+            _context.ServiceCategories.Update(category);
+        }
+
+        public void Delete(ServiceCategory category)
+        {
+            _context.ServiceCategories.Remove(category);
+        }
+        public IQueryable<ServiceCategory> Query()
+        {
+            return _context.ServiceCategories
+                .Include(sc => sc.Services)
+                .Include(sc => sc.ChildServiceCategories)
+                    .ThenInclude(c => c.Services)
+                .Include(sc => sc.ChildServiceCategories)
+                    .ThenInclude(c => c.ChildServiceCategories)
+                .AsQueryable();
+        }
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
         }
     }
 }

@@ -12,5 +12,10 @@ namespace Repositories.ServiceRepositories
         Task<IEnumerable<ServiceCategory>> GetAllAsync();
         Task<ServiceCategory> GetByIdAsync(Guid id);
         Task<IEnumerable<Service>> GetServicesByCategoryIdAsync(Guid categoryId);
+        IQueryable<ServiceCategory> Query();
+        void Add(ServiceCategory category);
+        void Update(ServiceCategory category);
+        void Delete(ServiceCategory category);
+        Task<int> SaveChangesAsync();
     }
 }

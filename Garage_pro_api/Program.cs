@@ -30,6 +30,9 @@ using Services.BranchServices;
 using Repositories.ServiceRepositories;
 using Services.ServiceServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Services.Cloudinaries;
+using Repositories.PartCategoryRepositories;
+using Services.PartCategoryServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -40,6 +43,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
+    c.CustomSchemaIds(type => type.FullName); // dùng FullName để phân biệt
     // Thêm thông tin cho Swagger UI
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
@@ -110,32 +114,16 @@ else
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
 }
 
-// ================== JWT SETTINGS ==================
+// JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
-// ================== AUTHENTICATION CONFIG ==================
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultScheme = "SmartScheme";
-    options.DefaultChallengeScheme = "SmartScheme";
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddPolicyScheme("SmartScheme", "JWT or Cookie", options =>
-{
-    options.ForwardDefaultSelector = context =>
-    {
-        // Ưu tiên JWT nếu có header Bearer
-        string authorization = context.Request.Headers["Authorization"];
-        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
-        {
-            return JwtBearerDefaults.AuthenticationScheme;
-        }
-
-        // Nếu không có → dùng Cookie
-        return CookieAuthenticationDefaults.AuthenticationScheme;
-    };
-})
-.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+.AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -146,7 +134,7 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ClockSkew = TimeSpan.Zero // bỏ delay mặc định
+        ClockSkew = TimeSpan.Zero
     };
 
     options.Events = new JwtBearerEvents
@@ -160,11 +148,11 @@ builder.Services.AddAuthentication(options =>
             return Task.CompletedTask;
         }
     };
-})
-.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+}).AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
-    options.LoginPath = "/api/auth/login";
-    options.LogoutPath = "/api/auth/logout";
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.SlidingExpiration = true;
 })
@@ -229,10 +217,14 @@ builder.Services.AddScoped<IBranchRepository, BranchRepository>();
 builder.Services.AddScoped<IBranchService, BranchService>();
 
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IServiceService, ServiceService>();
+
 builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
-
-
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+
+builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
+builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
+
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 
 // Đăng ký Authorization Handler
