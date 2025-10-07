@@ -1,14 +1,19 @@
 ﻿using AutoMapper;
-using BusinessObject.Branches;
 using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
+using Customers;
 using Dtos.Branches;
+using Dtos.Customers;
 using Dtos.Policies;
 using Dtos.Roles;
-using BusinessObject.Authentication;
 using Dtos.Services;
 using Dtos.Parts;
+using Dtos.Vehicles;
+
 
 namespace Garage_pro_api.Mapper
 {
@@ -97,6 +102,33 @@ namespace Garage_pro_api.Mapper
             // PartCategory -> PartCategoryWithPartsDto
             CreateMap<PartCategory, PartCategoryWithPartsDto>()
                 .ForMember(dest => dest.PartCategoryId, opt => opt.MapFrom(src => src.LaborCategoryId));
+
+            //mapping cho Vehicle
+            CreateMap<Vehicle, VehicleDto>();
+            CreateMap<RequestPartDto, RequestPart>()
+    .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => Guid.NewGuid()));
+
+            CreateMap<RequestServiceDto, RequestService>()
+                .ForMember(dest => dest.RequestServiceId, opt => opt.MapFrom(src => Guid.NewGuid()));
+            //quotation
+            CreateMap<Inspection, QuotationDto>()
+            .ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.ServiceInspections))
+            .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.PartInspections));
+
+            CreateMap<ServiceInspection, ServiceItemDto>()
+                .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Service.Price))
+                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => 1));
+
+            CreateMap<PartInspection, PartItemDto>()
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
+                .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Part.Name))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Part.Price))
+                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => 1))
+                .ForMember(dest => dest.SelectedSpecId, opt => opt.MapFrom(src => src.PartInspectionId))
+                .ForMember(dest => dest.Specifications, opt => opt.MapFrom(src => src.Part.PartSpecifications));
+
+            CreateMap<PartSpecification, PartSpecificationDto>();
         }
     }
 }

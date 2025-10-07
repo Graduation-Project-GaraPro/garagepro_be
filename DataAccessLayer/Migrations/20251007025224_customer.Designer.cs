@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007025224_customer")]
+    partial class customer
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,173 +24,6 @@ namespace DataAccessLayer.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
-                {
-                    b.Property<Guid>("MessageId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreateAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MessageText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SenderType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("MessageId");
-
-                    b.HasIndex("SessionId");
-
-                    b.ToTable("AiChatMessages");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIChatSession", b =>
-                {
-                    b.Property<Guid>("SessionId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("DiagnosisResult")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("SessionName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("int");
-
-                    b.Property<int>("TotalMessages")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("VehicleId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("SessionId");
-
-                    b.ToTable("AiChatSessions");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
-                {
-                    b.Property<Guid>("KeywordId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("AIChatMessageMessageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("AIDiagnostic_KeywordKeywordId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreateAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid>("MessageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("MessageText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("SenderType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("SessionId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("KeywordId");
-
-                    b.HasIndex("AIChatMessageMessageId");
-
-                    b.HasIndex("AIDiagnostic_KeywordKeywordId");
-
-                    b.HasIndex("SessionId");
-
-                    b.ToTable("AIDiagnostic_Keywords");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIResponseTemplate", b =>
-                {
-                    b.Property<Guid>("TemplateId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid?>("AIDiagnostic_KeywordKeywordId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Language")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<Guid>("MessageId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Template")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("UsageCount")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Variables")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("TemplateId");
-
-                    b.HasIndex("AIDiagnostic_KeywordKeywordId");
-
-                    b.HasIndex("MessageId");
-
-                    b.ToTable("AIResponseTemplates");
-                });
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
@@ -428,8 +264,14 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1356,6 +1198,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1389,10 +1234,15 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<Guid>("ServiceTypeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("ServiceId");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("ServiceCategoryId");
 
@@ -1422,6 +1272,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("bit");
 
                     b.Property<Guid?>("ParentServiceCategoryId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceTypeId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -2043,51 +1896,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
-                {
-                    b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
-                        .WithMany("Messages")
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
-                {
-                    b.HasOne("BusinessObject.AiChat.AIChatMessage", null)
-                        .WithMany("Keywords")
-                        .HasForeignKey("AIChatMessageMessageId");
-
-                    b.HasOne("BusinessObject.AiChat.AIDiagnostic_Keyword", null)
-                        .WithMany("Keywords")
-                        .HasForeignKey("AIDiagnostic_KeywordKeywordId");
-
-                    b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
-                        .WithMany()
-                        .HasForeignKey("SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIResponseTemplate", b =>
-                {
-                    b.HasOne("BusinessObject.AiChat.AIDiagnostic_Keyword", null)
-                        .WithMany("ResponseTemplates")
-                        .HasForeignKey("AIDiagnostic_KeywordKeywordId");
-
-                    b.HasOne("BusinessObject.AiChat.AIChatMessage", "Message")
-                        .WithMany("ResponseTemplates")
-                        .HasForeignKey("MessageId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Message");
-                });
-
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
@@ -2468,11 +2276,17 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Service", b =>
                 {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId");
+
                     b.HasOne("BusinessObject.ServiceCategory", "ServiceCategory")
                         .WithMany("Services")
                         .HasForeignKey("ServiceCategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Branch");
 
                     b.Navigation("ServiceCategory");
                 });
@@ -2746,25 +2560,6 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
-                {
-                    b.Navigation("Keywords");
-
-                    b.Navigation("ResponseTemplates");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIChatSession", b =>
-                {
-                    b.Navigation("Messages");
-                });
-
-            modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
-                {
-                    b.Navigation("Keywords");
-
-                    b.Navigation("ResponseTemplates");
                 });
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>

@@ -1,19 +1,22 @@
-﻿using System;
+﻿using BusinessObject;
+using BusinessObject.AiChat;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Campaigns;
+using BusinessObject.Customers;
+using BusinessObject.Notifications;
+using BusinessObject.Policies;
+using BusinessObject.Roles;
+using BusinessObject.SystemLogs;
+using BusinessObject.Technician;
+using BusinessObject.Vehicles;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject;
-using BusinessObject.Authentication;
-using BusinessObject.Policies;
-using BusinessObject.SystemLogs;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
-using BusinessObject.Notifications;
-using BusinessObject.Technician;
-using BusinessObject.Roles;
-using BusinessObject.Branches;
-using BusinessObject.Campaigns;
 
 namespace DataAccessLayer
 {
@@ -71,9 +74,54 @@ namespace DataAccessLayer
         public DbSet<BranchService> BranchServices { get; set; }
         public DbSet<OperatingHour> OperatingHours { get; set; }
 
+        //AiChat
+        public DbSet<AIChatMessage> AiChatMessages { get; set; }
+        public DbSet<AIChatSession> AiChatSessions { get; set; }
+       
+        public DbSet<AIDiagnostic_Keyword> AIDiagnostic_Keywords { get; set; }
+        public DbSet<AIResponseTemplate> AIResponseTemplates { get; set; }
+        //Vehicle
+        //public DbSet<Vehicle> Vehicles { get; set; }
+        public DbSet<VehicleBrand> VehicleBrands { get; set; }
+        public DbSet<VehicleModel> VehicleModels { get; set; }
+        public DbSet<VehicleColor> VehicleColors { get; set; }
+        public DbSet<VehicleModelColor> VehicleModelColors { get; set; }
+        //Customer
+        public DbSet<RepairRequest> RepairRequests { get; set; }
+        public DbSet<RepairImage> RepairImages { get; set; }
+        public DbSet<RequestPart> RequestParts { get; set; }
+        public DbSet<RequestService> RequestServices { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+
+            //chặn casadate
+            modelBuilder.Entity<Vehicle>()
+      .HasOne(v => v.Brand)
+      .WithMany(b => b.Vehicles)
+      .HasForeignKey(v => v.BrandId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.Model)
+                .WithMany(m => m.Vehicles)
+                .HasForeignKey(v => v.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.Color)
+                .WithMany(c => c.Vehicles)
+                .HasForeignKey(v => v.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Explicitly configure the ApplicationRole properties to ensure they map correctly
             modelBuilder.Entity<ApplicationRole>(entity =>
