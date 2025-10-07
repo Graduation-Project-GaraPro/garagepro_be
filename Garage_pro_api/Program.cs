@@ -25,6 +25,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.Google;
 using Services.SmsSenders;
 using BusinessObject.Roles;
+using Repositories.BranchRepositories;
+using Services.BranchServices;
+using Repositories.ServiceRepositories;
+using Services.ServiceServices;
+using Microsoft.AspNetCore.Authentication.Cookies;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -111,10 +116,25 @@ var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = "SmartScheme";          // mặc định chọn scheme "thông minh"
+    options.DefaultChallengeScheme = "SmartScheme";
 })
-.AddJwtBearer(options =>
+.AddPolicyScheme("SmartScheme", "JWT or Cookie", options =>
+{
+    options.ForwardDefaultSelector = context =>
+    {
+        // Ưu tiên JWT nếu có header Bearer
+        string authorization = context.Request.Headers["Authorization"];
+        if (!string.IsNullOrEmpty(authorization) && authorization.StartsWith("Bearer "))
+        {
+            return JwtBearerDefaults.AuthenticationScheme;
+        }
+
+        // Nếu không thì fallback về Cookie
+        return CookieAuthenticationDefaults.AuthenticationScheme;
+    };
+})
+.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -140,11 +160,19 @@ builder.Services.AddAuthentication(options =>
         }
     };
 })
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/api/auth/login";   // đường dẫn login
+    options.LogoutPath = "/api/auth/logout"; // đường dẫn logout
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
+})
 .AddGoogle(googleOptions =>
 {
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -158,7 +186,7 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
 builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
 builder.Services.AddMemoryCache(); // Cho IMemoryCache
-
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 
@@ -196,11 +224,28 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+
+builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+
+builder.Services.AddScoped<IBranchService, BranchService>();
+
+builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+
+
+builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
+
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 // Đăng ký Policy Provider thay thế mặc định
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
@@ -224,7 +269,9 @@ if (app.Environment.IsDevelopment())
 app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
 app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
+app.UseSecurityPolicyEnforcement();
+
 app.MapControllers();
 // Initialize database
 

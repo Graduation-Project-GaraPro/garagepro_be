@@ -465,7 +465,7 @@ namespace Repositories
 
             repairOrder.IsArchived = true;
             repairOrder.ArchivedAt = DateTime.UtcNow;
-            repairOrder.ArchiveReason = reason;
+            //repairOrder.ArchiveReason = reason;
             repairOrder.ArchivedByUserId = archivedByUserId;
             repairOrder.UpdatedAt = DateTime.UtcNow;
 
@@ -487,7 +487,7 @@ namespace Repositories
 
             repairOrder.IsArchived = false;
             repairOrder.ArchivedAt = null;
-            repairOrder.ArchiveReason = null;
+            //repairOrder.ArchiveReason = null;
             repairOrder.ArchivedByUserId = null;
             repairOrder.UpdatedAt = DateTime.UtcNow;
             
@@ -725,7 +725,7 @@ namespace Repositories
 
             repairOrder.IsArchived = false;
             repairOrder.ArchivedAt = null;
-            repairOrder.ArchiveReason = null;
+            //repairOrder.ArchiveReason = null;
             repairOrder.ArchivedByUserId = null;
 
             try

@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
 using BusinessObject.Manager;
+using BusinessObject.Branches;
 
 namespace BusinessObject
 {
@@ -53,9 +54,6 @@ namespace BusinessObject
         public bool IsArchived { get; set; } = false;
 
         public DateTime? ArchivedAt { get; set; }
-
-        [MaxLength(500)]
-        public string ArchiveReason { get; set; }
 
         public string ArchivedByUserId { get; set; }
 

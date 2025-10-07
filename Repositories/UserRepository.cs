@@ -25,7 +25,121 @@ namespace Repositories
 
         public async Task<List<ApplicationUser>> GetAllAsync()
         {
-            return await _context.Users.ToListAsync();
+            // Lấy role Admin
+            var adminRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Admin");
+
+            if (adminRole == null)
+                return await _context.Users.ToListAsync(); // nếu không có role Admin, trả về tất cả
+
+            // Lấy userIds của Admin
+            var adminUserIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == adminRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            // Lấy tất cả user trừ Admin
+            var users = await _context.Users
+                .Where(u => !adminUserIds.Contains(u.Id))
+                .ToListAsync();
+
+            return users;
+        }
+
+        // Lấy tất cả user có role Manager và Technician
+        public async Task<List<ApplicationUser>> GetManagersAndTechniciansAsync()
+        {
+            var roleNames = new[] { "Manager", "Technician" };
+
+            // Lấy roleIds tương ứng
+            var roles = await _context.Roles
+                .Where(r => roleNames.Contains(r.Name))
+                .ToListAsync();
+
+            var roleIds = roles.Select(r => r.Id).ToList();
+
+            // Lấy userIds có role Manager hoặc Technician
+            var userIds = await _context.UserRoles
+                .Where(ur => roleIds.Contains(ur.RoleId))
+                .Select(ur => ur.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+        }
+
+        // Lấy tất cả user chỉ có role Technician
+        public async Task<List<ApplicationUser>> GetTechniciansAsync()
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == technicianRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+        }
+
+        // Lấy tất cả user chỉ có role Manager
+        public async Task<List<ApplicationUser>> GetManagersAsync()
+        {
+            var managerRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Manager");
+
+            if (managerRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == managerRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync();
+        }
+
+        // Lấy tất cả Manager chưa thuộc branch nào
+        public async Task<List<ApplicationUser>> GetManagersWithoutBranchAsync()
+        {
+            var managerRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Manager");
+
+            if (managerRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == managerRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
+                .ToListAsync();
+        }
+
+        // Lấy tất cả Technician chưa thuộc branch nào
+        public async Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync()
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == technicianRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
+                .ToListAsync();
         }
 
         public async Task<ApplicationUser> GetByIdAsync(string userId)

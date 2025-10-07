@@ -14,5 +14,15 @@ namespace Services
         Task<bool> BanUserAsync(string userId, string message);
         Task<bool> UnbanUserAsync(string userId, string message);
         Task<ApplicationUser?> GetUserByIdAsync(string userId);
+
+
+        // 👇 Thêm 3 method mới
+        Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();
+        Task<List<ApplicationUser>> GetManagersAsync();
+        Task<List<ApplicationUser>> GetTechniciansAsync();
+
+        // 👇 Thêm 2 method mới
+        Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
+        Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
     }
 }

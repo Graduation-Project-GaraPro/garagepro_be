@@ -1,8 +1,13 @@
 ﻿using AutoMapper;
+using BusinessObject.Branches;
+using BusinessObject;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
+using Dtos.Branches;
 using Dtos.Policies;
 using Dtos.Roles;
+using BusinessObject.Authentication;
+using Dtos.Services;
 
 namespace Garage_pro_api.Mapper
 {
@@ -39,9 +44,30 @@ namespace Garage_pro_api.Mapper
                     opt => opt.MapFrom(src => src.Permissions));
 
             // Role → RoleDto
+            CreateMap<ApplicationUser, ApplicationUserDto>().ReverseMap();
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,
                     opt => opt.Ignore()); // mình sẽ gán thủ công sau
+
+
+            // Service -> ServiceDto
+            
+            CreateMap<Service, ServiceDto>();
+            CreateMap<ServiceCategory, ServiceCategoryDto>();
+            // Branch -> BranchReadDto
+            CreateMap<Branch, BranchReadDto>()
+                .ForMember(dest => dest.Services,
+                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Service)))
+                .ForMember(dest => dest.OperatingHours,
+                           opt => opt.MapFrom(src => src.OperatingHours)).ReverseMap();
+
+            CreateMap<Branch, BranchCreateDto>()
+               .ReverseMap();
+
+                CreateMap<Branch, BranchUpdateDto>()
+               .ReverseMap();
+            // OperatingHour -> OperatingHourDto
+            CreateMap<OperatingHour, OperatingHourDto>();
         }
     }
 }

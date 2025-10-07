@@ -17,6 +17,8 @@ using System.Text;
 using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using Services.SmsSenders;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Garage_pro_api.Controllers
 {
@@ -257,6 +259,18 @@ namespace Garage_pro_api.Controllers
                 SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
+
+            // Tạo ClaimsPrincipal cho Cookie
+            var claimsPrincipal = _tokenService.ValidateToken(accessToken);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                claimsPrincipal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                });
 
             var response = new AuthResponseDto
             {
