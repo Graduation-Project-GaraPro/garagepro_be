@@ -1,13 +1,17 @@
 ﻿using AutoMapper;
-using BusinessObject.Branches;
 using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
 using Dtos.Branches;
+using Dtos.Customers;
 using Dtos.Policies;
 using Dtos.Roles;
-using BusinessObject.Authentication;
 using Dtos.Services;
+using Dtos.Vehicles;
+
 
 namespace Garage_pro_api.Mapper
 {
@@ -68,6 +72,16 @@ namespace Garage_pro_api.Mapper
                .ReverseMap();
             // OperatingHour -> OperatingHourDto
             CreateMap<OperatingHour, OperatingHourDto>();
+
+
+            //mapping cho Vehicle
+            CreateMap<Vehicle, VehicleDto>();
+            CreateMap<RequestPartDto, RequestPart>()
+    .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => Guid.NewGuid()));
+
+            CreateMap<RequestServiceDto, RequestService>()
+                .ForMember(dest => dest.RequestServiceId, opt => opt.MapFrom(src => Guid.NewGuid()));
+
         }
     }
 }
