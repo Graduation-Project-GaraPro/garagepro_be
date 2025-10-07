@@ -30,6 +30,7 @@ using Services.BranchServices;
 using Repositories.ServiceRepositories;
 using Services.ServiceServices;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Services.Cloudinaries;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -153,13 +154,23 @@ builder.Services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
-            if (context.Exception is SecurityTokenExpiredException)
-            {
-                context.Response.Headers.Add("Token-Expired", "true");
-            }
+            Console.WriteLine("JWT Authentication failed:");
+            Console.WriteLine(context.Exception.ToString());
+            return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("JWT validated successfully!");
+            Console.WriteLine("User: " + context.Principal?.Identity?.Name);
             return Task.CompletedTask;
         }
     };
+
 })
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
@@ -226,6 +237,7 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 builder.Services.AddScoped<IBranchRepository, BranchRepository>();
 
@@ -237,6 +249,8 @@ builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository
 
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
+
+
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -268,8 +282,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseSecurityPolicyEnforcement();
+//app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    Console.WriteLine("==== Incoming request ====");
+    Console.WriteLine("Path: " + context.Request.Path);
+    Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+    await next();
+});
+
 app.UseAuthentication();
 app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
 app.UseSecurityPolicyEnforcement();

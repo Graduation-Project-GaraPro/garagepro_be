@@ -45,26 +45,59 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
+  
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
 
             var user = await _authorizationService.GetUserAsync(User);
-            if (user == null) return NotFound(new { message = "User not found" });
-            var roles = await _userService.GetUserRolesAsync(user);
-            var result = new
-            {
-                user.Id,
-                FullName = $"{user.FirstName} {user.LastName}",
-                user.Email,
-                user.IsActive,
-                user.CreatedAt,
-                user.EmailConfirmed,
-                user.LastLogin,
-                Roles = roles
-            };
+            if (user == null) return Unauthorized();
+            var result = await _userService.GetUserByIdAsync(user.Id);
+            
             return Ok(result);
         }
+
+        //[HttpPut("me")]
+        //public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserDto model)
+        //{
+        //    // Lấy user hiện tại từ token (User.Claims)
+        //    var user = await _authorizationService.GetUserAsync(User);
+        //    if (user == null)
+        //        return NotFound(new { message = "User not found" });
+
+        //    // Cập nhật thông tin (chỉ những field được phép)
+        //    if (!string.IsNullOrWhiteSpace(model.FirstName))
+        //        user.FirstName = model.FirstName;
+
+        //    if (!string.IsNullOrWhiteSpace(model.LastName))
+        //        user.LastName = model.LastName;
+
+        //    if (!string.IsNullOrWhiteSpace(model.PhoneNumber))
+        //        user.PhoneNumber = model.PhoneNumber;
+
+        //    // Nếu bạn muốn cho phép đổi email (cân nhắc xác thực lại)
+        //    if (!string.IsNullOrWhiteSpace(model.Email))
+        //        user.Email = model.Email;
+
+        //    // Cập nhật vào DB
+        //    await _userService.UpdateUserAsync(user);
+
+        //    return Ok(new
+        //    {
+        //        message = "Profile updated successfully",
+        //        user = new
+        //        {
+        //            user.Id,
+        //            FullName = $"{user.FirstName} {user.LastName}",
+        //            user.Email,
+        //            user.PhoneNumber,
+        //            user.IsActive,
+        //            user.UpdatedAt
+        //        }
+        //    });
+        //}
+
+
         //[Authorize(Policy = "USER_VIEW")]
         [HttpGet("managers-technicians")]
         public async Task<IActionResult> GetManagersAndTechnicians()
