@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251007023917_VehicleLookupU")]
+    partial class VehicleLookupU
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1474,32 +1477,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Repairs");
                 });
 
-            modelBuilder.Entity("BusinessObject.Technician.Specification", b =>
-                {
-                    b.Property<Guid>("SpecificationID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("TemplateID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("SpecificationID");
-
-                    b.HasIndex("Label");
-
-                    b.HasIndex("TemplateID", "DisplayOrder");
-
-                    b.ToTable("Specification");
-                });
-
             modelBuilder.Entity("BusinessObject.Technician.SpecificationCategory", b =>
                 {
                     b.Property<Guid>("CategoryID")
@@ -1527,8 +1504,16 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("FieldTemplateID")
+                    b.Property<Guid>("CategoryID")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<Guid>("LookupID")
                         .HasColumnType("uniqueidentifier");
@@ -1540,10 +1525,11 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("DataID");
 
-                    b.HasIndex("FieldTemplateID");
+                    b.HasIndex("CategoryID");
 
-                    b.HasIndex("LookupID", "FieldTemplateID")
-                        .IsUnique();
+                    b.HasIndex("DisplayOrder");
+
+                    b.HasIndex("LookupID", "CategoryID");
 
                     b.ToTable("SpecificationsData");
                 });
@@ -1595,8 +1581,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.HasKey("LookupID");
-
-                    b.HasIndex("Automaker", "NameCar");
 
                     b.ToTable("VehicleLookups");
                 });
@@ -2244,32 +2228,21 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Job");
                 });
 
-            modelBuilder.Entity("BusinessObject.Technician.Specification", b =>
-                {
-                    b.HasOne("BusinessObject.Technician.SpecificationCategory", "SpecificationCategory")
-                        .WithMany("Specifications")
-                        .HasForeignKey("TemplateID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("SpecificationCategory");
-                });
-
             modelBuilder.Entity("BusinessObject.Technician.SpecificationsData", b =>
                 {
-                    b.HasOne("BusinessObject.Technician.Specification", "Specification")
-                        .WithMany("SpecificationsDatas")
-                        .HasForeignKey("FieldTemplateID")
+                    b.HasOne("BusinessObject.Technician.SpecificationCategory", "SpecificationCategory")
+                        .WithMany("SpecificationsData")
+                        .HasForeignKey("CategoryID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Technician.VehicleLookup", "VehicleLookup")
-                        .WithMany("SpecificationsDatas")
+                        .WithMany("SpecificationsData")
                         .HasForeignKey("LookupID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Specification");
+                    b.Navigation("SpecificationCategory");
 
                     b.Navigation("VehicleLookup");
                 });
@@ -2494,14 +2467,9 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Tags");
                 });
 
-            modelBuilder.Entity("BusinessObject.Technician.Specification", b =>
-                {
-                    b.Navigation("SpecificationsDatas");
-                });
-
             modelBuilder.Entity("BusinessObject.Technician.SpecificationCategory", b =>
                 {
-                    b.Navigation("Specifications");
+                    b.Navigation("SpecificationsData");
                 });
 
             modelBuilder.Entity("BusinessObject.Technician.Technician", b =>
@@ -2513,7 +2481,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Technician.VehicleLookup", b =>
                 {
-                    b.Navigation("SpecificationsDatas");
+                    b.Navigation("SpecificationsData");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>

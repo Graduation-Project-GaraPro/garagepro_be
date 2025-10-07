@@ -1,9 +1,7 @@
-﻿using System;
+﻿using BusinessObject.Enums;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Dtos.Technician
 {
@@ -11,8 +9,22 @@ namespace Dtos.Technician
     {
         [Required(ErrorMessage = "Vui lòng nhập kết quả kiểm tra")]
         public string Finding { get; set; }
-        public List<Guid> SuggestedPartIds { get; set; } = new List<Guid>();
 
         public bool IsCompleted { get; set; } = false;
+
+        // Danh sách kết quả kiểm tra theo từng Service
+        public List<ServiceInspectionUpdateDto> ServiceUpdates { get; set; } = new List<ServiceInspectionUpdateDto>();
+    }
+
+    public class ServiceInspectionUpdateDto
+    {
+        [Required]
+        public Guid ServiceId { get; set; }
+
+        // Trạng thái tình trạng dịch vụ (Tốt, Cần thay thế, Hư hỏng, v.v.)
+        public ConditionStatus ConditionStatus { get; set; }
+
+        // Gợi ý phụ tùng tương ứng với service này
+        public List<Guid> SuggestedPartIds { get; set; } = new List<Guid>();
     }
 }

@@ -6,13 +6,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Repositories.Technician
+namespace Services.Technician
 {
-    public interface IInspectionRepository
+    public interface IInspectionTechnicianService
     {
         Task<List<Inspection>> GetInspectionsByTechnicianAsync(string userId);
         Task<Inspection> GetInspectionByIdAsync(Guid id, string userId);
         Task<Inspection> UpdateInspectionAsync(Guid id, UpdateInspectionRequest request, string userId);
         Task<Inspection> StartInspectionAsync(Guid id, string userId);
-    }   
+    }
 }

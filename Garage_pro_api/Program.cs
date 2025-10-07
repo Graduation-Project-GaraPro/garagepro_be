@@ -201,14 +201,16 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 // Technician repository and service
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
-builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
-builder.Services.AddScoped<IInspectionService, InspectionService>();
+builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
+builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
+builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 
-builder.Services.AddScoped<IPermissionService, PermissionService>(); // g?c
+builder.Services.AddScoped<IPermissionService, PermissionService>(); 
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
 

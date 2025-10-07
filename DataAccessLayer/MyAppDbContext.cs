@@ -62,8 +62,9 @@ namespace DataAccessLayer
         public DbSet<JobTechnician> JobTechnicians { get; set; }
         public DbSet<Repair> Repairs { get; set; }
         public DbSet<VehicleLookup> VehicleLookups { get; set; }
-        public DbSet<Specifications> Specifications { get; set; } 
+        public DbSet<SpecificationCategory> SpecificationCategory { get; set; }
         public DbSet<SpecificationsData> SpecificationsData { get; set; }
+        public DbSet<Specification> Specification { get; set; }
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -292,57 +293,110 @@ namespace DataAccessLayer
                       .HasForeignKey(i => i.TechnicianId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
-            // VehicleLookup configuration
-            modelBuilder.Entity<VehicleLookup>(entity =>
-            {
-                entity.HasKey(e => e.LookupID);
-                entity.Property(e => e.Automaker)
-                      .IsRequired()
-                      .HasMaxLength(100);
-                entity.Property(e => e.NameCar)
-                      .IsRequired()
-                      .HasMaxLength(100);
 
-                entity.HasMany(e => e.Specifications)
-                      .WithOne(s => s.VehicleLookup)
-                      .HasForeignKey(s => s.LookupID)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // Specifications configuration
-            modelBuilder.Entity<Specifications>(entity =>
+            // SpecificationCategory configuration
+            modelBuilder.Entity<SpecificationCategory>(entity =>
             {
-                entity.HasKey(e => e.SpecificationsID);
+                entity.HasKey(e => e.CategoryID);
+
                 entity.Property(e => e.Title)
                       .IsRequired()
                       .HasMaxLength(200);
 
-                entity.HasOne(s => s.VehicleLookup)
-                      .WithMany(v => v.Specifications)
-                      .HasForeignKey(s => s.LookupID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(e => e.DisplayOrder)
+                      .IsRequired();
 
-                entity.HasMany(s => s.SpecificationsData)
-                      .WithOne(d => d.Specifications)
-                      .HasForeignKey(d => d.SpecificationsID)
-                      .OnDelete(DeleteBehavior.Cascade);
+                // Index để tăng performance khi sort
+                entity.HasIndex(e => e.DisplayOrder);
+
+                // Relationship với Specification
+                entity.HasMany(e => e.Specifications)
+                      .WithOne(s => s.SpecificationCategory)
+                      .HasForeignKey(s => s.TemplateID)
+                      .OnDelete(DeleteBehavior.Restrict); // Không cho xóa category nếu có specifications
+            });
+
+            // Specification configuration
+            modelBuilder.Entity<Specification>(entity =>
+            {
+                entity.HasKey(e => e.SpecificationID);
+
+                entity.Property(e => e.Label)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.DisplayOrder)
+                      .IsRequired();
+
+                // Relationship với SpecificationCategory
+                entity.HasOne(s => s.SpecificationCategory)
+                      .WithMany(c => c.Specifications)
+                      .HasForeignKey(s => s.TemplateID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Relationship với SpecificationsData
+                entity.HasMany(s => s.SpecificationsDatas)
+                      .WithOne(d => d.Specification)
+                      .HasForeignKey(d => d.FieldTemplateID)
+                      .OnDelete(DeleteBehavior.Restrict); // Không cho xóa specification nếu có data
+
+                // Composite Index để tăng performance khi query theo category và sort
+                entity.HasIndex(e => new { e.TemplateID, e.DisplayOrder });
+
+                // Index để search theo Label
+                entity.HasIndex(e => e.Label);
+            });
+
+            // VehicleLookup configuration
+            modelBuilder.Entity<VehicleLookup>(entity =>
+            {
+                entity.HasKey(e => e.LookupID);
+
+                entity.Property(e => e.Automaker)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                entity.Property(e => e.NameCar)
+                      .IsRequired()
+                      .HasMaxLength(100);
+
+                // Relationship với SpecificationsData
+                entity.HasMany(e => e.SpecificationsDatas)
+                      .WithOne(d => d.VehicleLookup)
+                      .HasForeignKey(d => d.LookupID)
+                      .OnDelete(DeleteBehavior.Cascade); // Xóa xe thì xóa hết data của xe đó
+
+                // Index để search theo Automaker và NameCar
+                entity.HasIndex(e => new { e.Automaker, e.NameCar });
             });
 
             // SpecificationsData configuration
             modelBuilder.Entity<SpecificationsData>(entity =>
             {
                 entity.HasKey(e => e.DataID);
-                entity.Property(e => e.Label)
-                      .IsRequired()
-                      .HasMaxLength(100);
+
                 entity.Property(e => e.Value)
                       .IsRequired()
                       .HasMaxLength(200);
 
-                entity.HasOne(d => d.Specifications)
-                      .WithMany(s => s.SpecificationsData)
-                      .HasForeignKey(d => d.SpecificationsID)
+                // Relationship với VehicleLookup
+                entity.HasOne(d => d.VehicleLookup)
+                      .WithMany(v => v.SpecificationsDatas)
+                      .HasForeignKey(d => d.LookupID)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                // Relationship với Specification
+                entity.HasOne(d => d.Specification)
+                      .WithMany(s => s.SpecificationsDatas)
+                      .HasForeignKey(d => d.FieldTemplateID)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Composite Index để tăng performance khi query theo xe và specification
+                entity.HasIndex(e => new { e.LookupID, e.FieldTemplateID })
+                      .IsUnique(); // Đảm bảo mỗi xe chỉ có 1 giá trị cho mỗi specification
+
+                // Index để query theo FieldTemplateID (khi muốn xem tất cả xe có specification này)
+                entity.HasIndex(e => e.FieldTemplateID);
             });
 
             //Log System

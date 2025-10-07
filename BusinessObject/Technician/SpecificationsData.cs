@@ -14,16 +14,17 @@ namespace BusinessObject.Technician
         public Guid DataID { get; set; }
 
         [Required]
-        [MaxLength(100)]
-        public string Label { get; set; }
-
-        [Required]
         [MaxLength(200)]
-        public string Value { get; set; }
+        public string Value { get; set; } // Giá trị cụ thể của xe
 
-        // FK -> Specifications
-        [ForeignKey(nameof(Specifications))]
-        public Guid SpecificationsID { get; set; }
-        public virtual Specifications Specifications { get; set; }
+        // FK -> VehicleLookup
+        [ForeignKey(nameof(VehicleLookup))]
+        public Guid LookupID { get; set; }
+        public virtual VehicleLookup VehicleLookup { get; set; }
+
+        // FK -> Specification
+        [ForeignKey(nameof(Specification))]
+        public Guid FieldTemplateID { get; set; }
+        public virtual Specification Specification { get; set; }
     }
 }

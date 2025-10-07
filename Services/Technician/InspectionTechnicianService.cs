@@ -4,11 +4,11 @@ using Repositories.Technician;
 
 namespace Services.Technician
 {
-    public class InspectionService : IInspectionService
+    public class InspectionTechnicianService : IInspectionTechnicianService
     {
-        private readonly IInspectionRepository _inspectionRepository;
+        private readonly IInspectionTechnicianRepository _inspectionRepository;
 
-        public InspectionService(IInspectionRepository inspectionRepository)
+        public InspectionTechnicianService(IInspectionTechnicianRepository inspectionRepository)
         {
             _inspectionRepository = inspectionRepository;
         }

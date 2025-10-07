@@ -1,4 +1,5 @@
 ﻿using BusinessObject.Authentication;
+using BusinessObject.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -21,19 +22,6 @@ namespace Garage_pro_api.Controllers
             _userManager = userManager;
         }
 
-        /// <summary>
-        /// Lấy danh sách công việc của technician hiện tại
-        /// Hỗ trợ OData: $select, $filter, $orderby, $top, $skip, $expand, $count
-        /// </summary>
-        /// <example>
-        /// GET /odata/JobTechnician/my-jobs
-        /// GET /odata/JobTechnician/my-jobs?$select=JobId,JobName,Status
-        /// GET /odata/JobTechnician/my-jobs?$filter=Status eq 'Pending'
-        /// GET /odata/JobTechnician/my-jobs?$orderby=Deadline desc
-        /// GET /odata/JobTechnician/my-jobs?$top=10&$skip=0
-        /// GET /odata/JobTechnician/my-jobs?$expand=Parts,Repairs
-        /// GET /odata/JobTechnician/my-jobs?$count=true
-        /// </example>
         [HttpGet("my-jobs")]
         [Authorize]
         [EnableQuery(MaxTop = 100, AllowedQueryOptions = AllowedQueryOptions.All)]
@@ -53,12 +41,20 @@ namespace Garage_pro_api.Controllers
             }
 
             var jobs = await _technicianService.GetJobsByTechnicianAsync(user.Id);
-            if (jobs == null || !jobs.Any())
+
+            // 🔹 Lọc chỉ những job có trạng thái New, InProgress, Completed
+            var filteredJobs = jobs
+                .Where(j => j.Status == JobStatus.New ||
+                            j.Status == JobStatus.InProgress ||
+                            j.Status == JobStatus.Completed)
+                .ToList();
+
+            if (!filteredJobs.Any())
             {
-                return Ok(new { Message = "Hiện tại bạn chưa được gán công việc nào." });
+                return Ok(new { Message = "Hiện tại bạn chưa có công việc nào trong tiến trình hoạt động." });
             }
 
-            var result = jobs.Select(job => new
+            var result = filteredJobs.Select(job => new
             {
                 job.JobId,
                 job.JobName,
@@ -106,7 +102,7 @@ namespace Garage_pro_api.Controllers
                     EstimatedTime = r.EstimatedTime,
                     Notes = r.Notes
                 }).ToList()
-            }).AsQueryable(); //trả về IQueryable để OData hoạt động
+            }).AsQueryable();
 
             return Ok(result);
         }

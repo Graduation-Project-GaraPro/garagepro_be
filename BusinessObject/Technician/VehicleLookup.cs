@@ -21,6 +21,6 @@ namespace BusinessObject.Technician
         public string NameCar { get; set; }
 
         // Navigation property
-        public virtual ICollection<Specifications> Specifications { get; set; }
+        public virtual ICollection<SpecificationsData> SpecificationsDatas { get; set; }
     }
 }

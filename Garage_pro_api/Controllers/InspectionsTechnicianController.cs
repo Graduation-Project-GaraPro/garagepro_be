@@ -13,12 +13,12 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    public class InspectionsController : ODataController
+    public class InspectionsTechnicianController : ODataController
     {
-        private readonly IInspectionService _inspectionService;
+        private readonly IInspectionTechnicianService _inspectionService;
         private readonly UserManager<ApplicationUser> _userManager;
 
-        public InspectionsController(IInspectionService inspectionService, UserManager<ApplicationUser> userManager)
+        public InspectionsTechnicianController(IInspectionTechnicianService inspectionService, UserManager<ApplicationUser> userManager)
         {
             _inspectionService = inspectionService;
             _userManager = userManager;
@@ -79,7 +79,16 @@ namespace Garage_pro_api.Controllers
                         FullName = $"{inspection.RepairOrder.Vehicle.User.FirstName} {inspection.RepairOrder.Vehicle.User.LastName}".Trim(),
                         Email = inspection.RepairOrder.Vehicle.User.Email,
                         PhoneNumber = inspection.RepairOrder.Vehicle.User.PhoneNumber
-                    } : null
+                    } : null ,
+                    Services = inspection.RepairOrder.RepairOrderServices?.Select(ros => new
+                    {
+                        ros.RepairOrderServiceId,
+                        ros.ServiceId,
+                        ServiceName = ros.Service?.ServiceName,
+                        ros.ServicePrice,
+                        ros.ActualDuration,
+                        ros.Notes
+                    }).ToList()
                 } : null,
                 ServiceInspections = inspection.ServiceInspections?.Select(si => new
                 {
@@ -157,7 +166,15 @@ namespace Garage_pro_api.Controllers
                         FullName = $"{inspection.RepairOrder.Vehicle.User.FirstName} {inspection.RepairOrder.Vehicle.User.LastName}".Trim(),
                         Email = inspection.RepairOrder.Vehicle.User.Email,
                         PhoneNumber = inspection.RepairOrder.Vehicle.User.PhoneNumber
-                    } : null
+                    } : null,
+                    Services = inspection.RepairOrder.RepairOrderServices?.Select(ros => new
+                    {
+                        ros.ServiceId,
+                        ServiceName = ros.Service?.ServiceName,
+                        ros.ServicePrice,
+                        ros.ActualDuration,
+                        ros.Notes
+                    }).ToList()
                 } : null,
 
                 ServiceInspections = inspection.ServiceInspections?.Select(si => new
@@ -210,43 +227,61 @@ namespace Garage_pro_api.Controllers
                 return Unauthorized(new { Message = "Bạn cần đăng nhập." });
             }
 
-            // Validate request
             if (string.IsNullOrWhiteSpace(request.Finding))
             {
                 return BadRequest(new { Message = "Vui lòng nhập kết quả kiểm tra (Finding)." });
             }
 
-            var updatedInspection = await _inspectionService.UpdateInspectionAsync(id, request, user.Id);
-            if (updatedInspection == null)
+            if (request.ServiceUpdates == null || !request.ServiceUpdates.Any())
             {
-                return BadRequest(new
-                {
-                    Message = "Không thể cập nhật. Kiểm tra xe không tồn tại, bạn không có quyền, hoặc trạng thái không cho phép cập nhật (chỉ New, Pending, InProgress)."
-                });
+                return BadRequest(new { Message = "Vui lòng nhập danh sách dịch vụ cần cập nhật." });
             }
 
-            return Ok(new
+            try
             {
-                Message = request.IsCompleted
-                    ? "Kiểm tra xe hoàn thành và đã gửi cho Manager xem xét."
-                    : "Cập nhật kiểm tra xe thành công.",
-                Inspection = new
+                var updatedInspection = await _inspectionService.UpdateInspectionAsync(id, request, user.Id);
+
+                return Ok(new
                 {
-                    updatedInspection.InspectionId,
-                    updatedInspection.Status,
-                    StatusText = updatedInspection.Status.ToString(),
-                    updatedInspection.Finding,
-                    updatedInspection.UpdatedAt,
-                    PartInspections = updatedInspection.PartInspections?.Select(pi => new
+                    Message = request.IsCompleted
+                        ? "Kiểm tra xe đã hoàn thành và gửi cho Manager xem xét."
+                        : "Cập nhật kiểm tra xe thành công.",
+                    Inspection = new
                     {
-                        pi.PartInspectionId,
-                        pi.PartId,
-                        PartName = pi.Part?.Name,
-                        pi.Status
-                    }).ToList()
-                }
-            });
+                        updatedInspection.InspectionId,
+                        updatedInspection.Status,
+                        StatusText = updatedInspection.Status.ToString(),
+                        updatedInspection.Finding,
+                        updatedInspection.UpdatedAt,
+                        ServiceInspections = updatedInspection.ServiceInspections?.Select(si => new
+                        {
+                            si.ServiceInspectionId,
+                            si.ServiceId,
+                            ServiceName = si.Service?.ServiceName,
+                            si.ConditionStatus
+                        }).ToList(),
+                        PartInspections = updatedInspection.PartInspections?.Select(pi => new
+                        {
+                            pi.PartInspectionId,
+                            pi.PartId,
+                            PartName = pi.Part?.Name,
+                            pi.Status
+                        }).ToList()
+                    }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Lỗi logic từ repo (VD: part không thuộc service, gợi ý sai trạng thái)
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Lỗi khác
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi cập nhật kiểm tra xe.", Error = ex.Message });
+            }
         }
+
 
         /// <summary>
         /// Bắt đầu kiểm tra xe (chuyển trạng thái từ New sang InProgress)
