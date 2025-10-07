@@ -235,6 +235,11 @@ builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 
+// Service Quotation
+builder.Services.AddScoped<IServiceService, ServiceService>();
+
+
+
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 

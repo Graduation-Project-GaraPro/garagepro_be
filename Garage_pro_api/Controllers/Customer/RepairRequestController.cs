@@ -43,14 +43,15 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(request);
         }
 
-        // GET: api/RepairRequests
-        //[HttpGet]
-        //public async Task<IActionResult> GetUserRepairRequests()
-        //{
-        //    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        //    var requests = await _repairRequestService.GetByUserIdAsync(userId);
-        //    return Ok(requests);
-        //}
+
+       // GET: api/RepairRequests
+       [HttpGet]
+        public async Task<IActionResult> GetUserRepairRequests()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var requests = await _repairRequestService.GetByUserIdAsync(userId);
+            return Ok(requests);
+        }
     }
 }
 
