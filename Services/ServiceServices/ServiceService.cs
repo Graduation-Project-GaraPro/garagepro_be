@@ -40,6 +40,43 @@ namespace Services.ServiceServices
             return _mapper.Map<IEnumerable<ServiceDto>>(entities);
         }
 
+
+        public async Task<(IEnumerable<ServiceDto> Services, int TotalCount)> GetPagedServicesAsync(
+                int pageNumber, int pageSize, string? searchTerm, string? status, Guid? serviceTypeId)
+        {
+            var query = _repository.Query(); // IQueryable<Service>
+
+            // Search theo tên hoặc mô tả
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(s =>
+                    s.ServiceName.Contains(searchTerm) ||
+                    (s.Description != null && s.Description.Contains(searchTerm)));
+            }
+
+            // Filter theo status
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                query = query.Where(s => s.ServiceStatus == status);
+            }
+
+            // Filter theo ServiceType (Category)
+            if (serviceTypeId.HasValue)
+            {
+                query = query.Where(s => s.ServiceCategoryId == serviceTypeId.Value);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var pagedEntities = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var services = _mapper.Map<IEnumerable<ServiceDto>>(pagedEntities);
+            return (services, totalCount);
+        }
+
         public async Task<ServiceDto> GetServiceByIdAsync(Guid id)
         {
             var entity = await _repository.GetByIdAsync(id);

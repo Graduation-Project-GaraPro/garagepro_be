@@ -11,6 +11,10 @@ namespace Services.ServiceServices
     public interface IServiceService
     {
         Task<IEnumerable<ServiceDto>> GetAllServicesAsync();
+
+        Task<(IEnumerable<ServiceDto> Services, int TotalCount)> GetPagedServicesAsync(
+                int pageNumber, int pageSize, string? searchTerm, string? status, Guid? serviceTypeId);
+
         Task<ServiceDto> GetServiceByIdAsync(Guid id);
         Task<ServiceDto> CreateServiceAsync(CreateServiceDto dto);
         Task<ServiceDto> UpdateServiceAsync(Guid id, UpdateServiceDto dto);

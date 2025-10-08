@@ -32,6 +32,35 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        [HttpGet("paged")]
+        public async Task<ActionResult<object>> GetPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] string? status = null,
+            [FromQuery] Guid? serviceTypeId = null)
+        {
+            try
+            {
+                var (services, totalCount) = await _service.GetPagedServicesAsync(
+                    pageNumber, pageSize, searchTerm, status, serviceTypeId);
+
+                return Ok(new
+                {
+                    pageNumber,
+                    pageSize,
+                    totalCount,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    data = services
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving services with paging", detail = ex.Message });
+            }
+        }
+
+
         // GET: api/service/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<Service>> GetById(Guid id)
