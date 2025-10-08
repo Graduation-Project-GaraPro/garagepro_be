@@ -37,7 +37,7 @@ namespace Garage_pro_api.Controllers
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] string? searchTerm = null,
-            [FromQuery] string? status = null,
+            [FromQuery] bool? status = null,
             [FromQuery] Guid? serviceTypeId = null)
         {
             try

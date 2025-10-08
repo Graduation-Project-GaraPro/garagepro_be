@@ -274,7 +274,7 @@ namespace Garage_pro_api.DbInit
                 Description = "This is Oil Change",
                 ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
                
-                ServiceStatus = "Active",
+                
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -284,9 +284,7 @@ namespace Garage_pro_api.DbInit
             {
                 ServiceName = "Brake Repair",
                 Description = "This is Brake Repair",
-                ServiceCategoryId = repairCategory.ServiceCategoryId,
-               
-                ServiceStatus = "Active",
+                ServiceCategoryId = repairCategory.ServiceCategoryId,                            
                 Price = 1200000,
                 EstimatedDuration = 2,
                 IsActive = true,

@@ -23,10 +23,7 @@ namespace BusinessObject
         [Required]
         [MaxLength(100)]
         public string ServiceName { get; set; }
-
-        [Required]
-        [MaxLength(50)]
-        public string ServiceStatus { get; set; }
+        
 
         [MaxLength(500)]
         public string Description { get; set; }

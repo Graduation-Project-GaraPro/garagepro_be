@@ -13,7 +13,7 @@ namespace Services.ServiceServices
         Task<IEnumerable<ServiceDto>> GetAllServicesAsync();
 
         Task<(IEnumerable<ServiceDto> Services, int TotalCount)> GetPagedServicesAsync(
-                int pageNumber, int pageSize, string? searchTerm, string? status, Guid? serviceTypeId);
+                int pageNumber, int pageSize, string? searchTerm, bool? status, Guid? serviceTypeId);
 
         Task<ServiceDto> GetServiceByIdAsync(Guid id);
         Task<ServiceDto> CreateServiceAsync(CreateServiceDto dto);

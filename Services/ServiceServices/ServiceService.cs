@@ -42,7 +42,7 @@ namespace Services.ServiceServices
 
 
         public async Task<(IEnumerable<ServiceDto> Services, int TotalCount)> GetPagedServicesAsync(
-                int pageNumber, int pageSize, string? searchTerm, string? status, Guid? serviceTypeId)
+                int pageNumber, int pageSize, string? searchTerm, bool? status, Guid? serviceTypeId)
         {
             var query = _repository.Query(); // IQueryable<Service>
 
@@ -55,9 +55,9 @@ namespace Services.ServiceServices
             }
 
             // Filter theo status
-            if (!string.IsNullOrWhiteSpace(status))
+            if (status.HasValue)
             {
-                query = query.Where(s => s.ServiceStatus == status);
+                query = query.Where(s => s.IsActive == status.Value);
             }
 
             // Filter theo ServiceType (Category)
@@ -165,7 +165,6 @@ namespace Services.ServiceServices
             existing.Description = dto.Description;
             existing.Price = dto.Price;
             existing.EstimatedDuration = dto.EstimatedDuration;
-            existing.ServiceStatus = dto.ServiceStatus;
             existing.ServiceCategoryId = dto.ServiceCategoryId;
             existing.IsActive = dto.IsActive;
             existing.IsAdvanced = dto.IsAdvanced;
