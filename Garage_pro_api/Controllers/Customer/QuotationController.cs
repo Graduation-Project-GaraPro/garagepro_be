@@ -18,8 +18,8 @@ namespace Garage_pro_api.Controllers.Customer
                 _quotationService = quotationService;
             }
 
-        //lấy all báo giá của customer
-        [HttpGet("all")]
+            //lấy all báo giá của customer
+            [HttpGet("all")]
             public async Task<ActionResult<List<QuotationDto>>> GetAllQuotations()
             {
             // Lấy userId từ token

@@ -34,6 +34,8 @@ using Services.Cloudinaries;
 using Repositories.PartCategoryRepositories;
 using Services.PartCategoryServices;
 using Repositories.PartRepositories;
+using Repositories.CampaignRepositories;
+using Services.CampaignServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -246,7 +248,9 @@ builder.Services.AddScoped<IPartRepository, PartRepository>();
 // Service Quotation
 builder.Services.AddScoped<IServiceService, ServiceService>();
 
-
+// Repositories & Services
+builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
+builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

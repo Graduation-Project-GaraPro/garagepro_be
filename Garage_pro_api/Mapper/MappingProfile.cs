@@ -15,6 +15,8 @@ using Dtos.Parts;
 using Dtos.Vehicles;
 
 using Dtos.Auth;
+using BusinessObject.Campaigns;
+using Dtos.Campaigns;
 
 namespace Garage_pro_api.Mapper
 {
@@ -138,6 +140,21 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Specifications, opt => opt.MapFrom(src => src.Part.PartSpecifications));
 
             CreateMap<PartSpecification, PartSpecificationDto>();
+
+
+            // Promotional Campaign
+
+            CreateMap<PromotionalCampaign, PromotionalCampaignDto>()
+            .ForMember(dest => dest.Services,
+                       opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(pcs => pcs.Service)));
+
+            CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>()
+                .ForMember(dest => dest.PromotionalCampaignServices, opt => opt.Ignore());
+
+            CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>()
+                .ForMember(dest => dest.PromotionalCampaignServices, opt => opt.Ignore());
+
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
         }
     }
 }

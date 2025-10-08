@@ -106,6 +106,7 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
+        public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
