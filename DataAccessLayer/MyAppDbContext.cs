@@ -55,7 +55,7 @@ namespace DataAccessLayer
         public DbSet<FeedBack> FeedBacks { get; set; }
 
         // Junction tables
-        
+
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
@@ -80,7 +80,7 @@ namespace DataAccessLayer
         public DbSet<JobTechnician> JobTechnicians { get; set; }
         public DbSet<Repair> Repairs { get; set; }
         public DbSet<VehicleLookup> VehicleLookups { get; set; }
-        public DbSet<Specifications> Specifications { get; set; } 
+        public DbSet<Specifications> Specifications { get; set; }
         public DbSet<SpecificationsData> SpecificationsData { get; set; }
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
@@ -92,7 +92,7 @@ namespace DataAccessLayer
         //AiChat
         public DbSet<AIChatMessage> AiChatMessages { get; set; }
         public DbSet<AIChatSession> AiChatSessions { get; set; }
-       
+
         public DbSet<AIDiagnostic_Keyword> AIDiagnostic_Keywords { get; set; }
         public DbSet<AIResponseTemplate> AIResponseTemplates { get; set; }
         //Vehicle
@@ -658,39 +658,39 @@ namespace DataAccessLayer
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-           
 
-                
-                modelBuilder.Entity<FeedBack>(entity =>
-                {
-                    entity.ToTable("FeedBacks");                
-                    entity.HasKey(f => f.FeedBackId);           
 
-                    entity.Property(f => f.Description)
-                          .HasMaxLength(1000);                  
 
-                    entity.Property(f => f.Rating)
-                          .IsRequired();                        
+            modelBuilder.Entity<FeedBack>(entity =>
+            {
+                entity.ToTable("FeedBacks");
+                entity.HasKey(f => f.FeedBackId);
 
-                    entity.Property(f => f.CreatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");   
+                entity.Property(f => f.Description)
+                      .HasMaxLength(1000);
 
-                    entity.Property(f => f.UpdatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(f => f.Rating)
+                      .IsRequired();
 
-                    
-                    entity.HasOne(f => f.User)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.UserId)
-                          .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(f => f.CreatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
 
-                   
-                    entity.HasOne(f => f.RepairOrder)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.RepairOrderId)
-                          .OnDelete(DeleteBehavior.Cascade);
-                });
-   
+                entity.Property(f => f.UpdatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
+
+
+                entity.HasOne(f => f.User)
+                      .WithMany()
+                      .HasForeignKey(f => f.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+
+                entity.HasOne(f => f.RepairOrder)
+                      .WithMany()
+                      .HasForeignKey(f => f.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Color-Label relationship
             modelBuilder.Entity<Label>()
                 .HasOne(l => l.Color)
@@ -861,7 +861,7 @@ namespace DataAccessLayer
             });
 
             // Many-to-many Branch <-> Service
-            modelBuilder.Entity<BranchService>() .HasKey(bs => new { bs.BranchId, bs.ServiceId });
+            modelBuilder.Entity<BranchService>().HasKey(bs => new { bs.BranchId, bs.ServiceId });
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>()
              .HasOne(bs => bs.Branch)
@@ -876,7 +876,7 @@ namespace DataAccessLayer
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            
+
 
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>

@@ -23,8 +23,9 @@ namespace Repositories.Customers
                 .Include(r => r.Vehicle)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                  .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .ToListAsync();
         }
@@ -35,8 +36,9 @@ namespace Repositories.Customers
                 .Include(r => r.Vehicle)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                 .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .Where(r => r.UserID == userId)
                 .ToListAsync();
@@ -48,8 +50,9 @@ namespace Repositories.Customers
                 .Include(r => r.Vehicle)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                      .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }

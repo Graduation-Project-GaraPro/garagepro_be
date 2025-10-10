@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010094449_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -618,6 +621,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("UnitPrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<int>("number")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("totalAmount")
                         .HasColumnType("decimal(18,2)");
 
@@ -639,11 +645,14 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("ServiceFee")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("numberService")
+                        .HasColumnType("int");
 
                     b.HasKey("RequestServiceId");
 
@@ -2352,7 +2361,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
-                        .WithMany("RepairRequests")
+                        .WithMany()
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3037,8 +3046,6 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
                     b.Navigation("Notifications");
-
-                    b.Navigation("RepairRequests");
 
                     b.Navigation("SystemLogs");
 

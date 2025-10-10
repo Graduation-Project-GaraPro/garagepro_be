@@ -21,15 +21,17 @@ namespace Garage_pro_api.Controllers.Customer
 
         // POST: api/RepairRequests
         [HttpPost]
-        public async Task<IActionResult> CreateRepairRequest(CreateRequestDto dto)
+        public async Task<IActionResult> CreateRepairRequest([FromBody] CreateRequestDto dto)
         {
             // Lấy userId từ token
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+             ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
 
             var createdRequest = await _repairRequestService.CreateRepairRequestAsync(dto, userId);
-            return CreatedAtAction(nameof(GetRepairRequestById), new { id = createdRequest.RequestID }, createdRequest);
+            return Ok(createdRequest);
+    
         }
 
         // GET: api/RepairRequests/{id}
@@ -44,11 +46,14 @@ namespace Garage_pro_api.Controllers.Customer
         }
 
 
-       // GET: api/RepairRequests
-       [HttpGet]
+        // GET: api/RepairRequests
+        [HttpGet("user-requests")]
         public async Task<IActionResult> GetUserRepairRequests()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+             ?? User.FindFirstValue("sub"); // hoặc "idUser"
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();// hoặc tên claim chứa idUser
             var requests = await _repairRequestService.GetByUserIdAsync(userId);
             return Ok(requests);
         }

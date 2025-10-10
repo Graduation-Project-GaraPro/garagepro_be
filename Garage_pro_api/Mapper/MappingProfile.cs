@@ -137,6 +137,24 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.SelectedSpecId, opt => opt.MapFrom(src => src.PartInspectionId))
                 .ForMember(dest => dest.Specifications, opt => opt.MapFrom(src => src.Part.PartSpecifications));
 
+            //Map repair request
+            CreateMap<RepairRequest, RepairRequestDto>()
+               .ForMember(dest => dest.RepairRequestID, opt => opt.MapFrom(src => src.RepairRequestID))
+               .ForMember(dest => dest.VehicleID, opt => opt.MapFrom(src => src.VehicleID))
+               .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+               .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src =>
+                   src.RepairImages.Select(img => img.ImageUrl).ToList()))
+               .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
+            // Map reuqest Servcie
+            CreateMap<RequestService, RequestServiceDto>()
+     .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
+     .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
+
+            CreateMap<RequestPart, RequestPartDto>()
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId));
+                
+
+
             CreateMap<PartSpecification, PartSpecificationDto>();
         }
     }

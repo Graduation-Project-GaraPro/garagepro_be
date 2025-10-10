@@ -24,26 +24,31 @@ namespace Repositories.RepairRequestRepositories
                 return await _context.RequestServices
                     .Include(rs => rs.Service)
                     .Include(rs => rs.RepairRequest)
+                    .Include(rs => rs.RequestParts)               // 👈 load Parts
+            .ThenInclude(rp => rp.Part)
                     .ToListAsync();
             }
 
-            public async Task<IEnumerable<RequestService>> GetByRepairRequestIdAsync(Guid repairRequestId)
-            {
-                return await _context.RequestServices
-                    .Include(rs => rs.Service)
-                    .Where(rs => rs.RepairRequestId == repairRequestId)
-                    .ToListAsync();
-            }
+        public async Task<IEnumerable<RequestService>> GetByRepairRequestIdAsync(Guid repairRequestId)
+        {
+            return await _context.RequestServices
+                .Include(rs => rs.Service)
+                .Include(rs => rs.RequestParts)
+                    .ThenInclude(rp => rp.Part)
+                .Where(rs => rs.RepairRequestId == repairRequestId)
+                .ToListAsync();
+        }
 
-            public async Task<RequestService> GetByIdAsync(Guid id)
-            {
-                return await _context.RequestServices
-                    .Include(rs => rs.Service)
-                    .Include(rs => rs.RepairRequest)
-                    .FirstOrDefaultAsync(rs => rs.RequestServiceId == id);
-            }
-
-            public async Task<RequestService> AddAsync(RequestService requestService)
+        public async Task<RequestService> GetByIdAsync(Guid id)
+        {
+            return await _context.RequestServices
+                .Include(rs => rs.Service)
+                .Include(rs => rs.RepairRequest)
+                .Include(rs => rs.RequestParts)
+                    .ThenInclude(rp => rp.Part)
+                .FirstOrDefaultAsync(rs => rs.RequestServiceId == id);
+        }
+        public async Task<RequestService> AddAsync(RequestService requestService)
             {
                 _context.RequestServices.Add(requestService);
                 await _context.SaveChangesAsync();

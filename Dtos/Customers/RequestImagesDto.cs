@@ -8,10 +8,11 @@ namespace Dtos.Customers
 {
     public class RequestImagesDto
     {
+        
         public Guid RequestImageId { get; set; }
         public Guid ServiceRequestId { get; set; }
         public string ImageUrl { get; set; }
-        public string Description { get; set; }
+        //public string Description { get; set; }
         public DateTime CreatedAt { get; set; }
     }
 }

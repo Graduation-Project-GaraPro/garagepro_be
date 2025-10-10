@@ -24,5 +24,10 @@ namespace Repositories.PartRepositories
         {
             return await _context.Parts.AnyAsync(predicate);
         }
+        public async Task<Part?> GetByIdAsync(Guid partId)
+        {
+            return await _context.Parts
+                .FirstOrDefaultAsync(p => p.PartId == partId);
+        }
     }
 }

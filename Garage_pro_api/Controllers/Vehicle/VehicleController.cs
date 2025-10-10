@@ -31,8 +31,12 @@ namespace Garage_pro_api.Controllers.Vehicle
             [HttpGet("user")]
             public async Task<IActionResult> GetUserVehicles()
             {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                var vehicles = await _vehicleService.GetUserVehiclesAsync(userId);
+            // Lấy userId từ token
+            var UserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(UserId))
+                return Unauthorized();
+            var vehicles = await _vehicleService.GetUserVehiclesAsync(UserId);
                 return Ok(vehicles);
             }
 
@@ -52,8 +56,11 @@ namespace Garage_pro_api.Controllers.Vehicle
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // Set the current user ID if not provided
-               String UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // Lấy userId từ token
+            var UserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(UserId))
+                return Unauthorized();
 
 
             var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto,UserId);

@@ -22,9 +22,9 @@ namespace Services.Customer
         Task<bool> DeleteImageAsync(Guid imageId);
 
         // Optional: for parts and services
-        Task<IEnumerable<RequestPartDto>> GetPartsAsync(Guid repairRequestId);
-        Task<RequestPartDto> AddPartAsync(RequestPartDto dto);
-        Task<bool> DeletePartAsync(Guid partId);
+        //Task<IEnumerable<RequestPartDto>> GetPartsAsync(Guid repairRequestId);
+        //Task<RequestPartDto> AddPartAsync(RequestPartDto dto);
+        //Task<bool> DeletePartAsync(Guid partId);
 
         Task<IEnumerable<RequestServiceDto>> GetServicesAsync(Guid repairRequestId);
         Task<RequestServiceDto> AddServiceAsync(RequestServiceDto dto);

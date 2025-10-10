@@ -1,39 +1,48 @@
+using BusinessObject;
 using BusinessObject.Authentication;
-using System.Text;
+using BusinessObject.Policies;
+using BusinessObject.Roles;
 using DataAccessLayer;
+using Garage_pro_api.Authorization;
+using Garage_pro_api.DbInit;
+using Garage_pro_api.Mapper;
+using Garage_pro_api.Middlewares;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Services;
-using BusinessObject;
-using Garage_pro_api.DbInit;
-using Repositories;
-using Services.EmailSenders;
-using Repositories.PolicyRepositories;
-using Services.PolicyServices;
-using Services.Authentication;
-using Garage_pro_api.Middlewares;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using BusinessObject.Policies;
-using Repositories.RoleRepositories;
-using Services.RoleServices;
-using Garage_pro_api.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Garage_pro_api.Mapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Google;
-using Services.SmsSenders;
-using BusinessObject.Roles;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
+using Repositories;
 using Repositories.BranchRepositories;
-using Services.BranchServices;
-using Repositories.ServiceRepositories;
-using Services.ServiceServices;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Services.Cloudinaries;
+using Repositories.Customers;
 using Repositories.PartCategoryRepositories;
-using Services.PartCategoryServices;
 using Repositories.PartRepositories;
+using Repositories.PolicyRepositories;
+using Repositories.QuotationRepositories;
+using Repositories.RepairRequestRepositories;
+using Repositories.RoleRepositories;
+using Repositories.ServiceRepositories;
+using Repositories.VehicleRepositories;
+using Repositories.Vehicles;
+using Services;
+using Services.Authentication;
+using Services.BranchServices;
+using Services.Cloudinaries;
+using Services.Customer;
+using Services.EmailSenders;
+using Services.PartCategoryServices;
+using Services.PolicyServices;
+using Services.QuotationService;
+using Services.RoleServices;
+using Services.ServiceServices;
+using Services.SmsSenders;
+using Services.Vehicles;
+using Services.VehicleServices;
+using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -87,7 +96,7 @@ builder.Services.AddAutoMapper(cfg =>
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
@@ -244,7 +253,28 @@ builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
 
 // Service Quotation
-builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
+builder.Services.AddScoped<IQuotationService, QuotationService>();
+//repair request
+
+
+builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
+builder.Services.AddScoped<IRequestServiceRepository, RequestServiceRepository>();
+builder.Services.AddScoped<IRepairRequestRepository, RepairRequestRepository>();
+builder.Services.AddScoped<IRepairRequestService, RepairRequestService>();
+//vehicle
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleServiceService>();
+builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
+builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
+
+
+
+
 
 
 
@@ -261,7 +291,7 @@ builder.Services.Configure<CloudinarySettings>(
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
-        builder => builder  
+        builder => builder
             .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());

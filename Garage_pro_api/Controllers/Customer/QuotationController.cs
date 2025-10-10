@@ -8,8 +8,8 @@ namespace Garage_pro_api.Controllers.Customer
 {
         [Route("api/[controller]")]
         [ApiController]
-        [Authorize] 
-        public class QuotationController : ControllerBase
+    [Authorize]
+    public class QuotationController : ControllerBase
         {
             private readonly IQuotationService _quotationService;
 
@@ -23,7 +23,8 @@ namespace Garage_pro_api.Controllers.Customer
             public async Task<ActionResult<List<QuotationDto>>> GetAllQuotations()
             {
             // Lấy userId từ token
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
             if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
@@ -36,7 +37,8 @@ namespace Garage_pro_api.Controllers.Customer
             [HttpGet("repair-request/{repairRequestId}")]
             public async Task<ActionResult<List<QuotationDto>>> GetQuotationsByRepairRequestId(Guid repairRequestId)
             {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
             if (string.IsNullOrEmpty(userId))
                     return Unauthorized();
 
