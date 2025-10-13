@@ -1,4 +1,5 @@
 ﻿using Dtos.Branches;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.BranchServices;
@@ -15,6 +16,7 @@ namespace Garage_pro_api.Controllers
         {
             _branchService = branchService;
         }
+        [Authorize(Policy = "BRANCH_VIEW")]
 
         // GET: api/branch
         [HttpGet]
@@ -42,6 +44,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_VIEW")]
 
         // GET: api/branch/{id}
         [HttpGet("{id}")]
@@ -58,6 +61,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_CREATE")]
 
         // POST: api/branch
         [HttpPost]
@@ -73,6 +77,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_UPDATE")]
 
         // PUT: api/branch/{id}
         [HttpPut("{id}")]
@@ -92,6 +97,8 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex });
             }
         }
+        [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]
+
         // Kích hoạt nhiều chi nhánh
         [HttpPatch("bulk-activate")]
         public async Task<IActionResult> BulkActivate([FromBody] IEnumerable<Guid> branchIds)
@@ -110,6 +117,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]
 
         // Vô hiệu hóa nhiều chi nhánh
         [HttpPatch("bulk-deactivate")]
@@ -129,6 +137,8 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]
+
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> ToggleStatus(Guid id, [FromBody] ToggleBranchStatusRequest request)
         {
@@ -157,6 +167,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { error = "An unexpected error occurred." });
             }
         }
+        [Authorize(Policy = "BRANCH_DELETE")]
 
         // Xóa nhiều chi nhánh
         [HttpDelete("bulk-delete")]
@@ -176,6 +187,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { error = ex.Message });
             }
         }
+        [Authorize(Policy = "BRANCH_DELETE")]
 
         // DELETE: api/branch/{id}
         [HttpDelete("{id}")]

@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Campaigns;
 using Dtos.Campaigns;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.CampaignServices;
@@ -16,6 +17,11 @@ namespace Garage_pro_api.Controllers
         {
             _service = service;
         }
+
+
+
+        [Authorize(Policy = "PROMO_VIEW")]
+
         [HttpGet("paged")]
         public async Task<ActionResult> GetPaged(
             [FromQuery] int page = 1,
@@ -43,6 +49,9 @@ namespace Garage_pro_api.Controllers
                 }
             });
         }
+
+        [Authorize(Policy = "PROMO_VIEW")]
+
         // GET: api/promotionalcampaigns
         [HttpGet]
         public async Task<ActionResult<IEnumerable<PromotionalCampaignDto>>> GetAll()
@@ -57,6 +66,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving campaigns", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "PROMO_VIEW")]
 
         // GET: api/promotionalcampaigns/{id}
         [HttpGet("{id}")]
@@ -74,6 +84,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving campaign", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "PROMO_CREATE")]
 
         // POST: api/promotionalcampaigns
         [HttpPost]
@@ -91,6 +102,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error creating campaign", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "PROMO_UPDATE")]
 
         // PUT: api/promotionalcampaigns/{id}
         [HttpPut("{id}")]
@@ -110,6 +122,9 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error updating campaign", detail = ex.Message });
             }
         }
+
+        [Authorize(Policy = "PROMO_TOGGLE")]
+
         [HttpPost("bulk/activate")]
         public async Task<IActionResult> BulkActivate([FromBody] List<Guid> ids)
         {
@@ -123,6 +138,7 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { message = "Campaigns activated successfully." });
         }
+        [Authorize(Policy = "PROMO_TOGGLE")]
 
         [HttpPost("bulk/deactivate")]
         public async Task<IActionResult> BulkDeactivate([FromBody] List<Guid> ids)
@@ -137,6 +153,7 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { message = "Campaigns deactivated successfully." });
         }
+        [Authorize(Policy = "PROMO_TOGGLE")]
 
         [HttpPost("{id}/activate")]
         public async Task<IActionResult> Activate(Guid id)
@@ -147,6 +164,7 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { message = "Campaign activated successfully." });
         }
+        [Authorize(Policy = "PROMO_TOGGLE")]
 
         [HttpPost("{id}/deactivate")]
         public async Task<IActionResult> Deactivate(Guid id)
@@ -158,7 +176,7 @@ namespace Garage_pro_api.Controllers
             return Ok(new { message = "Campaign deactivated successfully." });
         }
 
-
+        [Authorize(Policy = "PROMO_DELETE")]
         [HttpDelete("range")]
         public async Task<IActionResult> DeleteRange([FromBody] List<Guid> ids)
         {
@@ -179,6 +197,8 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [Authorize(Policy = "PROMO_DELETE")]
         // DELETE: api/promotionalcampaigns/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
