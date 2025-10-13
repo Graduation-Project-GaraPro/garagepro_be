@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
 using Dtos.Policies;
@@ -48,18 +48,31 @@ namespace Garage_pro_api.Mapper
                     opt => opt.Ignore()); // mình sẽ gán thủ công sau
 
             // Vehicle mappings
-            CreateMap<Vehicle, VehicleDto>().ReverseMap();
-            CreateMap<CreateVehicleDto, Vehicle>();
-            CreateMap<UpdateVehicleDto, Vehicle>();
-            
-            // User mappings
-            CreateMap<ApplicationUser, CustomerDto>()
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.FirstName, opt => opt.MapFrom(src => src.FirstName))
-                .ForMember(dest => dest.LastName, opt => opt.MapFrom(src => src.LastName))
-                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
-                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
-                .ForMember(dest => dest.Address, opt => opt.MapFrom(src => ""));
+            CreateMap<Vehicle, VehicleDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.VehicleId))
+                .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.Brand, opt => opt.Ignore()) // Would need lookup from Brand entity
+                .ForMember(dest => dest.Model, opt => opt.Ignore()) // Would need lookup from Model entity
+                .ForMember(dest => dest.Color, opt => opt.Ignore()) // Would need lookup from Color entity
+                .ReverseMap();
+                
+            CreateMap<CreateVehicleDto, Vehicle>()
+                .ForMember(dest => dest.VehicleId, opt => opt.MapFrom(src => Guid.NewGuid()))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.CustomerId))
+                .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate.ToUpper()))
+                .ForMember(dest => dest.BrandId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
+                .ForMember(dest => dest.ModelId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
+                .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
+                .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
+                .ForMember(dest => dest.LastServiceDate, opt => opt.MapFrom(src => DateTime.UtcNow));
+
+            CreateMap<UpdateVehicleDto, Vehicle>()
+                .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
+                .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
+                .ForMember(dest => dest.NextServiceDate, opt => opt.MapFrom(src => src.NextServiceDate))
+                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus));
 
             // Quotation mappings
             CreateMap<Quotation, QuotationDto>().ReverseMap();

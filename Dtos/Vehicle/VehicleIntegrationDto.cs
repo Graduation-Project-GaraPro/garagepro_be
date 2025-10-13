@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Dtos.RoBoard;
 
 namespace Dtos.Vehicle
 {
     public class VehicleWithHistoryDto
     {
         public VehicleDto Vehicle { get; set; }
-        public CustomerDto Customer { get; set; }
+        public RoBoardCustomerDto Customer { get; set; }
         public List<RepairOrderSummaryDto> ServiceHistory { get; set; } = new List<RepairOrderSummaryDto>();
     }
 
@@ -30,7 +31,7 @@ namespace Dtos.Vehicle
         
         public DateTime LastServiceDate { get; set; }
         
-        public long Mileage { get; set; }
+        public long? Odometer { get; set; }
         
         public List<RepairOrderSummaryDto> UpcomingAppointments { get; set; } = new List<RepairOrderSummaryDto>();
     }
@@ -79,5 +80,12 @@ namespace Dtos.Vehicle
         
         [StringLength(50)]
         public string PaidStatus { get; set; }
+    }
+    
+    // Add the missing VehicleWithCustomerDto class
+    public class VehicleWithCustomerDto
+    {
+        public VehicleDto Vehicle { get; set; }
+        public RoBoardCustomerDto Customer { get; set; }
     }
 }

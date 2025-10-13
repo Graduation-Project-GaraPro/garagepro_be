@@ -30,6 +30,11 @@ namespace Services
             return await _repository.GetRolesAsync(user);
         }
 
+        public async Task<ApplicationUser> GetByIdAsync(string userId)
+        {
+            return await _repository.GetByIdAsync(userId);
+        }
+
         public async Task<bool> BanUserAsync(string userId, string message)
         {
             var user = await _repository.GetByIdAsync(userId);

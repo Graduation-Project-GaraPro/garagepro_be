@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateVehicleSchema : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,10 +16,11 @@ namespace DataAccessLayer.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    IsDefault = table.Column<bool>(type: "bit", nullable: false),
-                    Users = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
+                    Discriminator = table.Column<string>(type: "nvarchar(21)", maxLength: 21, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsDefault = table.Column<bool>(type: "bit", nullable: true),
+                    Users = table.Column<int>(type: "int", nullable: true, defaultValue: 0),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -612,11 +613,10 @@ namespace DataAccessLayer.Migrations
                     LicensePlate = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     VIN = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: false),
                     Year = table.Column<int>(type: "int", nullable: false),
-                    Mileage = table.Column<long>(type: "bigint", nullable: false),
-                    OwnerEmail = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Odometer = table.Column<long>(type: "bigint", nullable: false),
                     LastServiceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     NextServiceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    WarrantyStatus = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    WarrantyStatus = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -835,7 +835,7 @@ namespace DataAccessLayer.Migrations
                 {
                     RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReceiveDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    RepairOrderType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    RoType = table.Column<int>(type: "int", nullable: false),
                     EstimatedCompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Cost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -844,11 +844,12 @@ namespace DataAccessLayer.Migrations
                     PaidStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     EstimatedRepairTime = table.Column<long>(type: "bigint", nullable: true),
                     Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    LabelId = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsArchived = table.Column<bool>(type: "bit", nullable: false),
                     ArchivedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ArchivedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ArchivedByUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     StatusId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -941,48 +942,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Jobs",
-                columns: table => new
-                {
-                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    JobName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Deadline = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Level = table.Column<int>(type: "int", nullable: false),
-                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerApprovalNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
-                    AssignedByManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    RevisionCount = table.Column<int>(type: "int", nullable: false),
-                    OriginalJobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    RevisionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Jobs", x => x.JobId);
-                    table.ForeignKey(
-                        name: "FK_Jobs_RepairOrders_RepairOrderId",
-                        column: x => x.RepairOrderId,
-                        principalTable: "RepairOrders",
-                        principalColumn: "RepairOrderId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Jobs_Services_ServiceId",
-                        column: x => x.ServiceId,
-                        principalTable: "Services",
-                        principalColumn: "ServiceId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Payments",
                 columns: table => new
                 {
@@ -1070,6 +1029,41 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Quotations",
+                columns: table => new
+                {
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InspectionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CustomerNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    ChangeRequestDetails = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RevisionNumber = table.Column<int>(type: "int", nullable: false),
+                    OriginalQuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Quotations", x => x.QuotationId);
+                    table.ForeignKey(
+                        name: "FK_Quotations_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Quotations_Inspections_InspectionId",
+                        column: x => x.InspectionId,
+                        principalTable: "Inspections",
+                        principalColumn: "InspectionId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "ServiceInspections",
                 columns: table => new
                 {
@@ -1090,6 +1084,115 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ServiceInspections_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RepairOrderServiceParts",
+                columns: table => new
+                {
+                    RepairOrderServicePartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepairOrderServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TotalCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RepairOrderServiceParts", x => x.RepairOrderServicePartId);
+                    table.ForeignKey(
+                        name: "FK_RepairOrderServiceParts_Parts_PartId",
+                        column: x => x.PartId,
+                        principalTable: "Parts",
+                        principalColumn: "PartId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepairOrderServiceParts_RepairOrderServices_RepairOrderServiceId",
+                        column: x => x.RepairOrderServiceId,
+                        principalTable: "RepairOrderServices",
+                        principalColumn: "RepairOrderServiceId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Jobs",
+                columns: table => new
+                {
+                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    JobName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Deadline = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Level = table.Column<int>(type: "int", nullable: false),
+                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CustomerApprovalNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    AssignedByManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RevisionCount = table.Column<int>(type: "int", nullable: false),
+                    OriginalJobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    RevisionReason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Jobs", x => x.JobId);
+                    table.ForeignKey(
+                        name: "FK_Jobs_Quotations_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotations",
+                        principalColumn: "QuotationId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Jobs_RepairOrders_RepairOrderId",
+                        column: x => x.RepairOrderId,
+                        principalTable: "RepairOrders",
+                        principalColumn: "RepairOrderId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Jobs_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuotationServices",
+                columns: table => new
+                {
+                    QuotationServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServicePrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CustomerRequestedParts = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuotationServices", x => x.QuotationServiceId);
+                    table.ForeignKey(
+                        name: "FK_QuotationServices_Quotations_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotations",
+                        principalColumn: "QuotationId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_QuotationServices_Services_ServiceId",
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "ServiceId",
@@ -1176,33 +1279,30 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RepairOrderServiceParts",
+                name: "QuotationServiceParts",
                 columns: table => new
                 {
-                    RepairOrderServicePartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    RepairOrderServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationServicePartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    TotalCost = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RepairOrderServiceParts", x => x.RepairOrderServicePartId);
+                    table.PrimaryKey("PK_QuotationServiceParts", x => x.QuotationServicePartId);
                     table.ForeignKey(
-                        name: "FK_RepairOrderServiceParts_Parts_PartId",
+                        name: "FK_QuotationServiceParts_Parts_PartId",
                         column: x => x.PartId,
                         principalTable: "Parts",
                         principalColumn: "PartId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_RepairOrderServiceParts_RepairOrderServices_RepairOrderServiceId",
-                        column: x => x.RepairOrderServiceId,
-                        principalTable: "RepairOrderServices",
-                        principalColumn: "RepairOrderServiceId",
+                        name: "FK_QuotationServiceParts_QuotationServices_QuotationServiceId",
+                        column: x => x.QuotationServiceId,
+                        principalTable: "QuotationServices",
+                        principalColumn: "QuotationServiceId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -1274,6 +1374,13 @@ namespace DataAccessLayer.Migrations
                 name: "IX_JobParts_PartId",
                 table: "JobParts",
                 column: "PartId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Jobs_QuotationId",
+                table: "Jobs",
+                column: "QuotationId",
+                unique: true,
+                filter: "[QuotationId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Jobs_RepairOrderId",
@@ -1364,6 +1471,37 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Permissions_CategoryId",
                 table: "Permissions",
                 column: "CategoryId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_InspectionId",
+                table: "Quotations",
+                column: "InspectionId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_UserId",
+                table: "Quotations",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServiceParts_PartId",
+                table: "QuotationServiceParts",
+                column: "PartId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServiceParts_QuotationServiceId",
+                table: "QuotationServiceParts",
+                column: "QuotationServiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServices_QuotationId",
+                table: "QuotationServices",
+                column: "QuotationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServices_ServiceId",
+                table: "QuotationServices",
+                column: "ServiceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepairOrders_BranchId",
@@ -1566,6 +1704,9 @@ namespace DataAccessLayer.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "QuotationServiceParts");
+
+            migrationBuilder.DropTable(
                 name: "RepairOrderServiceParts");
 
             migrationBuilder.DropTable(
@@ -1596,6 +1737,9 @@ namespace DataAccessLayer.Migrations
                 name: "CategoryNotifications");
 
             migrationBuilder.DropTable(
+                name: "QuotationServices");
+
+            migrationBuilder.DropTable(
                 name: "RepairOrderServices");
 
             migrationBuilder.DropTable(
@@ -1614,13 +1758,13 @@ namespace DataAccessLayer.Migrations
                 name: "SecurityPolicies");
 
             migrationBuilder.DropTable(
-                name: "Inspections");
-
-            migrationBuilder.DropTable(
                 name: "Parts");
 
             migrationBuilder.DropTable(
                 name: "Specifications");
+
+            migrationBuilder.DropTable(
+                name: "Quotations");
 
             migrationBuilder.DropTable(
                 name: "Services");
@@ -1632,22 +1776,25 @@ namespace DataAccessLayer.Migrations
                 name: "SystemLogs");
 
             migrationBuilder.DropTable(
-                name: "RepairOrders");
-
-            migrationBuilder.DropTable(
-                name: "Technicians");
-
-            migrationBuilder.DropTable(
                 name: "PartCategories");
 
             migrationBuilder.DropTable(
                 name: "VehicleLookups");
 
             migrationBuilder.DropTable(
+                name: "Inspections");
+
+            migrationBuilder.DropTable(
                 name: "ServiceCategories");
 
             migrationBuilder.DropTable(
                 name: "LogCategories");
+
+            migrationBuilder.DropTable(
+                name: "RepairOrders");
+
+            migrationBuilder.DropTable(
+                name: "Technicians");
 
             migrationBuilder.DropTable(
                 name: "OrderStatuses");

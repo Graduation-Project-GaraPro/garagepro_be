@@ -22,7 +22,7 @@ namespace BusinessObject.Authentication
 
         public DateTime? UpdatedAt { get; set; }
 
-        public bool Gender { get; set; } // true = Male, false = Female
+        public bool? Gender { get; set; } // true = Male, false = Female
 
         public DateTime? Birthday { get; set; }
 

@@ -71,7 +71,7 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<bool>("Gender")
+                    b.Property<bool?>("Gender")
                         .HasColumnType("bit");
 
                     b.Property<bool>("IsActive")
@@ -962,7 +962,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ArchivedByUserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("BranchId")
@@ -989,6 +988,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("LabelId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1005,13 +1007,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("RepairOrderType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<Guid>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("RoType")
+                        .HasColumnType("int");
 
                     b.Property<Guid>("StatusId")
                         .HasColumnType("uniqueidentifier");
@@ -1679,19 +1679,14 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<long>("Mileage")
-                        .HasColumnType("bigint");
-
                     b.Property<Guid>("ModelId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("NextServiceDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("OwnerEmail")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                    b.Property<long?>("Odometer")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1706,7 +1701,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(17)");
 
                     b.Property<string>("WarrantyStatus")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 

@@ -5,7 +5,7 @@
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class AddVehicleValidationConstraints : Migration
+    public partial class MakeVehicleFieldsNullable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -15,18 +15,18 @@ namespace DataAccessLayer.Migrations
                 table: "Vehicles",
                 type: "nvarchar(100)",
                 maxLength: 100,
-                nullable: false,
+                nullable: true,
                 oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                oldType: "nvarchar(100)",
+                oldMaxLength: 100);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "OwnerEmail",
+            migrationBuilder.AlterColumn<long>(
+                name: "Odometer",
                 table: "Vehicles",
-                type: "nvarchar(255)",
-                maxLength: 255,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(max)");
+                type: "bigint",
+                nullable: true,
+                oldClrType: typeof(long),
+                oldType: "bigint");
         }
 
         /// <inheritdoc />
@@ -35,20 +35,24 @@ namespace DataAccessLayer.Migrations
             migrationBuilder.AlterColumn<string>(
                 name: "WarrantyStatus",
                 table: "Vehicles",
-                type: "nvarchar(max)",
+                type: "nvarchar(100)",
+                maxLength: 100,
                 nullable: false,
+                defaultValue: "",
                 oldClrType: typeof(string),
                 oldType: "nvarchar(100)",
-                oldMaxLength: 100);
+                oldMaxLength: 100,
+                oldNullable: true);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "OwnerEmail",
+            migrationBuilder.AlterColumn<long>(
+                name: "Odometer",
                 table: "Vehicles",
-                type: "nvarchar(max)",
+                type: "bigint",
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(255)",
-                oldMaxLength: 255);
+                defaultValue: 0L,
+                oldClrType: typeof(long),
+                oldType: "bigint",
+                oldNullable: true);
         }
     }
 }

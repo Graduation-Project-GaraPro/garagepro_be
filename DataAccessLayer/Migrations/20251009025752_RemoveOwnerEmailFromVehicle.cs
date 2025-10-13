@@ -5,7 +5,7 @@
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class ConsolidateMigrations : Migration
+    public partial class RemoveOwnerEmailFromVehicle : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

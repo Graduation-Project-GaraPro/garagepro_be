@@ -28,8 +28,22 @@ using BusinessObject.Roles;
 using Microsoft.AspNetCore.OData;
 using Repositories.VehicleRepositories;
 using Services.VehicleServices;
+using AutoMapper;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
 
 // Add services to the container.
 
@@ -193,6 +207,9 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>(); // This was missing
 
+// Customer service
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+
 // Vehicle repository and services
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
@@ -200,7 +217,13 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 
 // Quotation repositories and services
 builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
-builder.Services.AddScoped<IQuotationService, Services.QuotationService>();
+builder.Services.AddScoped<IQuotationService>(provider =>
+{
+    var quotationRepository = provider.GetRequiredService<IQuotationRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var context = provider.GetRequiredService<MyAppDbContext>();
+    return new Services.QuotationService(quotationRepository, mapper, context);
+});
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -217,19 +240,10 @@ builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 // Đăng ký Policy Provider thay thế mặc định
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        builder => builder  
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
-});
 
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -237,6 +251,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+// Use CORS with the specific policy for your frontend
+app.UseCors("AllowFrontend");
+
 app.UseSecurityPolicyEnforcement();
 app.UseHttpsRedirection();
 app.UseAuthentication();
@@ -276,4 +294,5 @@ using (var scope = app.Services.CreateScope())
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
 }
+
 app.Run();

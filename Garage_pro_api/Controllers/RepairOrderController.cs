@@ -1,9 +1,16 @@
-using Dtos.RepairOrder;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using Microsoft.AspNetCore.Authorization;
 using Services;
-using BusinessObject;
+using Dtos.RepairOrder;
 using Dtos.RoBoard;
+using System.Security.Claims;
+using BusinessObject.Authentication;
+using Services.VehicleServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -12,10 +19,23 @@ namespace Garage_pro_api.Controllers
     public class RepairOrderController : ControllerBase
     {
         private readonly IRepairOrderService _repairOrderService;
+        private readonly IUserService _userService;
+        private readonly ICustomerService _customerService;
+        private readonly IVehicleService _vehicleService;
+        private readonly IOrderStatusService _orderStatusService;
 
-        public RepairOrderController(IRepairOrderService repairOrderService)
+        public RepairOrderController(
+            IRepairOrderService repairOrderService, 
+            IUserService userService,
+            ICustomerService customerService,
+            IVehicleService vehicleService,
+            IOrderStatusService orderStatusService)
         {
             _repairOrderService = repairOrderService;
+            _userService = userService;
+            _customerService = customerService;
+            _vehicleService = vehicleService;
+            _orderStatusService = orderStatusService;
         }
 
         // GET: api/RepairOrder
@@ -24,7 +44,15 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetRepairOrders()
         {
             var repairOrders = await _repairOrderService.GetAllRepairOrdersAsync();
-            return Ok(repairOrders);
+            // Map to enhanced DTOs
+            var repairOrderDtos = new List<RepairOrderDto>();
+            foreach (var ro in repairOrders)
+            {
+                var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(ro.RepairOrderId);
+                var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
+                repairOrderDtos.Add(repairOrderDto);
+            }
+            return Ok(repairOrderDtos);
         }
 
         // GET: api/RepairOrder/5
@@ -37,47 +65,143 @@ namespace Garage_pro_api.Controllers
                 return NotFound();
             }
 
-            // Map RoBoardCardDto to RepairOrderDto
-            var repairOrderDto = new RepairOrderDto
-            {
-                RepairOrderId = repairOrder.RepairOrderId,
-                ReceiveDate = repairOrder.ReceiveDate,
-                RepairOrderType = repairOrder.RepairOrderType,
-                EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
-                CompletionDate = repairOrder.CompletionDate,
-                Cost = repairOrder.Cost,
-                EstimatedAmount = repairOrder.EstimatedAmount,
-                PaidAmount = repairOrder.PaidAmount,
-                PaidStatus = repairOrder.PaidStatus,
-                EstimatedRepairTime = repairOrder.EstimatedRepairTime,
-                Note = repairOrder.Note,
-                CreatedAt = repairOrder.CreatedAt,
-                UpdatedAt = repairOrder.UpdatedAt,
-                IsArchived = repairOrder.IsArchived,
-                ArchivedAt = repairOrder.ArchivedAt,
-                ArchivedByUserId = repairOrder.ArchivedBy,
-                BranchId = repairOrder.Branch?.BranchId ?? Guid.Empty,
-                StatusId = repairOrder.StatusId,
-                VehicleId = repairOrder.Vehicle?.VehicleId ?? Guid.Empty,
-                UserId = repairOrder.Customer?.UserId ?? string.Empty,
-                RepairRequestId = Guid.NewGuid() // This would need to be properly mapped
-            };
+            // Use the enhanced DTO with all the information
+            var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(id);
+            var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
 
             return Ok(repairOrderDto);
         }
 
+        //// POST: api/RepairOrder/create-request
+        //[HttpPost("create-request")]
+        //public async Task<IActionResult> CreateRepairOrderRequest([FromBody] CreateRepairOrderRequestDto createRequestDto)
+        //{
+        //    if (!ModelState.IsValid)
+        //    {
+        //        return BadRequest(ModelState);
+        //    }
+
+        //    try
+        //    {
+        //        // Get the authenticated user to extract branch ID
+        //        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //        if (string.IsNullOrEmpty(userId))
+        //        {
+        //            return Unauthorized("User not authenticated");
+        //        }
+
+        //        // Get the user from the user service to extract their branch ID
+        //        var user = await _userService.GetByIdAsync(userId);
+        //        if (user == null)
+        //        {
+        //            return Unauthorized("User not found");
+        //        }
+
+        //        // Ensure the user has a branch assigned
+        //        if (!user.BranchId.HasValue)
+        //        {
+        //            return BadRequest("User is not assigned to a branch");
+        //        }
+
+        //        // Create a new repair order based on the frontend request
+        //        var repairOrder = new BusinessObject.RepairOrder
+        //        {
+        //            VehicleId = createRequestDto.VehicleId,
+        //            RoType = createRequestDto.RepairOrderType,
+        //            Note = createRequestDto.VehicleConcern,
+        //            LabelId = createRequestDto.LabelId,
+        //            UserId = createRequestDto.CustomerId,
+        //            // Set default values for required fields
+        //            StatusId = Guid.NewGuid(), // This should be set to a proper status ID
+        //            BranchId = user.BranchId.Value, // Get branch ID from authenticated user
+        //            RepairRequestId = Guid.NewGuid(),
+        //            PaidStatus = createRequestDto.Status,
+        //            // Other fields will use their default values
+        //        };
+
+        //        var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder);
+                
+        //        // Return the created repair order
+        //        var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
+        //        var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
+                
+        //        return CreatedAtAction(nameof(GetRepairOrder), new { id = repairOrderDto.RepairOrderId }, repairOrderDto);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return BadRequest(new { message = ex.Message });
+        //    }
+        //}
+
         // POST: api/RepairOrder
         [HttpPost]
-        public async Task<IActionResult> CreateRepairOrder(CreateRepairOrderDto createRepairOrderDto)
+        public async Task<IActionResult> CreateRepairOrder([FromBody] CreateRoDto createRoDto)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            // Map DTO to entity (this would require access to the actual RepairOrder entity)
-            // For now, we'll just return a placeholder
-            return CreatedAtAction(nameof(GetRepairOrder), new { id = Guid.NewGuid() }, createRepairOrderDto);
+            try
+            {
+                // Get the authenticated user to extract branch ID
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized("User not authenticated");
+                }
+
+                // Get the user from the user service to extract their branch ID
+                var user = await _userService.GetByIdAsync(userId);
+                if (user == null)
+                {
+                    return Unauthorized("User not found");
+                }
+
+                // Ensure the user has a branch assigned
+                if (!user.BranchId.HasValue)
+                {
+                    return BadRequest("User is not assigned to a branch");
+                }
+
+                // Get the default "Pending" status
+                var statusColumns = await _orderStatusService.GetOrderStatusesByColumnsAsync();
+                var pendingStatus = statusColumns.Pending.FirstOrDefault();
+                var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : Guid.NewGuid();
+
+                // Create a new repair order based on the simplified DTO
+                var repairOrder = new BusinessObject.RepairOrder
+                {
+                    VehicleId = createRoDto.VehicleId,
+                    RoType = createRoDto.RoType,
+                    ReceiveDate = createRoDto.ReceiveDate,
+                    EstimatedCompletionDate = createRoDto.EstimatedCompletionDate,
+                    EstimatedAmount = createRoDto.EstimatedAmount,
+                    Note = createRoDto.Note,
+                    LabelId = createRoDto.LabelId,
+                    EstimatedRepairTime = createRoDto.EstimatedRepairTime,
+                    UserId = createRoDto.CustomerId,
+                    StatusId = statusId,
+                    BranchId = user.BranchId.Value, // Get branch ID from authenticated user
+                    RepairRequestId = Guid.NewGuid(),
+                    PaidStatus = "Unpaid", // Default paid status
+                    // Other fields will use their default values
+                    Cost = 0, // Auto-generated
+                    CreatedAt = DateTime.UtcNow // Auto-generated
+                };
+
+                var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder);
+                
+                // Return the created repair order
+                var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
+                var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
+                
+                return CreatedAtAction(nameof(GetRepairOrder), new { id = repairOrderDto.RepairOrderId }, repairOrderDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT: api/RepairOrder/5

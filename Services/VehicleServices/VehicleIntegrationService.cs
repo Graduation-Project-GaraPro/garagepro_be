@@ -2,11 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using BusinessObject;
-using Dtos.RepairOrder;
 using Dtos.Vehicle;
+using Dtos.RoBoard;
 using Repositories;
-using Services.VehicleServices;
+using Repositories.VehicleRepositories;
 
 namespace Services.VehicleServices
 {
@@ -46,20 +47,17 @@ namespace Services.VehicleServices
             var vehicleWithHistory = new VehicleWithHistoryDto
             {
                 Vehicle = vehicle,
-                Customer = user != null ? new CustomerDto
+                Customer = user != null ? new RoBoardCustomerDto
                 {
                     UserId = user.Id,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
+                    FullName = user.FullName,
                     Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Address = "" // Assuming address is not part of ApplicationUser
+                    PhoneNumber = user.PhoneNumber
                 } : null,
                 ServiceHistory = repairOrders.Select(ro => new RepairOrderSummaryDto
                 {
                     RepairOrderId = ro.RepairOrderId,
                     ReceiveDate = ro.ReceiveDate,
-                    RepairOrderType = ro.RepairOrderType,
                     StatusName = ro.OrderStatus?.StatusName ?? "Unknown",
                     BranchName = ro.Branch?.BranchName ?? "Unknown",
                     CustomerName = ro.User?.FullName ?? "Unknown",
@@ -80,14 +78,12 @@ namespace Services.VehicleServices
             var vehiclesWithCustomer = vehicles.Select(v => new VehicleWithCustomerDto
             {
                 Vehicle = v,
-                Customer = user != null ? new CustomerDto
+                Customer = user != null ? new RoBoardCustomerDto
                 {
                     UserId = user.Id,
-                    FirstName = user.FirstName,
-                    LastName = user.LastName,
+                    FullName = user.FullName,
                     Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    Address = "" // Assuming address is not part of ApplicationUser
+                    PhoneNumber = user.PhoneNumber
                 } : null
             }).ToList();
 
@@ -122,12 +118,11 @@ namespace Services.VehicleServices
                 MakeModel = "Unknown", // This would require brand/model lookup
                 NextServiceDate = vehicle.NextServiceDate,
                 LastServiceDate = vehicle.LastServiceDate,
-                Mileage = vehicle.Mileage,
+                Odometer = vehicle.Odometer,
                 UpcomingAppointments = upcomingOrders.Select(ro => new RepairOrderSummaryDto
                 {
                     RepairOrderId = ro.RepairOrderId,
                     ReceiveDate = ro.ReceiveDate,
-                    RepairOrderType = ro.RepairOrderType,
                     StatusName = ro.OrderStatus?.StatusName ?? "Unknown",
                     BranchName = ro.Branch?.BranchName ?? "Unknown",
                     EstimatedAmount = ro.EstimatedAmount

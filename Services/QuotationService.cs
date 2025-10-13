@@ -7,6 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using DataAccessLayer;
+using Microsoft.EntityFrameworkCore;
 
 namespace Services
 {
@@ -14,11 +16,13 @@ namespace Services
     {
         private readonly IQuotationRepository _quotationRepository;
         private readonly IMapper _mapper;
+        private readonly MyAppDbContext _context;
 
-        public QuotationService(IQuotationRepository quotationRepository, IMapper mapper)
+        public QuotationService(IQuotationRepository quotationRepository, IMapper mapper, MyAppDbContext context)
         {
             _quotationRepository = quotationRepository;
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<QuotationDto> GetQuotationByIdAsync(Guid id)
@@ -53,6 +57,11 @@ namespace Services
 
         public async Task<QuotationDto> CreateQuotationAsync(Guid inspectionId, string userId)
         {
+            // Check if inspection exists
+            var inspectionExists = await _context.Inspections.AnyAsync(i => i.InspectionId == inspectionId);
+            if (!inspectionExists)
+                throw new ArgumentException("Inspection not found");
+
             // Create a new quotation from inspection
             var quotation = new Quotation
             {

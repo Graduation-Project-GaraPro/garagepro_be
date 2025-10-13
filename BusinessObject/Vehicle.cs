@@ -26,7 +26,7 @@ namespace BusinessObject
         public Guid ColorId { get; set; }
 
         [MaxLength(50)]
-        [RegularExpression(@"^[A-Z0-9]{1,10}$")]
+        [RegularExpression(@"^[A-Z0-9\-]{1,15}$")] // Allow hyphens in license plates
         public string LicensePlate { get; set; }
 
         [MaxLength(17)]
@@ -37,14 +37,8 @@ namespace BusinessObject
         [Range(1886, 2030)]
         public int Year { get; set; }
 
-        [Required]
         [Range(0, long.MaxValue)]
-        public long Mileage { get; set; }
-
-        [Required]
-        [EmailAddress]
-        [MaxLength(255)]
-        public string OwnerEmail { get; set; }
+        public long? Odometer { get; set; }
 
         [Required]
         public DateTime LastServiceDate { get; set; }
@@ -52,7 +46,7 @@ namespace BusinessObject
         public DateTime? NextServiceDate { get; set; }
 
         [MaxLength(100)]
-        public string WarrantyStatus { get; set; }
+        public string? WarrantyStatus { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

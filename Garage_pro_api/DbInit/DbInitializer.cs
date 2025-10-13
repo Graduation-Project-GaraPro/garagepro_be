@@ -1,4 +1,4 @@
-﻿using BusinessObject;
+﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Enums;
@@ -515,8 +515,7 @@ namespace Garage_pro_api.DbInit
                             LicensePlate = "51F12345",
                             VIN = "1HGBH41JXMN109186",
                             Year = 2020,
-                            Mileage = 15000,
-                            OwnerEmail = customerUser.Email,
+                            Odometer = 15000,
                             LastServiceDate = DateTime.UtcNow.AddDays(-30),
                             NextServiceDate = DateTime.UtcNow.AddDays(30),
                             WarrantyStatus = "Active",
@@ -531,8 +530,7 @@ namespace Garage_pro_api.DbInit
                             LicensePlate = "51F67890",
                             VIN = "2T1BURHE5JC012345",
                             Year = 2018,
-                            Mileage = 25000,
-                            OwnerEmail = customerUser.Email,
+                            Odometer = 25000,
                             LastServiceDate = DateTime.UtcNow.AddDays(-60),
                             NextServiceDate = DateTime.UtcNow.AddDays(15),
                             WarrantyStatus = "Expired",
@@ -547,8 +545,7 @@ namespace Garage_pro_api.DbInit
                             LicensePlate = "51F54321",
                             VIN = "3VWBP29M85M000001",
                             Year = 2022,
-                            Mileage = 8000,
-                            OwnerEmail = customerUser.Email,
+                            Odometer = 8000,
                             LastServiceDate = DateTime.UtcNow.AddDays(-15),
                             NextServiceDate = DateTime.UtcNow.AddDays(45),
                             WarrantyStatus = "Active",
@@ -583,7 +580,6 @@ namespace Garage_pro_api.DbInit
                     {
                         new RepairOrder
                         {
-                            RepairOrderType = "Standard Service",
                             ReceiveDate = DateTime.UtcNow.AddDays(-5),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
                             Cost = 1500000,
@@ -603,7 +599,6 @@ namespace Garage_pro_api.DbInit
                         },
                         new RepairOrder
                         {
-                            RepairOrderType = "Emergency Repair",
                             ReceiveDate = DateTime.UtcNow.AddDays(-3),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
                             Cost = 3000000,
@@ -623,7 +618,6 @@ namespace Garage_pro_api.DbInit
                         },
                         new RepairOrder
                         {
-                            RepairOrderType = "Complete Service",
                             ReceiveDate = DateTime.UtcNow.AddDays(-10),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
                             CompletionDate = DateTime.UtcNow.AddDays(-1),

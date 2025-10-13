@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject;
 using Dtos.Vehicle;
+using Dtos.RoBoard;
 using Repositories.VehicleRepositories;
 
 namespace Services.VehicleServices
@@ -53,8 +54,8 @@ namespace Services.VehicleServices
         public async Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto)
         {
             var vehicle = _mapper.Map<Vehicle>(createVehicleDto);
-            vehicle.VehicleId = Guid.NewGuid();
-            vehicle.CreatedAt = DateTime.UtcNow;
+            // VehicleId is set in the mapping
+            // CreatedAt is set in the mapping
             
             var createdVehicle = await _vehicleRepository.CreateAsync(vehicle);
             return _mapper.Map<VehicleDto>(createdVehicle);
@@ -91,7 +92,13 @@ namespace Services.VehicleServices
             if (vehicle == null) return null;
 
             var vehicleDto = _mapper.Map<VehicleDto>(vehicle);
-            var customerDto = _mapper.Map<CustomerDto>(vehicle.User);
+            var customerDto = new RoBoardCustomerDto
+            {
+                UserId = vehicle.User.Id,
+                FullName = vehicle.User.FullName,
+                Email = vehicle.User.Email,
+                PhoneNumber = vehicle.User.PhoneNumber
+            };
 
             return new VehicleWithCustomerDto
             {
