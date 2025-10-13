@@ -1,6 +1,7 @@
 ﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 using BusinessObject.Enums;
 using BusinessObject.Roles;
 using DataAccessLayer;
@@ -45,7 +46,7 @@ namespace Garage_pro_api.DbInit
             await SeedServicesAsync();
             await SeedServicePartsAsync();
             await SeedBranchesAsync();
-
+            await SeedPromotionalCampaignsWithServicesAsync();
         }
 
         // 1. Seed Roles
@@ -379,6 +380,98 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+        private async Task SeedPromotionalCampaignsWithServicesAsync()
+        {
+            if (!_context.PromotionalCampaigns.Any())
+            {
+                var campaigns = new List<PromotionalCampaign>
+        {
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Grand Opening Discount",
+                Description = "Celebrate our grand opening with 20% off all services!",
+                Type = CampaignType.Discount,
+                DiscountType = DiscountType.Percentage,
+                DiscountValue = 20,
+                StartDate = DateTime.UtcNow.AddDays(-3),
+                EndDate = DateTime.UtcNow.AddDays(7),
+                MinimumOrderValue = 0,
+                MaximumDiscount = 500000,
+                UsageLimit = 200,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Loyalty Appreciation",
+                Description = "Fixed discount of 150,000₫ for our returning customers.",
+                Type = CampaignType.Loyalty,
+                DiscountType = DiscountType.Fixed,
+                DiscountValue = 150000,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(2),
+                MinimumOrderValue = 500000,
+                MaximumDiscount = null,
+                UsageLimit = 100,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Year-End Free Checkup",
+                Description = "Get a free maintenance check for any service above 1,000,000₫.",
+                Type = CampaignType.Seasonal,
+                DiscountType = DiscountType.FreeService,
+                DiscountValue = 0,
+                StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
+                EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
+                MinimumOrderValue = 1000000,
+                MaximumDiscount = null,
+                UsageLimit = 300,
+                UsedCount = 0,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
 
-    }
+                _context.PromotionalCampaigns.AddRange(campaigns);
+                await _context.SaveChangesAsync();
+
+                // --- Sau khi lưu campaign, thêm liên kết Service ---
+                var services = await _context.Services.ToListAsync();
+                if (services.Any())
+                {
+                    var promoCampaignServices = new List<PromotionalCampaignService>();
+
+                    foreach (var campaign in campaigns)
+                    {
+                        // Lấy ngẫu nhiên 2 dịch vụ đầu tiên cho demo
+                        var selectedServices = services.Take(2).ToList();
+
+                        foreach (var service in selectedServices)
+                        {
+                            promoCampaignServices.Add(new PromotionalCampaignService
+                            {
+                                PromotionalCampaignId = campaign.Id,
+                                ServiceId = service.ServiceId
+                            });
+                        }
+                    }
+
+                    _context.PromotionalCampaignServices.AddRange(promoCampaignServices);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+
+            }
+        }
 }

@@ -17,7 +17,13 @@ namespace Repositories.CampaignRepositories
         {
             _context = context;
         }
-
+        public async Task<IQueryable<PromotionalCampaign>> QueryAsync()
+        {
+            return _context.PromotionalCampaigns
+                .Include(pc => pc.PromotionalCampaignServices)
+                .ThenInclude(pcs => pcs.Service)
+                .AsQueryable();
+        }
         public async Task<IEnumerable<PromotionalCampaign>> GetAllAsync()
         {
             return await _context.PromotionalCampaigns
@@ -54,6 +60,41 @@ namespace Repositories.CampaignRepositories
         {
             _context.PromotionalCampaigns.Remove(campaign);
         }
+        public void DeleteRange(IEnumerable<PromotionalCampaign> campaigns)
+        {
+            if (campaigns != null && campaigns.Any())
+            {
+                _context.PromotionalCampaigns.RemoveRange(campaigns);
+            }
+        }
+
+        public async Task UpdateStatusAsync(Guid id, bool isActive)
+        {
+            var campaign = await _context.PromotionalCampaigns.FindAsync(id);
+            if (campaign == null) return;
+
+            campaign.IsActive = isActive;
+            campaign.UpdatedAt = DateTime.UtcNow;
+
+            _context.PromotionalCampaigns.Update(campaign);
+        }
+        public async Task UpdateStatusRangeAsync(IEnumerable<Guid> ids, bool isActive)
+        {
+            var campaigns = await _context.PromotionalCampaigns
+                .Where(pc => ids.Contains(pc.Id))
+                .ToListAsync();
+
+            if (!campaigns.Any()) return;
+
+            foreach (var campaign in campaigns)
+            {
+                campaign.IsActive = isActive;
+                campaign.UpdatedAt = DateTime.UtcNow;
+            }
+
+            _context.PromotionalCampaigns.UpdateRange(campaigns);
+        }
+
 
         public async Task SaveChangesAsync()
         {

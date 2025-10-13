@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject.Campaigns;
 using Dtos.Campaigns;
+using Microsoft.EntityFrameworkCore;
 using Repositories.CampaignRepositories;
 using Repositories.ServiceRepositories;
 
@@ -23,7 +24,88 @@ namespace Services.CampaignServices
             _serviceRepository = serviceRepository;
             _mapper = mapper;
         }
+        public async Task<(IEnumerable<PromotionalCampaignDto> Campaigns, int TotalCount)>
+         GetPagedAsync(int page, int limit, string? search, CampaignType? type, bool? isActive, DateTime? startDate, DateTime? endDate)
+        {
+            var query = await _repository.QueryAsync();
 
+            // Filter
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                query = query.Where(c => c.Name.Contains(search) ||
+                                         (c.Description != null && c.Description.Contains(search)));
+            }
+
+            if (type.HasValue)
+            {
+                query = query.Where(c => c.Type == type.Value);
+            }
+
+            if (isActive.HasValue)
+            {
+                query = query.Where(c => c.IsActive == isActive.Value);
+            }
+
+            if (startDate.HasValue)
+            {
+                query = query.Where(c => c.StartDate >= startDate.Value);
+            }
+
+            if (endDate.HasValue)
+            {
+                query = query.Where(c => c.EndDate <= endDate.Value);
+            }
+
+            // Count tổng
+            var totalCount = await query.CountAsync();
+
+            // Paging
+            var campaigns = await query
+                .OrderByDescending(c => c.CreatedAt)
+                .Skip((page - 1) * limit)
+                .Take(limit)
+                .ToListAsync();
+
+            return (_mapper.Map<IEnumerable<PromotionalCampaignDto>>(campaigns), totalCount);
+        }
+        public async Task<bool> UpdateStatusAsync(Guid id, bool isActive)
+        {
+            var campaign = await _repository.GetByIdAsync(id);
+            if (campaign == null)
+                return false;
+
+            campaign.IsActive = isActive;
+            campaign.UpdatedAt = DateTime.UtcNow;
+
+            _repository.Update(campaign);
+            await _repository.SaveChangesAsync();
+
+            return true;
+        }
+
+        public async Task<bool> ActivateAsync(Guid id)
+        {
+            return await UpdateStatusAsync(id, true);
+        }
+
+        public async Task<bool> DeactivateAsync(Guid id)
+        {
+            return await UpdateStatusAsync(id, false);
+        }
+
+        public async Task<bool> BulkUpdateStatusAsync(IEnumerable<Guid> ids, bool isActive)
+        {
+            var campaigns = await _repository.QueryAsync();
+            var toUpdate = campaigns.Where(pc => ids.Contains(pc.Id)).ToList();
+
+            if (!toUpdate.Any())
+                return false;
+
+            await _repository.UpdateStatusRangeAsync(ids, isActive);
+            await _repository.SaveChangesAsync();
+
+            return true;
+        }
         public async Task<IEnumerable<PromotionalCampaignDto>> GetAllAsync()
         {
             var campaigns = await _repository.GetAllAsync();
@@ -40,9 +122,10 @@ namespace Services.CampaignServices
         {
             // validate ServiceIds
             var existingServiceIds = await _serviceRepository.Query()
-                .Where(s => dto.ServiceIds.Contains(s.Id))
-                .Select(s => s.Id)
+                .Where(s => dto.ServiceIds.Contains(s.ServiceId)) 
+                .Select(s => s.ServiceId)                      
                 .ToListAsync();
+
 
             var notFoundIds = dto.ServiceIds.Except(existingServiceIds).ToList();
             if (notFoundIds.Any())
@@ -78,9 +161,9 @@ namespace Services.CampaignServices
 
             // validate ServiceIds
             var existingServiceIds = await _serviceRepository.Query()
-                .Where(s => dto.ServiceIds.Contains(s.Id))
-                .Select(s => s.Id)
-                .ToListAsync();
+                 .Where(s => dto.ServiceIds.Contains(s.ServiceId)) 
+                 .Select(s => s.ServiceId)                        
+                 .ToListAsync();
 
             var notFoundIds = dto.ServiceIds.Except(existingServiceIds).ToList();
             if (notFoundIds.Any())
@@ -118,6 +201,26 @@ namespace Services.CampaignServices
             await _repository.SaveChangesAsync();
             return true;
         }
+        public async Task<bool> DeleteRangeAsync(IEnumerable<Guid> ids)
+        {
+            var campaigns = await _repository.QueryAsync();
+            var toDelete = campaigns.Where(pc => ids.Contains(pc.Id)).ToList();
+
+            if (!toDelete.Any())
+                return false;
+
+            // Rule: không cho xoá nếu còn active
+            if (toDelete.Any(c => c.IsActive))
+            {
+                throw new InvalidOperationException("Cannot delete active campaigns.");
+            }
+
+            _repository.DeleteRange(toDelete);
+            await _repository.SaveChangesAsync();
+
+            return true;
+        }
+
     }
 
 }

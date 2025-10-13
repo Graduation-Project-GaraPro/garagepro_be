@@ -219,7 +219,45 @@ namespace Services.ServiceServices
             return _mapper.Map<ServiceDto>(existing);
         }
 
+        public async Task<IEnumerable<ServiceDto>> BulkUpdateServiceStatusAsync(List<Guid> serviceIds, bool isActive)
+        {
+            var services = await _repository.Query()
+                .Where(s => serviceIds.Contains(s.ServiceId))
+                .ToListAsync();
 
+            if (!services.Any())
+                throw new ApplicationException("No matching services found.");
+
+            foreach (var service in services)
+            {
+                service.IsActive = isActive;
+                service.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _repository.SaveChangesAsync();
+
+            return _mapper.Map<IEnumerable<ServiceDto>>(services);
+        }
+
+        public async Task<IEnumerable<ServiceDto>> BulkUpdateServiceAdvanceStatusAsync(List<Guid> serviceIds, bool isAdvanced)
+        {
+            var services = await _repository.Query()
+                .Where(s => serviceIds.Contains(s.ServiceId))
+                .ToListAsync();
+
+            if (!services.Any())
+                throw new ApplicationException("No matching services found.");
+
+            foreach (var service in services)
+            {
+                service.IsAdvanced = isAdvanced;
+                service.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _repository.SaveChangesAsync();
+
+            return _mapper.Map<IEnumerable<ServiceDto>>(services);
+        }
 
 
         public async Task<bool> DeleteServiceAsync(Guid id)

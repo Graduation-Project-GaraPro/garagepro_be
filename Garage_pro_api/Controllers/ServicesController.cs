@@ -109,7 +109,33 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error updating service", detail = ex.Message });
             }
         }
+        [HttpPatch("bulk-update-status")]
+        public async Task<IActionResult> BulkUpdateServiceStatus([FromBody] BulkUpdateStatusRequest request)
+        {
+            try
+            {
+                var result = await _service.BulkUpdateServiceStatusAsync(request.ServiceIds, request.IsActive);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating service status", detail = ex.Message });
+            }
+        }
 
+        [HttpPatch("bulk-update-advance-status")]
+        public async Task<IActionResult> BulkUpdateServiceAdvanceStatus([FromBody] BulkUpdateAdvanceStatusRequest request)
+        {
+            try
+            {
+                var result = await _service.BulkUpdateServiceAdvanceStatusAsync(request.ServiceIds, request.IsAdvanced);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating service advance status", detail = ex.Message });
+            }
+        }
         // DELETE: api/service/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)

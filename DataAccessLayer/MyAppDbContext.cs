@@ -88,7 +88,7 @@ namespace DataAccessLayer
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<BranchService> BranchServices { get; set; }
         public DbSet<OperatingHour> OperatingHours { get; set; }
-
+        public DbSet<VoucherUsage> VoucherUsages { get; set; }
         //AiChat
         public DbSet<AIChatMessage> AiChatMessages { get; set; }
         public DbSet<AIChatSession> AiChatSessions { get; set; }
@@ -107,6 +107,7 @@ namespace DataAccessLayer
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
         public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
+        public DbSet<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -919,6 +920,30 @@ namespace DataAccessLayer
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
 
+            modelBuilder.Entity<VoucherUsage>(entity =>
+            {
+                entity.ToTable("VoucherUsage");
+
+                entity.HasKey(v => v.Id);
+
+                entity.Property(v => v.UsedAt)
+                      .HasColumnType("datetime2");
+
+                entity.HasOne(v => v.Campaign)
+                      .WithMany(c => c.VoucherUsages)
+                      .HasForeignKey(v => v.CampaignId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.Customer)
+                      .WithMany()
+                      .HasForeignKey(v => v.CustomerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.RepairOrder)
+                      .WithMany(ro => ro.VoucherUsages)
+                      .HasForeignKey(v => v.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

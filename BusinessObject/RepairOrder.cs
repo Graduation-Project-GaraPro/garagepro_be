@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using BusinessObject.Authentication;
 using BusinessObject.Manager;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 
 namespace BusinessObject
 {
@@ -84,5 +85,9 @@ namespace BusinessObject
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
         public virtual FeedBack? FeedBack { get; set; }
+
+        // ?? One-to-many (VoucherUsage)
+        public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
+            = new List<VoucherUsage>();
     }
 }
