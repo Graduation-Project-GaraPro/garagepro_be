@@ -1,34 +1,35 @@
 ﻿using BusinessObject;
+using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
+using BusinessObject.Campaigns;
 using BusinessObject.Customers;
+using BusinessObject.Manager;
+using BusinessObject.Notifications;
 using BusinessObject.Notifications;
 using BusinessObject.Policies;
+using BusinessObject.Policies;
+using BusinessObject.Quotations;
+using BusinessObject.Roles;
 using BusinessObject.Roles;
 using BusinessObject.SystemLogs;
+using BusinessObject.SystemLogs;
+using BusinessObject.Technician;
 using BusinessObject.Technician;
 using BusinessObject.Vehicles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject;
-using BusinessObject.Authentication;
-using BusinessObject.Manager;
-using BusinessObject.Policies;
-using BusinessObject.SystemLogs;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
-using BusinessObject.Notifications;
-using BusinessObject.Technician;
-using BusinessObject.Roles;
-using BusinessObject.Branches;
-using BusinessObject.Campaigns;
 
 namespace DataAccessLayer
 {
@@ -106,6 +107,8 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
+        public DbSet<Quotation> Quotations { get; set; }
+        public DbSet<QuotationItem> QuotationItems { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -938,6 +941,19 @@ namespace DataAccessLayer
                 .WithOne(img => img.RepairRequest)
                 .HasForeignKey(img => img.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
+            // Giải quyết lỗi multiple cascade paths
+            modelBuilder.Entity<Quotation>()
+                .HasOne(q => q.RepairRequest)
+                .WithMany(r => r.Quotations)
+                .HasForeignKey(q => q.RepairRequestID)
+                .OnDelete(DeleteBehavior.NoAction); // 👈 Thêm dòng này
+
+            // Nếu có liên kết tương tự, áp dụng NoAction luôn
+            modelBuilder.Entity<QuotationItem>()
+                .HasOne(qi => qi.Quotation)
+                .WithMany(q => q.QuotationItems)
+                .HasForeignKey(qi => qi.QuotationID)
+                .OnDelete(DeleteBehavior.Cascade); // Có thể giữ cascade ở đây, vì không tạo vòng
         }
 
     }

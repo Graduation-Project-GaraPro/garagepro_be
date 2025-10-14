@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using BusinessObject.Notifications;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
+using BusinessObject.Quotations;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
@@ -45,12 +46,14 @@ namespace BusinessObject.Authentication
         public virtual Technician.Technician Technician { get; set; }
         //repair request 
         public virtual ICollection<RepairRequest> RepairRequests { get; set; } = new List<RepairRequest>();
-
+        //quotation
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // --------------------------
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }
+
     }
 
 }

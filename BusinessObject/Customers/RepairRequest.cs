@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Quotations;
 using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
@@ -53,7 +54,7 @@ namespace BusinessObject.Customers
         [ForeignKey(nameof(BranchId))]
         public virtual Branch Branch { get; set; }
 
-
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
 
 

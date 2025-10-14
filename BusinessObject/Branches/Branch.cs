@@ -53,7 +53,10 @@ namespace BusinessObject.Branches
 
         // Many-to-many
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
-        
+
+        // Quotation relationship
+        public virtual ICollection<Quotations.Quotation> Quotations { get; set; } = new List<Quotations.Quotation>();
+
     }
 
 

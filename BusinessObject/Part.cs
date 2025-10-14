@@ -1,3 +1,6 @@
+using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Quotations;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -5,7 +8,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Branches;
 
 namespace BusinessObject
 {
@@ -41,6 +43,11 @@ namespace BusinessObject
         public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
         public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
+         public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
+        //requestService
+
+        // (1 Part -> nhi?u QuotationItem)
+        public virtual ICollection<QuotationItem> QuotationItems { get; set; } = new List<QuotationItem>();
     }
 
 }

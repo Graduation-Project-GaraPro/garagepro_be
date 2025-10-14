@@ -1,4 +1,5 @@
-﻿using Customers;
+﻿using BusinessObject.Quotations;
+using Customers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,10 +12,10 @@ namespace Repositories.QuotationRepositories
     {
        
         /// Lấy tất cả báo giá được gửi cho customer
-         Task<List<QuotationDto>> GetQuotationsByUserIdAsync(String userId);
+         Task<IEnumerable<Quotation>> GetQuotationsByUserIdAsync(String userId);
 
         //lấy chi tiết suitable cho repair request
-        Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId);
+        Task<IEnumerable<Quotation>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId);
         //update báo giá cho phép thay đổi pârt
         //Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto);
 
