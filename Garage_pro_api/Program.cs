@@ -39,6 +39,8 @@ using Repositories.VehicleRepositories;
 using Services.VehicleServices;
 using AutoMapper;
 
+using Repositories.CampaignRepositories;
+using Services.CampaignServices;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -246,6 +248,12 @@ builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
 
+// Quotation services
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+
 // Vehicle brand, model, and color repositories
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
@@ -283,7 +291,9 @@ builder.Services.AddScoped<IPartRepository, PartRepository>();
 // Service Quotation
 builder.Services.AddScoped<IServiceService, ServiceService>();
 
-
+// Repositories & Services
+builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
+builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -315,8 +325,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Use CORS with the specific policy for your frontend
-app.UseCors("AllowFrontend");
 
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();

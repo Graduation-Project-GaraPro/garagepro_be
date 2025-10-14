@@ -1,4 +1,4 @@
-﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -38,6 +38,9 @@ namespace DataAccessLayer
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
+        public DbSet<Quotation> Quotations { get; set; }
+        public DbSet<QuotationService> QuotationServices { get; set; }
+        public DbSet<QuotationPart> QuotationParts { get; set; }
 
         // Junction tables
         public DbSet<JobPart> JobParts { get; set; }
@@ -91,12 +94,58 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
+        public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
+        public DbSet<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // Quotation relationships
+            modelBuilder.Entity<Quotation>(entity =>
+            {
+                entity.HasOne(q => q.Inspection)
+                      .WithMany(i => i.Quotations)
+                      .HasForeignKey(q => q.InspectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(q => q.User)
+                      .WithMany()
+                      .HasForeignKey(q => q.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(q => q.Vehicle)
+                      .WithMany()
+                      .HasForeignKey(q => q.VehicleId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<QuotationService>(entity =>
+            {
+                entity.HasOne(qs => qs.Quotation)
+                      .WithMany(q => q.QuotationServices)
+                      .HasForeignKey(qs => qs.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qs => qs.Service)
+                      .WithMany()
+                      .HasForeignKey(qs => qs.ServiceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<QuotationPart>(entity =>
+            {
+                entity.HasOne(qp => qp.Quotation)
+                      .WithMany(q => q.QuotationParts)
+                      .HasForeignKey(qp => qp.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qp => qp.Part)
+                      .WithMany()
+                      .HasForeignKey(qp => qp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
 
             //chặn casadate
             modelBuilder.Entity<Vehicle>()
@@ -904,6 +953,30 @@ namespace DataAccessLayer
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
 
+            modelBuilder.Entity<VoucherUsage>(entity =>
+            {
+                entity.ToTable("VoucherUsage");
+
+                entity.HasKey(v => v.Id);
+
+                entity.Property(v => v.UsedAt)
+                      .HasColumnType("datetime2");
+
+                entity.HasOne(v => v.Campaign)
+                      .WithMany(c => c.VoucherUsages)
+                      .HasForeignKey(v => v.CampaignId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(v => v.Customer)
+                      .WithMany()
+                      .HasForeignKey(v => v.CustomerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.RepairOrder)
+                      .WithMany(ro => ro.VoucherUsages)
+                      .HasForeignKey(v => v.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
     }
 }

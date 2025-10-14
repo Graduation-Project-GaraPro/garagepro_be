@@ -41,7 +41,8 @@ namespace BusinessObject.Campaigns
         // Many-to-many
         public virtual ICollection<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
             = new List<PromotionalCampaignService>();
-
+        public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
+        = new List<VoucherUsage>();
     }
 
     public enum CampaignType

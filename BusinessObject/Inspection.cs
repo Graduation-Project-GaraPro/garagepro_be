@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -37,6 +37,6 @@ namespace BusinessObject
         public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<PartInspection> PartInspections { get; set; }
-       
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>(); // Add this line
     }
 }

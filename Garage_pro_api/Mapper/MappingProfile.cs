@@ -12,8 +12,8 @@ using Dtos.Roles;
 using Dtos.Vehicles;
 using Dtos.Services;
 using Dtos.Parts;
-
 using Dtos.Auth;
+using Dtos.Quotations;
 
 namespace Garage_pro_api.Mapper
 {
@@ -113,6 +113,47 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Color, opt => opt.Ignore())
                 .ForMember(dest => dest.RepairOrders, opt => opt.Ignore())
                 .ForMember(dest => dest.User, opt => opt.Ignore());
+
+            // Quotation mappings
+            CreateMap<Quotation, QuotationDto>()
+                .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => src.QuotationId))
+                .ForMember(dest => dest.InspectionId, opt => opt.MapFrom(src => src.InspectionId))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.VehicleId, opt => opt.MapFrom(src => src.VehicleId))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.SentToCustomerAt, opt => opt.MapFrom(src => src.SentToCustomerAt))
+                .ForMember(dest => dest.CustomerResponseAt, opt => opt.MapFrom(src => src.CustomerResponseAt))
+                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
+                .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+                .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
+                .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note))
+                .ForMember(dest => dest.ExpiresAt, opt => opt.MapFrom(src => src.ExpiresAt))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => $"{src.Vehicle.Brand.BrandName} {src.Vehicle.Model.ModelName}"));
+
+            CreateMap<QuotationService, QuotationServiceDto>()
+                .ForMember(dest => dest.QuotationServiceId, opt => opt.MapFrom(src => src.QuotationServiceId))
+                .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => src.QuotationId))
+                .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
+                .ForMember(dest => dest.IsSelected, opt => opt.MapFrom(src => src.IsSelected))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
+                .ForMember(dest => dest.ServiceDescription, opt => opt.MapFrom(src => src.Service.Description));
+
+            CreateMap<QuotationPart, QuotationPartDto>()
+                .ForMember(dest => dest.QuotationPartId, opt => opt.MapFrom(src => src.QuotationPartId))
+                .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => src.QuotationId))
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
+                .ForMember(dest => dest.IsSelected, opt => opt.MapFrom(src => src.IsSelected))
+                .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
+                .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
+                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Part.Name))
+                .ForMember(dest => dest.PartDescription, opt => opt.MapFrom(src => src.Part.Name)); // Changed to use Name instead of Description
 
             CreateMap<ApplicationUser, UserDto>().ReverseMap();
             CreateMap<UpdateUserDto, ApplicationUser>()

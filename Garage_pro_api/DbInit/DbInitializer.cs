@@ -1,6 +1,7 @@
-﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 using BusinessObject.Enums;
 using BusinessObject.Roles;
 using BusinessObject.Vehicles;
@@ -52,6 +53,7 @@ namespace Garage_pro_api.DbInit
             await SeedVehiclesAsync();
             await SeedRepairOrdersAsync();
 
+            await SeedPromotionalCampaignsWithServicesAsync();
         }
 
         // 1. Seed Roles
@@ -126,7 +128,10 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Vehicle Management" }
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
     };
 
             foreach (var cat in categories)
@@ -145,30 +150,56 @@ namespace Garage_pro_api.DbInit
             var userCatId = categories.First(c => c.Name == "User Management").Id;
             var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
             var roleCatId = categories.First(c => c.Name == "Role Management").Id;
-            var vehicleCatId = categories.First(c => c.Name == "Vehicle Management").Id;
+            var branchCatId = categories.First(c => c.Name == "Branch Management").Id;
+            var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
+            var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
+            var partCatId = categories.First(c => c.Name == "Part Management").Id;
 
             var defaultPermissions = new List<Permission>
-    {
-        new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
+                {
+                    // ✅ User Management
+                    new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
 
-        new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Role create", Description = "Can create role", CategoryId = roleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "ROLE_UPDATE", Name = "Role update", Description = "Can update role", CategoryId = roleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Role delete", Description = "Can delete role", CategoryId = roleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "Role View", Description = "Can View role", CategoryId = roleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASIGN", Name = "Permission assign", Description = "Can assign permission", CategoryId = roleCatId },
+                    // ✅ Role Management
+                    new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Create Role", Description = "Can create roles", CategoryId = roleCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "ROLE_UPDATE", Name = "Update Role", Description = "Can update roles", CategoryId = roleCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Delete Role", Description = "Can delete roles", CategoryId = roleCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "View Roles", Description = "Can view roles", CategoryId = roleCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASSIGN", Name = "Assign Permissions", Description = "Can assign permissions to roles", CategoryId = roleCatId },
 
-        new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view bookings", CategoryId = bookingCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage bookings", CategoryId = bookingCatId },
+                    // ✅ Booking Management
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view booking records", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage booking details", CategoryId = bookingCatId },
 
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = vehicleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicles", Description = "Can create vehicles", CategoryId = vehicleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_EDIT", Name = "Edit Vehicles", Description = "Can edit vehicles", CategoryId = vehicleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicles", Description = "Can delete vehicles", CategoryId = vehicleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_WARRANTY", Name = "Manage Vehicle Warranty", Description = "Can manage vehicle warranty", CategoryId = vehicleCatId },
-        new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Manage Vehicle Schedule", Description = "Can manage vehicle service schedule", CategoryId = vehicleCatId }
-    };
+                    // ✅ Branch Management
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_VIEW", Name = "View Branches", Description = "Can view branch list", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_CREATE", Name = "Create Branch", Description = "Can create branches", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_UPDATE", Name = "Update Branch", Description = "Can update branch info", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_DELETE", Name = "Delete Branch", Description = "Can delete branches", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_STATUS_TOGGLE", Name = "Toggle Branch Status", Description = "Can activate/deactivate branches", CategoryId = branchCatId },
+
+                    // ✅ Service Management
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_VIEW", Name = "View Services", Description = "Can view services", CategoryId = serviceCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_CREATE", Name = "Create Service", Description = "Can create new services", CategoryId = serviceCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_UPDATE", Name = "Update Service", Description = "Can update service information", CategoryId = serviceCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_DELETE", Name = "Delete Service", Description = "Can delete services", CategoryId = serviceCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_STATUS_TOGGLE", Name = "Toggle Service Status", Description = "Can activate/deactivate services", CategoryId = serviceCatId },
+
+                    // ✅ Promotional Management
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_VIEW", Name = "View Promotions", Description = "Can view promotional campaigns", CategoryId = promotionalCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_CREATE", Name = "Create Promotion", Description = "Can create promotional campaigns", CategoryId = promotionalCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_UPDATE", Name = "Update Promotion", Description = "Can update promotional campaigns", CategoryId = promotionalCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_DELETE", Name = "Delete Promotion", Description = "Can delete promotional campaigns", CategoryId = promotionalCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_TOGGLE", Name = "Toggle Promotion Status", Description = "Can activate/deactivate promotions", CategoryId = promotionalCatId },
+
+                    // ✅ Part Management
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
+                };
 
             foreach (var perm in defaultPermissions)
             {
@@ -186,12 +217,44 @@ namespace Garage_pro_api.DbInit
             var permissions = await _context.Permissions.ToListAsync();
 
             var rolePermissionMap = new Dictionary<string, string[]>
-    {
-        { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE", "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN", "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_EDIT", "VEHICLE_DELETE", "VEHICLE_WARRANTY", "VEHICLE_SCHEDULE" } },
-        { "Manager", new[] { "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE", "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_EDIT", "VEHICLE_DELETE", "VEHICLE_WARRANTY", "VEHICLE_SCHEDULE" } },
-        { "Customer", new[] { "BOOKING_VIEW", "VEHICLE_VIEW" } },
-        { "Technician", new[] { "BOOKING_MANAGE", "VEHICLE_VIEW" } }
-    };
+                        {
+                            {
+                                "Admin", new[]
+                                {
+                                    // User
+                                    "USER_VIEW", "USER_EDIT", "USER_DELETE",
+            
+                                    // Booking
+                                    "BOOKING_VIEW", "BOOKING_MANAGE",
+            
+                                    // Role
+                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN",
+            
+                                    // ✅ Branch Management
+                                    "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE",
+            
+                                    // ✅ Service Management
+                                    "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",
+            
+                                    // ✅ Promotional Management
+                                    "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE"
+                                }
+                            },
+                            {
+                                "Manager", new[]
+                                {
+                                    "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW"
+                                }
+                            },
+                            {
+                                "Customer", new[] { "BOOKING_VIEW" }
+                            },
+                            {
+                                "Technician", new[] { "BOOKING_MANAGE" }
+                            }
+                        };
+
 
             foreach (var role in roles)
             {
@@ -289,7 +352,7 @@ namespace Garage_pro_api.DbInit
                 Description = "This is Oil Change",
                 ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
                
-                ServiceStatus = "Active",
+                
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -299,9 +362,7 @@ namespace Garage_pro_api.DbInit
             {
                 ServiceName = "Brake Repair",
                 Description = "This is Brake Repair",
-                ServiceCategoryId = repairCategory.ServiceCategoryId,
-               
-                ServiceStatus = "Active",
+                ServiceCategoryId = repairCategory.ServiceCategoryId,                            
                 Price = 1200000,
                 EstimatedDuration = 2,
                 IsActive = true,
@@ -792,6 +853,98 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+        private async Task SeedPromotionalCampaignsWithServicesAsync()
+        {
+            if (!_context.PromotionalCampaigns.Any())
+            {
+                var campaigns = new List<PromotionalCampaign>
+        {
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Grand Opening Discount",
+                Description = "Celebrate our grand opening with 20% off all services!",
+                Type = CampaignType.Discount,
+                DiscountType = DiscountType.Percentage,
+                DiscountValue = 20,
+                StartDate = DateTime.UtcNow.AddDays(-3),
+                EndDate = DateTime.UtcNow.AddDays(7),
+                MinimumOrderValue = 0,
+                MaximumDiscount = 500000,
+                UsageLimit = 200,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Loyalty Appreciation",
+                Description = "Fixed discount of 150,000₫ for our returning customers.",
+                Type = CampaignType.Loyalty,
+                DiscountType = DiscountType.Fixed,
+                DiscountValue = 150000,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(2),
+                MinimumOrderValue = 500000,
+                MaximumDiscount = null,
+                UsageLimit = 100,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Year-End Free Checkup",
+                Description = "Get a free maintenance check for any service above 1,000,000₫.",
+                Type = CampaignType.Seasonal,
+                DiscountType = DiscountType.FreeService,
+                DiscountValue = 0,
+                StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
+                EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
+                MinimumOrderValue = 1000000,
+                MaximumDiscount = null,
+                UsageLimit = 300,
+                UsedCount = 0,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+
+                _context.PromotionalCampaigns.AddRange(campaigns);
+                await _context.SaveChangesAsync();
+
+                // --- Sau khi lưu campaign, thêm liên kết Service ---
+                var services = await _context.Services.ToListAsync();
+                if (services.Any())
+                {
+                    var promoCampaignServices = new List<PromotionalCampaignService>();
+
+                    foreach (var campaign in campaigns)
+                    {
+                        // Lấy ngẫu nhiên 2 dịch vụ đầu tiên cho demo
+                        var selectedServices = services.Take(2).ToList();
+
+                        foreach (var service in selectedServices)
+                        {
+                            promoCampaignServices.Add(new PromotionalCampaignService
+                            {
+                                PromotionalCampaignId = campaign.Id,
+                                ServiceId = service.ServiceId
+                            });
+                        }
+                    }
+
+                    _context.PromotionalCampaignServices.AddRange(promoCampaignServices);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
         private async Task SeedRepairOrdersAsync()
         {
             if (!_context.RepairOrders.Any())
@@ -802,7 +955,7 @@ namespace Garage_pro_api.DbInit
                 var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
                 
                 var branch = await _context.Branches.FirstOrDefaultAsync();
-                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000003"); // Default Customer
+                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
                 var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
                 var vehicles = await _context.Vehicles.ToListAsync();
                 
