@@ -1,54 +1,79 @@
-﻿using Customers;
+﻿using AutoMapper;
+using BusinessObject.Quotations;
+using Customers;
 using Repositories.QuotationRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Services.QuotationService
 {
-   
-        public class QuotationService : IQuotationService
+    public class QuotationService : IQuotationService
+    {
+        private readonly IQuotationRepository _quotationRepository;
+        private readonly IMapper _mapper;
+        
+
+        public QuotationService(IQuotationRepository quotationRepository, IMapper mapper)
         {
-            private readonly IQuotationRepository _quotationRepository;
+            _quotationRepository = quotationRepository;
+            _mapper = mapper;
+        }
 
-            public QuotationService(IQuotationRepository quotationRepository)
+        // ✅ Lấy tất cả báo giá theo userId (tất cả RepairRequest thuộc user đó)
+        public async Task<IEnumerable<QuotationDto>> GetQuotationsByUserIdAsync(string userId)
+        {
+            var quotations = await _quotationRepository.GetQuotationsByUserIdAsync(userId);
+
+            // Map tự động bằng AutoMapper
+            var result = _mapper.Map<IEnumerable<QuotationDto>>(quotations);
+
+            return result;
+        }
+
+        // ✅ Lấy danh sách báo giá thuộc một RepairRequest cụ thể
+        public async Task<IEnumerable<QuotationDto>> GetQuotationsByRepairRequestIdAsync(string userId, Guid repairRequestId)
+        {
+            var quotations = await _quotationRepository.GetQuotationsByRepairRequestIdAsync(userId, repairRequestId);
+
+            var result = _mapper.Map<IEnumerable<QuotationDto>>(quotations);
+
+            return result;
+        }
+
+        public async Task<bool> ApproveQuotationAsync(Guid quotationId)
+        {
+            var quotation =await _quotationRepository.GetQuotationByIdAsync(quotationId);
+            if(quotation == null)
             {
-                _quotationRepository = quotationRepository;
+                throw new KeyNotFoundException($"Quotation with ID {quotationId} was not found.");
             }
-
-            // Lấy tất cả báo giá của customer
-            public async Task<List<QuotationDto>> GetQuotationsByUserIdAsync(string userId)
+            if(quotation.Status != Status.Pending)
             {
-                if (string.IsNullOrEmpty(userId))
-                    throw new ArgumentException("UserId cannot be null or empty");
-
-                var quotations = await _quotationRepository.GetQuotationsByUserIdAsync(userId);
-                return quotations;
+                throw new InvalidOperationException($"Quotation with ID {quotationId} has already been approved.");
             }
+            quotation.Status = Status.Approved;
+            quotation.ApprovedAt = DateTime.Now;
+             await _quotationRepository.UpdateQuotationAsync(quotation);
+            return true;
+        }
 
-            // Lấy báo giá theo RepairRequest
-            public async Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(string userId, Guid repairRequestId)
+        public async Task<bool> RejectQuotationAsync(Guid quotationId)
+        {
+            var quotation = await _quotationRepository.GetQuotationByIdAsync(quotationId);
+            if (quotation == null)
             {
-                if (string.IsNullOrEmpty(userId))
-                    throw new ArgumentException("UserId cannot be null or empty");
-
-                if (repairRequestId == Guid.Empty)
-                    throw new ArgumentException("RepairRequestId is invalid");
-
-                var quotations = await _quotationRepository.GetQuotationsByRepairRequestIdAsync(userId, repairRequestId);
-                return quotations;
+                throw new KeyNotFoundException($"Quotation with ID {quotationId} was not found.");
             }
-
-            // UpdateQuotationPartsAsync 
-            // public async Task<QuotationDto> UpdateQuotationPartsAsync(string userId, UpdateQuotationPartsDto dto)
-            // {
-            //     if (dto == null) throw new ArgumentNullException(nameof(dto));
-            //     var updatedQuotation = await _quotationRepository.UpdateQuotationPartsAsync(userId, dto);
-            //     return updatedQuotation;
-            // }
+            if (quotation.Status != Status.Pending)
+            {
+                throw new InvalidOperationException($"Quotation with ID {quotationId} has already been approved.");
+            }
+            quotation.Status = Status.Approved;
+            quotation.ApprovedAt = DateTime.Now;
+            await _quotationRepository.UpdateQuotationAsync(quotation);
+            return true;
         }
     }
-
-
+}

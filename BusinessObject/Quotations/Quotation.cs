@@ -14,7 +14,7 @@ namespace BusinessObject.Quotations
     public class Quotation
     {
         [Key]
-        public Guid QuotationID { get; set; }
+        public Guid QuotationID { get; set; } = new Guid();
 
         [Required]
         public Guid RepairRequestID { get; set; }
@@ -75,6 +75,7 @@ namespace BusinessObject.Quotations
         Pending,
         Approved,
         Rejected,
+        Updated,
         Expired
     }
 }

@@ -17,7 +17,12 @@ namespace Repositories.QuotationRepositories
         //lấy chi tiết suitable cho repair request
         Task<IEnumerable<Quotation>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId);
         //update báo giá cho phép thay đổi pârt
+        Task<Quotation> GetQuotationByIdAsync(Guid quotationId);
         //Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto);
+        Task<bool> ApproveQuotationAsync(Guid quotationId);
+        Task<bool> RejectQuotationAsync(Guid quotationId);
+         Task<Quotation> UpdateQuotationAsync(Quotation quotation);
+
 
 
 

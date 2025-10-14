@@ -45,20 +45,42 @@ namespace Garage_pro_api.Controllers.Customer
                 var quotations = await _quotationService.GetQuotationsByRepairRequestIdAsync(userId, repairRequestId);
                 return Ok(quotations);
             }
-
-         
-            /// Customer cập nhật Part (chọn Spec)           
-            // [HttpPut("update-parts")]
-            // public async Task<ActionResult<QuotationDto>> UpdateQuotationParts(UpdateQuotationPartsDto dto)
-            // {
-            //     var userId = User.FindFirst("sub")?.Value;
-            //     if (string.IsNullOrEmpty(userId))
-            //         return Unauthorized();
-
-            //     var updatedQuotation = await _quotationService.UpdateQuotationPartsAsync(userId, dto);
-            //     return Ok(updatedQuotation);
-            // }
+        //apporve báo giá
+        [HttpPost("approve/{quotationId}")]
+            public async Task<ActionResult<QuotationDto>> ApproveQuotation(Guid quotationId)
+            {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+                var approvedQuotation = await _quotationService.ApproveQuotationAsync( quotationId);
+                return Ok(approvedQuotation);
         }
+        //customer từ chối báo giá
+        [HttpPost("reject/{quotationId}")]
+            public async Task<ActionResult<QuotationDto>> RejectQuotation(Guid quotationId)
+            {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+                var rejectedQuotation = await _quotationService.RejectQuotationAsync( quotationId);
+                return Ok(rejectedQuotation);
+        }
+
+
+        /// Customer cập nhật Part (chọn Spec)           
+        // [HttpPut("update-parts")]
+        // public async Task<ActionResult<QuotationDto>> UpdateQuotationParts(UpdateQuotationPartsDto dto)
+        // {
+        //     var userId = User.FindFirst("sub")?.Value;
+        //     if (string.IsNullOrEmpty(userId))
+        //         return Unauthorized();
+
+        //     var updatedQuotation = await _quotationService.UpdateQuotationPartsAsync(userId, dto);
+        //     return Ok(updatedQuotation);
+        // }
     }
+}
 
 

@@ -6,16 +6,13 @@ namespace Customers
     // DTO hiển thị báo giá
     public class QuotationDto
     {
-        public Guid QuotationId { get; set; }
+        public Guid QuotationID { get; set; }
+        public Guid RepairRequestID { get; set; }
+        public string? BranchName { get; set; }
+        public string? Status { get; set; }
+        public decimal TotalPrice { get; set; }
         public DateTime CreatedAt { get; set; }
-        public string CustomerConcern { get; set; }
-        public string? Finding { get; set; }
-
-        // Danh sách dịch vụ
-        public List<ServiceItemDto> Services { get; set; } = new List<ServiceItemDto>();
-
-        // Danh sách linh kiện / Part
-        public List<PartItemDto> Parts { get; set; } = new List<PartItemDto>();
+        public List<QuotationItemDto> Items { get; set; } = new();
     }
 
     // DTO dịch vụ
@@ -28,27 +25,20 @@ namespace Customers
     }
 
     // DTO  Part
-    public class PartItemDto
+    public class QuotationItemDto
     {
-        public Guid PartId { get; set; }              // ID Part gốc
-        public string PartName { get; set; }          // Tên Part
-        public decimal Price { get; set; }            // Giá Part
-        public int Quantity { get; set; }             // Quantity cố định not change
-        public decimal Total => Price * Quantity;
-
-        // Danh sách Specification 
-        public List<PartSpecificationDto> Specifications { get; set; } = new List<PartSpecificationDto>();
-
-        // Nếu Customer có thể chọn Spec, lưu Spec đã chọn
-        public Guid? SelectedSpecId { get; set; }//lấy từ bảng PartSpecification
+        public Guid QuotationItemID { get; set; }
+        public string ItemType { get; set; }
+        public string ItemName { get; set; }
+        public string? CategoryName { get; set; }
+        public string? Description { get; set; }
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal TotalPrice { get; set; }
     }
 
-    // DTO Specification
-    public class PartSpecificationDto
-    {
-        public Guid SpecId { get; set; }
-        public string SpecValue { get; set; } // ví dụ: "Dầu loại tốt"
-    }
+
+
 
     // DTO Customer gửi lựa chọn Spec cho Part
     public class UpdateQuotationPartsDto
