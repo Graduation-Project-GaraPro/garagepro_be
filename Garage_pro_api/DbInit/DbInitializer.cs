@@ -1,4 +1,4 @@
-﻿using BusinessObject.Authentication;
+using BusinessObject.Authentication;
 using BusinessObject.Roles;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
