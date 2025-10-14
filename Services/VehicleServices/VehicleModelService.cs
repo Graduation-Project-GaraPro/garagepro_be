@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Dtos.Vehicles;
-using Repositories.Vehicles;
+using Repositories.VehicleRepositories;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;

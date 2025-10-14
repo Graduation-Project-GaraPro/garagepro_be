@@ -7,14 +7,12 @@ using System.Threading.Tasks;
 
 namespace Services.VehicleServices
 {
-   
-        public interface IVehicleBrandServices
-        {
-            Task<IEnumerable<VehicleBrandDto>> GetAllBrandsAsync();
-            Task<VehicleBrandDto> GetBrandByIdAsync(Guid id);
-            Task<VehicleBrandDto> CreateBrandAsync(CreateVehicleBrandDto brandDto);
-            //Task<bool> UpdateBrandAsync(Guid id, UpdateVehicleBrandDto brandDto);
-            //Task<bool> DeleteBrandAsync(Guid id);
-        }
+    public interface IVehicleBrandServices
+    {
+        Task<IEnumerable<VehicleBrandDto>> GetAllBrandsAsync();
+        Task<VehicleBrandDto> GetBrandByIdAsync(Guid id);
+        Task<VehicleBrandDto> CreateBrandAsync(CreateVehicleBrandDto brandDto);
+        //Task<bool> UpdateBrandAsync(Guid id, UpdateVehicleBrandDto brandDto);
+        //Task<bool> DeleteBrandAsync(Guid id);
     }
-
+}

@@ -1,77 +1,99 @@
-﻿using AutoMapper;
-using AutoMapper.QueryableExtensions;
-using Customers;
+using BusinessObject;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repositories.QuotationRepositories
 {
-    public class QuotationRepository: IQuotationRepository
+    public class QuotationRepository : IQuotationRepository
     {
-            private readonly MyAppDbContext _context;
-            private readonly IMapper _mapper;
+        private readonly MyAppDbContext _context;
 
-            public QuotationRepository(MyAppDbContext context, IMapper mapper)
-            {
-                _context = context;
-                _mapper = mapper;
-            }
+        public QuotationRepository(MyAppDbContext context)
+        {
+            _context = context;
+        }
 
-            public async Task<List<QuotationDto>> GetQuotationsByUserIdAsync(String userId)
-            {
-                return await _context.Inspections
-                    .Include(i => i.RepairOrder)
-                    .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                    .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-                    .Where(i => i.RepairOrder.UserId == userId)
-                    .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// dùng projectto để map k cần load hết chỉ cần nhhuwnxg entities cần thiết
-                    .ToListAsync();
-            }
+        public async Task<Quotation> CreateAsync(Quotation quotation)
+        {
+            _context.Quotations.Add(quotation);
+            await _context.SaveChangesAsync();
+            return quotation;
+        }
 
-            public async Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId)
-            {
-                return await _context.Inspections
-                    .Include(i => i.RepairOrder)
-                    .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                    .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-                    .Where(i => i.RepairOrder.UserId == userId && i.RepairOrderId == repairRequestId)
-                    .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)
-                    .ToListAsync();
-            }
+        public async Task<Quotation> GetByIdAsync(Guid quotationId)
+        {
+            return await _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationParts)
+                .ThenInclude(qp => qp.Part)
+                .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
+        }
 
-        //update báo giá cho phép thay đổi pârt
-        //public async Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto)
-        //{
-        //    var inspection = await _context.Inspections
-        //        .Include(i => i.RepairOrder)
-        //        .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-        //        .FirstOrDefaultAsync(i => i.InspectionId == dto.QuotationId && i.RepairOrder.UserId == userId);
+        public async Task<IEnumerable<Quotation>> GetByInspectionIdAsync(Guid inspectionId)
+        {
+            return await _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationParts)
+                .ThenInclude(qp => qp.Part)
+                .Where(q => q.InspectionId == inspectionId)
+                .ToListAsync();
+        }
 
-        //    if (inspection == null)
-        //        throw new Exception("Quotation not found or not authorized");
+        public async Task<IEnumerable<Quotation>> GetByUserIdAsync(string userId)
+        {
+            return await _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationParts)
+                .ThenInclude(qp => qp.Part)
+                .Where(q => q.UserId == userId)
+                .ToListAsync();
+        }
 
-        //    foreach (var partUpdate in dto.Parts)
-        //    {
-        //        var partInspection = inspection.PartInspections
-        //            .FirstOrDefault(p => p.PartId == partUpdate.PartId);
+        public async Task<IEnumerable<Quotation>> GetAllAsync()
+        {
+            return await _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationParts)
+                .ThenInclude(qp => qp.Part)
+                .ToListAsync();
+        }
 
-        //        if (partInspection != null &&
-        //            partInspection.Part.PartSpecifications.Any(s => s.SpecId == partUpdate.SelectedSpecId))
-        //        {
-        //        partInspection.SelectedSpecId = partUpdate.SelectedSpecId; // <-- đây mới đúng
-        //    }
-        //    }
+        public async Task<Quotation> UpdateAsync(Quotation quotation)
+        {
+            _context.Quotations.Update(quotation);
+            await _context.SaveChangesAsync();
+            return quotation;
+        }
 
-        //    await _context.SaveChangesAsync();
+        public async Task<bool> DeleteAsync(Guid quotationId)
+        {
+            var quotation = await _context.Quotations.FindAsync(quotationId);
+            if (quotation == null)
+                return false;
 
-        //    return _mapper.Map<QuotationDto>(inspection);
-        //}
+            _context.Quotations.Remove(quotation);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ExistsAsync(Guid quotationId)
+        {
+            return await _context.Quotations.AnyAsync(q => q.QuotationId == quotationId);
+        }
     }
 }
-
-

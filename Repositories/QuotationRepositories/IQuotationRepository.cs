@@ -1,24 +1,19 @@
-﻿using Customers;
+using BusinessObject;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repositories.QuotationRepositories
 {
     public interface IQuotationRepository
     {
-       
-        /// Lấy tất cả báo giá được gửi cho customer
-         Task<List<QuotationDto>> GetQuotationsByUserIdAsync(String userId);
-
-        //lấy chi tiết suitable cho repair request
-        Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId);
-        //update báo giá cho phép thay đổi pârt
-        //Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto);
-
-
-
+        Task<Quotation> CreateAsync(Quotation quotation);
+        Task<Quotation> GetByIdAsync(Guid quotationId);
+        Task<IEnumerable<Quotation>> GetByInspectionIdAsync(Guid inspectionId);
+        Task<IEnumerable<Quotation>> GetByUserIdAsync(string userId);
+        Task<IEnumerable<Quotation>> GetAllAsync();
+        Task<Quotation> UpdateAsync(Quotation quotation);
+        Task<bool> DeleteAsync(Guid quotationId);
+        Task<bool> ExistsAsync(Guid quotationId);
     }
 }

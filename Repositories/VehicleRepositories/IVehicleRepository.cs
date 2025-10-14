@@ -3,17 +3,22 @@ using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using BusinessObject;
 
-namespace Repositories.Vehicles
+namespace Repositories.VehicleRepositories
 {
     public interface IVehicleRepository
     {
+        Task<Vehicle?> GetByIdAsync(Guid vehicleId);
+        Task<Vehicle?> GetByVinAsync(string vin);
+        Task<Vehicle?> GetByLicensePlateAsync(string licensePlate);
+        Task<IEnumerable<Vehicle>> GetByUserIdAsync(string userId);
         Task<IEnumerable<Vehicle>> GetAllAsync();
-        Task<IEnumerable<Vehicle>> GetByUserIdAsync(String userId);
-        Task<Vehicle> GetByIdAsync(Guid id);
-        Task<Vehicle> AddAsync(Vehicle vehicle);
+        Task<Vehicle> CreateAsync(Vehicle vehicle);
         Task<Vehicle> UpdateAsync(Vehicle vehicle);
-        Task<bool> DeleteAsync(Guid id);
-        Task<bool> ExistsAsync(Guid id);
+        Task<bool> DeleteAsync(Guid vehicleId);
+        Task<bool> ExistsAsync(Guid vehicleId);
+        Task<bool> ExistsByVinAsync(string vin);
+        Task<bool> ExistsByLicensePlateAsync(string licensePlate);
     }
 }

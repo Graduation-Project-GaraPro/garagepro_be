@@ -34,6 +34,11 @@ using Services.Cloudinaries;
 using Repositories.PartCategoryRepositories;
 using Services.PartCategoryServices;
 using Repositories.PartRepositories;
+using Microsoft.AspNetCore.OData;
+using Repositories.VehicleRepositories;
+using Services.VehicleServices;
+using AutoMapper;
+
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
 using Repositories.LogRepositories;
@@ -41,9 +46,23 @@ using Services.LogServices;
 using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
+
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddOData(options => options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -224,12 +243,36 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobService, Services.JobService>();
+builder.Services.AddScoped<IJobService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    return new Services.JobService(jobRepository);
+});
 
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>(); // This was missing
+
+// Customer service
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+
+// Vehicle repository and services
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
+
+// Quotation services
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+
+// Vehicle brand, model, and color repositories
+builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -288,7 +331,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -348,4 +390,5 @@ using (var scope = app.Services.CreateScope())
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
 }
+
 app.Run();

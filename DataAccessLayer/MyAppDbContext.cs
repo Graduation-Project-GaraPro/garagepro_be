@@ -1,4 +1,4 @@
-﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -12,27 +12,12 @@ using BusinessObject.Technician;
 using BusinessObject.Vehicles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BusinessObject;
-using BusinessObject.Authentication;
 using BusinessObject.Manager;
-using BusinessObject.Policies;
-using BusinessObject.SystemLogs;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
-using BusinessObject.Notifications;
-using BusinessObject.Technician;
-using BusinessObject.Roles;
-using BusinessObject.Branches;
-using BusinessObject.Campaigns;
+
 
 namespace DataAccessLayer
 {
-    public class MyAppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+    public class MyAppDbContext : IdentityDbContext<ApplicationUser>
     {
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
@@ -53,14 +38,24 @@ namespace DataAccessLayer
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
+        public DbSet<Quotation> Quotations { get; set; }
+        public DbSet<QuotationService> QuotationServices { get; set; }
+        public DbSet<QuotationPart> QuotationParts { get; set; }
 
         // Junction tables
+        public DbSet<JobPart> JobParts { get; set; }
+        public DbSet<JobTechnician> JobTechnicians { get; set; }
+        public DbSet<Repair> Repairs { get; set; }
+        public DbSet<Specifications> Specifications { get; set; }
+        public DbSet<SpecificationsData> SpecificationsData { get; set; }
+        public DbSet<VehicleLookup> VehicleLookups { get; set; }
+        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
+        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
         
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
-        public DbSet<JobPart> JobParts { get; set; }
         public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
@@ -68,8 +63,6 @@ namespace DataAccessLayer
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
         public DbSet<LogCategory> LogCategories { get; set; }
         public DbSet<LogTag> LogTags { get; set; }
-        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
-        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
         // Notification
         public DbSet<CategoryNotification> CategoryNotifications { get; set; }
@@ -77,18 +70,13 @@ namespace DataAccessLayer
 
         //Technician
         public DbSet<Technician> Technicians { get; set; }
-        public DbSet<JobTechnician> JobTechnicians { get; set; }
-        public DbSet<Repair> Repairs { get; set; }
-        public DbSet<VehicleLookup> VehicleLookups { get; set; }
-        public DbSet<Specifications> Specifications { get; set; } 
-        public DbSet<SpecificationsData> SpecificationsData { get; set; }
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
         public DbSet<BranchService> BranchServices { get; set; }
         public DbSet<OperatingHour> OperatingHours { get; set; }
-        public DbSet<VoucherUsage> VoucherUsages { get; set; }
+
         //AiChat
         public DbSet<AIChatMessage> AiChatMessages { get; set; }
         public DbSet<AIChatSession> AiChatSessions { get; set; }
@@ -114,6 +102,50 @@ namespace DataAccessLayer
         {
             base.OnModelCreating(modelBuilder);
 
+            // Quotation relationships
+            modelBuilder.Entity<Quotation>(entity =>
+            {
+                entity.HasOne(q => q.Inspection)
+                      .WithMany(i => i.Quotations)
+                      .HasForeignKey(q => q.InspectionId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(q => q.User)
+                      .WithMany()
+                      .HasForeignKey(q => q.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(q => q.Vehicle)
+                      .WithMany()
+                      .HasForeignKey(q => q.VehicleId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<QuotationService>(entity =>
+            {
+                entity.HasOne(qs => qs.Quotation)
+                      .WithMany(q => q.QuotationServices)
+                      .HasForeignKey(qs => qs.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qs => qs.Service)
+                      .WithMany()
+                      .HasForeignKey(qs => qs.ServiceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<QuotationPart>(entity =>
+            {
+                entity.HasOne(qp => qp.Quotation)
+                      .WithMany(q => q.QuotationParts)
+                      .HasForeignKey(qp => qp.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qp => qp.Part)
+                      .WithMany()
+                      .HasForeignKey(qp => qp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
 
             //chặn casadate
             modelBuilder.Entity<Vehicle>()
@@ -329,6 +361,7 @@ namespace DataAccessLayer
                       .HasForeignKey(r => r.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+            
             // Repair configuration
             modelBuilder.Entity<Repair>(entity =>
             {

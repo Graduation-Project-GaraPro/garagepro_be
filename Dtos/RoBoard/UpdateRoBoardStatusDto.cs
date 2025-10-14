@@ -105,7 +105,7 @@ namespace Dtos.RoBoard
         [MaxLength(500)]
         public string ArchiveReason { get; set; }
         
-        public string ArchivedByUserId { get; set; }
+        public string? ArchivedByUserId { get; set; }
     }
     
     public class RestoreRepairOrderDto

@@ -19,6 +19,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/orderstatus/columns
         [HttpGet("columns")]
+        [AllowAnonymous] // Allow anonymous access for testing
         public async Task<IActionResult> GetOrderStatusesByColumns()
         {
             try

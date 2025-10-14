@@ -7,11 +7,16 @@ namespace Dtos.Vehicles
     {
         public Guid VehicleID { get; set; }
         public Guid BrandID { get; set; }
-        public Guid UserID { get; set; }
+        public string UserID { get; set; }
         public Guid ModelID { get; set; }
         public Guid ColorID { get; set; }
         public string LicensePlate { get; set; }
         public string VIN { get; set; }
+        public int Year { get; set; }
+        public long? Odometer { get; set; }
+        public DateTime LastServiceDate { get; set; }
+        public DateTime? NextServiceDate { get; set; }
+        public string WarrantyStatus { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         
@@ -27,7 +32,7 @@ namespace Dtos.Vehicles
         public Guid BrandID { get; set; }
 
         [Required]
-        public Guid UserID { get; set; }
+        public string UserID { get; set; }
 
         [Required]
         public Guid ModelID { get; set; }
@@ -46,6 +51,12 @@ namespace Dtos.Vehicles
         [RegularExpression(@"^[A-HJ-NPR-Z0-9]{17}$",
             ErrorMessage = "VIN must be 17 characters, excluding I, O, Q")]
         public string VIN { get; set; }
+        
+        [Required]
+        [Range(1886, 2030)]
+        public int Year { get; set; }
+        
+        public long? Odometer { get; set; }
     }
 
     public class UpdateVehicleDto
@@ -70,5 +81,16 @@ namespace Dtos.Vehicles
         [RegularExpression(@"^[A-HJ-NPR-Z0-9]{17}$",
             ErrorMessage = "VIN must be 17 characters, excluding I, O, Q")]
         public string VIN { get; set; }
+        
+        [Required]
+        [Range(1886, 2030)]
+        public int Year { get; set; }
+        
+        public long? Odometer { get; set; }
+        
+        public DateTime? NextServiceDate { get; set; }
+        
+        [MaxLength(100)]
+        public string WarrantyStatus { get; set; }
     }
 }

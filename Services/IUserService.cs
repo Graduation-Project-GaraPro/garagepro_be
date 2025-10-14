@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +10,7 @@ namespace Services
     public interface IUserService
     {
         Task<List<ApplicationUser>> GetAllUsersAsync();
+        Task<ApplicationUser> GetByIdAsync(string userId);
         Task<IList<string>> GetUserRolesAsync(ApplicationUser user);
         Task<bool> BanUserAsync(string userId, string message);
         Task<bool> UnbanUserAsync(string userId, string message);

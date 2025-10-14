@@ -4,7 +4,7 @@ using Dtos.Customers;
 using Repositories;
 using Repositories.Customers;
 using Repositories.RepairRequestRepositories;
-using Repositories.Vehicles;
+using Repositories.VehicleRepositories;
 using Services.Cloudinaries;
 using System;
 using System.Collections.Generic;

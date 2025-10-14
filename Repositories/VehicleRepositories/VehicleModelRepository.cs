@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Repositories.Vehicles
+namespace Repositories.VehicleRepositories
 {
     public class VehicleModelRepository : IVehicleModelRepository
     {

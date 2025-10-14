@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Repositories.Vehicles
+namespace Repositories.VehicleRepositories
 {
     public interface IVehicleBrandRepository
     {
