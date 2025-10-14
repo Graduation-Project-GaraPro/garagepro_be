@@ -36,6 +36,9 @@ using Services.PartCategoryServices;
 using Repositories.PartRepositories;
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
+using Repositories.LogRepositories;
+using Services.LogServices;
+using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -182,10 +185,21 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.SlidingExpiration = true;
 });
+
+// Register session
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddScoped<DbInitializer>();
-
+builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
+builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
 builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
 builder.Services.AddMemoryCache(); // Cho IMemoryCache
@@ -282,6 +296,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseSession();
+app.UseMiddleware<UserActivityMiddleware>();
+
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
 app.Use(async (context, next) =>
@@ -294,8 +311,8 @@ app.Use(async (context, next) =>
 
 app.UseAuthentication();
 app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
-app.UseSecurityPolicyEnforcement();
 
+app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 // Initialize database
 
