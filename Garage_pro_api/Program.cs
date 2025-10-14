@@ -26,6 +26,7 @@ using Repositories.QuotationRepositories;
 using Repositories.RepairRequestRepositories;
 using Repositories.RoleRepositories;
 using Repositories.ServiceRepositories;
+using Repositories.UnitOfWork;
 using Repositories.VehicleRepositories;
 using Repositories.Vehicles;
 using Services;
@@ -262,6 +263,12 @@ builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
 builder.Services.AddScoped<IRequestServiceRepository, RequestServiceRepository>();
 builder.Services.AddScoped<IRepairRequestRepository, RepairRequestRepository>();
 builder.Services.AddScoped<IRepairRequestService, RepairRequestService>();
+// Nếu dùng Scoped lifetime như các repository khác
+builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
+
+//
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
 //vehicle
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleServiceService>();

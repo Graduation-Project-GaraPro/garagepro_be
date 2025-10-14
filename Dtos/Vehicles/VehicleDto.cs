@@ -14,7 +14,7 @@ namespace Dtos.Vehicles
         public string VIN { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-        
+
         // Navigation property names for reference
         public string BrandName { get; set; }
         public string ModelName { get; set; }

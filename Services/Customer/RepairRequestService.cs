@@ -2,12 +2,9 @@
 using BusinessObject;
 using BusinessObject.Customers;
 using Dtos.Customers;
+using Dtos.Parts;
 using Repositories;
-using Repositories.Customers;
-using Repositories.PartRepositories;
-using Repositories.RepairRequestRepositories;
-using Repositories.ServiceRepositories;
-using Repositories.Vehicles;
+using Repositories.UnitOfWork;
 using Services.Cloudinaries;
 using System;
 using System.Collections.Generic;
@@ -18,62 +15,41 @@ namespace Services.Customer
 {
     public class RepairRequestService : IRepairRequestService
     {
-        private readonly IRepairRequestRepository _repairRequestRepository;
-        //private readonly IRequestPartRepository _requestPartsRepository;
-        private readonly IRequestServiceRepository _requestServicesRepository;
-        private readonly IUserRepository _userRepository;
-        private readonly IVehicleRepository _vehicleRepository;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IMapper _mapper;
-        private readonly IServiceRepository _serviceRepository;
-        private readonly IPartRepository _partRepository;
-        //private readonly ISpecPartRepository _partSpecificationRepository;
 
         public RepairRequestService(
-            //ISpecPartRepository specPartRepository,
-            IPartRepository partRepository,
-            IServiceRepository serviceRepository,
-            IRepairRequestRepository repairRequestRepository,
-            IUserRepository userRepository,
-            IVehicleRepository vehicleRepository,
-            //IRequestPartRepository requestPartRepository,
-            IRequestServiceRepository requestServiceRepository,
+            IUnitOfWork unitOfWork,
             ICloudinaryService cloudinaryService,
             IMapper mapper)
         {
-            //_partSpecificationRepository = specPartRepository;
-            _partRepository = partRepository;
-            _serviceRepository = serviceRepository;
-            _repairRequestRepository = repairRequestRepository;
-            _userRepository = userRepository;
-            _vehicleRepository = vehicleRepository;
-            //_requestPartsRepository = requestPartRepository;
-            _requestServicesRepository = requestServiceRepository;
+            _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _mapper = mapper;
         }
 
         public async Task<IEnumerable<RepairRequestDto>> GetAllAsync()
         {
-            var requests = await _repairRequestRepository.GetAllAsync();
+            var requests = await _unitOfWork.RepairRequests.GetAllAsync();
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
         public async Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId)
         {
-            var requests = await _repairRequestRepository.GetByUserIdAsync(userId);
+            var requests = await _unitOfWork.RepairRequests.GetByUserIdAsync(userId);
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
         public async Task<RepairRequestDto> GetByIdAsync(Guid id)
         {
-            var request = await _repairRequestRepository.GetByIdAsync(id);
+            var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
             return _mapper.Map<RepairRequestDto>(request);
         }
 
         public async Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId)
         {
-            var vehicle = await _vehicleRepository.GetByIdAsync(dto.VehicleID);
+            var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
             if (vehicle == null || vehicle.UserId != userId)
                 throw new Exception("This vehicle does not belong to the current user");
 
@@ -93,33 +69,29 @@ namespace Services.Customer
 
             foreach (var serviceDto in dto.Services)
             {
-                var service = await _serviceRepository.GetByIdAsync(serviceDto.ServiceId)
+                var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
                               ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
 
-                // Chỉ giữ giá service (tiền công)
                 var requestService = new RequestService
                 {
                     ServiceId = service.ServiceId,
-                    ServiceFee = service.Price,   // <-- chỉ tính tiền công
+                    ServiceFee = service.Price,
                     RequestParts = new List<RequestPart>()
                 };
 
                 totalServiceFee += service.Price;
 
-                // Nếu có parts thì cộng tiền parts riêng
                 if (serviceDto.Parts != null)
                 {
                     foreach (var partDto in serviceDto.Parts)
                     {
-                        var part = await _partRepository.GetByIdAsync(partDto.PartId)
+                        var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
                                    ?? throw new Exception($"Part {partDto.PartId} not found");
 
                         var requestPart = new RequestPart
                         {
                             PartId = part.PartId,
-                           
                             UnitPrice = part.Price,
-                           
                         };
 
                         totalPartsFee += requestPart.UnitPrice;
@@ -130,11 +102,8 @@ namespace Services.Customer
                 repairRequest.RequestServices.Add(requestService);
             }
 
-            // Tổng tiền cuối cùng
-           
             repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
 
-            // Xử lý ảnh
             if (dto.ImageUrls != null && dto.ImageUrls.Any())
             {
                 foreach (var imageUrl in dto.ImageUrls)
@@ -148,74 +117,205 @@ namespace Services.Customer
                 }
             }
 
-            await _repairRequestRepository.AddAsync(repairRequest);
+            await _unitOfWork.RepairRequests.AddAsync(repairRequest);
+            await _unitOfWork.SaveChangesAsync();
+
+            return _mapper.Map<RepairRequestDto>(repairRequest);
+        }
+
+        public async Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto, string userId)
+        {
+            var repairRequest = await _unitOfWork.RepairRequests.GetTrackingByIdAsync(requestId)
+                ?? throw new Exception("Repair request not found");
+
+            if (repairRequest.UserID != userId)
+                throw new Exception("You are not allowed to update this request");
+
+            if (repairRequest.Status != Status.Pending)
+                throw new Exception("Cannot update a request that is already being processed.");
+
+            // --- Cập nhật các trường cơ bản ---
+            if (!string.IsNullOrEmpty(dto.Description))
+                repairRequest.Description = dto.Description;
+
+            if (dto.RequestDate.HasValue)
+                repairRequest.RequestDate = dto.RequestDate.Value;
+
+            // --- Cập nhật hình ảnh ---
+            if (dto.ImageUrls != null)
+            {
+                // Lấy danh sách image hiện tại từ DB
+                var currentImages = await _unitOfWork.RepairImages
+                    .GetByRepairRequestIdAsync(repairRequest.RepairRequestID);
+
+                // Xóa những image không còn trong DTO
+                var imagesToRemove = currentImages
+                    .Where(img => !dto.ImageUrls.Contains(img.ImageUrl))
+                    .ToList();
+
+                foreach (var img in imagesToRemove)
+                    _unitOfWork.RepairImages.Remove(img);
+
+                // Thêm những image mới mà chưa có
+                var existingUrls = currentImages.Select(img => img.ImageUrl).ToHashSet();
+                foreach (var url in dto.ImageUrls.Where(url => !existingUrls.Contains(url)))
+                {
+                    var newImage = new RepairImage
+                    {
+                        ImageId = Guid.NewGuid(),
+                        ImageUrl = url,
+                        RepairRequestId = repairRequest.RepairRequestID
+                    };
+                    await _unitOfWork.RepairImages.AddAsync(newImage);
+                }
+            }
+
+
+            // --- Cập nhật services và parts ---
+            //if (dto.Services != null)
+            //{
+            //    var currentServices = repairRequest.RequestServices.ToList();
+            //    var dtoServiceIds = dto.Services.Select(s => s.ServiceId).ToHashSet();
+
+            //    // 1. Xóa service không còn trong DTO
+            //    foreach (var rs in currentServices.Where(s => !dtoServiceIds.Contains(s.ServiceId)))
+            //    {
+            //        await _unitOfWork.RequestServices.DeleteAsync(rs.RequestServiceId);
+            //        repairRequest.RequestServices.Remove(rs);
+            //    }
+
+            //    decimal totalServiceFee = 0;
+            //    decimal totalPartsFee = 0;
+
+                //                // 2. Cập nhật hoặc thêm service mới
+                //                foreach (var serviceDto in dto.Services)
+                //                {
+                //                    var existingService = repairRequest.RequestServices
+                //                        .FirstOrDefault(s => s.ServiceId == serviceDto.ServiceId);
+
+                //                    if (existingService == null)
+                //                    {
+                //                        // Thêm service mới
+                //                        var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
+                //                                      ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
+
+                //                        var requestService = new RequestService
+                //                        {
+                //                            RequestServiceId = Guid.NewGuid(),
+                //                            ServiceId = service.ServiceId,
+                //                            ServiceFee = service.Price,
+                //                            RepairRequestId = repairRequest.RepairRequestID,
+                //                            RequestParts = new List<RequestPart>()
+                //                        };
+
+                //                        totalServiceFee += service.Price;
+
+                //                        if (serviceDto.Parts != null)
+                //                        {
+                //                            foreach (var partDto in serviceDto.Parts)
+                //                            {
+                //                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
+                //                                           ?? throw new Exception($"Part {partDto.PartId} not found");
+
+                //                                var requestPart = new RequestPart
+                //                                {
+                //                                    RequestPartId = Guid.NewGuid(),
+                //                                    PartId = part.PartId,
+                //                                    UnitPrice = part.Price,
+                //                                    RequestServiceId = requestService.RequestServiceId
+                //                                };
+
+                //                                requestService.RequestParts.Add(requestPart);
+                //                                totalPartsFee += part.Price;
+                //                            }
+                //                        }
+
+                //                        repairRequest.RequestServices.Add(requestService);
+                //                    }
+                //                    else
+                //                    {
+                //                        // Update parts cho service đã tồn tại
+                //                        var dtoParts = serviceDto.Parts; // giữ nguyên null nếu không có
+                //if (dtoParts == null) dtoParts = new List<RequestPartDto>();
+                //                        var existingPartIds = existingService.RequestParts.Select(p => p.PartId).ToHashSet();
+
+                //                        // Xóa parts không còn trong DTO
+                //                        var partsToRemove = existingService.RequestParts
+                //                            .Where(p => !dtoParts.Any(dp => dp.PartId == p.PartId))
+                //                            .ToList();
+
+                //                        foreach (var part in partsToRemove)
+                //                            existingService.RequestParts.Remove(part);
+
+                //                        // Thêm parts mới
+                //                        foreach (var partDto in dtoParts)
+                //                        {
+                //                            if (!existingPartIds.Contains(partDto.PartId))
+                //                            {
+                //                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
+                //                                           ?? throw new Exception($"Part {partDto.PartId} not found");
+
+                //                                existingService.RequestParts.Add(new RequestPart
+                //                                {
+                //                                    RequestPartId = Guid.NewGuid(),
+                //                                    PartId = part.PartId,
+                //                                    UnitPrice = part.Price,
+                //                                    RequestServiceId = existingService.RequestServiceId
+                //                                });
+                //                            }
+                //                        }
+
+                //                        totalServiceFee += existingService.ServiceFee;
+                //                        totalPartsFee += existingService.RequestParts.Sum(p => p.UnitPrice);
+                //                    }
+                //                }
+
+                //                repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
+                //            }
+
+
+
+            
+            repairRequest.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
 
             return _mapper.Map<RepairRequestDto>(repairRequest);
         }
 
 
-
-
-
-
-
-        public async Task<RepairRequestDto> UpdateRepairRequestAsync(Guid id, UpdateRepairRequestDto dto)
-        {
-            var request = await _repairRequestRepository.GetByIdAsync(id);
-            if (request == null) return null;
-
-            _mapper.Map(dto, request);
-            await _repairRequestRepository.UpdateAsync(request);
-
-            return _mapper.Map<RepairRequestDto>(request);
-        }
-
         public async Task<bool> DeleteRepairRequestAsync(Guid id)
         {
-            return await _repairRequestRepository.DeleteAsync(id);
+            var result = await _unitOfWork.RepairRequests.DeleteAsync(id);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
 
-        public async Task<IEnumerable<RequestImagesDto>> GetImagesAsync(Guid repairRequestId)
-        {
-            var images = await _repairRequestRepository.GetImagesAsync(repairRequestId);
-            return _mapper.Map<IEnumerable<RequestImagesDto>>(images);
-        }
-
-        public async Task<RequestImagesDto> AddImageAsync(RequestImagesDto dto)
-        {
-            var image = _mapper.Map<RepairImage>(dto);
-            image.ImageId = Guid.NewGuid();
-            await _repairRequestRepository.AddImageAsync(image);
-            return _mapper.Map<RequestImagesDto>(image);
-        }
-
-        public async Task<bool> DeleteImageAsync(Guid imageId)
-        {
-            return await _repairRequestRepository.DeleteImageAsync(imageId);
-        }
-
-        //public async Task<IEnumerable<RequestPartDto>> GetPartsAsync(Guid repairRequestId)
+        //public async Task<IEnumerable<RequestImagesDto>> GetImagesAsync(Guid repairRequestId)
         //{
-        //    var parts = await _requestPartsRepository.GetByRepairRequestIdAsync(repairRequestId);
-        //    return _mapper.Map<IEnumerable<RequestPartDto>>(parts);
+        //    var images = await _unitOfWork.RepairRequests.GetImagesAsync(repairRequestId);
+        //    return _mapper.Map<IEnumerable<RequestImagesDto>>(images);
         //}
 
-        //public async Task<RequestPartDto> AddPartAsync(RequestPartDto dto)
+        //public async Task<RequestImagesDto> AddImageAsync(RequestImagesDto dto)
         //{
-        //    var part = _mapper.Map<RequestPart>(dto);
-        //    part.RequestPartId = Guid.NewGuid();
-        //    await _requestPartsRepository.AddAsync(part);
-        //    return _mapper.Map<RequestPartDto>(part);
+        //    var image = _mapper.Map<RepairImage>(dto);
+        //    image.ImageId = Guid.NewGuid();
+        //    await _unitOfWork.RepairRequests.AddImageAsync(image);
+        //    await _unitOfWork.SaveChangesAsync();
+        //    return _mapper.Map<RequestImagesDto>(image);
         //}
 
-        //public async Task<bool> DeletePartAsync(Guid partId)
+        //public async Task<bool> DeleteImageAsync(Guid imageId)
         //{
-        //    return await _requestPartsRepository.DeleteAsync(partId);
+        //    var result = await _unitOfWork.RepairRequests.DeleteImageAsync(imageId);
+        //    await _unitOfWork.SaveChangesAsync();
+        //    return result;
         //}
 
         public async Task<IEnumerable<RequestServiceDto>> GetServicesAsync(Guid repairRequestId)
         {
-            var services = await _requestServicesRepository.GetByRepairRequestIdAsync(repairRequestId);
+            var services = await _unitOfWork.RequestServices.GetByRepairRequestIdAsync(repairRequestId);
             return _mapper.Map<IEnumerable<RequestServiceDto>>(services);
         }
 
@@ -223,15 +323,31 @@ namespace Services.Customer
         {
             var service = _mapper.Map<RequestService>(dto);
             service.RequestServiceId = Guid.NewGuid();
-            await _requestServicesRepository.AddAsync(service);
+            await _unitOfWork.RequestServices.AddAsync(service);
+            await _unitOfWork.SaveChangesAsync();
             return _mapper.Map<RequestServiceDto>(service);
         }
 
         public async Task<bool> DeleteServiceAsync(Guid requestServiceId)
         {
-            return await _requestServicesRepository.DeleteAsync(requestServiceId);
+            var result = await _unitOfWork.RequestServices.DeleteAsync(requestServiceId);
+            await _unitOfWork.SaveChangesAsync();
+            return result;
         }
 
+        public Task<IEnumerable<RequestImagesDto>> GetImagesAsync(Guid repairRequestId)
+        {
+            throw new NotImplementedException();
+        }
 
+        public Task<RequestImagesDto> AddImageAsync(RequestImagesDto dto)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<bool> DeleteImageAsync(Guid imageId)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -62,18 +62,17 @@ namespace Repositories.RepairRequestRepositories
                 return requestService;
             }
 
-            public async Task<bool> DeleteAsync(Guid id)
-            {
-                var requestService = await _context.RequestServices.FindAsync(id);
-                if (requestService == null)
-                    return false;
+        public async Task<bool> DeleteAsync(Guid id)
+        {
+            var deletedCount = await _context.RequestServices
+                .Where(rs => rs.RequestServiceId == id)
+                .ExecuteDeleteAsync(); // ✅ xóa trực tiếp trong DB, không cần load vào bộ nhớ
 
-                _context.RequestServices.Remove(requestService);
-                await _context.SaveChangesAsync();
-                return true;
-            }
+            return deletedCount > 0;
+        }
 
-            public async Task<bool> ExistsAsync(Guid id)
+
+        public async Task<bool> ExistsAsync(Guid id)
             {
                 return await _context.RequestServices.AnyAsync(rs => rs.RequestServiceId == id);
             }

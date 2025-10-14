@@ -31,16 +31,20 @@ namespace Dtos.Customers
 
 
     public class UpdateRepairRequestDto
-    {
-        [Required]
-        public string Description { get; set; }
+    {     
+            [StringLength(500, ErrorMessage = "Description max 500 chars")]
+            public string? Description { get; set; }
 
-        [Required]
-        public string Status { get; set; }
+            public DateTime? RequestDate { get; set; }
 
-        public List<Guid> ServiceIDs { get; set; }
-        public List<RequestPartInputDto> Parts { get; set; }
-    }
+            // Cho phép cập nhật lại hình ảnh nếu cần
+            public List<string>? ImageUrls { get; set; }
+
+            // Cho phép đổi dịch vụ và phụ tùng
+           // public List<RequestServiceDto>? Services { get; set; }
+        }
+
+    
 
 
 

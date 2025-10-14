@@ -13,7 +13,7 @@ namespace Services.Customer
         Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId);
         Task<RepairRequestDto> GetByIdAsync(Guid id);
         Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId);
-        Task<RepairRequestDto> UpdateRepairRequestAsync(Guid id, UpdateRepairRequestDto dto);
+        Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto,string userId);
         Task<bool> DeleteRepairRequestAsync(Guid id);
 
         // For RepairImages

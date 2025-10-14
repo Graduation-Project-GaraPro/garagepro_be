@@ -918,6 +918,27 @@ namespace DataAccessLayer
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
 
+            // 🔹 RepairRequest - RequestService (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RequestServices)
+                .WithOne(rs => rs.RepairRequest)
+                .HasForeignKey(rs => rs.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 RequestService - RequestPart (1-n)
+            modelBuilder.Entity<RequestService>()
+                .HasMany(rs => rs.RequestParts)
+                .WithOne(rp => rp.RequestService)
+                .HasForeignKey(rp => rp.RequestServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 (Nếu có) RepairRequest - RepairImage (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RepairImages)
+                .WithOne(img => img.RepairRequest)
+                .HasForeignKey(img => img.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
+
     }
-}
+    }

@@ -152,10 +152,11 @@ namespace Garage_pro_api.Mapper
 
             CreateMap<RequestPart, RequestPartDto>()
                 .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId));
-                
-
-
-            CreateMap<PartSpecification, PartSpecificationDto>();
+            // vehicle 
+            CreateMap<Vehicle, VehicleDto>()
+           .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand != null ? src.Brand.BrandName : null))
+           .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model != null ? src.Model.ModelName : null))
+           .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color != null ? src.Color.ColorName : null));
         }
     }
 }
