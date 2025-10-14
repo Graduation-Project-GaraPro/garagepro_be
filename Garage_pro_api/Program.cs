@@ -41,20 +41,47 @@ using AutoMapper;
 
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
+
+using Repositories.InspectionAndRepair;
+using Services.InspectionAndRepair;
+
+using Repositories.RoleRepositories;
+using Services.RoleServices;
+using Garage_pro_api.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using Garage_pro_api.Mapper;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Google;
+using Services.SmsSenders;
+using BusinessObject.Roles;
+using Microsoft.OData.ModelBuilder;
+using Microsoft.AspNetCore.OData;
+using System.Text.Json.Serialization;
+using Repositories.Statistical;
+using Services.Statistical;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Services.RepairHistory;
+using Repositories.RepairHistory;
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy
-                .WithOrigins("http://localhost:3000")
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
+// OData Model Configuration
+var modelBuilder = new ODataConventionModelBuilder();
+builder.Services.AddControllers()
+    .AddOData(options => options
+        .Select()           
+        .Filter()           
+        .OrderBy()          
+        .Expand()           
+        .Count()            
+        .SetMaxTop(100)     
+        .AddRouteComponents("odata", modelBuilder.GetEdmModel())
+    )
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
+
 
 // Add services to the container.
 
@@ -73,12 +100,12 @@ builder.Services.AddSwaggerGen(c =>
         Version = "v1"
     });
 
-    // Thêm cấu hình cho Bearer Token
+    // Th�m c?u h�nh cho Bearer Token
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
@@ -100,10 +127,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<MappingProfile>();
+    cfg.AddProfile<RepairMappingProfile>();
+    cfg.AddProfile<InspectionTechnicianProfile>();
+    cfg.AddProfile<JobTechnicianProfile>();
 });
+
 
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -258,6 +290,28 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Service
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+// Technician repository and service
+builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
+builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
+builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
+builder.Services.AddScoped<ISpecificationService, SpecificationService>();
+builder.Services.AddScoped<IRepairRepository, RepairRepository>();
+builder.Services.AddScoped<IRepairService, RepairService>();
+builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
+builder.Services.AddScoped<IStatisticalService, StatisticalService>();
+builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
+builder.Services.AddScoped<IRepairHistoryService, RepairHistoryService>();
+
+
+
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+
+builder.Services.AddScoped<IPermissionService, PermissionService>(); 
+builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
@@ -317,6 +371,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
+app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

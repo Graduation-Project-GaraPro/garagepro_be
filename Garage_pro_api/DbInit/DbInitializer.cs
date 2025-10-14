@@ -1028,6 +1028,86 @@ namespace Garage_pro_api.DbInit
                     await _context.SaveChangesAsync();
                 }
             }
+            await _context.SaveChangesAsync();
+
+            // Lấy lại categories để đảm bảo có Id từ DB
+            categories = await _context.PermissionCategories.ToListAsync();
+            var userCatId = categories.First(c => c.Name == "User Management").Id;
+            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
+            var RoleCatId = categories.First(c => c.Name == "Role Management").Id;
+
+            // 4. Seed Permissions
+            var defaultPermissions = new List<Permission>
+            {
+                new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
+
+
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Role create", Description = "Can create role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_UPDATE", Name = "Role update", Description = "Can update role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Role delete", Description = "Can delete role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "Role View", Description = "Can View role", CategoryId = RoleCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASIGN", Name = "permission asign", Description = "Can view role", CategoryId = RoleCatId },
+
+                new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view bookings", CategoryId = bookingCatId },
+                new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage bookings", CategoryId = bookingCatId }
+            };
+
+            foreach (var perm in defaultPermissions)
+            {
+                if (!await _context.Permissions.AnyAsync(p => p.Code == perm.Code))
+                {
+                    await _context.Permissions.AddAsync(perm);
+                }
+            }
+            await _context.SaveChangesAsync();
+
+            // 5. Assign default permissions to roles
+            var roles = await _roleManager.Roles.ToListAsync();
+            var permissions = await _context.Permissions.ToListAsync();
+
+            var rolePermissionMap = new Dictionary<string, string[]>
+            {
+                { "Admin", new[] { "USER_VIEW", "USER_EDIT", "USER_DELETE", "BOOKING_VIEW", "BOOKING_MANAGE", "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN" } },
+                { "Manager", new[] { "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE" } },
+                { "Customer", new[] { "BOOKING_VIEW" } },
+                { "Technician", new[] { "BOOKING_MANAGE" } }
+            };
+
+            foreach (var role in roles)
+            {
+                if (!rolePermissionMap.ContainsKey(role.Name))
+                    continue;
+
+                var codes = rolePermissionMap[role.Name];
+
+                foreach (var code in codes)
+                {
+                    var perm = permissions.FirstOrDefault(p => p.Code == code);
+                    if (perm == null) continue;
+
+                    bool exists = await _context.RolePermissions
+                        .AnyAsync(rp => rp.RoleId == role.Id && rp.PermissionId == perm.Id);
+
+                    if (!exists)
+                    {
+                        var rp = new RolePermission
+                        {
+                            RoleId = role.Id,
+                            PermissionId = perm.Id,
+                            GrantedBy = "SYSTEM",
+                            GrantedAt = DateTime.UtcNow
+                        };
+
+                        await _context.RolePermissions.AddAsync(rp);
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
+
+
     }
 }

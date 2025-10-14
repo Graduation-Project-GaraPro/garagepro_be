@@ -905,14 +905,14 @@ namespace Services
             int pageSize = 50)
         {
             var archivedOrders = await _repairOrderRepository.GetArchivedRepairOrdersAsync(filters);
-            
+
             // Apply sorting
             var sortedOrders = sortBy?.ToLower() switch
             {
-                "archivedat" => sortOrder?.ToLower() == "desc" 
+                "archivedat" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ArchivedAt)
                     : archivedOrders.OrderBy(ro => ro.ArchivedAt),
-                "receivedate" => sortOrder?.ToLower() == "desc" 
+                "receivedate" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ReceiveDate)
                     : archivedOrders.OrderBy(ro => ro.ReceiveDate),
                 _ => archivedOrders.OrderByDescending(ro => ro.ArchivedAt)

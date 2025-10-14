@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
+using BusinessObject.Enums;
 
 namespace BusinessObject
 {
@@ -36,7 +37,9 @@ namespace BusinessObject
 
         public bool IsActive { get; set; } = true;
 
-        public bool IsAdvanced { get; set; } = false;
+        public bool IsAdvanced { get; set; } = false; // true được  chọn nhiều
+
+        public Guid? BranchId { get; set; }
 
 
       

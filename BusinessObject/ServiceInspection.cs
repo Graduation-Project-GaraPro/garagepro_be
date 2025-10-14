@@ -1,3 +1,4 @@
+using BusinessObject.Enums;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -20,9 +21,7 @@ namespace BusinessObject
         [Required]
         [ForeignKey(nameof(Inspection))]
         public Guid InspectionId { get; set; }
-
-        [MaxLength(100)]
-        public string Status { get; set; }
+        public ConditionStatus ConditionStatus { get; set; } = ConditionStatus.Not_Checked;
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

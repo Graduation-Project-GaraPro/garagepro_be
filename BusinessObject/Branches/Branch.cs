@@ -51,6 +51,7 @@ namespace BusinessObject.Branches
         // Many-to-many
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
         
+
     }
 
 
