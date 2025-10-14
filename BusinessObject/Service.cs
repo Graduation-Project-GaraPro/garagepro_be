@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -25,8 +25,6 @@ namespace BusinessObject
         [MaxLength(100)]
         public string ServiceName { get; set; }
 
-        public ServiceStatus ServiceStatus { get; set; } = ServiceStatus.Active;
-
         [MaxLength(500)]
         public string Description { get; set; }
 
@@ -38,8 +36,7 @@ namespace BusinessObject
 
         public bool IsActive { get; set; } = true;
 
-        public bool IsAdvanced { get; set; } = false;
-
+        public bool IsAdvanced { get; set; } = false; // true được  chọn nhiều
 
         public Guid? BranchId { get; set; }
 

@@ -1,5 +1,5 @@
 ﻿using BusinessObject.Enums;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -60,6 +60,6 @@ namespace BusinessObject
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual ICollection<JobPart> JobParts { get; set; }
         public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
-        public virtual ICollection<Repair> Repairs { get; set; } = new List<Repair>();
+        public virtual Repair Repair { get; set; }
     }
 }

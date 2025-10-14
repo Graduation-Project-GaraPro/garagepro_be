@@ -17,8 +17,8 @@ using Garage_pro_api.Middlewares;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using BusinessObject.Policies;
 
-using Repositories.Technician;
-using Services.Technician;
+using Repositories.InspectionAndRepair;
+using Services.InspectionAndRepair;
 
 using Repositories.RoleRepositories;
 using Services.RoleServices;
@@ -31,6 +31,12 @@ using Services.SmsSenders;
 using BusinessObject.Roles;
 using Microsoft.OData.ModelBuilder;
 using Microsoft.AspNetCore.OData;
+using System.Text.Json.Serialization;
+using Repositories.Statistical;
+using Services.Statistical;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Services.RepairHistory;
+using Repositories.RepairHistory;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -44,7 +50,12 @@ builder.Services.AddControllers()
         .Count()            
         .SetMaxTop(100)     
         .AddRouteComponents("odata", modelBuilder.GetEdmModel())
-    );
+    )
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
 
 
 // Add services to the container.
@@ -66,8 +77,8 @@ builder.Services.AddSwaggerGen(c =>
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
@@ -93,6 +104,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<MappingProfile>();
+    cfg.AddProfile<RepairMappingProfile>();
+    cfg.AddProfile<InspectionTechnicianProfile>();
+    cfg.AddProfile<JobTechnicianProfile>();
 });
 
 
@@ -205,6 +219,14 @@ builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnician
 builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
+builder.Services.AddScoped<IRepairRepository, RepairRepository>();
+builder.Services.AddScoped<IRepairService, RepairService>();
+builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
+builder.Services.AddScoped<IStatisticalService, StatisticalService>();
+builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
+builder.Services.AddScoped<IRepairHistoryService, RepairHistoryService>();
+
+
 
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();

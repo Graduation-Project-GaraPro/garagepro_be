@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251008085711_UpdateJobStatus")]
+    partial class UpdateJobStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -354,9 +357,6 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<Guid>("JobId")
                         .HasColumnType("uniqueidentifier");
 
@@ -378,8 +378,8 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<TimeSpan?>("ActualTime")
-                        .HasColumnType("time");
+                    b.Property<long?>("ActualTime")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -389,8 +389,8 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<TimeSpan?>("EstimatedTime")
-                        .HasColumnType("time");
+                    b.Property<long?>("EstimatedTime")
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("JobId")
                         .HasColumnType("uniqueidentifier");
@@ -403,10 +403,13 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("RepairId");
 
-                    b.HasIndex("JobId")
-                        .IsUnique();
+                    b.HasIndex("JobId");
 
                     b.ToTable("Repairs");
                 });
@@ -682,10 +685,29 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Labels");
                 });
 
+            modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
+                {
+                    b.Property<Guid>("CategoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CategoryName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("CategoryID");
+
+                    b.ToTable("CategoryNotifications");
+                });
+
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("NotificationID")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CategoryID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Content")
@@ -714,6 +736,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("NotificationID");
+
+                    b.HasIndex("CategoryID");
 
                     b.HasIndex("UserID");
 
@@ -1821,8 +1845,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.Repair", b =>
                 {
                     b.HasOne("BusinessObject.Job", "Job")
-                        .WithOne("Repair")
-                        .HasForeignKey("BusinessObject.InspectionAndRepair.Repair", "JobId")
+                        .WithMany("Repairs")
+                        .HasForeignKey("JobId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -1929,11 +1953,19 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
+                    b.HasOne("BusinessObject.Notifications.CategoryNotification", "CategoryNotification")
+                        .WithMany("Notifications")
+                        .HasForeignKey("CategoryID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("CategoryNotification");
 
                     b.Navigation("User");
                 });
@@ -2377,8 +2409,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("JobTechnicians");
 
-                    b.Navigation("Repair")
-                        .IsRequired();
+                    b.Navigation("Repairs");
+                });
+
+            modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
+                {
+                    b.Navigation("Notifications");
                 });
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>

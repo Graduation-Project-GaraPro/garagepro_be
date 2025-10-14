@@ -42,7 +42,7 @@ namespace BusinessObject.Authentication
         
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
         public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
-        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
+        public virtual InspectionAndRepair.Technician Technician { get; set; } // Thêm quan hệ với Technician
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }

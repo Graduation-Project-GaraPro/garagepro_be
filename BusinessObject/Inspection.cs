@@ -34,7 +34,7 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual RepairOrder RepairOrder { get; set; }
-        public virtual Technician.Technician Technician { get; set; } // Thêm quan hệ với Technician
+        public virtual InspectionAndRepair.Technician Technician { get; set; } // Thêm quan hệ với Technician
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<PartInspection> PartInspections { get; set; }
        

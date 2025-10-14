@@ -10,7 +10,7 @@ using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using BusinessObject.Notifications;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 using BusinessObject.Roles;
 using BusinessObject.Branches;
 
@@ -54,7 +54,7 @@ namespace DataAccessLayer
         public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
         // Notification
-        public DbSet<CategoryNotification> CategoryNotifications { get; set; }
+        //public DbSet<CategoryNotification> CategoryNotifications { get; set; }
         public DbSet<Notification> Notifications { get; set; }
 
         //Technician
@@ -155,19 +155,19 @@ namespace DataAccessLayer
                  .OnDelete(DeleteBehavior.Cascade); // Xóa Technician nếu User bị xóa
             });
 
-            // CategoryNotification configuration
-            modelBuilder.Entity<CategoryNotification>(entity =>
-            {
-                entity.HasKey(e => e.CategoryID);
-                entity.Property(e => e.CategoryName)
-                      .IsRequired()
-                      .HasMaxLength(100);
+            //// CategoryNotification configuration
+            //modelBuilder.Entity<CategoryNotification>(entity =>
+            //{
+            //    entity.HasKey(e => e.CategoryID);
+            //    entity.Property(e => e.CategoryName)
+            //          .IsRequired()
+            //          .HasMaxLength(100);
 
-                entity.HasMany(e => e.Notifications)
-                      .WithOne(n => n.CategoryNotification)
-                      .HasForeignKey(n => n.CategoryID)
-                      .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
-            });
+            //    entity.HasMany(e => e.Notifications)
+            //          .WithOne(n => n.CategoryNotification)
+            //          .HasForeignKey(n => n.CategoryID)
+            //          .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
+            //});
 
 
             // Notifications configuration
@@ -188,11 +188,11 @@ namespace DataAccessLayer
                 entity.Property(e => e.TimeSent)
                       .IsRequired();
 
-                // Quan hệ với CategoryNotification
-                entity.HasOne(e => e.CategoryNotification)
-                      .WithMany(c => c.Notifications)
-                      .HasForeignKey(e => e.CategoryID)
-                      .OnDelete(DeleteBehavior.Restrict);
+                //// Quan hệ với CategoryNotification
+                //entity.HasOne(e => e.CategoryNotification)
+                //      .WithMany(c => c.Notifications)
+                //      .HasForeignKey(e => e.CategoryID)
+                //      .OnDelete(DeleteBehavior.Restrict);
 
                 // Quan hệ với ApplicationUser
                 entity.HasOne(e => e.User)
@@ -257,9 +257,10 @@ namespace DataAccessLayer
                       .HasForeignKey(jt => jt.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasMany(j => j.Repairs) // Quan hệ một-nhiều với Repair
+                entity.HasOne(j => j.Repair)
                       .WithOne(r => r.Job)
-                      .HasForeignKey(r => r.JobId)
+                      .HasForeignKey<Repair>(r => r.JobId)
+                      .IsRequired()
                       .OnDelete(DeleteBehavior.Cascade);
             });
             // Repair configuration
@@ -267,14 +268,11 @@ namespace DataAccessLayer
             {
                 entity.HasKey(e => e.RepairId);
                 entity.Property(e => e.Description).HasMaxLength(500);
-                entity.Property(e => e.Notes).HasMaxLength(500);
-                entity.Property(e => e.Status)
-                      .HasConversion<string>()
-                      .IsRequired();
 
+                entity.HasIndex(e => e.JobId).IsUnique();
                 entity.HasOne(r => r.Job)
-                      .WithMany(j => j.Repairs)
-                      .HasForeignKey(r => r.JobId)
+                      .WithOne(j => j.Repair)
+                      .HasForeignKey<Repair>(r => r.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
             // Inspection configuration
@@ -292,6 +290,7 @@ namespace DataAccessLayer
                       .WithMany(t => t.Inspections)
                       .HasForeignKey(i => i.TechnicianId)
                       .OnDelete(DeleteBehavior.Restrict);
+
             });
 
             // SpecificationCategory configuration
@@ -687,12 +686,6 @@ namespace DataAccessLayer
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Service-ServiceCategory relationship
-            modelBuilder.Entity<Service>(entity =>
-            {
-                entity.Property(s => s.ServiceStatus)
-                     .HasConversion<string>()
-                     .IsRequired();
-            });
             modelBuilder.Entity<Service>()
                 .HasOne(s => s.ServiceCategory)
                 .WithMany(sc => sc.Services)
@@ -809,6 +802,8 @@ namespace DataAccessLayer
                       .WithMany(i => i.PartInspections)
                       .HasForeignKey(pi => pi.InspectionId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+            
             });
 
             // PartSpecification configuration
