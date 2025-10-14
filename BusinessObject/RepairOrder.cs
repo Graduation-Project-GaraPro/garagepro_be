@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using BusinessObject.Manager;
 using BusinessObject.Branches;
 
 namespace BusinessObject
@@ -73,6 +74,8 @@ namespace BusinessObject
         [Required]
         public Guid RepairRequestId { get; set; }
 
+        public Guid? FeedBackId { get; set; }
+
         // Navigation property
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
@@ -82,5 +85,6 @@ namespace BusinessObject
         public virtual ICollection<Inspection> Inspections { get; set; }
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
+        public virtual FeedBack? FeedBack { get; set; }
     }
 }

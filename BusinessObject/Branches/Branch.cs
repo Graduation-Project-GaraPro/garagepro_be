@@ -44,8 +44,8 @@ namespace BusinessObject.Branches
         public virtual ICollection<OperatingHour> OperatingHours { get; set; } = new List<OperatingHour>();
 
         // Navigation properties
-        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = null!;
-        public virtual ICollection<Part> Parts { get; set; } = null!;
+        public virtual ICollection<RepairOrder>? RepairOrders { get; set; } = null!;
+        public virtual ICollection<Part>? Parts { get; set; } = null!;
         public virtual ICollection<ApplicationUser> Staffs { get; set; } = new List<ApplicationUser>();
 
         // Many-to-many

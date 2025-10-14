@@ -635,9 +635,9 @@ namespace Services
                 VehicleId = vehicle.VehicleId,
                 LicensePlate = vehicle.LicensePlate ?? "",
                 VIN = vehicle.VIN ?? "",
-                BrandName = "Unknown Brand", // TODO: Add brand navigation when available
-                ModelName = "Unknown Model", // TODO: Add model navigation when available
-                ColorName = "Unknown Color" // TODO: Add color navigation when available
+                BrandName = vehicle.Brand?.BrandName ?? "Unknown Brand",
+                ModelName = vehicle.Model?.ModelName ?? "Unknown Model",
+                ColorName = vehicle.Color?.ColorName ?? "Unknown Color"
             };
         }
 

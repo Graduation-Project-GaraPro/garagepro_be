@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using BusinessObject;
+using BusinessObject.Vehicles;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace Repositories.VehicleRepositories
 {
@@ -21,6 +19,9 @@ namespace Repositories.VehicleRepositories
         {
             return await _context.Vehicles
                 .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
                 .FirstOrDefaultAsync(v => v.VehicleId == vehicleId);
         }
 
@@ -28,6 +29,9 @@ namespace Repositories.VehicleRepositories
         {
             return await _context.Vehicles
                 .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
                 .FirstOrDefaultAsync(v => v.VIN == vin);
         }
 
@@ -35,6 +39,9 @@ namespace Repositories.VehicleRepositories
         {
             return await _context.Vehicles
                 .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
                 .FirstOrDefaultAsync(v => v.LicensePlate == licensePlate);
         }
 
@@ -43,6 +50,9 @@ namespace Repositories.VehicleRepositories
             return await _context.Vehicles
                 .Include(v => v.User)
                 .Where(v => v.UserId == userId)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
                 .ToListAsync();
         }
 
@@ -50,6 +60,9 @@ namespace Repositories.VehicleRepositories
         {
             return await _context.Vehicles
                 .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
                 .ToListAsync();
         }
 

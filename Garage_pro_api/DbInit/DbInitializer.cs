@@ -1,8 +1,9 @@
-﻿﻿using BusinessObject;
+﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Enums;
 using BusinessObject.Roles;
+using BusinessObject.Vehicles;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -47,6 +48,7 @@ namespace Garage_pro_api.DbInit
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
+            await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
             await SeedRepairOrdersAsync();
 
@@ -81,8 +83,12 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000003", "Default", "Customer", "Customer"),
-                ("0900000004", "Default", "Technician", "Technician")
+                ("0900000013", "System", "Manager1", "Manager"),
+                ("0900000014", "System", "Manager2", "Manager"),
+                ("0900000005", "Default", "Customer", "Customer"),
+                ("0900000006", "Default", "Technician", "Technician"),
+                ("0900000007", "Default", "Technician1", "Technician"),
+                ("0900000008", "Default", "Technician2", "Technician")
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";
@@ -282,7 +288,7 @@ namespace Garage_pro_api.DbInit
                 ServiceName = "Oil Change",
                 Description = "This is Oil Change",
                 ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
-                ServiceTypeId = defaultServiceTypeId,
+               
                 ServiceStatus = "Active",
                 Price = 300000,
                 EstimatedDuration = 1,
@@ -294,7 +300,7 @@ namespace Garage_pro_api.DbInit
                 ServiceName = "Brake Repair",
                 Description = "This is Brake Repair",
                 ServiceCategoryId = repairCategory.ServiceCategoryId,
-                ServiceTypeId = defaultServiceTypeId,
+               
                 ServiceStatus = "Active",
                 Price = 1200000,
                 EstimatedDuration = 2,
@@ -321,8 +327,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = oilChange.ServiceId,
                     PartId = airFilter.PartId,
-                    Quantity = 1,
-                    UnitPrice = airFilter.Price,
+                   
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -330,8 +335,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = brakeRepair.ServiceId,
                     PartId = brakePad.PartId,
-                    Quantity = 2,
-                    UnitPrice = brakePad.Price,
+                   
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -364,8 +368,8 @@ namespace Garage_pro_api.DbInit
                     {
                         DayOfWeek = day,
                         IsOpen = true,
-                        OpenTime = "08:00",
-                        CloseTime = "17:00"
+                        OpenTime = new TimeSpan(8, 0, 0),   // 08:00
+                        CloseTime = new TimeSpan(17, 0, 0)  // 17:00
                     });
                 }
 
@@ -472,46 +476,245 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+        private async Task SeedVehicleRelatedEntitiesAsync()
+        {
+            // Seed Vehicle Brands
+            if (!_context.VehicleBrands.Any())
+            {
+                var brands = new List<VehicleBrand>
+                {
+                    new VehicleBrand 
+                    { 
+                        BrandID = Guid.NewGuid(), 
+                        BrandName = "Toyota", 
+                        Country = "Japan", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleBrand 
+                    { 
+                        BrandID = Guid.NewGuid(), 
+                        BrandName = "Honda", 
+                        Country = "Japan", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleBrand 
+                    { 
+                        BrandID = Guid.NewGuid(), 
+                        BrandName = "Ford", 
+                        Country = "USA", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleBrand 
+                    { 
+                        BrandID = Guid.NewGuid(), 
+                        BrandName = "BMW", 
+                        Country = "Germany", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleBrand 
+                    { 
+                        BrandID = Guid.NewGuid(), 
+                        BrandName = "Mercedes-Benz", 
+                        Country = "Germany", 
+                        CreatedAt = DateTime.UtcNow 
+                    }
+                };
+
+                _context.VehicleBrands.AddRange(brands);
+                await _context.SaveChangesAsync();
+            }
+
+            // Seed Vehicle Colors
+            if (!_context.VehicleColors.Any())
+            {
+                var colors = new List<VehicleColor>
+                {
+                    new VehicleColor 
+                    { 
+                        ColorID = Guid.NewGuid(), 
+                        ColorName = "White", 
+                        HexCode = "#FFFFFF", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleColor 
+                    { 
+                        ColorID = Guid.NewGuid(), 
+                        ColorName = "Black", 
+                        HexCode = "#000000", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleColor 
+                    { 
+                        ColorID = Guid.NewGuid(), 
+                        ColorName = "Silver", 
+                        HexCode = "#C0C0C0", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleColor 
+                    { 
+                        ColorID = Guid.NewGuid(), 
+                        ColorName = "Red", 
+                        HexCode = "#FF0000", 
+                        CreatedAt = DateTime.UtcNow 
+                    },
+                    new VehicleColor 
+                    { 
+                        ColorID = Guid.NewGuid(), 
+                        ColorName = "Blue", 
+                        HexCode = "#0000FF", 
+                        CreatedAt = DateTime.UtcNow 
+                    }
+                };
+
+                _context.VehicleColors.AddRange(colors);
+                await _context.SaveChangesAsync();
+            }
+
+            // Seed Vehicle Models (after brands are created)
+            if (!_context.VehicleModels.Any())
+            {
+                var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
+                var hondaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Honda");
+                var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
+                var bmwBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "BMW");
+                var mercedesBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Mercedes-Benz");
+
+                if (toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null)
+                {
+                    var models = new List<VehicleModel>
+                    {
+                        // Toyota models
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Camry", 
+                            ManufacturingYear = 2022, 
+                            BrandID = toyotaBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Corolla", 
+                            ManufacturingYear = 2021, 
+                            BrandID = toyotaBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        // Honda models
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Civic", 
+                            ManufacturingYear = 2022, 
+                            BrandID = hondaBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Accord", 
+                            ManufacturingYear = 2020, 
+                            BrandID = hondaBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        // Ford models
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Focus", 
+                            ManufacturingYear = 2021, 
+                            BrandID = fordBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "Mustang", 
+                            ManufacturingYear = 2023, 
+                            BrandID = fordBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        // BMW models
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "3 Series", 
+                            ManufacturingYear = 2022, 
+                            BrandID = bmwBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "5 Series", 
+                            ManufacturingYear = 2021, 
+                            BrandID = bmwBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        // Mercedes models
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "C-Class", 
+                            ManufacturingYear = 2022, 
+                            BrandID = mercedesBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        },
+                        new VehicleModel 
+                        { 
+                            ModelID = Guid.NewGuid(), 
+                            ModelName = "E-Class", 
+                            ManufacturingYear = 2020, 
+                            BrandID = mercedesBrand.BrandID, 
+                            CreatedAt = DateTime.UtcNow 
+                        }
+                    };
+
+                    _context.VehicleModels.AddRange(models);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
         private async Task SeedVehiclesAsync()
         {
             if (!_context.Vehicles.Any())
             {
                 // Get required entities
-                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000003"); // Default Customer
+                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
                 
-                // Create default colors if they don't exist
-                var whiteColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "White") ?? 
-                                new Color { ColorName = "White", HexCode = "#FFFFFF" };
-                var blackColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Black") ?? 
-                                new Color { ColorName = "Black", HexCode = "#000000" };
-                var silverColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Silver") ?? 
-                                 new Color { ColorName = "Silver", HexCode = "#C0C0C0" };
+                // Get vehicle related entities
+                var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
+                var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
+                var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
+                var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
+                var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
 
-                // Add colors to context if they were newly created
-                if (!_context.Colors.Any(c => c.ColorName == "White"))
-                    _context.Colors.Add(whiteColor);
-                if (!_context.Colors.Any(c => c.ColorName == "Black"))
-                    _context.Colors.Add(blackColor);
-                if (!_context.Colors.Any(c => c.ColorName == "Silver"))
-                    _context.Colors.Add(silverColor);
+                var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
+                var hondaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Honda");
+                var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
+                var bmwBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "BMW");
+                var mercedesBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Mercedes-Benz");
 
-                await _context.SaveChangesAsync();
+                var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
+                var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
+                var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
+                var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
+                var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
 
-                // Get the actual color entities from DB
-                whiteColor = await _context.Colors.FirstAsync(c => c.ColorName == "White");
-                blackColor = await _context.Colors.FirstAsync(c => c.ColorName == "Black");
-                silverColor = await _context.Colors.FirstAsync(c => c.ColorName == "Silver");
-
-                if (customerUser != null)
+                if (customerUser != null && 
+                    whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null &&
+                    toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null &&
+                    camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null)
                 {
                     var vehicles = new List<Vehicle>
                     {
                         new Vehicle
                         {
-                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            BrandId = toyotaBrand.BrandID,
                             UserId = customerUser.Id,
-                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
-                            ColorId = whiteColor.ColorId,
+                            ModelId = camryModel.ModelID,
+                            ColorId = whiteColor.ColorID,
                             LicensePlate = "51F12345",
                             VIN = "1HGBH41JXMN109186",
                             Year = 2020,
@@ -523,10 +726,10 @@ namespace Garage_pro_api.DbInit
                         },
                         new Vehicle
                         {
-                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            BrandId = hondaBrand.BrandID,
                             UserId = customerUser.Id,
-                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
-                            ColorId = blackColor.ColorId,
+                            ModelId = civicModel.ModelID,
+                            ColorId = blackColor.ColorID,
                             LicensePlate = "51F67890",
                             VIN = "2T1BURHE5JC012345",
                             Year = 2018,
@@ -538,10 +741,10 @@ namespace Garage_pro_api.DbInit
                         },
                         new Vehicle
                         {
-                            BrandId = Guid.NewGuid(), // In a real scenario, this would reference an actual brand
+                            BrandId = fordBrand.BrandID,
                             UserId = customerUser.Id,
-                            ModelId = Guid.NewGuid(), // In a real scenario, this would reference an actual model
-                            ColorId = silverColor.ColorId,
+                            ModelId = focusModel.ModelID,
+                            ColorId = silverColor.ColorID,
                             LicensePlate = "51F54321",
                             VIN = "3VWBP29M85M000001",
                             Year = 2022,
@@ -550,6 +753,36 @@ namespace Garage_pro_api.DbInit
                             NextServiceDate = DateTime.UtcNow.AddDays(45),
                             WarrantyStatus = "Active",
                             CreatedAt = DateTime.UtcNow.AddDays(-15)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = bmwBrand.BrandID,
+                            UserId = customerUser.Id,
+                            ModelId = series3Model.ModelID,
+                            ColorId = redColor.ColorID,
+                            LicensePlate = "51F98765",
+                            VIN = "WBAVA33598NL67342",
+                            Year = 2021,
+                            Odometer = 12000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-45),
+                            NextServiceDate = DateTime.UtcNow.AddDays(20),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-45)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = mercedesBrand.BrandID,
+                            UserId = customerUser.Id,
+                            ModelId = cClassModel.ModelID,
+                            ColorId = blueColor.ColorID,
+                            LicensePlate = "51F24680",
+                            VIN = "WDDHF8JB0DA123456",
+                            Year = 2019,
+                            Odometer = 35000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-90),
+                            NextServiceDate = DateTime.UtcNow.AddDays(10),
+                            WarrantyStatus = "Expiring Soon",
+                            CreatedAt = DateTime.UtcNow.AddDays(-90)
                         }
                     };
 

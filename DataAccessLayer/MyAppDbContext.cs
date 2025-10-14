@@ -1,18 +1,19 @@
-﻿using BusinessObject;
-using BusinessObject.Authentication;
-using BusinessObject.Policies;
-using BusinessObject.SystemLogs;
-using BusinessObject.Enums;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿﻿using BusinessObject;
+using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
+using BusinessObject.Customers;
 using BusinessObject.Notifications;
-using BusinessObject.Technician;
-using BusinessObject.Roles;
 using BusinessObject.Policies;
+using BusinessObject.Roles;
 using BusinessObject.SystemLogs;
-using BusinessObject.Enums;
+using BusinessObject.Technician;
+using BusinessObject.Vehicles;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using BusinessObject.Manager;
+
 
 namespace DataAccessLayer
 {
@@ -36,6 +37,9 @@ namespace DataAccessLayer
         public DbSet<PartCategory> PartCategories { get; set; }
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
+        public DbSet<FeedBack> FeedBacks { get; set; }
+
+        // Junction tables
         public DbSet<JobPart> JobParts { get; set; }
         public DbSet<JobTechnician> JobTechnicians { get; set; }
         public DbSet<Repair> Repairs { get; set; }
@@ -44,9 +48,6 @@ namespace DataAccessLayer
         public DbSet<VehicleLookup> VehicleLookups { get; set; }
         public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
         public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
-        public DbSet<Quotation> Quotations { get; set; }
-        public DbSet<QuotationService> QuotationServices { get; set; }
-        public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
         
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
@@ -70,10 +71,57 @@ namespace DataAccessLayer
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
+        public DbSet<BranchService> BranchServices { get; set; }
+        public DbSet<OperatingHour> OperatingHours { get; set; }
+
+        //AiChat
+        public DbSet<AIChatMessage> AiChatMessages { get; set; }
+        public DbSet<AIChatSession> AiChatSessions { get; set; }
+       
+        public DbSet<AIDiagnostic_Keyword> AIDiagnostic_Keywords { get; set; }
+        public DbSet<AIResponseTemplate> AIResponseTemplates { get; set; }
+        //Vehicle
+        //public DbSet<Vehicle> Vehicles { get; set; }
+        public DbSet<VehicleBrand> VehicleBrands { get; set; }
+        public DbSet<VehicleModel> VehicleModels { get; set; }
+        public DbSet<VehicleColor> VehicleColors { get; set; }
+        public DbSet<VehicleModelColor> VehicleModelColors { get; set; }
+        //Customer
+        public DbSet<RepairRequest> RepairRequests { get; set; }
+        public DbSet<RepairImage> RepairImages { get; set; }
+        public DbSet<RequestPart> RequestParts { get; set; }
+        public DbSet<RequestService> RequestServices { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+
+            //chặn casadate
+            modelBuilder.Entity<Vehicle>()
+      .HasOne(v => v.Brand)
+      .WithMany(b => b.Vehicles)
+      .HasForeignKey(v => v.BrandId)
+      .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.Model)
+                .WithMany(m => m.Vehicles)
+                .HasForeignKey(v => v.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.Color)
+                .WithMany(c => c.Vehicles)
+                .HasForeignKey(v => v.ColorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Vehicle>()
+                .HasOne(v => v.User)
+                .WithMany()
+                .HasForeignKey(v => v.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Explicitly configure the ApplicationRole properties to ensure they map correctly
             modelBuilder.Entity<ApplicationRole>(entity =>
@@ -263,83 +311,6 @@ namespace DataAccessLayer
                       .WithOne(r => r.Job)
                       .HasForeignKey(r => r.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
-                      
-                entity.HasOne(j => j.Quotation)
-                      .WithOne(q => q.Job)
-                      .HasForeignKey<Job>(j => j.QuotationId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
-            
-            // Quotation configuration
-            modelBuilder.Entity<Quotation>(entity =>
-            {
-                entity.HasKey(e => e.QuotationId);
-                entity.Property(e => e.CustomerNote).IsRequired().HasMaxLength(1000);
-                entity.Property(e => e.ChangeRequestDetails).IsRequired().HasMaxLength(1000);
-                entity.Property(e => e.TotalAmount).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.Status)
-                      .HasConversion<string>()
-                      .IsRequired();
-
-                entity.HasOne(q => q.Inspection)
-                      .WithOne() // One-to-one relationship with Inspection
-                      .HasForeignKey<Quotation>(q => q.InspectionId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasOne(q => q.User)
-                      .WithMany()
-                      .HasForeignKey(q => q.UserId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasMany(q => q.QuotationServices)
-                      .WithOne(qs => qs.Quotation)
-                      .HasForeignKey(qs => qs.QuotationId)
-                      .OnDelete(DeleteBehavior.Cascade);
-                      
-                entity.HasOne(q => q.Job)
-                      .WithOne(j => j.Quotation)
-                      .HasForeignKey<Job>(j => j.QuotationId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
-
-            // QuotationService configuration
-            modelBuilder.Entity<QuotationService>(entity =>
-            {
-                entity.HasKey(e => e.QuotationServiceId);
-                entity.Property(e => e.ServicePrice).HasColumnType("decimal(18,2)");
-                entity.Property(e => e.CustomerRequestedParts).HasMaxLength(1000);
-
-                entity.HasOne(qs => qs.Quotation)
-                      .WithMany(q => q.QuotationServices)
-                      .HasForeignKey(qs => qs.QuotationId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(qs => qs.Service)
-                      .WithMany()
-                      .HasForeignKey(qs => qs.ServiceId)
-                      .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasMany(qs => qs.QuotationServiceParts)
-                      .WithOne(qsp => qsp.QuotationService)
-                      .HasForeignKey(qsp => qsp.QuotationServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // QuotationServicePart configuration
-            modelBuilder.Entity<QuotationServicePart>(entity =>
-            {
-                entity.HasKey(e => e.QuotationServicePartId);
-                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
-
-                entity.HasOne(qsp => qsp.QuotationService)
-                      .WithMany(qs => qs.QuotationServiceParts)
-                      .HasForeignKey(qsp => qsp.QuotationServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(qsp => qsp.Part)
-                      .WithMany()
-                      .HasForeignKey(qsp => qsp.PartId)
-                      .OnDelete(DeleteBehavior.Restrict);
             });
             
             // Repair configuration
@@ -673,6 +644,39 @@ namespace DataAccessLayer
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+           
+
+                
+                modelBuilder.Entity<FeedBack>(entity =>
+                {
+                    entity.ToTable("FeedBacks");                
+                    entity.HasKey(f => f.FeedBackId);           
+
+                    entity.Property(f => f.Description)
+                          .HasMaxLength(1000);                  
+
+                    entity.Property(f => f.Rating)
+                          .IsRequired();                        
+
+                    entity.Property(f => f.CreatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");   
+
+                    entity.Property(f => f.UpdatedAt)
+                          .HasDefaultValueSql("GETUTCDATE()");
+
+                    
+                    entity.HasOne(f => f.User)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.UserId)
+                          .OnDelete(DeleteBehavior.Cascade);
+
+                   
+                    entity.HasOne(f => f.RepairOrder)
+                          .WithMany()                           
+                          .HasForeignKey(f => f.RepairOrderId)
+                          .OnDelete(DeleteBehavior.Cascade);
+                });
+   
             // Color-Label relationship
             modelBuilder.Entity<Label>()
                 .HasOne(l => l.Color)
@@ -842,28 +846,29 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
             });
 
-
+            // Many-to-many Branch <-> Service
+            modelBuilder.Entity<BranchService>() .HasKey(bs => new { bs.BranchId, bs.ServiceId });
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>()
-                .HasKey(bs => new { bs.BranchId, bs.ServiceId });
-
-            modelBuilder.Entity<BranchService>()
-                .HasOne(bs => bs.Branch)
-                .WithMany(b => b.BranchServices)
-                .HasForeignKey(bs => bs.BranchId)
-                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
+             .HasOne(bs => bs.Branch)
+             .WithMany(b => b.BranchServices)
+             .HasForeignKey(bs => bs.BranchId)
+             .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<BranchService>()
                 .HasOne(bs => bs.Service)
                 .WithMany(s => s.BranchServices)
                 .HasForeignKey(bs => bs.ServiceId)
-                .OnDelete(DeleteBehavior.Restrict); // <-- thêm vào
-           
+                .OnDelete(DeleteBehavior.Cascade);
+
+
+            
+
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
             {
-                entity.HasKey(e => e.ServicePartId);
-                entity.Property(e => e.UnitPrice).HasColumnType("decimal(18,2)");
+                entity.HasKey(e => new { e.ServiceId, e.PartId });
+
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(sp => sp.Service)
@@ -883,6 +888,22 @@ namespace DataAccessLayer
             .WithMany(b => b.Staffs)
             .HasForeignKey(u => u.BranchId)
             .OnDelete(DeleteBehavior.SetNull); // Hoặc Cascade nếu muốn xóa user khi branch bị xóa
+
+            // PromotionalCampaignService n-n Branch
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+            .HasKey(pcs => new { pcs.PromotionalCampaignId, pcs.ServiceId });
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+                .HasOne(pcs => pcs.PromotionalCampaign)
+                .WithMany(pc => pc.PromotionalCampaignServices)
+                .HasForeignKey(pcs => pcs.PromotionalCampaignId);
+
+            modelBuilder.Entity<PromotionalCampaignService>()
+                .HasOne(pcs => pcs.Service)
+                .WithMany(s => s.PromotionalCampaignServices)
+                .HasForeignKey(pcs => pcs.ServiceId);
+
         }
     }
 }

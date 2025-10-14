@@ -1,10 +1,12 @@
+using BusinessObject.Authentication;
+using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Authentication;
 
 namespace BusinessObject
 {
@@ -50,10 +52,18 @@ namespace BusinessObject
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
+        [ForeignKey("BrandId")]
+        public virtual VehicleBrand Brand { get; set; }
+
+        [ForeignKey("ModelId")]
+        public virtual VehicleModel Model { get; set; }
+
+        [ForeignKey("ColorId")]
+        public virtual VehicleColor Color { get; set; }
+
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
         public virtual ApplicationUser User { get; set; } = null!;
     }

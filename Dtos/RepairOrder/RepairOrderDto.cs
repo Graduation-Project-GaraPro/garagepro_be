@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using BusinessObject.Enums;
 using Dtos.RoBoard;
-using Dtos.Vehicle;
+using Dtos.Vehicles;
 
 namespace Dtos.RepairOrder
 {

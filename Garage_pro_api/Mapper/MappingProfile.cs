@@ -1,12 +1,19 @@
 using AutoMapper;
+using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
+using Dtos.Branches;
+using Dtos.Customers;
 using Dtos.Policies;
 using Dtos.Roles;
-using BusinessObject;
-using Dtos.Vehicle;
-using BusinessObject.Authentication;
-using Dtos.Quotation; // Add this line
+using Dtos.Vehicles;
+using Dtos.Services;
+using Dtos.Parts;
+
+using Dtos.Auth;
 
 namespace Garage_pro_api.Mapper
 {
@@ -43,41 +50,147 @@ namespace Garage_pro_api.Mapper
                     opt => opt.MapFrom(src => src.Permissions));
 
             // Role → RoleDto
+            CreateMap<ApplicationUser, ApplicationUserDto>().ReverseMap();
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,
                     opt => opt.Ignore()); // mình sẽ gán thủ công sau
 
             // Vehicle mappings
             CreateMap<Vehicle, VehicleDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.VehicleId))
-                .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.UserId))
-                .ForMember(dest => dest.Brand, opt => opt.Ignore()) // Would need lookup from Brand entity
-                .ForMember(dest => dest.Model, opt => opt.Ignore()) // Would need lookup from Model entity
-                .ForMember(dest => dest.Color, opt => opt.Ignore()) // Would need lookup from Color entity
-                .ReverseMap();
-                
+                .ForMember(dest => dest.VehicleID, opt => opt.MapFrom(src => src.VehicleId))
+                .ForMember(dest => dest.UserID, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.BrandID, opt => opt.MapFrom(src => src.BrandId))
+                .ForMember(dest => dest.ModelID, opt => opt.MapFrom(src => src.ModelId))
+                .ForMember(dest => dest.ColorID, opt => opt.MapFrom(src => src.ColorId))
+                .ForMember(dest => dest.Year, opt => opt.MapFrom(src => src.Year))
+                .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
+                .ForMember(dest => dest.LastServiceDate, opt => opt.MapFrom(src => src.LastServiceDate))
+                .ForMember(dest => dest.NextServiceDate, opt => opt.MapFrom(src => src.NextServiceDate))
+                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
+                .ForMember(dest => dest.BrandName, opt => opt.MapFrom(src => src.Brand.BrandName))
+                .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model.ModelName))
+                .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color.ColorName));
+
             CreateMap<CreateVehicleDto, Vehicle>()
                 .ForMember(dest => dest.VehicleId, opt => opt.MapFrom(src => Guid.NewGuid()))
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.CustomerId))
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserID))
+                .ForMember(dest => dest.BrandId, opt => opt.MapFrom(src => src.BrandID))
+                .ForMember(dest => dest.ModelId, opt => opt.MapFrom(src => src.ModelID))
+                .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorID))
+                .ForMember(dest => dest.Year, opt => opt.MapFrom(src => src.Year))
                 .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate.ToUpper()))
-                .ForMember(dest => dest.BrandId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
-                .ForMember(dest => dest.ModelId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
-                .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => Guid.NewGuid())) // Temporary
-                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
                 .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
-                .ForMember(dest => dest.LastServiceDate, opt => opt.MapFrom(src => DateTime.UtcNow));
+                .ForMember(dest => dest.LastServiceDate, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.NextServiceDate, opt => opt.Ignore())
+                .ForMember(dest => dest.WarrantyStatus, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.UpdatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.Brand, opt => opt.Ignore())
+                .ForMember(dest => dest.Model, opt => opt.Ignore())
+                .ForMember(dest => dest.Color, opt => opt.Ignore())
+                .ForMember(dest => dest.RepairOrders, opt => opt.Ignore())
+                .ForMember(dest => dest.User, opt => opt.Ignore());
 
             CreateMap<UpdateVehicleDto, Vehicle>()
+                .ForMember(dest => dest.VehicleId, opt => opt.Ignore())
+                .ForMember(dest => dest.UserId, opt => opt.Ignore())
+                .ForMember(dest => dest.BrandId, opt => opt.MapFrom(src => src.BrandID))
+                .ForMember(dest => dest.ModelId, opt => opt.MapFrom(src => src.ModelID))
+                .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorID))
+                .ForMember(dest => dest.Year, opt => opt.MapFrom(src => src.Year))
+                .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate.ToUpper()))
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
                 .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
                 .ForMember(dest => dest.NextServiceDate, opt => opt.MapFrom(src => src.NextServiceDate))
-                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus));
+                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
+                .ForMember(dest => dest.Brand, opt => opt.Ignore())
+                .ForMember(dest => dest.Model, opt => opt.Ignore())
+                .ForMember(dest => dest.Color, opt => opt.Ignore())
+                .ForMember(dest => dest.RepairOrders, opt => opt.Ignore())
+                .ForMember(dest => dest.User, opt => opt.Ignore());
 
-            // Quotation mappings
-            CreateMap<Quotation, QuotationDto>().ReverseMap();
-            CreateMap<QuotationService, QuotationServiceDto>().ReverseMap();
-            CreateMap<QuotationServicePart, QuotationServicePartDto>().ReverseMap();
+            CreateMap<ApplicationUser, UserDto>().ReverseMap();
+            CreateMap<UpdateUserDto, ApplicationUser>()
+    .ForAllMembers(opt =>
+        opt.Condition((src, dest, srcMember) => srcMember != null));
+
+
+            // Service -> ServiceDto
+
+            CreateMap<Service, Dtos.Branches.ServiceDto>();
+            CreateMap<Service, Dtos.Services.ServiceDto>();
+            CreateMap<Service, CreateServiceDto>().ReverseMap();
+            CreateMap<Service, UpdateServiceDto>().ReverseMap().ForMember(dest => dest.ServiceId, opt => opt.Ignore()); ;
+
+            CreateMap<Service, Dtos.Services.ServiceDto>()
+                .ForMember(dest => dest.Branches,
+                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)))
+                .ForMember(dest => dest.Parts,
+                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)));
+
+
+            CreateMap<ServiceCategory, ServiceCategoryDto>().ReverseMap();
+            CreateMap<ServiceCategory, GetCategoryForServiceDto>().ReverseMap();
+
+            // DTO -> Entity (Create)
+            CreateMap<CreateServiceCategoryDto, ServiceCategory>();
+
+            // DTO -> Entity (Update)
+            CreateMap<UpdateServiceCategoryDto, ServiceCategory>();
+
+
+            // Branch -> BranchReadDto
+            CreateMap<Branch, BranchReadDto>()
+                .ForMember(dest => dest.Services,
+                           opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Service)))
+                .ForMember(dest => dest.OperatingHours,
+                           opt => opt.MapFrom(src => src.OperatingHours)).ReverseMap();
+
+            CreateMap<Branch, BranchServiceRelatedDto>().ReverseMap();
+
+
+            CreateMap<Branch, BranchCreateDto>()
+               .ReverseMap();
+
+            CreateMap<Branch, BranchUpdateDto>()
+           .ReverseMap();
+            // OperatingHour -> OperatingHourDto
+            CreateMap<OperatingHour, OperatingHourDto>();
+
+            // Part -> PartDto
+            CreateMap<Part, PartDto>();
+            CreateMap<Part, PartServiceRelatedDto>().ReverseMap();
+
+            // PartCategory -> PartCategoryWithPartsDto
+            CreateMap<PartCategory, PartCategoryWithPartsDto>()
+                .ForMember(dest => dest.PartCategoryId, opt => opt.MapFrom(src => src.LaborCategoryId));
+
+            //mapping cho Vehicle
+            CreateMap<RequestPartDto, RequestPart>()
+                .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => Guid.NewGuid()));
+
+            CreateMap<RequestServiceDto, RequestService>()
+                .ForMember(dest => dest.RequestServiceId, opt => opt.MapFrom(src => Guid.NewGuid()));
+
+            //CreateMap<ServiceInspection, ServiceItemDto>()
+            //    .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
+            //    .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Service.Price))
+            //    .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => 1));
+
+            //CreateMap<PartInspection, PartItemDto>()
+            //    .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
+            //    .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Part.Name))
+            //    .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Part.Price))
+            //    .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => 1))
+            //    .ForMember(dest => dest.SelectedSpecId, opt => opt.MapFrom(src => src.PartInspectionId))
+            //    .ForMember(dest => dest.Specifications, opt => opt.MapFrom(src => src.Part.PartSpecifications));
+
+            //CreateMap<PartSpecification, PartSpecificationDto>();
         }
     }
 }

@@ -1,4 +1,4 @@
-using Dtos.Vehicle;
+using Dtos.Vehicles;
 using Microsoft.AspNetCore.Mvc;
 using Services.VehicleServices;
 using Garage_pro_api.Authorization;

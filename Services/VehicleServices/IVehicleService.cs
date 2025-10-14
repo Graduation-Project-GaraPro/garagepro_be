@@ -1,8 +1,8 @@
+using BusinessObject;
+using Dtos.Vehicles;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using BusinessObject;
-using Dtos.Vehicle;
 
 namespace Services.VehicleServices
 {
@@ -13,7 +13,9 @@ namespace Services.VehicleServices
         Task<VehicleDto?> GetVehicleByLicensePlateAsync(string licensePlate);
         Task<IEnumerable<VehicleDto>> GetVehiclesByUserIdAsync(string userId);
         Task<IEnumerable<VehicleDto>> GetAllVehiclesAsync();
+        Task<IEnumerable<VehicleDto>> GetUserVehiclesAsync(string userId);
         Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto);
+        Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto, string userId);
         Task<VehicleDto> UpdateVehicleAsync(Guid vehicleId, UpdateVehicleDto updateVehicleDto);
         Task<bool> DeleteVehicleAsync(Guid vehicleId);
         Task<bool> VehicleExistsAsync(Guid vehicleId);

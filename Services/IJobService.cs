@@ -114,8 +114,6 @@ namespace Services
         Task<bool> ExpireOldEstimatesAsync();
         Task<Job> CreateJobFromServiceAsync(Guid serviceId, Guid repairOrderId, string managerId);
         
-        // Quotation Integration
-        Task<Job> CreateJobFromQuotationAsync(Guid quotationId, Guid serviceId, string managerId);
 
     }
 }

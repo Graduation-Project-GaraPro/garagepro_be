@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject;
-using Dtos.Vehicle;
 using Dtos.RoBoard;
 using Repositories;
 using Repositories.VehicleRepositories;
+using Dtos.Vehicles;
 
 namespace Services.VehicleServices
 {
@@ -42,7 +42,7 @@ namespace Services.VehicleServices
                 ro => ro.User);
 
             // Get customer details
-            var user = await _userRepository.GetByIdAsync(vehicle.UserId);
+            var user = await _userRepository.GetByIdAsync(vehicle.UserID);
 
             var vehicleWithHistory = new VehicleWithHistoryDto
             {
@@ -111,7 +111,7 @@ namespace Services.VehicleServices
 
             var schedulingInfo = new VehicleSchedulingDto
             {
-                VehicleId = vehicle.VehicleId,
+                VehicleId = vehicle.VehicleID,
                 LicensePlate = vehicle.LicensePlate,
                 VIN = vehicle.VIN,
                 Year = vehicle.Year,
@@ -142,7 +142,7 @@ namespace Services.VehicleServices
             // For now, we'll return placeholder data
             var insuranceInfo = new VehicleInsuranceDto
             {
-                VehicleId = vehicle.VehicleId,
+                VehicleId = vehicle.VehicleID,
                 LicensePlate = vehicle.LicensePlate,
                 VIN = vehicle.VIN,
                 InsuranceStatus = "Not Verified", // Placeholder

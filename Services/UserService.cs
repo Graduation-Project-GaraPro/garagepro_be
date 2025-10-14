@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.EmailSenders;
 
@@ -80,5 +81,54 @@ namespace Services
 
             return true;
         }
+
+        public async Task<ApplicationUser?> GetUserByIdAsync(string userId)
+        {
+            return await _repository.GetByIdAsync(userId);
+        }
+        // 👇 Thêm các method mới
+        public async Task<List<ApplicationUser>> GetManagersAndTechniciansAsync()
+        {
+            return await _repository.GetManagersAndTechniciansAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetManagersAsync()
+        {
+            return await _repository.GetManagersAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetTechniciansAsync()
+        {
+            return await _repository.GetTechniciansAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetManagersWithoutBranchAsync()
+        {
+            return await _repository.GetManagersWithoutBranchAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync()
+        {
+            return await _repository.GetTechniciansWithoutBranchAsync();
+
+        }
+
+        public async Task<bool> UpdateUserAsync(ApplicationUser user)
+        {
+            try
+            {
+                var existingUser = await _repository.GetByIdAsync(user.Id);
+                if (existingUser == null)
+                {
+                    return false; // User không tồn tại
+                }
+                await _repository.UpdateAsync(user);
+                return true;
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return false; // Xử lý lỗi concurrency nếu cần
+            }
+        }   
     }
 }

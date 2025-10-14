@@ -4,9 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject;
-using Dtos.Vehicle;
 using Dtos.RoBoard;
 using Repositories.VehicleRepositories;
+using Dtos.Vehicles;
 
 namespace Services.VehicleServices
 {
@@ -51,11 +51,54 @@ namespace Services.VehicleServices
             return vehicles.Select(v => _mapper.Map<VehicleDto>(v));
         }
 
+        public async Task<IEnumerable<VehicleDto>> GetUserVehiclesAsync(string userId)
+        {
+            var vehicles = await _vehicleRepository.GetByUserIdAsync(userId);
+            return vehicles.Select(v => _mapper.Map<VehicleDto>(v));
+        }
+
+        // This method is used when the user ID is provided in the DTO
         public async Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto)
         {
-            var vehicle = _mapper.Map<Vehicle>(createVehicleDto);
-            // VehicleId is set in the mapping
-            // CreatedAt is set in the mapping
+            // Create a new Vehicle entity and map the properties
+            var vehicle = new Vehicle
+            {
+                BrandId = createVehicleDto.BrandID,
+                UserId = createVehicleDto.UserID, // Use the provided user ID
+                ModelId = createVehicleDto.ModelID,
+                ColorId = createVehicleDto.ColorID,
+                LicensePlate = createVehicleDto.LicensePlate,
+                VIN = createVehicleDto.VIN,
+                Year = createVehicleDto.Year,
+                Odometer = createVehicleDto.Odometer,
+                LastServiceDate = DateTime.UtcNow, // Set default value
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            var createdVehicle = await _vehicleRepository.CreateAsync(vehicle);
+            return _mapper.Map<VehicleDto>(createdVehicle);
+        }
+
+        // This method is used when the user ID should be taken from the authenticated user
+        public async Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto, string userId)
+        {
+            // Override the user ID with the authenticated user's ID
+            createVehicleDto.UserID = userId;
+            
+            // Create a new Vehicle entity and map the properties
+            var vehicle = new Vehicle
+            {
+                BrandId = createVehicleDto.BrandID,
+                UserId = createVehicleDto.UserID, // Use the authenticated user's ID
+                ModelId = createVehicleDto.ModelID,
+                ColorId = createVehicleDto.ColorID,
+                LicensePlate = createVehicleDto.LicensePlate,
+                VIN = createVehicleDto.VIN,
+                Year = createVehicleDto.Year,
+                Odometer = createVehicleDto.Odometer,
+                LastServiceDate = DateTime.UtcNow, // Set default value
+                CreatedAt = DateTime.UtcNow
+            };
             
             var createdVehicle = await _vehicleRepository.CreateAsync(vehicle);
             return _mapper.Map<VehicleDto>(createdVehicle);

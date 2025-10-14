@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Branches;
+using BusinessObject.Campaigns;
 
 namespace BusinessObject
 {
@@ -17,8 +18,7 @@ namespace BusinessObject
         [Required]
         public Guid ServiceCategoryId { get; set; }
 
-        [Required]
-        public Guid ServiceTypeId { get; set; }
+        
 
         [Required]
         [MaxLength(100)]
@@ -41,8 +41,8 @@ namespace BusinessObject
 
         public bool IsAdvanced { get; set; } = false;
 
-        
-        public Guid? BranchId { get; set; }
+
+      
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -51,12 +51,15 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual ServiceCategory ServiceCategory { get; set; }
-        public virtual Branch? Branch { get; set; }
         public virtual ICollection<RepairOrderService> RepairOrderServices { get; set; } = new List<RepairOrderService>();
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; } = new List<ServiceInspection>();
-        public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
+        public virtual ICollection<Job>? Jobs { get; set; } = new List<Job>();
         // Many-to-many
-        public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
-        public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
+        public virtual ICollection<BranchService>? BranchServices { get; set; } = new List<BranchService>();
+        public virtual ICollection<ServicePart>? ServiceParts { get; set; } = new List<ServicePart>();
+
+        // Many-to-many
+        public virtual ICollection<PromotionalCampaignService>? PromotionalCampaignServices { get; set; }
+            = new List<PromotionalCampaignService>();
     }
 }

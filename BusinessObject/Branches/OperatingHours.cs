@@ -26,9 +26,9 @@ namespace BusinessObject.Branches
         public bool IsOpen { get; set; } = false;
 
         [MaxLength(5)]
-        public string OpenTime { get; set; } = "08:00";
+        public TimeSpan? OpenTime { get; set; } 
 
         [MaxLength(5)]
-        public string CloseTime { get; set; } = "17:00";
+        public TimeSpan? CloseTime { get; set; } 
     }
 }

@@ -25,6 +25,15 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.Google;
 using Services.SmsSenders;
 using BusinessObject.Roles;
+using Repositories.BranchRepositories;
+using Services.BranchServices;
+using Repositories.ServiceRepositories;
+using Services.ServiceServices;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Services.Cloudinaries;
+using Repositories.PartCategoryRepositories;
+using Services.PartCategoryServices;
+using Repositories.PartRepositories;
 using Microsoft.AspNetCore.OData;
 using Repositories.VehicleRepositories;
 using Services.VehicleServices;
@@ -54,6 +63,7 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
+    c.CustomSchemaIds(type => type.FullName); // dùng FullName để phân biệt
     // Thêm thông tin cho Swagger UI
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
@@ -151,19 +161,38 @@ builder.Services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
-            if (context.Exception is SecurityTokenExpiredException)
-            {
-                context.Response.Headers.Add("Token-Expired", "true");
-            }
+            Console.WriteLine("JWT Authentication failed:");
+            Console.WriteLine(context.Exception.ToString());
+            return Task.CompletedTask;
+        },
+        OnMessageReceived = context =>
+        {
+            Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            Console.WriteLine("JWT validated successfully!");
+            Console.WriteLine("User: " + context.Principal?.Identity?.Name);
             return Task.CompletedTask;
         }
     };
+})
+.AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+    options.Cookie.HttpOnly = true;
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
+    options.SlidingExpiration = true;
 })
 .AddGoogle(googleOptions =>
 {
     googleOptions.ClientId = builder.Configuration["Authentication:Google:ClientId"];
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
+
+
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -177,9 +206,12 @@ builder.Services.AddScoped<DbInitializer>();
 builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
 builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
 builder.Services.AddMemoryCache(); // Cho IMemoryCache
-
+builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
+builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
@@ -198,8 +230,7 @@ builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService>(provider =>
 {
     var jobRepository = provider.GetRequiredService<IJobRepository>();
-    var quotationRepository = provider.GetRequiredService<IQuotationRepository>();
-    return new Services.JobService(jobRepository, quotationRepository);
+    return new Services.JobService(jobRepository);
 });
 
 // Role and Permission services
@@ -215,15 +246,11 @@ builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
 
-// Quotation repositories and services
-builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
-builder.Services.AddScoped<IQuotationService>(provider =>
-{
-    var quotationRepository = provider.GetRequiredService<IQuotationRepository>();
-    var mapper = provider.GetRequiredService<IMapper>();
-    var context = provider.GetRequiredService<MyAppDbContext>();
-    return new Services.QuotationService(quotationRepository, mapper, context);
-});
+// Vehicle brand, model, and color repositories
+builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -235,11 +262,47 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
+
+builder.Services.AddScoped<IBranchRepository, BranchRepository>();
+
+builder.Services.AddScoped<IBranchService, BranchService>();
+
+builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<IServiceService, ServiceService>();
+
+builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
+builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
+
+builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
+builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
+
+builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
+builder.Services.AddScoped<IPartRepository, PartRepository>();
+
+// Service Quotation
+builder.Services.AddScoped<IServiceService, ServiceService>();
+
+
+
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
 // Đăng ký Policy Provider thay thế mặc định
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+
+builder.Services.Configure<CloudinarySettings>(
+    builder.Configuration.GetSection("CloudinarySettings")
+);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder  
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
 
 builder.Services.AddEndpointsApiExplorer();
 
@@ -255,10 +318,20 @@ if (app.Environment.IsDevelopment())
 // Use CORS with the specific policy for your frontend
 app.UseCors("AllowFrontend");
 
-app.UseSecurityPolicyEnforcement();
-app.UseHttpsRedirection();
+//app.UseSecurityPolicyEnforcement();
+//app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    Console.WriteLine("==== Incoming request ====");
+    Console.WriteLine("Path: " + context.Request.Path);
+    Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+    await next();
+});
+
 app.UseAuthentication();
-app.UseAuthorization();
+app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
+app.UseSecurityPolicyEnforcement();
+
 app.MapControllers();
 // Initialize database
 

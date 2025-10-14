@@ -16,10 +16,7 @@ namespace BusinessObject
         [Required]
         [MaxLength(100)]
         public string CategoryName { get; set; }
-
-        [Required]
-        public Guid ServiceTypeId { get; set; }
-
+       
         // Parent-child relationship for hierarchical categories
         public Guid? ParentServiceCategoryId { get; set; }
 
