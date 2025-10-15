@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
+
+using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using Dtos.RepairOrder;
 using Dtos.RoBoard;
 using Repositories;
 
@@ -293,6 +296,22 @@ namespace Services
             return await _repairOrderRepository.DeleteAsync(repairOrderId);
         }
 
+        public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync()
+        {
+            return await _repairOrderRepository.GetAllRepairOrdersWithFullDetailsAsync();
+        }
+
+        // NEW: Get repair orders by status
+        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId)
+        {
+            return await _repairOrderRepository.GetRepairOrdersByStatusAsync(statusId);
+        }
+
+        public async Task<RepairOrder> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId)
+        {
+            return await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+        }
+
         public async Task<bool> RepairOrderExistsAsync(Guid repairOrderId)
         {
             return await _repairOrderRepository.ExistsAsync(repairOrderId);
@@ -486,7 +505,6 @@ namespace Services
             return new RoBoardCardDto
             {
                 RepairOrderId = repairOrder.RepairOrderId,
-                RepairOrderType = repairOrder.RepairOrderType,
                 ReceiveDate = repairOrder.ReceiveDate,
                 EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
                 CompletionDate = repairOrder.CompletionDate,
@@ -507,9 +525,66 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
-                //ArchiveReason = repairOrder.ArchiveReason,
                 ArchivedBy = repairOrder.ArchivedByUserId
             };
+        }
+
+        // New method to map RepairOrder to enhanced RepairOrderDto
+        public RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder)
+        {
+            var dto = new RepairOrderDto
+            {
+                RepairOrderId = repairOrder.RepairOrderId,
+                RoType = repairOrder.RoType,
+                ReceiveDate = repairOrder.ReceiveDate,
+                EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
+                CompletionDate = repairOrder.CompletionDate,
+                Cost = repairOrder.Cost,
+                EstimatedAmount = repairOrder.EstimatedAmount,
+                PaidAmount = repairOrder.PaidAmount,
+                PaidStatus = repairOrder.PaidStatus,
+                EstimatedRepairTime = repairOrder.EstimatedRepairTime,
+                Note = repairOrder.Note,
+                CreatedAt = repairOrder.CreatedAt,
+                UpdatedAt = repairOrder.UpdatedAt,
+                IsArchived = repairOrder.IsArchived,
+                ArchivedAt = repairOrder.ArchivedAt,
+                ArchivedByUserId = repairOrder.ArchivedByUserId,
+                BranchId = repairOrder.BranchId,
+                StatusId = repairOrder.StatusId,
+                VehicleId = repairOrder.VehicleId,
+                UserId = repairOrder.UserId,
+                RepairRequestId = repairOrder.RepairRequestId,
+                CustomerName = repairOrder.User?.FullName ?? "Unknown Customer",
+                CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+            };
+
+            // Add technician names (from jobs)
+            if (repairOrder.Jobs != null)
+            {
+                var technicianNames = new HashSet<string>();
+                foreach (var job in repairOrder.Jobs)
+                {
+                    if (job.JobTechnicians != null)
+                    {
+                        foreach (var jobTech in job.JobTechnicians)
+                        {
+                            if (jobTech.Technician?.User != null)
+                            {
+                                technicianNames.Add(jobTech.Technician.User.FullName ?? "Unknown Technician");
+                            }
+                        }
+                    }
+                }
+                dto.TechnicianNames = technicianNames.ToList();
+                
+                // Calculate progress based on job completion
+                dto.TotalJobs = repairOrder.Jobs.Count;
+                dto.CompletedJobs = repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed);
+                dto.ProgressPercentage = dto.TotalJobs > 0 ? (decimal)(dto.CompletedJobs * 100) / dto.TotalJobs : 0;
+            }
+
+            return dto;
         }
 
         private RoBoardListItemDto MapToRoBoardListItemDto(RepairOrder repairOrder, int rowNumber)
@@ -518,7 +593,6 @@ namespace Services
             {
                 RepairOrderId = repairOrder.RepairOrderId,
                 RowNumber = rowNumber,
-                RepairOrderType = repairOrder.RepairOrderType,
                 ReceiveDate = repairOrder.ReceiveDate,
                 EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
                 CompletionDate = repairOrder.CompletionDate,
@@ -537,7 +611,9 @@ namespace Services
                 VehicleModel = "Unknown Model", // TODO: Add model navigation when available
                 VehicleColor = "Unknown Color", // TODO: Add color navigation when available
                 BranchName = repairOrder.Branch?.BranchName ?? "Unknown Branch",
-                //BranchAddress = repairOrder.Branch?.Address ?? "",
+
+                //BranchAddress = repairOrder.Branch != null ? 
+                //    $"{repairOrder.Branch.Street}, {repairOrder.Branch.Ward}, {repairOrder.Branch.District}, {repairOrder.Branch.City}" : "",
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 StatusDuration = GetStatusDurationText((int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays),
                 Priority = GetPriorityLevel(repairOrder),
@@ -549,7 +625,7 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
-                //ArchiveReason = repairOrder.ArchiveReason
+
             };
         }
 
@@ -562,9 +638,9 @@ namespace Services
                 VehicleId = vehicle.VehicleId,
                 LicensePlate = vehicle.LicensePlate ?? "",
                 VIN = vehicle.VIN ?? "",
-                BrandName = "Unknown Brand", // TODO: Add brand navigation when available
-                ModelName = "Unknown Model", // TODO: Add model navigation when available
-                ColorName = "Unknown Color" // TODO: Add color navigation when available
+                BrandName = vehicle.Brand?.BrandName ?? "Unknown Brand",
+                ModelName = vehicle.Model?.ModelName ?? "Unknown Model",
+                ColorName = vehicle.Color?.ColorName ?? "Unknown Color"
             };
         }
 

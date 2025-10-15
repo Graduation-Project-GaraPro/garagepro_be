@@ -36,7 +36,6 @@ namespace Services.PolicyServices
             var allErrors = result.Errors
                 .SelectMany(kvp => kvp.Value)
                 .ToList();
-
             // Convert sang IdentityError để Identity xử lý chuẩn
             var identityErrors = allErrors
                 .Select(msg => new IdentityError
@@ -45,7 +44,6 @@ namespace Services.PolicyServices
                     Description = msg
                 })
                 .ToArray();
-
             return IdentityResult.Failed(identityErrors);
         }
     }

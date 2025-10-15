@@ -18,6 +18,9 @@ using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using Services.SmsSenders;
 
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
+
 namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
@@ -185,6 +188,8 @@ namespace Garage_pro_api.Controllers
 
             var confirmationLink = $"{Request.Scheme}://{Request.Host}/api/auth/confirm-email?userId={user.Id}&token={encodedToken}";
 
+            Console.WriteLine($"Confirmation Link: {confirmationLink}"); // For debugging
+
             await _emailSender.SendEmailAsync(
                 user.Email,
                 "Confirm your email",
@@ -255,6 +260,19 @@ namespace Garage_pro_api.Controllers
                 SameSite = SameSiteMode.None,
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
+
+            // Tạo ClaimsPrincipal cho Cookie
+            var claimsPrincipal = _tokenService.ValidateToken(accessToken);
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                claimsPrincipal,
+                new AuthenticationProperties
+                {
+                    IsPersistent = true,
+                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
+                });
+
 
             var response = new AuthResponseDto
             {

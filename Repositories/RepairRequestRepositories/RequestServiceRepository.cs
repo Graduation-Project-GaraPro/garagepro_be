@@ -1,0 +1,77 @@
+﻿using BusinessObject.Customers;
+using DataAccessLayer;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Repositories.RepairRequestRepositories
+{
+    public class RequestServiceRepository: IRequestServiceRepository
+    {
+       
+            private readonly MyAppDbContext _context;
+
+            public RequestServiceRepository(MyAppDbContext context)
+            {
+                _context = context;
+            }
+
+            public async Task<IEnumerable<RequestService>> GetAllAsync()
+            {
+                return await _context.RequestServices
+                    .Include(rs => rs.Service)
+                    .Include(rs => rs.RepairRequest)
+                    .ToListAsync();
+            }
+
+            public async Task<IEnumerable<RequestService>> GetByRepairRequestIdAsync(Guid repairRequestId)
+            {
+                return await _context.RequestServices
+                    .Include(rs => rs.Service)
+                    .Where(rs => rs.RepairRequestId == repairRequestId)
+                    .ToListAsync();
+            }
+
+            public async Task<RequestService> GetByIdAsync(Guid id)
+            {
+                return await _context.RequestServices
+                    .Include(rs => rs.Service)
+                    .Include(rs => rs.RepairRequest)
+                    .FirstOrDefaultAsync(rs => rs.RequestServiceId == id);
+            }
+
+            public async Task<RequestService> AddAsync(RequestService requestService)
+            {
+                _context.RequestServices.Add(requestService);
+                await _context.SaveChangesAsync();
+                return requestService;
+            }
+
+            public async Task<RequestService> UpdateAsync(RequestService requestService)
+            {
+                _context.Entry(requestService).State = EntityState.Modified;
+                await _context.SaveChangesAsync();
+                return requestService;
+            }
+
+            public async Task<bool> DeleteAsync(Guid id)
+            {
+                var requestService = await _context.RequestServices.FindAsync(id);
+                if (requestService == null)
+                    return false;
+
+                _context.RequestServices.Remove(requestService);
+                await _context.SaveChangesAsync();
+                return true;
+            }
+
+            public async Task<bool> ExistsAsync(Guid id)
+            {
+                return await _context.RequestServices.AnyAsync(rs => rs.RequestServiceId == id);
+            }
+        }
+    }
+

@@ -6,6 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Enums;
 namespace BusinessObject
 {
     public class Inspection
@@ -37,6 +38,6 @@ namespace BusinessObject
         public virtual InspectionAndRepair.Technician Technician { get; set; } // Thêm quan hệ với Technician
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<PartInspection> PartInspections { get; set; }
-       
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>(); // Add this line
     }
 }

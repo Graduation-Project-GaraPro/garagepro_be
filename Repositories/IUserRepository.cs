@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -14,6 +14,18 @@ namespace Repositories
         Task<List<ApplicationUser>> GetAllAsync();
         Task<ApplicationUser> GetByIdAsync(string userId);
         Task<IList<string>> GetRolesAsync(ApplicationUser user);
+
+        Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();
+        Task<List<ApplicationUser>> GetTechniciansAsync();
+        Task<List<ApplicationUser>> GetManagersAsync();
+
+        Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
+        Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
         Task UpdateAsync(ApplicationUser user);
+        
+        // Customer search methods
+        Task<IEnumerable<ApplicationUser>> SearchCustomersAsync(string searchTerm);
+        Task<IEnumerable<ApplicationUser>> GetCustomersByVehicleLicensePlateAsync(string licensePlate);
+        Task<IEnumerable<ApplicationUser>> GetAllCustomersAsync();
     }
 }

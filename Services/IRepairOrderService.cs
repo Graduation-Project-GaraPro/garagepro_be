@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject;
+using Dtos.RepairOrder;
 using Dtos.RoBoard;
 
 namespace Services
@@ -24,6 +25,19 @@ namespace Services
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<bool> RepairOrderExistsAsync(Guid repairOrderId);
 
+        
+        // NEW: Get all repair orders with OData support
+        Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
+        
+        // NEW: Get repair orders by status
+        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId);
+        
+        // NEW: Get repair order with full details
+        Task<RepairOrder> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
+        
+        // NEW: Map RepairOrder to RepairOrderDto
+        RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder);
+        
         // Statistics and Analytics
         Task<RoBoardStatisticsDto> GetBoardStatisticsAsync(RoBoardFiltersDto filters = null);
         Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null);

@@ -16,8 +16,6 @@ namespace BusinessObject
 
         [Required]
         public Guid PartCategoryId { get; set; }
-
-
         public Guid? BranchId { get; set; }  // v?n gi? 1-n n?u c?n
 
         [Required, MaxLength(100)]

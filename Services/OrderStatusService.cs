@@ -1,5 +1,9 @@
 using BusinessObject;
 using Repositories;
+using Dtos.RoBoard; // Add this using statement
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Services
 {
@@ -20,16 +24,34 @@ namespace Services
             _orderStatusRepository = orderStatusRepository;
         }
 
-        public async Task<object> GetOrderStatusesByColumnsAsync()
+        public async Task<RoBoardColumnsDto> GetOrderStatusesByColumnsAsync()
         {
             var allStatuses = await _orderStatusRepository.GetAllAsync();
             
             // Group statuses into 3 columns based on predefined names
-            var result = new
+            var result = new RoBoardColumnsDto
             {
-                Pending = allStatuses.Where(s => s.StatusName == "Pending").ToList(),
-                InProgress = allStatuses.Where(s => s.StatusName == "In Progress").ToList(),
-                Completed = allStatuses.Where(s => s.StatusName == "Completed").ToList()
+                Pending = allStatuses.Where(s => s.StatusName == "Pending")
+                    .Select(s => new RoBoardColumnDto
+                    {
+                        OrderStatusId = s.OrderStatusId,
+                        StatusName = s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList(),
+                InProgress = allStatuses.Where(s => s.StatusName == "In Progress")
+                    .Select(s => new RoBoardColumnDto
+                    {
+                        OrderStatusId = s.OrderStatusId,
+                        StatusName = s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList(),
+                Completed = allStatuses.Where(s => s.StatusName == "Completed")
+                    .Select(s => new RoBoardColumnDto
+                    {
+                        OrderStatusId = s.OrderStatusId,
+                        StatusName = s.StatusName,
+                        RepairOrderCount = s.RepairOrders?.Count ?? 0
+                    }).ToList()
             };
 
             return result;

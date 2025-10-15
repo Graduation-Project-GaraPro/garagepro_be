@@ -68,14 +68,8 @@ namespace Services.RoleServices
         {
             var users = await _roleRepo.GetUsersByRoleIdAsync(roleId);
 
-            var userDtos = users.Select(u => new UserDto
-            {
-                Id = u.Id, 
-                Name = $"{u.FirstName} {u.LastName}".Trim(),
-                Status = u.IsActive,
-                Email = u.Email,
-                PhoneNumber = u.PhoneNumber
-            }).ToList();
+
+            var userDtos = _mapper.Map<List<UserDto>>(users);
 
             return userDtos;
         }
