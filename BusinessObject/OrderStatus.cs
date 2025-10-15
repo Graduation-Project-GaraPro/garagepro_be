@@ -10,7 +10,7 @@ namespace BusinessObject
     public class OrderStatus
     {
         [Key]
-        public Guid OrderStatusId { get; set; } = Guid.NewGuid();
+        public int OrderStatusId { get; set; } // Changed from Guid to int
 
         [Required]
         [MaxLength(100)]

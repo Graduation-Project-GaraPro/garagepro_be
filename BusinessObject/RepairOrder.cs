@@ -64,7 +64,7 @@ namespace BusinessObject
         public Guid BranchId { get; set; }
 
         [Required]
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
 
         [Required]
         public Guid VehicleId { get; set; }

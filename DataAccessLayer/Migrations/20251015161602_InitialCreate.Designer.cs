@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251014063804_AddQuotationEntities")]
-    partial class AddQuotationEntities
+    [Migration("20251015161602_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -851,8 +851,8 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("OrderStatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("OrderStatusId")
+                        .HasColumnType("int");
 
                     b.HasKey("LabelId");
 
@@ -964,9 +964,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
                 {
-                    b.Property<Guid>("OrderStatusId")
+                    b.Property<int>("OrderStatusId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderStatusId"));
 
                     b.Property<string>("StatusName")
                         .IsRequired()
@@ -1309,7 +1311,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("QuotationId")
+                    b.Property<Guid?>("QuotationServiceId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("TotalPrice")
@@ -1319,7 +1321,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.HasIndex("QuotationId");
+                    b.HasIndex("QuotationServiceId");
 
                     b.ToTable("QuotationParts");
                 });
@@ -1358,6 +1360,49 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("QuotationServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationServicePart", b =>
+                {
+                    b.Property<Guid>("QuotationServicePartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRecommended")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("QuotationServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("RecommendationNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("TotalPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("QuotationServicePartId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("QuotationServiceId");
+
+                    b.ToTable("QuotationServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -1427,8 +1472,8 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("RoType")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("StatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StatusId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1476,9 +1521,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("ServicePrice")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("RepairOrderServiceId");
 
@@ -2850,15 +2892,14 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.Quotation", "Quotation")
-                        .WithMany("QuotationParts")
-                        .HasForeignKey("QuotationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.HasOne("BusinessObject.QuotationService", "QuotationService")
+                        .WithMany()
+                        .HasForeignKey("QuotationServiceId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Part");
 
-                    b.Navigation("Quotation");
+                    b.Navigation("QuotationService");
                 });
 
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
@@ -2878,6 +2919,25 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Quotation");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationServicePart", b =>
+                {
+                    b.HasOne("BusinessObject.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.QuotationService", "QuotationService")
+                        .WithMany("QuotationServiceParts")
+                        .HasForeignKey("QuotationServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("QuotationService");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -3396,9 +3456,12 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Quotation", b =>
                 {
-                    b.Navigation("QuotationParts");
-
                     b.Navigation("QuotationServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationService", b =>
+                {
+                    b.Navigation("QuotationServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>

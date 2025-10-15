@@ -35,7 +35,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/orderstatus/{id}
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetOrderStatusById(Guid id)
+        public async Task<IActionResult> GetOrderStatusById(int id) // Changed from Guid to int
         {
             try
             {
@@ -53,7 +53,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/orderstatus/{id}/labels
         [HttpGet("{id}/labels")]
-        public async Task<IActionResult> GetLabelsByOrderStatusId(Guid id)
+        public async Task<IActionResult> GetLabelsByOrderStatusId(int id) // Changed from Guid to int
         {
             try
             {
@@ -88,7 +88,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/orderstatus/{id}/exists
         [HttpGet("{id}/exists")]
-        public async Task<IActionResult> CheckOrderStatusExists(Guid id)
+        public async Task<IActionResult> CheckOrderStatusExists(int id) // Changed from Guid to int
         {
             try
             {

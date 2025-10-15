@@ -10,7 +10,7 @@ namespace Dtos.RoBoard
         public Guid RepairOrderId { get; set; }
         
         [Required]
-        public Guid NewStatusId { get; set; }
+        public int NewStatusId { get; set; } // Changed from Guid to int
         
         public List<Guid>? LabelsToAdd { get; set; } = new List<Guid>();
         
@@ -27,9 +27,9 @@ namespace Dtos.RoBoard
         
         public Guid RepairOrderId { get; set; }
         
-        public Guid? OldStatusId { get; set; }
+        public int? OldStatusId { get; set; } // Changed from Guid? to int?
         
-        public Guid? NewStatusId { get; set; }
+        public int? NewStatusId { get; set; } // Changed from Guid? to int?
         
         public DateTime UpdatedAt { get; set; }
         
@@ -61,9 +61,9 @@ namespace Dtos.RoBoard
     {
         public Guid RepairOrderId { get; set; }
         
-        public Guid FromStatusId { get; set; }
+        public int FromStatusId { get; set; } // Changed from Guid to int
         
-        public Guid ToStatusId { get; set; }
+        public int ToStatusId { get; set; } // Changed from Guid to int
         
         public bool IsValid { get; set; }
         

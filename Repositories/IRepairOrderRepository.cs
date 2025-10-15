@@ -18,13 +18,13 @@ namespace Repositories
         Task<bool> ExistsAsync(Guid repairOrderId);
 
         // Kanban Board specific queries
-        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId);
+        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);
         Task<IEnumerable<RepairOrder>> GetRepairOrdersForKanbanAsync(RoBoardFiltersDto filters = null);
         Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync();
 
         // Status update operations for drag-drop
-        Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, Guid newStatusId, string changeNote = null);
+        Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string changeNote = null);
         Task<IEnumerable<RepairOrder>> BatchUpdateStatusAsync(List<UpdateRoBoardStatusDto> updates);
 
         // List view specific queries with optimized projections
@@ -36,12 +36,12 @@ namespace Repositories
             int pageSize = 50);
 
         // Statistics and aggregations
-        Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null);
+        Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int> statusIds = null);
         Task<Dictionary<string, object>> GetKanbanStatisticsAsync(RoBoardFiltersDto filters = null);
 
         // Validation and business rules
-        Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId);
-        Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(Guid statusId);
+        Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId);
+        Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId);
 
         // User/Customer specific queries (User-centric architecture)
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByUserIdAsync(string userId);
@@ -50,7 +50,7 @@ namespace Repositories
         // Advanced filtering and search
         Task<IEnumerable<RepairOrder>> SearchRepairOrdersAsync(
             string searchText,
-            List<Guid> statusIds = null,
+            List<int> statusIds = null,
             List<Guid> branchIds = null,
             DateTime? fromDate = null,
             DateTime? toDate = null);
@@ -74,7 +74,7 @@ namespace Repositories
         // Archive Support Methods
         Task<RepairOrder?> GetRepairOrderByIdAsync(Guid repairOrderId);
         Task<RepairOrder> AddAsync(RepairOrder repairOrder);
-        Task<IEnumerable<RepairOrder>> GetOrdersForAutoArchiveAsync(Guid statusId, DateTime cutoffDate);
+        Task<IEnumerable<RepairOrder>> GetOrdersForAutoArchiveAsync(int statusId, DateTime cutoffDate);
         Task<bool> RestoreArchivedRepairOrderAsync(Guid repairOrderId);
         Task<bool> UpdateCompletionStatusAsync(Guid repairOrderId, bool isVehiclePickedUp, DateTime? vehiclePickupDate, bool isFullyPaid, DateTime? fullPaymentDate, string? notes = null);
     }

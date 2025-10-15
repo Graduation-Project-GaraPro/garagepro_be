@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -481,52 +481,48 @@ namespace Garage_pro_api.DbInit
                 var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
                 var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
+                // Create default colors if they don't exist
+                var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ?? 
+                              new Color { ColorName = "Red", HexCode = "#FF0000" };
+                var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ?? 
+                                 new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
+                var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ?? 
+                                new Color { ColorName = "Green", HexCode = "#00FF00" };
+
+                // Add colors to context if they were newly created
+                if (!_context.Colors.Any(c => c.ColorName == "Red"))
+                    _context.Colors.Add(redColor);
+                if (!_context.Colors.Any(c => c.ColorName == "Yellow"))
+                    _context.Colors.Add(yellowColor);
+                if (!_context.Colors.Any(c => c.ColorName == "Green"))
+                    _context.Colors.Add(greenColor);
+
+                await _context.SaveChangesAsync();
+
+                // Only create labels if we have the corresponding order statuses
                 if (pendingStatus != null && inProgressStatus != null && completedStatus != null)
                 {
-                    // Create default colors if they don't exist
-                    var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ?? 
-                                  new Color { ColorName = "Red", HexCode = "#FF0000" };
-                    var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ?? 
-                                     new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
-                    var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ?? 
-                                    new Color { ColorName = "Green", HexCode = "#00FF00" };
-
-                    // Add colors to context if they were newly created
-                    if (!_context.Colors.Any(c => c.ColorName == "Red"))
-                        _context.Colors.Add(redColor);
-                    if (!_context.Colors.Any(c => c.ColorName == "Yellow"))
-                        _context.Colors.Add(yellowColor);
-                    if (!_context.Colors.Any(c => c.ColorName == "Green"))
-                        _context.Colors.Add(greenColor);
-
-                    await _context.SaveChangesAsync();
-
-                    // Get the actual color entities from DB
-                    redColor = await _context.Colors.FirstAsync(c => c.ColorName == "Red");
-                    yellowColor = await _context.Colors.FirstAsync(c => c.ColorName == "Yellow");
-                    greenColor = await _context.Colors.FirstAsync(c => c.ColorName == "Green");
-
                     var labels = new List<Label>
                     {
                         new Label 
                         { 
-                            LabelName = "New", 
-                            Description = "Newly created order", 
-                            OrderStatusId = pendingStatus.OrderStatusId,
+                            LabelName = "Pending", 
+                            Description = "Order is waiting to be processed", 
+                            OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
                             ColorId = redColor.ColorId
                         },
                         new Label 
                         { 
                             LabelName = "In Progress", 
                             Description = "Order is being worked on", 
-                            OrderStatusId = inProgressStatus.OrderStatusId,
+                            OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
                             ColorId = yellowColor.ColorId
                         },
                         new Label 
                         { 
                             LabelName = "Done", 
                             Description = "Order completed", 
-                            OrderStatusId = completedStatus.OrderStatusId,
+                            OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
                             ColorId = greenColor.ColorId
                         }
                     };

@@ -22,7 +22,7 @@ namespace Services
             return await _labelRepository.GetAllAsync();
         }
 
-        public async Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(Guid orderStatusId)
+        public async Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(int orderStatusId) // Changed from Guid to int
         {
             // Validate that order status exists
             if (!await _orderStatusRepository.ExistsAsync(orderStatusId))

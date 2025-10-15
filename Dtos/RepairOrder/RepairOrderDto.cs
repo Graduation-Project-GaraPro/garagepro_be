@@ -55,7 +55,7 @@ namespace Dtos.RepairOrder
         // Foreign keys
         public Guid BranchId { get; set; }
         
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
         
         public Guid VehicleId { get; set; }
         
@@ -168,7 +168,7 @@ namespace Dtos.RepairOrder
         // Foreign keys
         public Guid BranchId { get; set; }
         
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
         
         public Guid VehicleId { get; set; }
         

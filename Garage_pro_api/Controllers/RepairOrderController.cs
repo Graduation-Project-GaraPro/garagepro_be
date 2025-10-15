@@ -167,7 +167,7 @@ namespace Garage_pro_api.Controllers
                 // Get the default "Pending" status
                 var statusColumns = await _orderStatusService.GetOrderStatusesByColumnsAsync();
                 var pendingStatus = statusColumns.Pending.FirstOrDefault();
-                var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : Guid.NewGuid();
+                var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : 1;
 
                 // Create a new repair order based on the simplified DTO
                 var repairOrder = new BusinessObject.RepairOrder
@@ -247,7 +247,7 @@ namespace Garage_pro_api.Controllers
             existingRepairOrder.ArchivedAt = updateRepairOrderDto.ArchivedAt;
             existingRepairOrder.ArchivedByUserId = updateRepairOrderDto.ArchivedByUserId;
             existingRepairOrder.BranchId = updateRepairOrderDto.BranchId;
-            existingRepairOrder.StatusId = updateRepairOrderDto.StatusId;
+            existingRepairOrder.StatusId = updateRepairOrderDto.StatusId; // This is now an int
 
             try
             {
@@ -295,7 +295,7 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/status/{statusId}
         [HttpGet("status/{statusId}")]
         [EnableQuery]
-        public async Task<IActionResult> GetRepairOrdersByStatus(Guid statusId)
+        public async Task<IActionResult> GetRepairOrdersByStatus(int statusId) // Changed from Guid to int
         {
             var repairOrders = await _repairOrderService.GetRepairOrdersByStatusAsync(statusId);
             return Ok(repairOrders);

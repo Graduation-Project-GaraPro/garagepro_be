@@ -186,7 +186,7 @@ namespace Services
         }
        
 
-        public async Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, Guid fromStatusId, Guid toStatusId)
+        public async Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, int fromStatusId, int toStatusId) // Changed from Guid to int
         {
             var validation = new RoBoardMoveValidationDto
             {
@@ -252,7 +252,7 @@ namespace Services
         public async Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder)
         {
             // Set default status to "Pending" if not specified
-            if (repairOrder.StatusId == Guid.Empty)
+            if (repairOrder.StatusId == 0) // Changed from Guid.Empty to 0 for int
             {
                 var pendingStatus = (await _orderStatusRepository.GetAllAsync())
                     .FirstOrDefault(s => s.StatusName == "Pending");
@@ -260,12 +260,22 @@ namespace Services
                 {
                     repairOrder.StatusId = pendingStatus.OrderStatusId;
                 }
+                else
+                {
+                    // If no pending status exists, create a default one
+                    var defaultStatus = new OrderStatus
+                    {
+                        StatusName = "Pending"
+                    };
+                    var createdStatus = await _orderStatusRepository.CreateAsync(defaultStatus);
+                    repairOrder.StatusId = createdStatus.OrderStatusId;
+                }
             }
 
             var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
 
             // Send real-time update via SignalR
-            if (_hubContext != null && createdRepairOrder != null)
+            if (_hubContext != null)
             {
                 var cardDto = MapToRoBoardCardDto(createdRepairOrder);
                 await _hubContext.Clients.All.SendAsync("RepairOrderCreated", cardDto);
@@ -307,7 +317,7 @@ namespace Services
         }
 
         // NEW: Get repair orders by status
-        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId)
+        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId) // Changed from Guid to int
         {
             return await _repairOrderRepository.GetRepairOrdersByStatusAsync(statusId);
         }
@@ -354,7 +364,7 @@ namespace Services
             return statistics;
         }
 
-        public async Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null)
+        public async Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int> statusIds = null) // Changed from Guid to int
         {
             return await _repairOrderRepository.GetRepairOrderCountsByStatusAsync(statusIds);
         }
@@ -381,7 +391,7 @@ namespace Services
 
         public async Task<IEnumerable<RoBoardCardDto>> SearchRepairOrdersAsync(
             string searchText,
-            List<Guid> statusIds = null,
+            List<int> statusIds = null, // Changed from Guid to int
             List<Guid> branchIds = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
@@ -395,12 +405,12 @@ namespace Services
 
         #region Business Rules and Validation
 
-        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId)
+        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId) // Changed from Guid to int
         {
             return await _repairOrderRepository.CanMoveToStatusAsync(repairOrderId, newStatusId);
         }
 
-        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(Guid statusId)
+        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
         {
             var labels = await _repairOrderRepository.GetAvailableLabelsForStatusAsync(statusId);
             return labels.Select(MapToRoBoardLabelDto);

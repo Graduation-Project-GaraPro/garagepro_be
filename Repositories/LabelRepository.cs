@@ -20,7 +20,7 @@ namespace Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<Label>> GetByOrderStatusIdAsync(Guid orderStatusId)
+        public async Task<IEnumerable<Label>> GetByOrderStatusIdAsync(int orderStatusId) // Changed from Guid to int
         {
             return await _context.Labels
                 .Include(l => l.OrderStatus)

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -850,11 +850,21 @@ namespace DataAccessLayer
                 .HasForeignKey(l => l.OrderStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Configure OrderStatus to use identity
+            modelBuilder.Entity<OrderStatus>(entity =>
+            {
+                entity.HasKey(e => e.OrderStatusId);
+                entity.Property(e => e.OrderStatusId)
+                      .ValueGeneratedOnAdd(); // Identity column
+                entity.Property(e => e.StatusName)
+                      .IsRequired()
+                      .HasMaxLength(100);
+            });
+
             // RepairOrderService configuration (Junction table)
             modelBuilder.Entity<RepairOrderService>(entity =>
             {
                 entity.HasKey(e => e.RepairOrderServiceId);
-                entity.Property(e => e.ServicePrice).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.ActualDuration).HasColumnType("decimal(18,2)");
                 entity.Property(e => e.Notes).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();

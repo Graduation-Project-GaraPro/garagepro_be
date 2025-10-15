@@ -15,7 +15,7 @@ namespace BusinessObject
 
         [Required]
         [ForeignKey(nameof(OrderStatus))]
-        public Guid OrderStatusId { get; set; }
+        public int OrderStatusId { get; set; } // Changed from Guid to int
 
         [Required]
         [MaxLength(100)]

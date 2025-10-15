@@ -15,7 +15,7 @@ namespace Services
         
         // Drag & Drop Operations
         Task<RoBoardStatusUpdateResultDto> UpdateRepairOrderStatusAsync(UpdateRoBoardStatusDto updateDto);
-        Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, Guid fromStatusId, Guid toStatusId);
+        Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, int fromStatusId, int toStatusId);
         
         // CRUD Operations
         Task<RoBoardCardDto?> GetRepairOrderCardAsync(Guid repairOrderId);
@@ -29,25 +29,25 @@ namespace Services
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
         
         // NEW: Get repair orders by status
-        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId);
+        Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);
         
         // NEW: Map RepairOrder to RepairOrderDto
         RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder);
         
         // Statistics and Analytics
         Task<RoBoardStatisticsDto> GetBoardStatisticsAsync(RoBoardFiltersDto filters = null);
-        Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null);
+        Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int> statusIds = null);
         
         // User-specific Operations
         Task<IEnumerable<RoBoardCardDto>> GetRepairOrdersByUserAsync(string userId);
         Task<IEnumerable<RoBoardCardDto>> GetRepairOrdersByBranchAsync(Guid branchId);
         
         // Search and Filtering
-        Task<IEnumerable<RoBoardCardDto>> SearchRepairOrdersAsync(string searchText, List<Guid> statusIds = null, List<Guid> branchIds = null, DateTime? fromDate = null, DateTime? toDate = null);
+        Task<IEnumerable<RoBoardCardDto>> SearchRepairOrdersAsync(string searchText, List<int> statusIds = null, List<Guid> branchIds = null, DateTime? fromDate = null, DateTime? toDate = null);
         
         // Business Rules and Validation
-        Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId);
-        Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(Guid statusId);            
+        Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId);
+        Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId);            
         
         // Board Configuration
         Task<RoBoardConfigurationDto> GetBoardConfigurationAsync();

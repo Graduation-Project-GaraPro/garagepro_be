@@ -34,7 +34,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/label/by-orderstatus/{orderStatusId}
         [HttpGet("by-orderstatus/{orderStatusId}")]
-        public async Task<IActionResult> GetLabelsByOrderStatusId(Guid orderStatusId)
+        public async Task<IActionResult> GetLabelsByOrderStatusId(int orderStatusId) // Changed from Guid to int
         {
             try
             {
@@ -197,7 +197,7 @@ namespace Garage_pro_api.Controllers
         public string LabelName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public Guid ColorId { get; set; }
-        public Guid OrderStatusId { get; set; }
+        public int OrderStatusId { get; set; } // Changed from Guid to int
     }
 
     public class UpdateLabelRequest
@@ -205,6 +205,6 @@ namespace Garage_pro_api.Controllers
         public string LabelName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public Guid ColorId { get; set; }
-        public Guid OrderStatusId { get; set; }
+        public int OrderStatusId { get; set; } // Changed from Guid to int
     }
 }

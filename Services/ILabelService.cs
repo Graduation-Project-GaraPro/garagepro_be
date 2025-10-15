@@ -6,7 +6,7 @@ namespace Services
     public interface ILabelService
     {
         Task<IEnumerable<Label>> GetAllLabelsAsync();
-        Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(Guid orderStatusId);
+        Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(int orderStatusId); // Changed from Guid to int
         Task<Label?> GetLabelByIdAsync(Guid id);
         Task<Label> CreateLabelAsync(Label label);
         Task<Label> UpdateLabelAsync(Label label);

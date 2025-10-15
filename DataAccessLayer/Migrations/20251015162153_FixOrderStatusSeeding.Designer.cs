@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251015052703_AddRecommendationFieldsToQuotationServicePart")]
-    partial class AddRecommendationFieldsToQuotationServicePart
+    [Migration("20251015162153_FixOrderStatusSeeding")]
+    partial class FixOrderStatusSeeding
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -851,8 +851,8 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("OrderStatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("OrderStatusId")
+                        .HasColumnType("int");
 
                     b.HasKey("LabelId");
 
@@ -964,9 +964,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
                 {
-                    b.Property<Guid>("OrderStatusId")
+                    b.Property<int>("OrderStatusId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderStatusId"));
 
                     b.Property<string>("StatusName")
                         .IsRequired()
@@ -1470,8 +1472,8 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("RoType")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("StatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StatusId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1519,9 +1521,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("ServicePrice")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("RepairOrderServiceId");
 

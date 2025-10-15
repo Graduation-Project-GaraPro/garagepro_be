@@ -46,7 +46,7 @@ namespace Dtos.RoBoard
         public string ArchivedBy { get; set; }
         
         // Current status information
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; }
         
         public string StatusName { get; set; }
         
