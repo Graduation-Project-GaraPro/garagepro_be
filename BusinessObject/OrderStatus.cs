@@ -10,7 +10,7 @@ namespace BusinessObject
     public class OrderStatus
     {
         [Key]
-        public int OrderStatusId { get; set; } // Changed from Guid to int
+        public int OrderStatusId { get; set; } // 1 - Pending, 2 - In Progress, 3 - Completed
 
         [Required]
         [MaxLength(100)]
