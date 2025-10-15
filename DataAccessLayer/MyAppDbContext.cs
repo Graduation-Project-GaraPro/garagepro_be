@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -41,6 +41,8 @@ namespace DataAccessLayer
         public DbSet<Quotation> Quotations { get; set; }
         public DbSet<QuotationService> QuotationServices { get; set; }
         public DbSet<QuotationPart> QuotationParts { get; set; }
+        // Add the new QuotationServicePart entity
+        public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
 
         // Junction tables
         public DbSet<JobPart> JobParts { get; set; }
@@ -119,6 +121,11 @@ namespace DataAccessLayer
                       .WithMany()
                       .HasForeignKey(q => q.VehicleId)
                       .OnDelete(DeleteBehavior.Restrict);
+                      
+                // Configure the Status property to use the enum
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .HasMaxLength(20);
             });
 
             modelBuilder.Entity<QuotationService>(entity =>
@@ -132,13 +139,55 @@ namespace DataAccessLayer
                       .WithMany()
                       .HasForeignKey(qs => qs.ServiceId)
                       .OnDelete(DeleteBehavior.Restrict);
+                      
+                // Add the new relationship with QuotationServicePart
+                entity.HasMany(qs => qs.QuotationServiceParts)
+                      .WithOne(qsp => qsp.QuotationService)
+                      .HasForeignKey(qsp => qsp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
             });
 
+            /*
             modelBuilder.Entity<QuotationPart>(entity =>
             {
                 entity.HasOne(qp => qp.Quotation)
                       .WithMany(q => q.QuotationParts)
                       .HasForeignKey(qp => qp.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qp => qp.Part)
+                      .WithMany()
+                      .HasForeignKey(qp => qp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+                      
+                // Add the new relationship with QuotationService
+                entity.HasOne(qp => qp.QuotationService)
+                      .WithMany(qs => qs.QuotationParts) // Add QuotationParts collection to QuotationService
+                      .HasForeignKey(qp => qp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+            */
+
+            // Add the new QuotationServicePart configuration
+            modelBuilder.Entity<QuotationServicePart>(entity =>
+            {
+                entity.HasOne(qsp => qsp.QuotationService)
+                      .WithMany(qs => qs.QuotationServiceParts)
+                      .HasForeignKey(qsp => qsp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qsp => qsp.Part)
+                      .WithMany()
+                      .HasForeignKey(qsp => qsp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+            
+            // Configure the relationship between QuotationPart and QuotationService
+            modelBuilder.Entity<QuotationPart>(entity =>
+            {
+                entity.HasOne(qp => qp.QuotationService)
+                      .WithMany() // Remove the incorrect collection reference
+                      .HasForeignKey(qp => qp.QuotationServiceId)
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(qp => qp.Part)

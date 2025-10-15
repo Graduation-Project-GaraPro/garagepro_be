@@ -56,6 +56,9 @@ builder.Services.AddCors(options =>
         });
 });
 
+// Add SignalR services
+builder.Services.AddSignalR();
+
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -227,6 +230,9 @@ builder.Services.AddScoped<IColorService, ColorService>();
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
 builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
+// Add this line to register the SignalR hub
+builder.Services.AddSignalR();
+
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddScoped<IJobService>(provider =>
@@ -251,7 +257,9 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 // Quotation services
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
-builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+// Update to use the new QuotationServicePartRepository
+// builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServicePartRepository, Repositories.QuotationRepositories.QuotationServicePartRepository>();
 builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
 
 // Vehicle brand, model, and color repositories
@@ -325,6 +333,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Use CORS with the specific policy for your frontend
+app.UseCors("AllowFrontend");
 
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
@@ -341,6 +351,10 @@ app.UseAuthorization();            // phải chạy trước để gắn User h�
 app.UseSecurityPolicyEnforcement();
 
 app.MapControllers();
+
+// Add this line to map the SignalR hub
+app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+
 // Initialize database
 
 using (var scope = app.Services.CreateScope())

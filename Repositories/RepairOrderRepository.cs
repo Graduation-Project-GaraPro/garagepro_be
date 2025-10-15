@@ -192,15 +192,7 @@ namespace Repositories
                 if (repairOrder != null)
                 {
                     repairOrder.StatusId = update.NewStatusId;
-                    
-                    if (!string.IsNullOrEmpty(update.ChangeNote))
-                    {
-                        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                        var statusChangeNote = $"[{timestamp}] Batch update: {update.ChangeNote}";
-                        repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note) 
-                            ? statusChangeNote 
-                            : $"{repairOrder.Note}\n{statusChangeNote}";
-                    }
+                                      
                     
                     updatedOrders.Add(repairOrder);
                 }

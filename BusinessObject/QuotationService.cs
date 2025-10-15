@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -33,5 +34,9 @@ namespace BusinessObject
         // Navigation properties
         public virtual Quotation Quotation { get; set; }
         public virtual Service Service { get; set; }
+        // Add the new relationship with QuotationServicePart
+        public virtual ICollection<QuotationServicePart> QuotationServiceParts { get; set; } = new List<QuotationServicePart>();
+        // Remove the relationship with QuotationPart
+        // public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
     }
 }

@@ -23,7 +23,9 @@ namespace Dtos.Quotations
         public string CustomerName { get; set; }
         public string VehicleInfo { get; set; }
         public ICollection<QuotationServiceDto> QuotationServices { get; set; }
-        public ICollection<QuotationPartDto> QuotationParts { get; set; }
+        // Remove direct QuotationParts and add QuotationServiceParts
+        // public ICollection<QuotationPartDto> QuotationParts { get; set; }
+        public ICollection<QuotationServicePartDto> QuotationServiceParts { get; set; }
     }
 
     public class QuotationServiceDto
@@ -40,14 +42,20 @@ namespace Dtos.Quotations
         // Service details
         public string ServiceName { get; set; }
         public string ServiceDescription { get; set; }
+        
+        // Add QuotationServiceParts for this service
+        public ICollection<QuotationServicePartDto> QuotationServiceParts { get; set; }
     }
 
-    public class QuotationPartDto
+    public class QuotationServicePartDto
     {
-        public Guid QuotationPartId { get; set; }
-        public Guid QuotationId { get; set; }
+        public Guid QuotationServicePartId { get; set; }
+        public Guid QuotationServiceId { get; set; }
         public Guid PartId { get; set; }
-        public bool IsSelected { get; set; }
+        public bool IsSelected { get; set; } // Customer selection
+        // Add the property for manager recommendation
+        public bool IsRecommended { get; set; } // Manager recommendation
+        public string RecommendationNote { get; set; }
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
@@ -72,7 +80,8 @@ namespace Dtos.Quotations
         public string Note { get; set; }
         
         public ICollection<CreateQuotationServiceDto> QuotationServices { get; set; }
-        public ICollection<CreateQuotationPartDto> QuotationParts { get; set; }
+        // Remove direct QuotationParts and add QuotationServiceParts
+        // public ICollection<CreateQuotationPartDto> QuotationParts { get; set; }
     }
 
     public class CreateQuotationServiceDto
@@ -86,14 +95,21 @@ namespace Dtos.Quotations
         public decimal Price { get; set; }
 
         public decimal Quantity { get; set; } = 1;
+        
+        // Add QuotationServiceParts for this service
+        public ICollection<CreateQuotationServicePartDto> QuotationServiceParts { get; set; }
     }
 
-    public class CreateQuotationPartDto
+    public class CreateQuotationServicePartDto
     {
         [Required]
         public Guid PartId { get; set; }
 
-        public bool IsSelected { get; set; } = false;
+        public bool IsSelected { get; set; } = false; // Customer selection
+        
+        // Add the property for manager recommendation
+        public bool IsRecommended { get; set; } = false; // Manager recommendation
+        public string RecommendationNote { get; set; }
 
         [Required]
         public decimal Price { get; set; }
@@ -126,7 +142,9 @@ namespace Dtos.Quotations
         public string CustomerNote { get; set; }
         
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }
-        public ICollection<CustomerQuotationPartDto> SelectedParts { get; set; }
+        // Change to use QuotationServicePart instead of direct QuotationPart
+        // public ICollection<CustomerQuotationPartDto> SelectedParts { get; set; }
+        public ICollection<CustomerQuotationServicePartDto> SelectedServiceParts { get; set; }
     }
 
     public class CustomerQuotationServiceDto
@@ -135,9 +153,9 @@ namespace Dtos.Quotations
         public Guid QuotationServiceId { get; set; }
     }
 
-    public class CustomerQuotationPartDto
+    public class CustomerQuotationServicePartDto
     {
         [Required]
-        public Guid QuotationPartId { get; set; }
+        public Guid QuotationServicePartId { get; set; }
     }
 }

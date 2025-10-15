@@ -30,8 +30,6 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                .Include(q => q.QuotationParts)
-                .ThenInclude(qp => qp.Part)
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 
@@ -42,8 +40,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                .Include(q => q.QuotationParts)
-                .ThenInclude(qp => qp.Part)
+                // Remove the direct QuotationParts relationship
+                // .Include(q => q.QuotationParts)
+                // .ThenInclude(qp => qp.Part)
                 .Where(q => q.InspectionId == inspectionId)
                 .ToListAsync();
         }
@@ -55,8 +54,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                .Include(q => q.QuotationParts)
-                .ThenInclude(qp => qp.Part)
+                // Remove the direct QuotationParts relationship
+                // .Include(q => q.QuotationParts)
+                // .ThenInclude(qp => qp.Part)
                 .Where(q => q.UserId == userId)
                 .ToListAsync();
         }
@@ -68,8 +68,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                .Include(q => q.QuotationParts)
-                .ThenInclude(qp => qp.Part)
+                // Remove the direct QuotationParts relationship
+                // .Include(q => q.QuotationParts)
+                // .ThenInclude(qp => qp.Part)
                 .ToListAsync();
         }
 

@@ -15,7 +15,6 @@ namespace Services
         
         // Drag & Drop Operations
         Task<RoBoardStatusUpdateResultDto> UpdateRepairOrderStatusAsync(UpdateRoBoardStatusDto updateDto);
-        Task<BatchRoBoardStatusUpdateResultDto> BatchUpdateRepairOrderStatusAsync(BatchUpdateRoBoardStatusDto batchUpdateDto);
         Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, Guid fromStatusId, Guid toStatusId);
         
         // CRUD Operations
@@ -24,15 +23,13 @@ namespace Services
         Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder);
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<bool> RepairOrderExistsAsync(Guid repairOrderId);
-        
+        Task<RepairOrder> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
+
         // NEW: Get all repair orders with OData support
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
         
         // NEW: Get repair orders by status
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId);
-        
-        // NEW: Get repair order with full details
-        Task<RepairOrder> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
         
         // NEW: Map RepairOrder to RepairOrderDto
         RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder);
@@ -50,19 +47,10 @@ namespace Services
         
         // Business Rules and Validation
         Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId);
-        Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(Guid statusId);
-        
-        // Audit and History
-        Task<IEnumerable<RoBoardCardDto>> GetRecentlyUpdatedRepairOrdersAsync(int hours = 24);
-        
-        // Simplified 3-Status Operations (Pending, In Progress, Completed)
-        Task<RoBoardColumnDto> GetPendingOrdersAsync(RoBoardFiltersDto filters = null);
-        Task<RoBoardColumnDto> GetInProgressOrdersAsync(RoBoardFiltersDto filters = null);
-        Task<RoBoardColumnDto> GetCompletedOrdersAsync(RoBoardFiltersDto filters = null);
+        Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(Guid statusId);            
         
         // Board Configuration
         Task<RoBoardConfigurationDto> GetBoardConfigurationAsync();
-        Task<RoBoardPermissionsDto> GetUserPermissionsAsync(string userId, List<string> userRoles);
         
         // Archive Management Operations
         Task<ArchiveOperationResultDto> ArchiveRepairOrderAsync(ArchiveRepairOrderDto archiveDto);

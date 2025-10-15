@@ -12,31 +12,11 @@ namespace Dtos.RoBoard
         [Required]
         public Guid NewStatusId { get; set; }
         
-        public Guid? PreviousStatusId { get; set; }
+        public List<Guid>? LabelsToAdd { get; set; } = new List<Guid>();
         
-        // Optional: Specific position within the new column
-        public int? NewOrderIndex { get; set; }
+        public List<Guid>? LabelsToRemove { get; set; } = new List<Guid>();
         
-        // Optional: Add or remove specific labels during the move
-        public List<Guid> LabelsToAdd { get; set; } = new List<Guid>();
-        
-        public List<Guid> LabelsToRemove { get; set; } = new List<Guid>();
-        
-        // Optional: Add notes about the status change
-        [MaxLength(500)]
-        public string ChangeNote { get; set; }
-        
-        // For validation: Frontend can send this to ensure no conflicts
         public DateTime? LastModifiedAt { get; set; }
-    }
-    
-    public class BatchUpdateRoBoardStatusDto
-    {
-        [Required]
-        public List<UpdateRoBoardStatusDto> Updates { get; set; } = new List<UpdateRoBoardStatusDto>();
-        
-        [MaxLength(500)]
-        public string BatchNote { get; set; }
     }
     
     public class RoBoardStatusUpdateResultDto

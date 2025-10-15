@@ -1,5 +1,6 @@
 using AutoMapper;
 using BusinessObject;
+using BusinessObject.Enums; // Add this using statement
 using Dtos.Quotations;
 using Repositories.QuotationRepositories;
 using System;
@@ -9,22 +10,22 @@ using System.Threading.Tasks;
 
 namespace Services.QuotationServices
 {
-    public class QuotationManagementService : IQuotationService // Renamed class to avoid conflict
+    public class QuotationManagementService : IQuotationService
     {
         private readonly IQuotationRepository _quotationRepository;
         private readonly IQuotationServiceRepository _quotationServiceRepository;
-        private readonly IQuotationPartRepository _quotationPartRepository;
+        private readonly IQuotationServicePartRepository _quotationServicePartRepository; // Changed from IQuotationPartRepository
         private readonly IMapper _mapper;
 
         public QuotationManagementService(
             IQuotationRepository quotationRepository,
             IQuotationServiceRepository quotationServiceRepository,
-            IQuotationPartRepository quotationPartRepository,
+            IQuotationServicePartRepository quotationServicePartRepository, // Changed from IQuotationPartRepository
             IMapper mapper)
         {
             _quotationRepository = quotationRepository;
             _quotationServiceRepository = quotationServiceRepository;
-            _quotationPartRepository = quotationPartRepository;
+            _quotationServicePartRepository = quotationServicePartRepository; // Changed from _quotationPartRepository
             _mapper = mapper;
         }
 
@@ -37,7 +38,7 @@ namespace Services.QuotationServices
                 UserId = createQuotationDto.UserId,
                 VehicleId = createQuotationDto.VehicleId,
                 Note = createQuotationDto.Note,
-                Status = "Pending",
+                Status = QuotationStatus.Pending, // Use enum instead of string
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -61,34 +62,37 @@ namespace Services.QuotationServices
                     
                     await _quotationServiceRepository.CreateAsync(quotationService);
                     createdQuotation.QuotationServices.Add(quotationService);
-                }
-            }
-
-            // Create quotation parts
-            if (createQuotationDto.QuotationParts != null)
-            {
-                foreach (var partDto in createQuotationDto.QuotationParts)
-                {
-                    var quotationPart = new QuotationPart
-                    {
-                        QuotationId = createdQuotation.QuotationId,
-                        PartId = partDto.PartId,
-                        IsSelected = partDto.IsSelected,
-                        Price = partDto.Price,
-                        Quantity = partDto.Quantity,
-                        TotalPrice = partDto.Price * partDto.Quantity,
-                        CreatedAt = DateTime.UtcNow
-                    };
                     
-                    await _quotationPartRepository.CreateAsync(quotationPart);
-                    createdQuotation.QuotationParts.Add(quotationPart);
+                    // Create quotation service parts for this service
+                    if (serviceDto.QuotationServiceParts != null)
+                    {
+                        foreach (var partDto in serviceDto.QuotationServiceParts)
+                        {
+                            var quotationServicePart = new QuotationServicePart
+                            {
+                                QuotationServiceId = quotationService.QuotationServiceId,
+                                PartId = partDto.PartId,
+                                IsSelected = partDto.IsSelected,
+                                // Set the new properties
+                                IsRecommended = partDto.IsRecommended,
+                                RecommendationNote = partDto.RecommendationNote,
+                                Price = partDto.Price,
+                                Quantity = partDto.Quantity,
+                                TotalPrice = partDto.Price * partDto.Quantity,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            
+                            await _quotationServicePartRepository.CreateAsync(quotationServicePart);
+                            quotationService.QuotationServiceParts.Add(quotationServicePart);
+                        }
+                    }
                 }
             }
 
-            // Calculate total amount
+            // Calculate total amount (services + parts)
             createdQuotation.TotalAmount = 
                 createdQuotation.QuotationServices.Sum(qs => qs.TotalPrice) +
-                createdQuotation.QuotationParts.Sum(qp => qp.TotalPrice);
+                createdQuotation.QuotationServices.Sum(qs => qs.QuotationServiceParts.Sum(qsp => qsp.TotalPrice));
 
             await _quotationRepository.UpdateAsync(createdQuotation);
 
@@ -138,7 +142,8 @@ namespace Services.QuotationServices
             if (existingQuotation == null)
                 throw new ArgumentException($"Quotation with ID {quotationId} not found.");
 
-            existingQuotation.Status = updateStatusDto.Status;
+            // Convert string status to enum
+            existingQuotation.Status = Enum.Parse<QuotationStatus>(updateStatusDto.Status);
             
             if (updateStatusDto.CustomerResponseAt.HasValue)
             {
@@ -166,12 +171,13 @@ namespace Services.QuotationServices
 
         public async Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto)
         {
+            // Get the quotation with all related data
             var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
             if (quotation == null)
                 throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
 
             // Update quotation status
-            quotation.Status = responseDto.Status;
+            quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
             
             // Update selected services
@@ -188,24 +194,31 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Update selected parts
-            if (responseDto.SelectedParts != null)
+            // Update selected service parts
+            if (responseDto.SelectedServiceParts != null)
             {
-                foreach (var selectedPart in responseDto.SelectedParts)
+                foreach (var selectedServicePart in responseDto.SelectedServiceParts)
                 {
-                    var quotationPart = quotation.QuotationParts
-                        .FirstOrDefault(qp => qp.QuotationPartId == selectedPart.QuotationPartId);
-                    if (quotationPart != null)
+                    // Find the service part in all quotation services
+                    var quotationServicePart = quotation.QuotationServices
+                        .SelectMany(qs => qs.QuotationServiceParts)
+                        .FirstOrDefault(qsp => qsp.QuotationServicePartId == selectedServicePart.QuotationServicePartId);
+                        
+                    if (quotationServicePart != null)
                     {
-                        quotationPart.IsSelected = true;
+                        quotationServicePart.IsSelected = true;
                     }
                 }
             }
 
-            // Recalculate total amount based on selected items
+            // Recalculate total amount based on selected services and parts
             quotation.TotalAmount = 
                 quotation.QuotationServices.Where(qs => qs.IsSelected).Sum(qs => qs.TotalPrice) +
-                quotation.QuotationParts.Where(qp => qp.IsSelected).Sum(qp => qp.TotalPrice);
+                quotation.QuotationServices
+                    .Where(qs => qs.IsSelected)
+                    .SelectMany(qs => qs.QuotationServiceParts)
+                    .Where(qsp => qsp.IsSelected)
+                    .Sum(qsp => qsp.TotalPrice);
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);

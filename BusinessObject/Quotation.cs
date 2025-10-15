@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using BusinessObject.Authentication;
+using BusinessObject.Enums; // Add this using statement
 
 namespace BusinessObject
 {
@@ -27,8 +28,8 @@ namespace BusinessObject
 
         public DateTime? CustomerResponseAt { get; set; }
 
-        [MaxLength(20)]
-        public string Status { get; set; } // Pending, Sent, Approved, Rejected, Expired
+        // Change the Status property to use the enum
+        public QuotationStatus Status { get; set; } // Pending, Sent, Approved, Rejected, Expired
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
@@ -46,6 +47,7 @@ namespace BusinessObject
         public virtual ApplicationUser User { get; set; } // Customer
         public virtual Vehicle Vehicle { get; set; }
         public virtual ICollection<QuotationService> QuotationServices { get; set; } = new List<QuotationService>();
-        public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
+        // Remove the direct relationship with QuotationPart
+        // public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
     }
 }

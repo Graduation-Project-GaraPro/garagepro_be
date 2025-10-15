@@ -213,8 +213,52 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Implementation would go here
-            return NoContent();
+            // First, get the existing repair order to preserve customer and vehicle information
+            var existingRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(id);
+            if (existingRepairOrder == null)
+            {
+                return NotFound();
+            }
+
+            // Ensure customer and vehicle cannot be changed to different entities
+            if (updateRepairOrderDto.UserId != existingRepairOrder.UserId)
+            {
+                return BadRequest("Cannot change customer. Please create a new repair order for a different customer.");
+            }
+
+            if (updateRepairOrderDto.VehicleId != existingRepairOrder.VehicleId)
+            {
+                return BadRequest("Cannot change vehicle. Please create a new repair order for a different vehicle.");
+            }
+
+            // Map the update DTO to the existing repair order
+            existingRepairOrder.ReceiveDate = updateRepairOrderDto.ReceiveDate;
+            existingRepairOrder.RoType = updateRepairOrderDto.RoType;
+            existingRepairOrder.EstimatedCompletionDate = updateRepairOrderDto.EstimatedCompletionDate;
+            existingRepairOrder.CompletionDate = updateRepairOrderDto.CompletionDate;
+            existingRepairOrder.Cost = updateRepairOrderDto.Cost;
+            existingRepairOrder.EstimatedAmount = updateRepairOrderDto.EstimatedAmount;
+            existingRepairOrder.PaidAmount = updateRepairOrderDto.PaidAmount;
+            existingRepairOrder.PaidStatus = updateRepairOrderDto.PaidStatus;
+            existingRepairOrder.EstimatedRepairTime = updateRepairOrderDto.EstimatedRepairTime;
+            existingRepairOrder.Note = updateRepairOrderDto.Note;
+            existingRepairOrder.UpdatedAt = DateTime.UtcNow;
+            existingRepairOrder.IsArchived = updateRepairOrderDto.IsArchived;
+            existingRepairOrder.ArchivedAt = updateRepairOrderDto.ArchivedAt;
+            existingRepairOrder.ArchivedByUserId = updateRepairOrderDto.ArchivedByUserId;
+            existingRepairOrder.BranchId = updateRepairOrderDto.BranchId;
+            existingRepairOrder.StatusId = updateRepairOrderDto.StatusId;
+
+            try
+            {
+                var updatedRepairOrder = await _repairOrderService.UpdateRepairOrderAsync(existingRepairOrder);
+                var repairOrderDto = _repairOrderService.MapToRepairOrderDto(updatedRepairOrder);
+                return Ok(repairOrderDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE: api/RepairOrder/5
@@ -256,8 +300,9 @@ namespace Garage_pro_api.Controllers
             var repairOrders = await _repairOrderService.GetRepairOrdersByStatusAsync(statusId);
             return Ok(repairOrders);
         }
-        
+
         // POST: api/RepairOrder/status/update
+        [AllowAnonymous]
         [HttpPost("status/update")]
         public async Task<IActionResult> UpdateRepairOrderStatus([FromBody] UpdateRoBoardStatusDto updateDto)
         {
@@ -275,23 +320,6 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
         
-        // POST: api/RepairOrder/status/batch-update
-        [HttpPost("status/batch-update")]
-        public async Task<IActionResult> BatchUpdateRepairOrderStatus([FromBody] BatchUpdateRoBoardStatusDto batchUpdateDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var result = await _repairOrderService.BatchUpdateRepairOrderStatusAsync(batchUpdateDto);
-            if (!result.OverallSuccess)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
-        }
         
         // POST: api/RepairOrder/archive
         [HttpPost("archive")]

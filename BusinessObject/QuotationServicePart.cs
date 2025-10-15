@@ -4,23 +4,26 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BusinessObject
 {
-    public class QuotationPart
+    public class QuotationServicePart
     {
         [Key]
-        public Guid QuotationPartId { get; set; } = Guid.NewGuid();
+        public Guid QuotationServicePartId { get; set; } = Guid.NewGuid();
 
-        // Remove the direct QuotationId relationship
-        // [Required]
-        // public Guid QuotationId { get; set; }
-
-        // Keep the relationship with QuotationService
-        public Guid? QuotationServiceId { get; set; }
+        [Required]
+        public Guid QuotationServiceId { get; set; }
 
         [Required]
         public Guid PartId { get; set; }
 
         [Required]
-        public bool IsSelected { get; set; } = false; // Customer approval
+        public bool IsSelected { get; set; } = false; // Customer selection
+
+        // Add a property to indicate manager recommendation
+        public bool IsRecommended { get; set; } = false; // Manager recommendation
+
+        // Add an optional note from the manager
+        [MaxLength(500)]
+        public string? RecommendationNote { get; set; } // Made nullable
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; }
@@ -35,10 +38,7 @@ namespace BusinessObject
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        // Remove the direct Quotation navigation property
-        // public virtual Quotation Quotation { get; set; }
-        public virtual Part Part { get; set; }
-        // Add navigation property for QuotationService
         public virtual QuotationService QuotationService { get; set; }
+        public virtual Part Part { get; set; }
     }
 }
