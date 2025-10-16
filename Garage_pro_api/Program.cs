@@ -108,7 +108,7 @@ builder.Services.AddAutoMapper(cfg =>
 builder.Services.AddDbContext<MyAppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
@@ -134,6 +134,7 @@ else
 {
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
 
 // JWT Authentication
@@ -308,7 +309,7 @@ builder.Services.Configure<CloudinarySettings>(
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
-        builder => builder  
+        builder => builder
             .AllowAnyOrigin()
             .AllowAnyMethod()
             .AllowAnyHeader());
@@ -346,6 +347,8 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+    Console.WriteLine("Applying pending migrations...");
+    dbContext.Database.Migrate();
 
     if (!dbContext.SecurityPolicies.Any())
     {
@@ -372,8 +375,10 @@ using (var scope = app.Services.CreateScope())
 
 using (var scope = app.Services.CreateScope())
 {
+    
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
+    Console.WriteLine("Database initialized successfully!");
 }
 
 app.Run();

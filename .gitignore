@@ -6,6 +6,8 @@
 # dotenv files
 .env
 
+**/Properties/launchSettings.json
+
 # User-specific files
 *.rsuser
 *.suo
