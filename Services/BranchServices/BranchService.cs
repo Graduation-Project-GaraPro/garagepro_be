@@ -317,10 +317,40 @@ namespace Services.BranchServices
                 throw new ApplicationException("Error updating branch", ex);
             }
         }
+        public async Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive)
+        {
+            try
+            {
+                await _branchRepo.UpdateIsActiveForManyAsync(branchIds, isActive);
+            }
+            catch (Exception ex)
+            {
+               
+                throw new ApplicationException("An error occurred while updating branch statuses.", ex);
+            }
+        }
 
 
 
         // DELETE
+        public async Task DeleteManyAsync(IEnumerable<Guid> branchIds)
+        {
+            try
+            {
+                await _branchRepo.DeleteManyAsync(branchIds);
+            }
+            catch (DbUpdateException ex)
+            {
+                //_logger.LogError(ex, "Database update error while deleting branches: {BranchIds}", string.Join(", ", branchIds));
+                throw new ApplicationException("Unable to delete some branches because they are being referenced by other data.", ex);
+            }
+            catch (Exception ex)
+            {
+                //_logger.LogError(ex, "Error deleting branches: {BranchIds}", string.Join(", ", branchIds));
+                throw new ApplicationException("An error occurred while deleting branches.", ex);
+            }
+        }
+
         public async Task<bool> DeleteBranchAsync(Guid branchId)
         {
             using var tx = await _context.Database.BeginTransactionAsync();

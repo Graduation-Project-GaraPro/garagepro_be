@@ -1,5 +1,6 @@
 ﻿using BusinessObject;
 using Dtos.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.ServiceServices;
@@ -16,6 +17,7 @@ namespace Garage_pro_api.Controllers
         {
             _service = service;
         }
+        [Authorize(Policy = "SERVICE_VIEW")]
 
         // GET: api/service
         [HttpGet]
@@ -31,6 +33,37 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving services", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "SERVICE_VIEW")]
+
+        [HttpGet("paged")]
+        public async Task<ActionResult<object>> GetPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] bool? status = null,
+            [FromQuery] Guid? serviceTypeId = null)
+        {
+            try
+            {
+                var (services, totalCount) = await _service.GetPagedServicesAsync(
+                    pageNumber, pageSize, searchTerm, status, serviceTypeId);
+
+                return Ok(new
+                {
+                    pageNumber,
+                    pageSize,
+                    totalCount,
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                    data = services
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving services with paging", detail = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = "SERVICE_VIEW")]
 
         // GET: api/service/{id}
         [HttpGet("{id}")]
@@ -48,6 +81,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving service", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "SERVICE_CREATE")]
 
         // POST: api/service
         [HttpPost]
@@ -63,6 +97,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error creating service", detail = ex.Message });
             }
         }
+        [Authorize(Policy = "SERVICE_UPDATE")]
 
         // PUT: api/service/{id}
         [HttpPut("{id}")]
@@ -80,6 +115,39 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error updating service", detail = ex.Message });
             }
         }
+
+        [Authorize(Policy = "SERVICE_STATUS_TOGGLE")]
+
+        [HttpPatch("bulk-update-status")]
+        public async Task<IActionResult> BulkUpdateServiceStatus([FromBody] BulkUpdateStatusRequest request)
+        {
+            try
+            {
+                var result = await _service.BulkUpdateServiceStatusAsync(request.ServiceIds, request.IsActive);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating service status", detail = ex.Message });
+            }
+        }
+        [Authorize(Policy = "SERVICE_STATUS_TOGGLE")]
+
+        [HttpPatch("bulk-update-advance-status")]
+        public async Task<IActionResult> BulkUpdateServiceAdvanceStatus([FromBody] BulkUpdateAdvanceStatusRequest request)
+        {
+            try
+            {
+                var result = await _service.BulkUpdateServiceAdvanceStatusAsync(request.ServiceIds, request.IsAdvanced);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error updating service advance status", detail = ex.Message });
+            }
+        }
+
+        [Authorize(Policy = "SERVICE_DELETE")]
 
         // DELETE: api/service/{id}
         [HttpDelete("{id}")]

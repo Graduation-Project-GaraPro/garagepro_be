@@ -66,6 +66,36 @@ namespace Repositories.BranchRepositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive)
+        {
+            var branches = await _context.Branches
+                .Where(b => branchIds.Contains(b.BranchId))
+                .ToListAsync();
+
+            if (branches.Any())
+            {
+                foreach (var branch in branches)
+                {
+                    branch.IsActive = isActive;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+        public async Task DeleteManyAsync(IEnumerable<Guid> branchIds)
+        {
+            var branches = await _context.Branches
+                .Where(b => branchIds.Contains(b.BranchId))
+                .ToListAsync();
+
+            if (branches.Any())
+            {
+                _context.Branches.RemoveRange(branches);
+                await _context.SaveChangesAsync();
+            }
+        }
+
+
         public async Task RemoveBranchServicesAsync(Branch branch)
         {
             _context.BranchServices.RemoveRange(branch.BranchServices);

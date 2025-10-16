@@ -16,6 +16,8 @@ namespace Services.BranchServices
         Task<BranchReadDto?> GetBranchByIdAsync(Guid id);
         Task<BranchReadDto> CreateBranchAsync(BranchCreateDto dto);
         Task<BranchReadDto?> UpdateBranchAsync(BranchUpdateDto dto);
+        Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive);
+        Task DeleteManyAsync(IEnumerable<Guid> branchIds);
         Task<bool> DeleteBranchAsync(Guid id);
     }
 

@@ -12,8 +12,7 @@ namespace Dtos.Services
     {
         public Guid ServiceId { get; set; }
         public Guid ServiceCategoryId { get; set; }
-        public string ServiceName { get; set; }
-        public string ServiceStatus { get; set; }
+        public string ServiceName { get; set; }      
         public string Description { get; set; }
         public decimal Price { get; set; }
         public decimal EstimatedDuration { get; set; }
@@ -25,6 +24,7 @@ namespace Dtos.Services
         public virtual GetCategoryForServiceDto ServiceCategory { get; set; }
 
         public virtual ICollection<BranchServiceRelatedDto>? Branches { get; set; } = new List<BranchServiceRelatedDto>();
+        public virtual ICollection<PartServiceRelatedDto>? Parts { get; set; } = new List<PartServiceRelatedDto>();
 
     }
 }

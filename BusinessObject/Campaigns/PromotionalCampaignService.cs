@@ -9,8 +9,7 @@ namespace BusinessObject.Campaigns
 {
     public class PromotionalCampaignService
     {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
+       
 
         [Required]
         public Guid PromotionalCampaignId { get; set; }

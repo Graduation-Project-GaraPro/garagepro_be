@@ -13,7 +13,7 @@ namespace Services
     {
         private readonly IJobRepository _jobRepository;
 
-        public JobService(IJobRepository jobRepository)
+        public JobService(IJobRepository jobRepository) // Update constructor
         {
             _jobRepository = jobRepository;
         }
@@ -74,6 +74,18 @@ namespace Services
         public async Task<bool> JobExistsAsync(Guid jobId)
         {
             return await _jobRepository.ExistsAsync(jobId);
+        }
+
+        // NEW: Get all jobs with OData support
+        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+        {
+            return await _jobRepository.GetJobsWithNavigationPropertiesAsync();
+        }
+        
+        // NEW: Get jobs by status
+        public async Task<IEnumerable<Job>> GetJobsByStatusIdAsync(JobStatus status)
+        {
+            return await _jobRepository.GetJobsByStatusAsync(status);
         }
 
         #endregion
@@ -621,6 +633,8 @@ namespace Services
 
             return await _jobRepository.CreateAsync(job);
         }
+        
+        
 
         #endregion
     }

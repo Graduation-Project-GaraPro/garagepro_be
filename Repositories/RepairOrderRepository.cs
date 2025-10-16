@@ -115,8 +115,31 @@ namespace Repositories
                     .ThenInclude(ros => ros.Service)
                 .Include(ro => ro.Inspections)
                 .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
                 .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+        }
+
+        public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                    .ThenInclude(os => os.Labels)
+                        .ThenInclude(l => l.Color)
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                .Include(ro => ro.User)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.Service)
+                .Include(ro => ro.Inspections)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
+                .Include(ro => ro.Payments)
+                .ToListAsync();
         }
 
         #endregion
@@ -374,8 +397,7 @@ namespace Repositories
             if (!string.IsNullOrEmpty(searchText))
             {
                 var searchLower = searchText.ToLower();
-                query = query.Where(ro => 
-                    (ro.RepairOrderType != null && ro.RepairOrderType.ToLower().Contains(searchLower)) ||
+                query = query.Where(ro =>                    
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
                     (ro.Vehicle.VIN != null && ro.Vehicle.VIN.ToLower().Contains(searchLower)) ||
                     (ro.User.FullName != null && ro.User.FullName.ToLower().Contains(searchLower)) ||
@@ -465,7 +487,6 @@ namespace Repositories
 
             repairOrder.IsArchived = true;
             repairOrder.ArchivedAt = DateTime.UtcNow;
-            //repairOrder.ArchiveReason = reason;
             repairOrder.ArchivedByUserId = archivedByUserId;
             repairOrder.UpdatedAt = DateTime.UtcNow;
 
@@ -487,7 +508,6 @@ namespace Repositories
 
             repairOrder.IsArchived = false;
             repairOrder.ArchivedAt = null;
-            //repairOrder.ArchiveReason = null;
             repairOrder.ArchivedByUserId = null;
             repairOrder.UpdatedAt = DateTime.UtcNow;
             
@@ -626,10 +646,6 @@ namespace Repositories
                 query = query.Where(ro => filters.PaidStatuses.Contains(ro.PaidStatus));
             }
 
-            if (!string.IsNullOrEmpty(filters.RepairOrderType))
-            {
-                query = query.Where(ro => ro.RepairOrderType == filters.RepairOrderType);
-            }
 
             // Apply common filters
             return ApplyCommonFilters(query, filters);
@@ -662,7 +678,6 @@ namespace Repositories
             {
                 var searchLower = filters.SearchText.ToLower();
                 query = query.Where(ro => 
-                    (ro.RepairOrderType != null && ro.RepairOrderType.ToLower().Contains(searchLower)) ||
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
                     (ro.User.FullName != null && ro.User.FullName.ToLower().Contains(searchLower)) ||
                     (ro.Note != null && ro.Note.ToLower().Contains(searchLower)));
@@ -683,8 +698,7 @@ namespace Repositories
                 "estimatedamount" => isDescending ? query.OrderByDescending(ro => ro.EstimatedAmount) : query.OrderBy(ro => ro.EstimatedAmount),
                 "paidamount" => isDescending ? query.OrderByDescending(ro => ro.PaidAmount) : query.OrderBy(ro => ro.PaidAmount),
                 "customername" => isDescending ? query.OrderByDescending(ro => ro.User.FullName) : query.OrderBy(ro => ro.User.FullName),
-                "statusname" => isDescending ? query.OrderByDescending(ro => ro.OrderStatus.StatusName) : query.OrderBy(ro => ro.OrderStatus.StatusName),
-                "repairordertype" => isDescending ? query.OrderByDescending(ro => ro.RepairOrderType) : query.OrderBy(ro => ro.RepairOrderType),
+                "statusname" => isDescending ? query.OrderByDescending(ro => ro.OrderStatus.StatusName) : query.OrderBy(ro => ro.OrderStatus.StatusName),             
                 "vehiclelicenseplate" => isDescending ? query.OrderByDescending(ro => ro.Vehicle.LicensePlate) : query.OrderBy(ro => ro.Vehicle.LicensePlate),
                 "createdat" => isDescending ? query.OrderByDescending(ro => ro.CreatedAt) : query.OrderBy(ro => ro.CreatedAt),
                 _ => isDescending ? query.OrderByDescending(ro => ro.ReceiveDate) : query.OrderBy(ro => ro.ReceiveDate)
@@ -725,7 +739,6 @@ namespace Repositories
 
             repairOrder.IsArchived = false;
             repairOrder.ArchivedAt = null;
-            //repairOrder.ArchiveReason = null;
             repairOrder.ArchivedByUserId = null;
 
             try

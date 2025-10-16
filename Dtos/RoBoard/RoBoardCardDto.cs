@@ -121,6 +121,12 @@ namespace Dtos.RoBoard
     {
         public string UserId { get; set; }
         
+        public string FirstName { get; set; }
+        
+        public string LastName { get; set; }
+        
+        public DateTime? Birthday { get; set; }
+        
         public string FullName { get; set; }
         
         public string Email { get; set; }
@@ -128,6 +134,26 @@ namespace Dtos.RoBoard
         public string PhoneNumber { get; set; }
     }
     
+    public class CreateCustomerDto
+    {
+        [Required]
+        public string FirstName { get; set; }
+        
+        [Required]
+        public string LastName { get; set; }
+        
+        public DateTime? Birthday { get; set; }
+        
+        [Required]
+        public string PhoneNumber { get; set; }
+        
+        [EmailAddress]
+        public string Email { get; set; }
+        
+        // Computed property for FullName
+        public string FullName => $"{FirstName} {LastName}";
+    }
+
     public class RoBoardBranchDto
     {
         public Guid BranchId { get; set; }
