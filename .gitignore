@@ -6,8 +6,6 @@
 # dotenv files
 .env
 
-**/Properties/launchSettings.json
-
 # User-specific files
 *.rsuser
 *.suo
@@ -484,3 +482,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Ignore all launchSettings.json files in any project
+**/Properties/launchSettings.json
+
