@@ -154,7 +154,7 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PromotionalCampaign",
+                name: "PromotionalCampaigns",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -175,7 +175,7 @@ namespace DataAccessLayer.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PromotionalCampaign", x => x.Id);
+                    table.PrimaryKey("PK_PromotionalCampaigns", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -442,7 +442,6 @@ namespace DataAccessLayer.Migrations
                     ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServiceCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServiceName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    ServiceStatus = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     EstimatedDuration = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -828,24 +827,23 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PromotionalCampaignService",
+                name: "PromotionalCampaignServices",
                 columns: table => new
                 {
                     PromotionalCampaignId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PromotionalCampaignService", x => new { x.PromotionalCampaignId, x.ServiceId });
+                    table.PrimaryKey("PK_PromotionalCampaignServices", x => new { x.PromotionalCampaignId, x.ServiceId });
                     table.ForeignKey(
-                        name: "FK_PromotionalCampaignService_PromotionalCampaign_PromotionalCampaignId",
+                        name: "FK_PromotionalCampaignServices_PromotionalCampaigns_PromotionalCampaignId",
                         column: x => x.PromotionalCampaignId,
-                        principalTable: "PromotionalCampaign",
+                        principalTable: "PromotionalCampaigns",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_PromotionalCampaignService_Services_ServiceId",
+                        name: "FK_PromotionalCampaignServices_Services_ServiceId",
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "ServiceId",
@@ -1421,6 +1419,39 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "VoucherUsage",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CampaignId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UsedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_VoucherUsage", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_VoucherUsage_AspNetUsers_CustomerId",
+                        column: x => x.CustomerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_VoucherUsage_PromotionalCampaigns_CampaignId",
+                        column: x => x.CampaignId,
+                        principalTable: "PromotionalCampaigns",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_VoucherUsage_RepairOrders_RepairOrderId",
+                        column: x => x.RepairOrderId,
+                        principalTable: "RepairOrders",
+                        principalColumn: "RepairOrderId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PartInspections",
                 columns: table => new
                 {
@@ -1444,6 +1475,46 @@ namespace DataAccessLayer.Migrations
                         column: x => x.PartId,
                         principalTable: "Parts",
                         principalColumn: "PartId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Quotations",
+                columns: table => new
+                {
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    InspectionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    VehicleId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DiscountAmount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Quotations", x => x.QuotationId);
+                    table.ForeignKey(
+                        name: "FK_Quotations_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Quotations_Inspections_InspectionId",
+                        column: x => x.InspectionId,
+                        principalTable: "Inspections",
+                        principalColumn: "InspectionId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Quotations_Vehicles_VehicleId",
+                        column: x => x.VehicleId,
+                        principalTable: "Vehicles",
+                        principalColumn: "VehicleId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -1582,6 +1653,66 @@ namespace DataAccessLayer.Migrations
                         principalTable: "RepairOrderServices",
                         principalColumn: "RepairOrderServiceId",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuotationParts",
+                columns: table => new
+                {
+                    QuotationPartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsSelected = table.Column<bool>(type: "bit", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TotalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuotationParts", x => x.QuotationPartId);
+                    table.ForeignKey(
+                        name: "FK_QuotationParts_Parts_PartId",
+                        column: x => x.PartId,
+                        principalTable: "Parts",
+                        principalColumn: "PartId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_QuotationParts_Quotations_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotations",
+                        principalColumn: "QuotationId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuotationServices",
+                columns: table => new
+                {
+                    QuotationServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    QuotationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    IsSelected = table.Column<bool>(type: "bit", nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Quantity = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    TotalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuotationServices", x => x.QuotationServiceId);
+                    table.ForeignKey(
+                        name: "FK_QuotationServices_Quotations_QuotationId",
+                        column: x => x.QuotationId,
+                        principalTable: "Quotations",
+                        principalColumn: "QuotationId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_QuotationServices_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(
@@ -1784,8 +1915,43 @@ namespace DataAccessLayer.Migrations
                 column: "CategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PromotionalCampaignService_ServiceId",
-                table: "PromotionalCampaignService",
+                name: "IX_PromotionalCampaignServices_ServiceId",
+                table: "PromotionalCampaignServices",
+                column: "ServiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationParts_PartId",
+                table: "QuotationParts",
+                column: "PartId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationParts_QuotationId",
+                table: "QuotationParts",
+                column: "QuotationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_InspectionId",
+                table: "Quotations",
+                column: "InspectionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_UserId",
+                table: "Quotations",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Quotations_VehicleId",
+                table: "Quotations",
+                column: "VehicleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServices_QuotationId",
+                table: "QuotationServices",
+                column: "QuotationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServices_ServiceId",
+                table: "QuotationServices",
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
@@ -1999,6 +2165,21 @@ namespace DataAccessLayer.Migrations
                 table: "Vehicles",
                 column: "UserId");
 
+            migrationBuilder.CreateIndex(
+                name: "IX_VoucherUsage_CampaignId",
+                table: "VoucherUsage",
+                column: "CampaignId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VoucherUsage_CustomerId",
+                table: "VoucherUsage",
+                column: "CustomerId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VoucherUsage_RepairOrderId",
+                table: "VoucherUsage",
+                column: "RepairOrderId");
+
             migrationBuilder.AddForeignKey(
                 name: "FK_FeedBacks_RepairOrders_RepairOrderId",
                 table: "FeedBacks",
@@ -2080,7 +2261,13 @@ namespace DataAccessLayer.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
-                name: "PromotionalCampaignService");
+                name: "PromotionalCampaignServices");
+
+            migrationBuilder.DropTable(
+                name: "QuotationParts");
+
+            migrationBuilder.DropTable(
+                name: "QuotationServices");
 
             migrationBuilder.DropTable(
                 name: "RepairImages");
@@ -2119,6 +2306,9 @@ namespace DataAccessLayer.Migrations
                 name: "VehicleModelColors");
 
             migrationBuilder.DropTable(
+                name: "VoucherUsage");
+
+            migrationBuilder.DropTable(
                 name: "AIDiagnostic_Keywords");
 
             migrationBuilder.DropTable(
@@ -2128,7 +2318,7 @@ namespace DataAccessLayer.Migrations
                 name: "CategoryNotifications");
 
             migrationBuilder.DropTable(
-                name: "PromotionalCampaign");
+                name: "Quotations");
 
             migrationBuilder.DropTable(
                 name: "RepairOrderServices");
@@ -2152,16 +2342,19 @@ namespace DataAccessLayer.Migrations
                 name: "SecurityPolicies");
 
             migrationBuilder.DropTable(
-                name: "Inspections");
-
-            migrationBuilder.DropTable(
                 name: "Parts");
 
             migrationBuilder.DropTable(
                 name: "Specifications");
 
             migrationBuilder.DropTable(
+                name: "PromotionalCampaigns");
+
+            migrationBuilder.DropTable(
                 name: "AiChatMessages");
+
+            migrationBuilder.DropTable(
+                name: "Inspections");
 
             migrationBuilder.DropTable(
                 name: "Services");
@@ -2173,9 +2366,6 @@ namespace DataAccessLayer.Migrations
                 name: "SystemLogs");
 
             migrationBuilder.DropTable(
-                name: "Technicians");
-
-            migrationBuilder.DropTable(
                 name: "PartCategories");
 
             migrationBuilder.DropTable(
@@ -2183,6 +2373,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "AiChatSessions");
+
+            migrationBuilder.DropTable(
+                name: "Technicians");
 
             migrationBuilder.DropTable(
                 name: "ServiceCategories");

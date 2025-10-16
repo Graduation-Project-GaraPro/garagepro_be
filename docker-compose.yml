@@ -28,8 +28,7 @@ services:
       sqlserver:
         condition: service_healthy
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=GarageProDB;User Id=sa;Password=YourStrong!Passw0rd;
+      - ASPNETCORE_ENVIRONMENT=Production
     ports:
       - "5000:8080"
     networks:

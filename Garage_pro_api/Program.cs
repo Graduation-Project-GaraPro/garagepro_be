@@ -134,6 +134,7 @@ else
 {
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
 
 // JWT Authentication
