@@ -10,6 +10,7 @@ using BusinessObject.Notifications;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
 using BusinessObject.Quotations;
+using BusinessObject.Manager;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
@@ -48,6 +49,9 @@ namespace BusinessObject.Authentication
         public virtual ICollection<RepairRequest> RepairRequests { get; set; } = new List<RepairRequest>();
         //quotation
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
+
+        //feedback 
+        public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 
         // --------------------------
         // Branch relationship

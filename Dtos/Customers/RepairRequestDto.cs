@@ -40,9 +40,9 @@ namespace Dtos.Customers
             // Cho phép cập nhật lại hình ảnh nếu cần
             public List<string>? ImageUrls { get; set; }
 
-            // Cho phép đổi dịch vụ và phụ tùng
-           // public List<RequestServiceDto>? Services { get; set; }
-        }
+        // Cho phép đổi dịch vụ và phụ tùng
+        public List<RequestServiceDto>? Services { get; set; }
+    }
 
     
 

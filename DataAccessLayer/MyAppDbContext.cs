@@ -954,6 +954,14 @@ namespace DataAccessLayer
                 .WithMany(q => q.QuotationItems)
                 .HasForeignKey(qi => qi.QuotationID)
                 .OnDelete(DeleteBehavior.Cascade); // Có thể giữ cascade ở đây, vì không tạo vòng
+
+     //       modelBuilder.Entity<RepairOrder>()
+     //.HasOne(ro => ro.RepairRequest)
+     //.WithMany(rr => rr.RepairOrders)
+     //.HasForeignKey(ro => ro.RepairRequestID)
+     //.OnDelete(DeleteBehavior.NoAction); // tránh lỗi multiple cascade paths
+
+
         }
 
     }

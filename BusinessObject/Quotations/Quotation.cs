@@ -44,7 +44,7 @@ namespace BusinessObject.Quotations
         [Required]
         [Column(TypeName = "decimal(18,2)")]
         public decimal FinalAmount { get; set; }
-        public Status Status { get; set; } = Status.Pending; // Pending, Approved, Rejected, Expired
+        public Status Status { get; set; } = Status.Pending; // Pending, Approved,update, Rejected, Expired
 
         public DateTime? ValidUntil { get; set; }
 

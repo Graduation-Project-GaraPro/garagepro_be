@@ -63,6 +63,14 @@ namespace Repositories
                                  .ToListAsync();
         }
 
+        public async Task<IEnumerable<FeedBack>> GetFeedbackByBranchIdAsync(Guid BranchId)
+        {
+            return await Task.FromResult(_context.FeedBacks
+                                 .Include(f => f.RepairOrder)
+                                 .Where(f => f.RepairOrder.BranchId == BranchId)
+                                 .AsEnumerable());
+        }
+
         public async Task UpdateAsync(FeedBack feedback)
         {
             _context.FeedBacks.Update(feedback);

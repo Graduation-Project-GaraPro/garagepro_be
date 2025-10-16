@@ -172,110 +172,108 @@ namespace Services.Customer
 
 
             // --- Cập nhật services và parts ---
-            //if (dto.Services != null)
-            //{
-            //    var currentServices = repairRequest.RequestServices.ToList();
-            //    var dtoServiceIds = dto.Services.Select(s => s.ServiceId).ToHashSet();
+            if (dto.Services != null)
+            {
+                var currentServices = repairRequest.RequestServices.ToList();
+                var dtoServiceIds = dto.Services.Select(s => s.ServiceId).ToHashSet();
 
-            //    // 1. Xóa service không còn trong DTO
-            //    foreach (var rs in currentServices.Where(s => !dtoServiceIds.Contains(s.ServiceId)))
-            //    {
-            //        await _unitOfWork.RequestServices.DeleteAsync(rs.RequestServiceId);
-            //        repairRequest.RequestServices.Remove(rs);
-            //    }
+                // 2a. Xóa service không còn trong DTO
+                foreach (var rs in currentServices.Where(s => !dtoServiceIds.Contains(s.ServiceId)))
+                {
+                    repairRequest.RequestServices.Remove(rs);
+                    await _unitOfWork.RequestServices.DeleteAsync(rs.RequestServiceId);
+                }
 
-            //    decimal totalServiceFee = 0;
-            //    decimal totalPartsFee = 0;
+                decimal totalServiceFee = 0;
+                decimal totalPartsFee = 0;
 
-                //                // 2. Cập nhật hoặc thêm service mới
-                //                foreach (var serviceDto in dto.Services)
-                //                {
-                //                    var existingService = repairRequest.RequestServices
-                //                        .FirstOrDefault(s => s.ServiceId == serviceDto.ServiceId);
+                // 2b. Update hoặc thêm service mới
+                foreach (var serviceDto in dto.Services)
+                {
+                    var existingService = repairRequest.RequestServices
+                        .FirstOrDefault(s => s.ServiceId == serviceDto.ServiceId);
 
-                //                    if (existingService == null)
-                //                    {
-                //                        // Thêm service mới
-                //                        var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
-                //                                      ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
+                    if (existingService == null)
+                    {
+                        // Thêm service mới
+                        var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
+                                      ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
 
-                //                        var requestService = new RequestService
-                //                        {
-                //                            RequestServiceId = Guid.NewGuid(),
-                //                            ServiceId = service.ServiceId,
-                //                            ServiceFee = service.Price,
-                //                            RepairRequestId = repairRequest.RepairRequestID,
-                //                            RequestParts = new List<RequestPart>()
-                //                        };
+                        var requestService = new RequestService
+                        {
+                            RequestServiceId = Guid.NewGuid(),
+                            ServiceId = service.ServiceId,
+                            ServiceFee = service.Price,
+                            RepairRequestId = repairRequest.RepairRequestID,
+                            RequestParts = new List<RequestPart>()
+                        };
 
-                //                        totalServiceFee += service.Price;
+                        totalServiceFee += service.Price;
 
-                //                        if (serviceDto.Parts != null)
-                //                        {
-                //                            foreach (var partDto in serviceDto.Parts)
-                //                            {
-                //                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                //                                           ?? throw new Exception($"Part {partDto.PartId} not found");
+                        // Thêm parts nếu có
+                        if (serviceDto.Parts != null)
+                        {
+                            foreach (var partDto in serviceDto.Parts)
+                            {
+                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
+                                           ?? throw new Exception($"Part {partDto.PartId} not found");
 
-                //                                var requestPart = new RequestPart
-                //                                {
-                //                                    RequestPartId = Guid.NewGuid(),
-                //                                    PartId = part.PartId,
-                //                                    UnitPrice = part.Price,
-                //                                    RequestServiceId = requestService.RequestServiceId
-                //                                };
+                                requestService.RequestParts.Add(new RequestPart
+                                {
+                                    RequestPartId = Guid.NewGuid(),
+                                    PartId = part.PartId,
+                                    UnitPrice = part.Price,
+                                    RequestServiceId = requestService.RequestServiceId
+                                });
 
-                //                                requestService.RequestParts.Add(requestPart);
-                //                                totalPartsFee += part.Price;
-                //                            }
-                //                        }
+                                totalPartsFee += part.Price;
+                            }
+                        }
 
-                //                        repairRequest.RequestServices.Add(requestService);
-                //                    }
-                //                    else
-                //                    {
-                //                        // Update parts cho service đã tồn tại
-                //                        var dtoParts = serviceDto.Parts; // giữ nguyên null nếu không có
-                //if (dtoParts == null) dtoParts = new List<RequestPartDto>();
-                //                        var existingPartIds = existingService.RequestParts.Select(p => p.PartId).ToHashSet();
+                        repairRequest.RequestServices.Add(requestService);
+                    }
+                    else
+                    {
+                        // Update parts cho service đã tồn tại
+                        var dtoParts = serviceDto.Parts ?? new List<RequestPartDto>();
+                        var existingPartIds = existingService.RequestParts.Select(p => p.PartId).ToHashSet();
 
-                //                        // Xóa parts không còn trong DTO
-                //                        var partsToRemove = existingService.RequestParts
-                //                            .Where(p => !dtoParts.Any(dp => dp.PartId == p.PartId))
-                //                            .ToList();
+                        // Xóa parts không còn trong DTO
+                        var partsToRemove = existingService.RequestParts
+                            .Where(p => !dtoParts.Any(dp => dp.PartId == p.PartId))
+                            .ToList();
 
-                //                        foreach (var part in partsToRemove)
-                //                            existingService.RequestParts.Remove(part);
+                        foreach (var part in partsToRemove)
+                            existingService.RequestParts.Remove(part);
 
-                //                        // Thêm parts mới
-                //                        foreach (var partDto in dtoParts)
-                //                        {
-                //                            if (!existingPartIds.Contains(partDto.PartId))
-                //                            {
-                //                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                //                                           ?? throw new Exception($"Part {partDto.PartId} not found");
+                        // Thêm parts mới
+                        foreach (var partDto in dtoParts)
+                        {
+                            if (!existingPartIds.Contains(partDto.PartId))
+                            {
+                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
+                                           ?? throw new Exception($"Part {partDto.PartId} not found");
 
-                //                                existingService.RequestParts.Add(new RequestPart
-                //                                {
-                //                                    RequestPartId = Guid.NewGuid(),
-                //                                    PartId = part.PartId,
-                //                                    UnitPrice = part.Price,
-                //                                    RequestServiceId = existingService.RequestServiceId
-                //                                });
-                //                            }
-                //                        }
+                                existingService.RequestParts.Add(new RequestPart
+                                {
+                                    RequestPartId = Guid.NewGuid(),
+                                    PartId = part.PartId,
+                                    UnitPrice = part.Price,
+                                    RequestServiceId = existingService.RequestServiceId
+                                });
+                            }
+                        }
 
-                //                        totalServiceFee += existingService.ServiceFee;
-                //                        totalPartsFee += existingService.RequestParts.Sum(p => p.UnitPrice);
-                //                    }
-                //                }
+                        totalServiceFee += existingService.ServiceFee;
+                        totalPartsFee += existingService.RequestParts.Sum(p => p.UnitPrice);
+                    }
+                }
 
-                //                repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
-                //            }
-
+                repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
+            }
 
 
-            
+
             repairRequest.UpdatedAt = DateTime.UtcNow;
 
             await _unitOfWork.SaveChangesAsync();

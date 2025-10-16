@@ -70,7 +70,7 @@ namespace Services.QuotationService
             {
                 throw new InvalidOperationException($"Quotation with ID {quotationId} has already been approved.");
             }
-            quotation.Status = Status.Approved;
+            quotation.Status = Status.Approved;//rệct
             quotation.ApprovedAt = DateTime.Now;
             await _quotationRepository.UpdateQuotationAsync(quotation);
             return true;

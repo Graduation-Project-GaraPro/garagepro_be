@@ -3,6 +3,7 @@ using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
+using BusinessObject.Manager;
 using BusinessObject.Policies;
 using BusinessObject.Quotations;
 using BusinessObject.Roles;
@@ -10,6 +11,7 @@ using Customers;
 using Dtos.Auth;
 using Dtos.Branches;
 using Dtos.Customers;
+using Dtos.FeedBacks;
 using Dtos.Parts;
 using Dtos.Policies;
 using Dtos.Roles;
@@ -176,6 +178,10 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
                 .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.UnitPrice))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.TotalPrice));
+            // feedback 
+            CreateMap<FeedBack, FeedBackReadDto>()
+     .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
+
         }
     }
 }

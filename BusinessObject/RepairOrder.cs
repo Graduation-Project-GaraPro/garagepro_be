@@ -1,3 +1,7 @@
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Manager;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -5,9 +9,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Authentication;
-using BusinessObject.Manager;
-using BusinessObject.Branches;
 
 namespace BusinessObject
 {
@@ -21,7 +22,7 @@ namespace BusinessObject
 
         [Required]
         [MaxLength(50)]
-        public string RepairOrderType { get; set; }
+        public string RepairOrderType { get; set; }//repair request, quotation, emergency 
 
         public DateTime? EstimatedCompletionDate { get; set; }
 
@@ -75,6 +76,9 @@ namespace BusinessObject
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
+      
+        public virtual ICollection<RepairRequest> RepairRequest { get; set; } 
+
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
         public virtual Vehicle Vehicle { get; set; }
