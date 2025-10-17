@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
 using BusinessObject.Customers;
-using BusinessObject.Quotations;
+
 
 namespace BusinessObject
 {
@@ -25,10 +25,7 @@ namespace BusinessObject
         [Required]
         [MaxLength(100)]
         public string ServiceName { get; set; }
-
-        [Required]
-        [MaxLength(50)]
-        public string ServiceStatus { get; set; }
+        
 
         [MaxLength(500)]
         public string Description { get; set; }
@@ -65,7 +62,7 @@ namespace BusinessObject
             = new List<PromotionalCampaignService>();
 
         // Quotation relationship
-        public virtual ICollection<QuotationItem>? QuotationItems { get; set; } = new List<QuotationItem>();
+        public virtual ICollection<QuotationService>? QuotationServices { get; set; } = new List<QuotationService>();
         //request relationship
         public virtual ICollection<RequestService>? RequestServices { get; set; } = new List<RequestService>();
 

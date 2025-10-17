@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Identity;
 using BusinessObject.Notifications;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
-using BusinessObject.Quotations;
 using BusinessObject.Manager;
 namespace BusinessObject.Authentication
 {
@@ -25,7 +24,7 @@ namespace BusinessObject.Authentication
 
         public DateTime? UpdatedAt { get; set; }
 
-        public bool Gender { get; set; } // true = Male, false = Female
+        public bool? Gender { get; set; } // true = Male, false = Female
 
         public DateTime? Birthday { get; set; }
 
@@ -47,9 +46,8 @@ namespace BusinessObject.Authentication
         public virtual Technician.Technician Technician { get; set; }
         //repair request 
         public virtual ICollection<RepairRequest> RepairRequests { get; set; } = new List<RepairRequest>();
-        //quotation
-        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
-
+        
+        
         //feedback 
         public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 

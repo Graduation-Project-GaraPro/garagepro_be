@@ -50,10 +50,10 @@ namespace Garage_pro_api.DbInit
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
-           // await SeedVehiclesAsync();
-            await SeedRepairOrdersAsync();
+            await SeedVehiclesAsync();
+            //await SeedRepairOrdersAsync();
 
-            //await SeedPromotionalCampaignsWithServicesAsync();
+            await SeedPromotionalCampaignsWithServicesAsync();
         }
 
         // 1. Seed Roles
@@ -737,297 +737,297 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        //private async Task SeedVehiclesAsync()
-        //{
-        //    if (!_context.Vehicles.Any())
-        //    {
-        //        // Get required entities
-        //        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-
-        //        // Get vehicle related entities
-        //        var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
-        //        var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
-        //        var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
-        //        var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
-        //        var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
-
-        //        var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
-        //        var hondaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Honda");
-        //        var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
-        //        var bmwBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "BMW");
-        //        var mercedesBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Mercedes-Benz");
-
-        //        var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
-        //        var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
-        //        var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
-        //        var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
-        //        var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
-
-        //        if (customerUser != null &&
-        //            whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null &&
-        //            toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null &&
-        //            camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null)
-        //        {
-        //            var vehicles = new List<Vehicle>
-        //            {
-        //                new Vehicle
-        //                {
-        //                    BrandId = toyotaBrand.BrandID,
-        //                    UserId = customerUser.Id,
-        //                    ModelId = camryModel.ModelID,
-        //                    ColorId = whiteColor.ColorID,
-        //                    LicensePlate = "51F12345",
-        //                    VIN = "1HGBH41JXMN109186",
-        //                    Year = 2020,
-        //                    Odometer = 15000,
-        //                    LastServiceDate = DateTime.UtcNow.AddDays(-30),
-        //                    NextServiceDate = DateTime.UtcNow.AddDays(30),
-        //                    WarrantyStatus = "Active",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-30)
-        //                },
-        //                new Vehicle
-        //                {
-        //                    BrandId = hondaBrand.BrandID,
-        //                    UserId = customerUser.Id,
-        //                    ModelId = civicModel.ModelID,
-        //                    ColorId = blackColor.ColorID,
-        //                    LicensePlate = "51F67890",
-        //                    VIN = "2T1BURHE5JC012345",
-        //                    Year = 2018,
-        //                    Odometer = 25000,
-        //                    LastServiceDate = DateTime.UtcNow.AddDays(-60),
-        //                    NextServiceDate = DateTime.UtcNow.AddDays(15),
-        //                    WarrantyStatus = "Expired",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-60)
-        //                },
-        //                new Vehicle
-        //                {
-        //                    BrandId = fordBrand.BrandID,
-        //                    UserId = customerUser.Id,
-        //                    ModelId = focusModel.ModelID,
-        //                    ColorId = silverColor.ColorID,
-        //                    LicensePlate = "51F54321",
-        //                    VIN = "3VWBP29M85M000001",
-        //                    Year = 2022,
-        //                    Odometer = 8000,
-        //                    LastServiceDate = DateTime.UtcNow.AddDays(-15),
-        //                    NextServiceDate = DateTime.UtcNow.AddDays(45),
-        //                    WarrantyStatus = "Active",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-15)
-        //                },
-        //                new Vehicle
-        //                {
-        //                    BrandId = bmwBrand.BrandID,
-        //                    UserId = customerUser.Id,
-        //                    ModelId = series3Model.ModelID,
-        //                    ColorId = redColor.ColorID,
-        //                    LicensePlate = "51F98765",
-        //                    VIN = "WBAVA33598NL67342",
-        //                    Year = 2021,
-        //                    Odometer = 12000,
-        //                    LastServiceDate = DateTime.UtcNow.AddDays(-45),
-        //                    NextServiceDate = DateTime.UtcNow.AddDays(20),
-        //                    WarrantyStatus = "Active",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-45)
-        //                },
-        //                new Vehicle
-        //                {
-        //                    BrandId = mercedesBrand.BrandID,
-        //                    UserId = customerUser.Id,
-        //                    ModelId = cClassModel.ModelID,
-        //                    ColorId = blueColor.ColorID,
-        //                    LicensePlate = "51F24680",
-        //                    VIN = "WDDHF8JB0DA123456",
-        //                    Year = 2019,
-        //                    Odometer = 35000,
-        //                    LastServiceDate = DateTime.UtcNow.AddDays(-90),
-        //                    NextServiceDate = DateTime.UtcNow.AddDays(10),
-        //                    WarrantyStatus = "Expiring Soon",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-90)
-        //                }
-        //            };
-
-        //            _context.Vehicles.AddRange(vehicles);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //    }
-        //}
-
-        //private async Task SeedPromotionalCampaignsWithServicesAsync()
-        //{
-        //    if (!_context.PromotionalCampaigns.Any())
-        //    {
-        //        var campaigns = new List<PromotionalCampaign>
-        //{
-        //    new PromotionalCampaign
-        //    {
-        //        Id = Guid.NewGuid(),
-        //        Name = "Grand Opening Discount",
-        //        Description = "Celebrate our grand opening with 20% off all services!",
-        //        Type = CampaignType.Discount,
-        //        DiscountType = DiscountType.Percentage,
-        //        DiscountValue = 20,
-        //        StartDate = DateTime.UtcNow.AddDays(-3),
-        //        EndDate = DateTime.UtcNow.AddDays(7),
-        //        MinimumOrderValue = 0,
-        //        MaximumDiscount = 500000,
-        //        UsageLimit = 200,
-        //        UsedCount = 0,
-        //        IsActive = true,
-        //        CreatedAt = DateTime.UtcNow,
-        //        UpdatedAt = DateTime.UtcNow
-        //    },
-        //    new PromotionalCampaign
-        //    {
-        //        Id = Guid.NewGuid(),
-        //        Name = "Loyalty Appreciation",
-        //        Description = "Fixed discount of 150,000₫ for our returning customers.",
-        //        Type = CampaignType.Loyalty,
-        //        DiscountType = DiscountType.Fixed,
-        //        DiscountValue = 150000,
-        //        StartDate = DateTime.UtcNow,
-        //        EndDate = DateTime.UtcNow.AddMonths(2),
-        //        MinimumOrderValue = 500000,
-        //        MaximumDiscount = null,
-        //        UsageLimit = 100,
-        //        UsedCount = 0,
-        //        IsActive = true,
-        //        CreatedAt = DateTime.UtcNow,
-        //        UpdatedAt = DateTime.UtcNow
-        //    },
-        //    new PromotionalCampaign
-        //    {
-        //        Id = Guid.NewGuid(),
-        //        Name = "Year-End Free Checkup",
-        //        Description = "Get a free maintenance check for any service above 1,000,000₫.",
-        //        Type = CampaignType.Seasonal,
-        //        DiscountType = DiscountType.FreeService,
-        //        DiscountValue = 0,
-        //        StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
-        //        EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
-        //        MinimumOrderValue = 1000000,
-        //        MaximumDiscount = null,
-        //        UsageLimit = 300,
-        //        UsedCount = 0,
-        //        IsActive = false,
-        //        CreatedAt = DateTime.UtcNow,
-        //        UpdatedAt = DateTime.UtcNow
-        //    }
-        //};
-
-        //        _context.PromotionalCampaigns.AddRange(campaigns);
-        //        await _context.SaveChangesAsync();
-
-        //        // --- Sau khi lưu campaign, thêm liên kết Service ---
-        //        var services = await _context.Services.ToListAsync();
-        //        if (services.Any())
-        //        {
-        //            var promoCampaignServices = new List<PromotionalCampaignService>();
-
-        //            foreach (var campaign in campaigns)
-        //            {
-        //                // Lấy ngẫu nhiên 2 dịch vụ đầu tiên cho demo
-        //                var selectedServices = services.Take(2).ToList();
-
-        //                foreach (var service in selectedServices)
-        //                {
-        //                    promoCampaignServices.Add(new PromotionalCampaignService
-        //                    {
-        //                        PromotionalCampaignId = campaign.Id,
-        //                        ServiceId = service.ServiceId
-        //                    });
-        //                }
-        //            }
-
-        //            _context.PromotionalCampaignServices.AddRange(promoCampaignServices);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //    }
-        //}
-
-        private async Task SeedRepairOrdersAsync()
+        private async Task SeedVehiclesAsync()
         {
-            if (!_context.RepairOrders.Any())
+            if (!_context.Vehicles.Any())
             {
                 // Get required entities
-                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
-                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
-                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
-
-                var branch = await _context.Branches.FirstOrDefaultAsync();
                 var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
-                var vehicles = await _context.Vehicles.ToListAsync();
 
-                if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
-                    branch != null && customerUser != null && vehicles.Any())
+                // Get vehicle related entities
+                var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
+                var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
+                var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
+                var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
+                var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
+
+                var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
+                var hondaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Honda");
+                var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
+                var bmwBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "BMW");
+                var mercedesBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Mercedes-Benz");
+
+                var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
+                var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
+                var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
+                var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
+                var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
+
+                if (customerUser != null &&
+                    whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null &&
+                    toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null &&
+                    camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null)
                 {
-                    var repairOrders = new List<RepairOrder>
+                    var vehicles = new List<Vehicle>
                     {
-                        new RepairOrder
+                        new Vehicle
                         {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-5),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
-                            Cost = 1500000,
-                            EstimatedAmount = 2000000,
-                            PaidAmount = 0,
-                            PaidStatus = "Unpaid",
-                            EstimatedRepairTime = 120,
-                            Note = "Regular maintenance service",
-                            CreatedAt = DateTime.UtcNow.AddDays(-5),
-                            BranchId = branch.BranchId,
-                            StatusId = pendingStatus.OrderStatusId,
-                            VehicleId = vehicles[0].VehicleId,
+                            BrandId = toyotaBrand.BrandID,
                             UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
+                            ModelId = camryModel.ModelID,
+                            ColorId = whiteColor.ColorID,
+                            LicensePlate = "51F12345",
+                            VIN = "1HGBH41JXMN109186",
+                            Year = 2020,
+                            Odometer = 15000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-30),
+                            NextServiceDate = DateTime.UtcNow.AddDays(30),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-30)
                         },
-                        new RepairOrder
+                        new Vehicle
                         {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-3),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
-                            Cost = 3000000,
-                            EstimatedAmount = 3500000,
-                            PaidAmount = 1000000,
-                            PaidStatus = "Partial",
-                            EstimatedRepairTime = 180,
-                            Note = "Brake system repair",
-                            CreatedAt = DateTime.UtcNow.AddDays(-3),
-                            BranchId = branch.BranchId,
-                            StatusId = inProgressStatus.OrderStatusId,
-                            VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
+                            BrandId = hondaBrand.BrandID,
                             UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
+                            ModelId = civicModel.ModelID,
+                            ColorId = blackColor.ColorID,
+                            LicensePlate = "51F67890",
+                            VIN = "2T1BURHE5JC012345",
+                            Year = 2018,
+                            Odometer = 25000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-60),
+                            NextServiceDate = DateTime.UtcNow.AddDays(15),
+                            WarrantyStatus = "Expired",
+                            CreatedAt = DateTime.UtcNow.AddDays(-60)
                         },
-                        new RepairOrder
+                        new Vehicle
                         {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-10),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
-                            CompletionDate = DateTime.UtcNow.AddDays(-1),
-                            Cost = 5000000,
-                            EstimatedAmount = 5000000,
-                            PaidAmount = 5000000,
-                            PaidStatus = "Paid",
-                            EstimatedRepairTime = 240,
-                            Note = "Complete vehicle overhaul",
-                            CreatedAt = DateTime.UtcNow.AddDays(-10),
-                            BranchId = branch.BranchId,
-                            StatusId = completedStatus.OrderStatusId,
-                            VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
+                            BrandId = fordBrand.BrandID,
                             UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
+                            ModelId = focusModel.ModelID,
+                            ColorId = silverColor.ColorID,
+                            LicensePlate = "51F54321",
+                            VIN = "3VWBP29M85M000001",
+                            Year = 2022,
+                            Odometer = 8000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-15),
+                            NextServiceDate = DateTime.UtcNow.AddDays(45),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-15)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = bmwBrand.BrandID,
+                            UserId = customerUser.Id,
+                            ModelId = series3Model.ModelID,
+                            ColorId = redColor.ColorID,
+                            LicensePlate = "51F98765",
+                            VIN = "WBAVA33598NL67342",
+                            Year = 2021,
+                            Odometer = 12000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-45),
+                            NextServiceDate = DateTime.UtcNow.AddDays(20),
+                            WarrantyStatus = "Active",
+                            CreatedAt = DateTime.UtcNow.AddDays(-45)
+                        },
+                        new Vehicle
+                        {
+                            BrandId = mercedesBrand.BrandID,
+                            UserId = customerUser.Id,
+                            ModelId = cClassModel.ModelID,
+                            ColorId = blueColor.ColorID,
+                            LicensePlate = "51F24680",
+                            VIN = "WDDHF8JB0DA123456",
+                            Year = 2019,
+                            Odometer = 35000,
+                            LastServiceDate = DateTime.UtcNow.AddDays(-90),
+                            NextServiceDate = DateTime.UtcNow.AddDays(10),
+                            WarrantyStatus = "Expiring Soon",
+                            CreatedAt = DateTime.UtcNow.AddDays(-90)
                         }
                     };
 
-                    _context.RepairOrders.AddRange(repairOrders);
+                    _context.Vehicles.AddRange(vehicles);
                     await _context.SaveChangesAsync();
                 }
             }
         }
+
+        private async Task SeedPromotionalCampaignsWithServicesAsync()
+        {
+            if (!_context.PromotionalCampaigns.Any())
+            {
+                var campaigns = new List<PromotionalCampaign>
+        {
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Grand Opening Discount",
+                Description = "Celebrate our grand opening with 20% off all services!",
+                Type = CampaignType.Discount,
+                DiscountType = DiscountType.Percentage,
+                DiscountValue = 20,
+                StartDate = DateTime.UtcNow.AddDays(-3),
+                EndDate = DateTime.UtcNow.AddDays(7),
+                MinimumOrderValue = 0,
+                MaximumDiscount = 500000,
+                UsageLimit = 200,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Loyalty Appreciation",
+                Description = "Fixed discount of 150,000₫ for our returning customers.",
+                Type = CampaignType.Loyalty,
+                DiscountType = DiscountType.Fixed,
+                DiscountValue = 150000,
+                StartDate = DateTime.UtcNow,
+                EndDate = DateTime.UtcNow.AddMonths(2),
+                MinimumOrderValue = 500000,
+                MaximumDiscount = null,
+                UsageLimit = 100,
+                UsedCount = 0,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            },
+            new PromotionalCampaign
+            {
+                Id = Guid.NewGuid(),
+                Name = "Year-End Free Checkup",
+                Description = "Get a free maintenance check for any service above 1,000,000₫.",
+                Type = CampaignType.Seasonal,
+                DiscountType = DiscountType.FreeService,
+                DiscountValue = 0,
+                StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
+                EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
+                MinimumOrderValue = 1000000,
+                MaximumDiscount = null,
+                UsageLimit = 300,
+                UsedCount = 0,
+                IsActive = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+
+                _context.PromotionalCampaigns.AddRange(campaigns);
+                await _context.SaveChangesAsync();
+
+                // --- Sau khi lưu campaign, thêm liên kết Service ---
+                var services = await _context.Services.ToListAsync();
+                if (services.Any())
+                {
+                    var promoCampaignServices = new List<PromotionalCampaignService>();
+
+                    foreach (var campaign in campaigns)
+                    {
+                        // Lấy ngẫu nhiên 2 dịch vụ đầu tiên cho demo
+                        var selectedServices = services.Take(2).ToList();
+
+                        foreach (var service in selectedServices)
+                        {
+                            promoCampaignServices.Add(new PromotionalCampaignService
+                            {
+                                PromotionalCampaignId = campaign.Id,
+                                ServiceId = service.ServiceId
+                            });
+                        }
+                    }
+
+                    _context.PromotionalCampaignServices.AddRange(promoCampaignServices);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        //private async Task SeedRepairOrdersAsync()
+        //{
+        //    if (!_context.RepairOrders.Any())
+        //    {
+        //        // Get required entities
+        //        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
+        //        var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
+        //        var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
+
+        //        var branch = await _context.Branches.FirstOrDefaultAsync();
+        //        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
+        //        var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
+        //        var vehicles = await _context.Vehicles.ToListAsync();
+
+        //        if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
+        //            branch != null && customerUser != null && vehicles.Any())
+        //        {
+        //            var repairOrders = new List<RepairOrder>
+        //            {
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-5),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+        //                    Cost = 1500000,
+        //                    EstimatedAmount = 2000000,
+        //                    PaidAmount = 0,
+        //                    PaidStatus = "Unpaid",
+        //                    EstimatedRepairTime = 120,
+        //                    Note = "Regular maintenance service",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-5),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = pendingStatus.OrderStatusId,
+        //                    VehicleId = vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                },
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-3),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+        //                    Cost = 3000000,
+        //                    EstimatedAmount = 3500000,
+        //                    PaidAmount = 1000000,
+        //                    PaidStatus = "Partial",
+        //                    EstimatedRepairTime = 180,
+        //                    Note = "Brake system repair",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-3),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = inProgressStatus.OrderStatusId,
+        //                    VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                },
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-10),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
+        //                    CompletionDate = DateTime.UtcNow.AddDays(-1),
+        //                    Cost = 5000000,
+        //                    EstimatedAmount = 5000000,
+        //                    PaidAmount = 5000000,
+        //                    PaidStatus = "Paid",
+        //                    EstimatedRepairTime = 240,
+        //                    Note = "Complete vehicle overhaul",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-10),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = completedStatus.OrderStatusId,
+        //                    VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                }
+        //            };
+
+        //            _context.RepairOrders.AddRange(repairOrders);
+        //            await _context.SaveChangesAsync();
+        //        }
+        //    }
+        }
+
     }
-}

@@ -4,7 +4,10 @@ using BusinessObject.Customers;
 using Dtos.Customers;
 using Dtos.Parts;
 using Repositories;
+using Repositories.Customers;
+using Repositories.RepairRequestRepositories;
 using Repositories.UnitOfWork;
+
 using Services.Cloudinaries;
 using System;
 using System.Collections.Generic;
@@ -131,7 +134,7 @@ namespace Services.Customer
             if (repairRequest.UserID != userId)
                 throw new Exception("You are not allowed to update this request");
 
-            if (repairRequest.Status != Status.Pending)
+            if (repairRequest.Status != RepairRequestStatus.Pending)
                 throw new Exception("Cannot update a request that is already being processed.");
 
             // --- Cập nhật các trường cơ bản ---

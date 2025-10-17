@@ -1,39 +1,29 @@
-﻿using BusinessObject;
-using BusinessObject;
+
+﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
-using BusinessObject.Authentication;
 using BusinessObject.Branches;
-using BusinessObject.Branches;
-using BusinessObject.Campaigns;
 using BusinessObject.Campaigns;
 using BusinessObject.Customers;
 using BusinessObject.Manager;
 using BusinessObject.Notifications;
-using BusinessObject.Notifications;
 using BusinessObject.Policies;
-using BusinessObject.Policies;
-using BusinessObject.Quotations;
-using BusinessObject.Roles;
 using BusinessObject.Roles;
 using BusinessObject.SystemLogs;
-using BusinessObject.SystemLogs;
-using BusinessObject.Technician;
 using BusinessObject.Technician;
 using BusinessObject.Vehicles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject.Manager;
 
 namespace DataAccessLayer
 {
-    public class MyAppDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+    public class MyAppDbContext : IdentityDbContext<ApplicationUser>
     {
         public MyAppDbContext(DbContextOptions<MyAppDbContext> options)
             : base(options) { }
@@ -54,14 +44,24 @@ namespace DataAccessLayer
         public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
+        public DbSet<Quotation> Quotations { get; set; }
+        public DbSet<QuotationService> QuotationServices { get; set; }
+        public DbSet<QuotationPart> QuotationParts { get; set; }
 
         // Junction tables
-
+        public DbSet<JobPart> JobParts { get; set; }
+        public DbSet<JobTechnician> JobTechnicians { get; set; }
+        public DbSet<Repair> Repairs { get; set; }
+        public DbSet<Specifications> Specifications { get; set; }
+        public DbSet<SpecificationsData> SpecificationsData { get; set; }
+        public DbSet<VehicleLookup> VehicleLookups { get; set; }
+        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
+        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
+        
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
-        public DbSet<JobPart> JobParts { get; set; }
         public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
@@ -69,8 +69,6 @@ namespace DataAccessLayer
         public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
         public DbSet<LogCategory> LogCategories { get; set; }
         public DbSet<LogTag> LogTags { get; set; }
-        public DbSet<SecurityPolicy> SecurityPolicies { get; set; }
-        public DbSet<SecurityPolicyHistory> SecurityPolicyHistories { get; set; }
 
         // Notification
         public DbSet<CategoryNotification> CategoryNotifications { get; set; }
@@ -78,11 +76,7 @@ namespace DataAccessLayer
 
         //Technician
         public DbSet<Technician> Technicians { get; set; }
-        public DbSet<JobTechnician> JobTechnicians { get; set; }
-        public DbSet<Repair> Repairs { get; set; }
-        public DbSet<VehicleLookup> VehicleLookups { get; set; }
-        public DbSet<Specifications> Specifications { get; set; }
-        public DbSet<SpecificationsData> SpecificationsData { get; set; }
+
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -107,14 +101,63 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
-        public DbSet<Quotation> Quotations { get; set; }
-        public DbSet<QuotationItem> QuotationItems { get; set; }
+
+        public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
+        public DbSet<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            // Quotation relationships
+            modelBuilder.Entity<Quotation>(entity =>
+            {
+                entity.HasOne(q => q.Inspection)
+                      .WithMany(i => i.Quotations)
+                      .HasForeignKey(q => q.InspectionId
+                      )
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(q => q.User)
+                      .WithMany()  // Fixed: added navigation property reference
+                      .HasForeignKey(q => q.UserId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(q => q.Vehicle)
+                      .WithMany()  // Also add this if Vehicle should track Quotations
+                      .HasForeignKey(q => q.VehicleId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<QuotationService>(entity =>
+            {
+                entity.HasOne(qs => qs.Quotation)
+                      .WithMany(q => q.QuotationServices)
+                      .HasForeignKey(qs => qs.QuotationId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qs => qs.Service)
+                      .WithMany()
+                      .HasForeignKey(qs => qs.ServiceId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
+
+          
+            // Configure the relationship between QuotationPart and QuotationService
+            modelBuilder.Entity<QuotationPart>(entity =>
+            {
+                entity.HasOne(qp => qp.QuotationService)
+                      .WithMany() // Remove the incorrect collection reference
+                      .HasForeignKey(qp => qp.QuotationServiceId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(qp => qp.Part)
+                      .WithMany()
+                      .HasForeignKey(qp => qp.PartId)
+                      .OnDelete(DeleteBehavior.Restrict);
+            });
 
             //chặn casadate
             modelBuilder.Entity<Vehicle>()
@@ -330,6 +373,7 @@ namespace DataAccessLayer
                       .HasForeignKey(r => r.JobId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
+            
             // Repair configuration
             modelBuilder.Entity<Repair>(entity =>
             {
@@ -920,7 +964,6 @@ namespace DataAccessLayer
                 .HasOne(pcs => pcs.Service)
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
-
             // 🔹 RepairRequest - RequestService (1-n)
             modelBuilder.Entity<RepairRequest>()
                 .HasMany(r => r.RequestServices)
@@ -941,27 +984,31 @@ namespace DataAccessLayer
                 .WithOne(img => img.RepairRequest)
                 .HasForeignKey(img => img.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
-            // Giải quyết lỗi multiple cascade paths
-            modelBuilder.Entity<Quotation>()
-                .HasOne(q => q.RepairRequest)
-                .WithMany(r => r.Quotations)
-                .HasForeignKey(q => q.RepairRequestID)
-                .OnDelete(DeleteBehavior.NoAction); // 👈 Thêm dòng này
+           
+            modelBuilder.Entity<VoucherUsage>(entity =>
+            {
+                entity.ToTable("VoucherUsage");
 
-            // Nếu có liên kết tương tự, áp dụng NoAction luôn
-            modelBuilder.Entity<QuotationItem>()
-                .HasOne(qi => qi.Quotation)
-                .WithMany(q => q.QuotationItems)
-                .HasForeignKey(qi => qi.QuotationID)
-                .OnDelete(DeleteBehavior.Cascade); // Có thể giữ cascade ở đây, vì không tạo vòng
+                entity.HasKey(v => v.Id);
 
-     //       modelBuilder.Entity<RepairOrder>()
-     //.HasOne(ro => ro.RepairRequest)
-     //.WithMany(rr => rr.RepairOrders)
-     //.HasForeignKey(ro => ro.RepairRequestID)
-     //.OnDelete(DeleteBehavior.NoAction); // tránh lỗi multiple cascade paths
+                entity.Property(v => v.UsedAt)
+                      .HasColumnType("datetime2");
 
+                entity.HasOne(v => v.Campaign)
+                      .WithMany(c => c.VoucherUsages)
+                      .HasForeignKey(v => v.CampaignId)
+                      .OnDelete(DeleteBehavior.Cascade);
 
+                entity.HasOne(v => v.Customer)
+                      .WithMany()
+                      .HasForeignKey(v => v.CustomerId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(v => v.RepairOrder)
+                      .WithMany(ro => ro.VoucherUsages)
+                      .HasForeignKey(v => v.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
         }
 
     }

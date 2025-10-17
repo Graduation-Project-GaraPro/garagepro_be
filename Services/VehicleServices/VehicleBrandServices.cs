@@ -1,13 +1,12 @@
 ﻿using BusinessObject.Vehicles;
 using Dtos.Vehicles;
-using Repositories.Vehicles;
-using Services.VehicleServices;
+using Repositories.VehicleRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Services.Vehicles
+namespace Services.VehicleServices
 {
     public class VehicleBrandService : IVehicleBrandServices
     {

@@ -2,7 +2,7 @@
 using Repositories.PartRepositories;
 using Repositories.RepairRequestRepositories;
 using Repositories.ServiceRepositories;
-using Repositories.Vehicles;
+using Repositories.VehicleRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;

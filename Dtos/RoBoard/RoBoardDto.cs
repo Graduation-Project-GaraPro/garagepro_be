@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace Dtos.RoBoard
 {
@@ -27,7 +28,7 @@ namespace Dtos.RoBoard
         // Filters applied to the board
         public RoBoardFiltersDto AppliedFilters { get; set; } = new RoBoardFiltersDto();
         
-        public int TotalCards => Columns?.Sum(c => c.CardCount) ?? 0;
+        public int TotalCards => Columns?.Sum(c => c.RepairOrderCount) ?? 0;
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         

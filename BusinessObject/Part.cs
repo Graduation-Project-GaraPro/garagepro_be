@@ -1,6 +1,6 @@
 using BusinessObject.Branches;
 using BusinessObject.Customers;
-using BusinessObject.Quotations;
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -45,9 +45,7 @@ namespace BusinessObject
         public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
          public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
         //requestService
-
-        // (1 Part -> nhi?u QuotationItem)
-        public virtual ICollection<QuotationItem> QuotationItems { get; set; } = new List<QuotationItem>();
+        public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
     }
 
 }

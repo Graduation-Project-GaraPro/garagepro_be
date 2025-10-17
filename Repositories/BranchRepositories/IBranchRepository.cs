@@ -18,7 +18,9 @@ namespace Repositories.BranchRepositories
         Task<IEnumerable<Branch>> GetAllAsync();
         Task AddAsync(Branch branch);
         Task UpdateAsync(Branch branch);
+        Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive);
         Task DeleteAsync(Branch branch);
+        Task DeleteManyAsync(IEnumerable<Guid> branchIds);
         Task RemoveBranchServicesAsync(Branch branch);
         Task RemoveOperatingHoursAsync(Branch branch);
         Task SaveChangesAsync();

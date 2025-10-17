@@ -16,7 +16,7 @@ namespace Dtos.Customers
 
             public string? Description { get; set; }
             public DateTime RequestDate { get; set; }
-            public Status Status { get; set; }
+            public RepairRequestStatus Status { get; set; }
 
             public decimal? EstimatedCost { get; set; }   // Tổng tiền ước tính
             public List<string>? ImageUrls { get; set; }  // URL ảnh

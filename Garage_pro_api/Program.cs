@@ -18,6 +18,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
 using Repositories;
 using Repositories.BranchRepositories;
+using Repositories.CampaignRepositories;
 using Repositories.Customers;
 using Repositories.PartCategoryRepositories;
 using Repositories.PartRepositories;
@@ -28,27 +29,46 @@ using Repositories.RoleRepositories;
 using Repositories.ServiceRepositories;
 using Repositories.UnitOfWork;
 using Repositories.VehicleRepositories;
-using Repositories.Vehicles;
 using Services;
 using Services.Authentication;
 using Services.BranchServices;
+using Services.CampaignServices;
 using Services.Cloudinaries;
 using Services.Customer;
 using Services.EmailSenders;
 using Services.PartCategoryServices;
 using Services.PolicyServices;
-using Services.QuotationService;
+using Services.QuotationServices;
 using Services.RoleServices;
 using Services.ServiceServices;
 using Services.SmsSenders;
-using Services.Vehicles;
 using Services.VehicleServices;
 using System.Text;
+using Microsoft.AspNetCore.OData;
+using Repositories.VehicleRepositories;
+using AutoMapper;
+
+using Repositories.CampaignRepositories;
+using Services.CampaignServices;
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddOData(options => options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -123,6 +143,7 @@ else
 {
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
 
 // JWT Authentication
@@ -218,12 +239,35 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobService, Services.JobService>();
+builder.Services.AddScoped<IJobService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    return new Services.JobService(jobRepository);
+});
 
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 builder.Services.AddScoped<IPermissionService, PermissionService>(); // This was missing
+
+// Customer service
+builder.Services.AddScoped<ICustomerService, CustomerService>();
+
+// Vehicle repository and services
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
+
+// Quotation services
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+
+// Vehicle brand, model, and color repositories
+builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+
 
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
@@ -255,7 +299,7 @@ builder.Services.AddScoped<IPartRepository, PartRepository>();
 
 // Service Quotation
 builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
-builder.Services.AddScoped<IQuotationService, QuotationService>();
+builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationService>();
 //repair request
 
 
@@ -271,7 +315,7 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 //vehicle
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
-builder.Services.AddScoped<IVehicleService, VehicleServiceService>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
@@ -283,7 +327,9 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 
 
 
-
+// Repositories & Services
+builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
+builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -307,7 +353,6 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 
 var app = builder.Build();
-app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -315,6 +360,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
 app.Use(async (context, next) =>
@@ -335,6 +382,8 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+    Console.WriteLine("Applying pending migrations...");
+    dbContext.Database.Migrate();
 
     if (!dbContext.SecurityPolicies.Any())
     {
@@ -361,7 +410,10 @@ using (var scope = app.Services.CreateScope())
 
 using (var scope = app.Services.CreateScope())
 {
+    
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
+    Console.WriteLine("Database initialized successfully!");
 }
+
 app.Run();

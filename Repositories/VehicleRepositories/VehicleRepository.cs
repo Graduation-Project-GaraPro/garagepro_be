@@ -2,12 +2,9 @@ using BusinessObject;
 using BusinessObject.Vehicles;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace Repositories.Vehicles
+
+namespace Repositories.VehicleRepositories
 {
     public class VehicleRepository : IVehicleRepository
     {
@@ -18,18 +15,40 @@ namespace Repositories.Vehicles
             _context = context;
         }
 
-        public async Task<IEnumerable<Vehicle>> GetAllAsync()
+        public async Task<Vehicle?> GetByIdAsync(Guid vehicleId)
         {
             return await _context.Vehicles
+                .Include(v => v.User)
                 .Include(v => v.Brand)
                 .Include(v => v.Model)
                 .Include(v => v.Color)
-                .ToListAsync();
+                .FirstOrDefaultAsync(v => v.VehicleId == vehicleId);
         }
 
-        public async Task<IEnumerable<Vehicle>> GetByUserIdAsync(String userId)
+        public async Task<Vehicle?> GetByVinAsync(string vin)
         {
             return await _context.Vehicles
+                .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
+                .FirstOrDefaultAsync(v => v.VIN == vin);
+        }
+
+        public async Task<Vehicle?> GetByLicensePlateAsync(string licensePlate)
+        {
+            return await _context.Vehicles
+                .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
+                .FirstOrDefaultAsync(v => v.LicensePlate == licensePlate);
+        }
+
+        public async Task<IEnumerable<Vehicle>> GetByUserIdAsync(string userId)
+        {
+            return await _context.Vehicles
+                .Include(v => v.User)
                 .Where(v => v.UserId == userId)
                 .Include(v => v.Brand)
                 .Include(v => v.Model)
@@ -37,16 +56,17 @@ namespace Repositories.Vehicles
                 .ToListAsync();
         }
 
-        public async Task<Vehicle> GetByIdAsync(Guid id)
+        public async Task<IEnumerable<Vehicle>> GetAllAsync()
         {
             return await _context.Vehicles
+                .Include(v => v.User)
                 .Include(v => v.Brand)
                 .Include(v => v.Model)
                 .Include(v => v.Color)
-                .FirstOrDefaultAsync(v => v.VehicleId == id);
+                .ToListAsync();
         }
 
-        public async Task<Vehicle> AddAsync(Vehicle vehicle)
+        public async Task<Vehicle> CreateAsync(Vehicle vehicle)
         {
             _context.Vehicles.Add(vehicle);
             await _context.SaveChangesAsync();
@@ -55,25 +75,34 @@ namespace Repositories.Vehicles
 
         public async Task<Vehicle> UpdateAsync(Vehicle vehicle)
         {
-            _context.Entry(vehicle).State = EntityState.Modified;
+            _context.Vehicles.Update(vehicle);
             await _context.SaveChangesAsync();
             return vehicle;
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(Guid vehicleId)
         {
-            var vehicle = await _context.Vehicles.FindAsync(id);
-            if (vehicle == null)
-                return false;
+            var vehicle = await _context.Vehicles.FindAsync(vehicleId);
+            if (vehicle == null) return false;
 
             _context.Vehicles.Remove(vehicle);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> ExistsAsync(Guid id)
+        public async Task<bool> ExistsAsync(Guid vehicleId)
         {
-            return await _context.Vehicles.AnyAsync(v => v.VehicleId == id);
+            return await _context.Vehicles.AnyAsync(v => v.VehicleId == vehicleId);
+        }
+
+        public async Task<bool> ExistsByVinAsync(string vin)
+        {
+            return await _context.Vehicles.AnyAsync(v => v.VIN == vin);
+        }
+
+        public async Task<bool> ExistsByLicensePlateAsync(string licensePlate)
+        {
+            return await _context.Vehicles.AnyAsync(v => v.LicensePlate == licensePlate);
         }
     }
 }

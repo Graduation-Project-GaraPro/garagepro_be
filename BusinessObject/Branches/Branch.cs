@@ -55,7 +55,7 @@ namespace BusinessObject.Branches
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
 
         // Quotation relationship
-        public virtual ICollection<Quotations.Quotation> Quotations { get; set; } = new List<Quotations.Quotation>();
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
     }
 

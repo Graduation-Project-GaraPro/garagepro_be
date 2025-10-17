@@ -1,6 +1,5 @@
 ﻿using BusinessObject.Authentication;
 using BusinessObject.Branches;
-using BusinessObject.Quotations;
 using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
@@ -34,7 +33,7 @@ namespace BusinessObject.Customers
 
         public DateTime? CompletedDate { get; set; }
 
-        public Status Status { get; set; } = Status.Pending;  // Pending, Accept, Cancelled
+        public RepairRequestStatus Status { get; set; } = RepairRequestStatus.Pending;  // Pending, Accept, Cancelled
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
@@ -63,7 +62,7 @@ namespace BusinessObject.Customers
         // Optional: các tiến trình sửa chữa
         //public virtual ICollection<RepairTask> RepairTasks { get; set; }
     }
-    public enum Status
+    public enum RepairRequestStatus
     {
         Pending, Accept, Cancelled
     }
