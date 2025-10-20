@@ -9,8 +9,10 @@ namespace BusinessObject
         [Key]
         public Guid QuotationPartId { get; set; } = Guid.NewGuid();
 
+        //[Required]
+        // public Guid QuotationId { get; set; }
         [Required]
-        public Guid QuotationId { get; set; }
+        public Guid QuotationServiceId { get; set; }
 
         [Required]
         public Guid PartId { get; set; }
@@ -31,7 +33,8 @@ namespace BusinessObject
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
-        public virtual Quotation Quotation { get; set; }
+       // public virtual Quotation Quotation { get; set; }
+        public virtual QuotationService QuotationService { get; set; }
         public virtual Part Part { get; set; }
     }
 }

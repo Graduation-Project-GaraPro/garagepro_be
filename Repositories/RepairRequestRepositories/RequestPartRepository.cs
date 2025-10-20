@@ -22,24 +22,24 @@ namespace Repositories.RepairRequestRepositories
             public async Task<IEnumerable<RequestPart>> GetAllAsync()
             {
                 return await _context.RequestParts
-                    .Include(rp => rp.RepairRequest)
+                    .Include(rp => rp.RequestService)
                     .Include(rp => rp.Part)
                     .ToListAsync();
             }
 
-            public async Task<IEnumerable<RequestPart>> GetByRepairRequestIdAsync(Guid repairRequestId)
+            public async Task<IEnumerable<RequestPart>> GetByRepairRequestIdAsync(Guid RequestServiceId)
             {
                 return await _context.RequestParts
-                    .Include(rp => rp.RepairRequest)
+                    //.Include(rp => rp.RepairRequest)
                     .Include(rp => rp.Part)
-                    .Where(rp => rp.RepairRequestID == repairRequestId)
+                    .Where(rp => rp.RequestServiceId == RequestServiceId)
                     .ToListAsync();
             }
 
             public async Task<RequestPart> GetByIdAsync(Guid id)
             {
                 return await _context.RequestParts
-                    .Include(rp => rp.RepairRequest)
+                    .Include(rp => rp.RequestService)
                     .Include(rp => rp.Part)
                     .FirstOrDefaultAsync(rp => rp.RequestPartId == id);
             }

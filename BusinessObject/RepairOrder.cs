@@ -1,3 +1,8 @@
+
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Manager;
 using BusinessObject.Enums;
 using System;
 using System.Collections.Generic;
@@ -22,7 +27,10 @@ namespace BusinessObject
         public DateTime ReceiveDate { get; set; } = DateTime.UtcNow;
 
         [Required]
+        [MaxLength(50)]
+        public string RepairOrderType { get; set; }//repair request, quotation, emergency 
         public RoType RoType { get; set; } // Updated to use enum
+
 
         public DateTime? EstimatedCompletionDate { get; set; }
 
@@ -78,6 +86,9 @@ namespace BusinessObject
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
+      
+        public virtual ICollection<RepairRequest> RepairRequest { get; set; } 
+
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
         public virtual Vehicle Vehicle { get; set; }

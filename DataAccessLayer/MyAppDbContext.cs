@@ -1,9 +1,11 @@
+
 ﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
 using BusinessObject.Customers;
+using BusinessObject.Manager;
 using BusinessObject.Notifications;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
@@ -12,8 +14,12 @@ using BusinessObject.Technician;
 using BusinessObject.Vehicles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using BusinessObject.Manager;
-
 
 namespace DataAccessLayer
 {
@@ -69,6 +75,7 @@ namespace DataAccessLayer
         //Technician
         public DbSet<Technician> Technicians { get; set; }
 
+
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
         public DbSet<RolePermission> RolePermissions { get; set; }
@@ -78,7 +85,7 @@ namespace DataAccessLayer
         //AiChat
         public DbSet<AIChatMessage> AiChatMessages { get; set; }
         public DbSet<AIChatSession> AiChatSessions { get; set; }
-       
+
         public DbSet<AIDiagnostic_Keyword> AIDiagnostic_Keywords { get; set; }
         public DbSet<AIResponseTemplate> AIResponseTemplates { get; set; }
         //Vehicle
@@ -92,8 +99,10 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
+
         public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
         public DbSet<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -105,16 +114,17 @@ namespace DataAccessLayer
             {
                 entity.HasOne(q => q.Inspection)
                       .WithMany(i => i.Quotations)
-                      .HasForeignKey(q => q.InspectionId)
+                      .HasForeignKey(q => q.InspectionId
+                      )
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(q => q.User)
-                      .WithMany()
+                      .WithMany()  // Fixed: added navigation property reference
                       .HasForeignKey(q => q.UserId)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(q => q.Vehicle)
-                      .WithMany()
+                      .WithMany()  // Also add this if Vehicle should track Quotations
                       .HasForeignKey(q => q.VehicleId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
@@ -132,11 +142,13 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
+          
+            // Configure the relationship between QuotationPart and QuotationService
             modelBuilder.Entity<QuotationPart>(entity =>
             {
-                entity.HasOne(qp => qp.Quotation)
-                      .WithMany(q => q.QuotationParts)
-                      .HasForeignKey(qp => qp.QuotationId)
+                entity.HasOne(qp => qp.QuotationService)
+                      .WithMany() // Remove the incorrect collection reference
+                      .HasForeignKey(qp => qp.QuotationServiceId)
                       .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(qp => qp.Part)
@@ -641,39 +653,39 @@ namespace DataAccessLayer
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-           
 
-                
-                modelBuilder.Entity<FeedBack>(entity =>
-                {
-                    entity.ToTable("FeedBacks");                
-                    entity.HasKey(f => f.FeedBackId);           
 
-                    entity.Property(f => f.Description)
-                          .HasMaxLength(1000);                  
 
-                    entity.Property(f => f.Rating)
-                          .IsRequired();                        
+            modelBuilder.Entity<FeedBack>(entity =>
+            {
+                entity.ToTable("FeedBacks");
+                entity.HasKey(f => f.FeedBackId);
 
-                    entity.Property(f => f.CreatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");   
+                entity.Property(f => f.Description)
+                      .HasMaxLength(1000);
 
-                    entity.Property(f => f.UpdatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(f => f.Rating)
+                      .IsRequired();
 
-                    
-                    entity.HasOne(f => f.User)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.UserId)
-                          .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(f => f.CreatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
 
-                   
-                    entity.HasOne(f => f.RepairOrder)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.RepairOrderId)
-                          .OnDelete(DeleteBehavior.Cascade);
-                });
-   
+                entity.Property(f => f.UpdatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
+
+
+                entity.HasOne(f => f.User)
+                      .WithMany()
+                      .HasForeignKey(f => f.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+
+                entity.HasOne(f => f.RepairOrder)
+                      .WithMany()
+                      .HasForeignKey(f => f.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
+
             // Color-Label relationship
             modelBuilder.Entity<Label>()
                 .HasOne(l => l.Color)
@@ -844,7 +856,7 @@ namespace DataAccessLayer
             });
 
             // Many-to-many Branch <-> Service
-            modelBuilder.Entity<BranchService>() .HasKey(bs => new { bs.BranchId, bs.ServiceId });
+            modelBuilder.Entity<BranchService>().HasKey(bs => new { bs.BranchId, bs.ServiceId });
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>()
              .HasOne(bs => bs.Branch)
@@ -859,7 +871,7 @@ namespace DataAccessLayer
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            
+
 
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
@@ -900,7 +912,27 @@ namespace DataAccessLayer
                 .HasOne(pcs => pcs.Service)
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
+            // 🔹 RepairRequest - RequestService (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RequestServices)
+                .WithOne(rs => rs.RepairRequest)
+                .HasForeignKey(rs => rs.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            // 🔹 RequestService - RequestPart (1-n)
+            modelBuilder.Entity<RequestService>()
+                .HasMany(rs => rs.RequestParts)
+                .WithOne(rp => rp.RequestService)
+                .HasForeignKey(rp => rp.RequestServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 (Nếu có) RepairRequest - RepairImage (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RepairImages)
+                .WithOne(img => img.RepairRequest)
+                .HasForeignKey(img => img.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+           
             modelBuilder.Entity<VoucherUsage>(entity =>
             {
                 entity.ToTable("VoucherUsage");
@@ -926,5 +958,6 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }
+
     }
-}
+    }

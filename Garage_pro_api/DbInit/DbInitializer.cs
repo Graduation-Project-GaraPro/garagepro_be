@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -51,7 +51,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            await SeedRepairOrdersAsync();
+            //await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
         }
@@ -351,8 +351,8 @@ namespace Garage_pro_api.DbInit
                 ServiceName = "Oil Change",
                 Description = "This is Oil Change",
                 ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
-               
-                
+
+
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -362,7 +362,7 @@ namespace Garage_pro_api.DbInit
             {
                 ServiceName = "Brake Repair",
                 Description = "This is Brake Repair",
-                ServiceCategoryId = repairCategory.ServiceCategoryId,                            
+                ServiceCategoryId = repairCategory.ServiceCategoryId,
                 Price = 1200000,
                 EstimatedDuration = 2,
                 IsActive = true,
@@ -388,7 +388,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = oilChange.ServiceId,
                     PartId = airFilter.PartId,
-                   
+
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -396,7 +396,7 @@ namespace Garage_pro_api.DbInit
                 {
                     ServiceId = brakeRepair.ServiceId,
                     PartId = brakePad.PartId,
-                   
+
                     CreatedAt = DateTime.UtcNow
                 });
 
@@ -484,11 +484,11 @@ namespace Garage_pro_api.DbInit
                 if (pendingStatus != null && inProgressStatus != null && completedStatus != null)
                 {
                     // Create default colors if they don't exist
-                    var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ?? 
+                    var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ??
                                   new Color { ColorName = "Red", HexCode = "#FF0000" };
-                    var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ?? 
+                    var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ??
                                      new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
-                    var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ?? 
+                    var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ??
                                     new Color { ColorName = "Green", HexCode = "#00FF00" };
 
                     // Add colors to context if they were newly created
@@ -508,24 +508,24 @@ namespace Garage_pro_api.DbInit
 
                     var labels = new List<Label>
                     {
-                        new Label 
-                        { 
-                            LabelName = "New", 
-                            Description = "Newly created order", 
+                        new Label
+                        {
+                            LabelName = "New",
+                            Description = "Newly created order",
                             OrderStatusId = pendingStatus.OrderStatusId,
                             ColorId = redColor.ColorId
                         },
-                        new Label 
-                        { 
-                            LabelName = "In Progress", 
-                            Description = "Order is being worked on", 
+                        new Label
+                        {
+                            LabelName = "In Progress",
+                            Description = "Order is being worked on",
                             OrderStatusId = inProgressStatus.OrderStatusId,
                             ColorId = yellowColor.ColorId
                         },
-                        new Label 
-                        { 
-                            LabelName = "Done", 
-                            Description = "Order completed", 
+                        new Label
+                        {
+                            LabelName = "Done",
+                            Description = "Order completed",
                             OrderStatusId = completedStatus.OrderStatusId,
                             ColorId = greenColor.ColorId
                         }
@@ -544,40 +544,40 @@ namespace Garage_pro_api.DbInit
             {
                 var brands = new List<VehicleBrand>
                 {
-                    new VehicleBrand 
-                    { 
-                        BrandID = Guid.NewGuid(), 
-                        BrandName = "Toyota", 
-                        Country = "Japan", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Toyota",
+                        Country = "Japan",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleBrand 
-                    { 
-                        BrandID = Guid.NewGuid(), 
-                        BrandName = "Honda", 
-                        Country = "Japan", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Honda",
+                        Country = "Japan",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleBrand 
-                    { 
-                        BrandID = Guid.NewGuid(), 
-                        BrandName = "Ford", 
-                        Country = "USA", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Ford",
+                        Country = "USA",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleBrand 
-                    { 
-                        BrandID = Guid.NewGuid(), 
-                        BrandName = "BMW", 
-                        Country = "Germany", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "BMW",
+                        Country = "Germany",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleBrand 
-                    { 
-                        BrandID = Guid.NewGuid(), 
-                        BrandName = "Mercedes-Benz", 
-                        Country = "Germany", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Mercedes-Benz",
+                        Country = "Germany",
+                        CreatedAt = DateTime.UtcNow
                     }
                 };
 
@@ -590,40 +590,40 @@ namespace Garage_pro_api.DbInit
             {
                 var colors = new List<VehicleColor>
                 {
-                    new VehicleColor 
-                    { 
-                        ColorID = Guid.NewGuid(), 
-                        ColorName = "White", 
-                        HexCode = "#FFFFFF", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleColor
+                    {
+                        ColorID = Guid.NewGuid(),
+                        ColorName = "White",
+                        HexCode = "#FFFFFF",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleColor 
-                    { 
-                        ColorID = Guid.NewGuid(), 
-                        ColorName = "Black", 
-                        HexCode = "#000000", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleColor
+                    {
+                        ColorID = Guid.NewGuid(),
+                        ColorName = "Black",
+                        HexCode = "#000000",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleColor 
-                    { 
-                        ColorID = Guid.NewGuid(), 
-                        ColorName = "Silver", 
-                        HexCode = "#C0C0C0", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleColor
+                    {
+                        ColorID = Guid.NewGuid(),
+                        ColorName = "Silver",
+                        HexCode = "#C0C0C0",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleColor 
-                    { 
-                        ColorID = Guid.NewGuid(), 
-                        ColorName = "Red", 
-                        HexCode = "#FF0000", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleColor
+                    {
+                        ColorID = Guid.NewGuid(),
+                        ColorName = "Red",
+                        HexCode = "#FF0000",
+                        CreatedAt = DateTime.UtcNow
                     },
-                    new VehicleColor 
-                    { 
-                        ColorID = Guid.NewGuid(), 
-                        ColorName = "Blue", 
-                        HexCode = "#0000FF", 
-                        CreatedAt = DateTime.UtcNow 
+                    new VehicleColor
+                    {
+                        ColorID = Guid.NewGuid(),
+                        ColorName = "Blue",
+                        HexCode = "#0000FF",
+                        CreatedAt = DateTime.UtcNow
                     }
                 };
 
@@ -645,89 +645,89 @@ namespace Garage_pro_api.DbInit
                     var models = new List<VehicleModel>
                     {
                         // Toyota models
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Camry", 
-                            ManufacturingYear = 2022, 
-                            BrandID = toyotaBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Camry",
+                            ManufacturingYear = 2022,
+                            BrandID = toyotaBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Corolla", 
-                            ManufacturingYear = 2021, 
-                            BrandID = toyotaBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Corolla",
+                            ManufacturingYear = 2021,
+                            BrandID = toyotaBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
                         // Honda models
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Civic", 
-                            ManufacturingYear = 2022, 
-                            BrandID = hondaBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Civic",
+                            ManufacturingYear = 2022,
+                            BrandID = hondaBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Accord", 
-                            ManufacturingYear = 2020, 
-                            BrandID = hondaBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Accord",
+                            ManufacturingYear = 2020,
+                            BrandID = hondaBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
                         // Ford models
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Focus", 
-                            ManufacturingYear = 2021, 
-                            BrandID = fordBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Focus",
+                            ManufacturingYear = 2021,
+                            BrandID = fordBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "Mustang", 
-                            ManufacturingYear = 2023, 
-                            BrandID = fordBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "Mustang",
+                            ManufacturingYear = 2023,
+                            BrandID = fordBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
                         // BMW models
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "3 Series", 
-                            ManufacturingYear = 2022, 
-                            BrandID = bmwBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "3 Series",
+                            ManufacturingYear = 2022,
+                            BrandID = bmwBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "5 Series", 
-                            ManufacturingYear = 2021, 
-                            BrandID = bmwBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "5 Series",
+                            ManufacturingYear = 2021,
+                            BrandID = bmwBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
                         // Mercedes models
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "C-Class", 
-                            ManufacturingYear = 2022, 
-                            BrandID = mercedesBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "C-Class",
+                            ManufacturingYear = 2022,
+                            BrandID = mercedesBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         },
-                        new VehicleModel 
-                        { 
-                            ModelID = Guid.NewGuid(), 
-                            ModelName = "E-Class", 
-                            ManufacturingYear = 2020, 
-                            BrandID = mercedesBrand.BrandID, 
-                            CreatedAt = DateTime.UtcNow 
+                        new VehicleModel
+                        {
+                            ModelID = Guid.NewGuid(),
+                            ModelName = "E-Class",
+                            ManufacturingYear = 2020,
+                            BrandID = mercedesBrand.BrandID,
+                            CreatedAt = DateTime.UtcNow
                         }
                     };
 
@@ -743,7 +743,7 @@ namespace Garage_pro_api.DbInit
             {
                 // Get required entities
                 var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-                
+
                 // Get vehicle related entities
                 var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
                 var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
@@ -763,7 +763,7 @@ namespace Garage_pro_api.DbInit
                 var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
                 var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
 
-                if (customerUser != null && 
+                if (customerUser != null &&
                     whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null &&
                     toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null &&
                     camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null)
@@ -945,89 +945,89 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        private async Task SeedRepairOrdersAsync()
-        {
-            if (!_context.RepairOrders.Any())
-            {
-                // Get required entities
-                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
-                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
-                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
-                
-                var branch = await _context.Branches.FirstOrDefaultAsync();
-                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
-                var vehicles = await _context.Vehicles.ToListAsync();
-                
-                if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
-                    branch != null && customerUser != null && vehicles.Any())
-                {
-                    var repairOrders = new List<RepairOrder>
-                    {
-                        new RepairOrder
-                        {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-5),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
-                            Cost = 1500000,
-                            EstimatedAmount = 2000000,
-                            PaidAmount = 0,
-                            PaidStatus = "Unpaid",
-                            EstimatedRepairTime = 120,
-                            Note = "Regular maintenance service",
-                            CreatedAt = DateTime.UtcNow.AddDays(-5),
-                            BranchId = branch.BranchId,
-                            StatusId = pendingStatus.OrderStatusId,
-                            VehicleId = vehicles[0].VehicleId,
-                            UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
-                        },
-                        new RepairOrder
-                        {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-3),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
-                            Cost = 3000000,
-                            EstimatedAmount = 3500000,
-                            PaidAmount = 1000000,
-                            PaidStatus = "Partial",
-                            EstimatedRepairTime = 180,
-                            Note = "Brake system repair",
-                            CreatedAt = DateTime.UtcNow.AddDays(-3),
-                            BranchId = branch.BranchId,
-                            StatusId = inProgressStatus.OrderStatusId,
-                            VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
-                            UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
-                        },
-                        new RepairOrder
-                        {
-                            ReceiveDate = DateTime.UtcNow.AddDays(-10),
-                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
-                            CompletionDate = DateTime.UtcNow.AddDays(-1),
-                            Cost = 5000000,
-                            EstimatedAmount = 5000000,
-                            PaidAmount = 5000000,
-                            PaidStatus = "Paid",
-                            EstimatedRepairTime = 240,
-                            Note = "Complete vehicle overhaul",
-                            CreatedAt = DateTime.UtcNow.AddDays(-10),
-                            BranchId = branch.BranchId,
-                            StatusId = completedStatus.OrderStatusId,
-                            VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
-                            UserId = customerUser.Id,
-                            RepairRequestId = Guid.NewGuid(),
-                            IsArchived = false,
-                            ArchivedByUserId = null
-                        }
-                    };
+        //private async Task SeedRepairOrdersAsync()
+        //{
+        //    if (!_context.RepairOrders.Any())
+        //    {
+        //        // Get required entities
+        //        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
+        //        var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
+        //        var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
-                    _context.RepairOrders.AddRange(repairOrders);
-                    await _context.SaveChangesAsync();
-                }
-            }
+        //        var branch = await _context.Branches.FirstOrDefaultAsync();
+        //        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
+        //        var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
+        //        var vehicles = await _context.Vehicles.ToListAsync();
+
+        //        if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
+        //            branch != null && customerUser != null && vehicles.Any())
+        //        {
+        //            var repairOrders = new List<RepairOrder>
+        //            {
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-5),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+        //                    Cost = 1500000,
+        //                    EstimatedAmount = 2000000,
+        //                    PaidAmount = 0,
+        //                    PaidStatus = "Unpaid",
+        //                    EstimatedRepairTime = 120,
+        //                    Note = "Regular maintenance service",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-5),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = pendingStatus.OrderStatusId,
+        //                    VehicleId = vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                },
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-3),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+        //                    Cost = 3000000,
+        //                    EstimatedAmount = 3500000,
+        //                    PaidAmount = 1000000,
+        //                    PaidStatus = "Partial",
+        //                    EstimatedRepairTime = 180,
+        //                    Note = "Brake system repair",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-3),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = inProgressStatus.OrderStatusId,
+        //                    VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                },
+        //                new RepairOrder
+        //                {
+        //                    ReceiveDate = DateTime.UtcNow.AddDays(-10),
+        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
+        //                    CompletionDate = DateTime.UtcNow.AddDays(-1),
+        //                    Cost = 5000000,
+        //                    EstimatedAmount = 5000000,
+        //                    PaidAmount = 5000000,
+        //                    PaidStatus = "Paid",
+        //                    EstimatedRepairTime = 240,
+        //                    Note = "Complete vehicle overhaul",
+        //                    CreatedAt = DateTime.UtcNow.AddDays(-10),
+        //                    BranchId = branch.BranchId,
+        //                    StatusId = completedStatus.OrderStatusId,
+        //                    VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
+        //                    UserId = customerUser.Id,
+        //                    RepairRequestId = Guid.NewGuid(),
+        //                    IsArchived = false,
+        //                    ArchivedByUserId = null
+        //                }
+        //            };
+
+        //            _context.RepairOrders.AddRange(repairOrders);
+        //            await _context.SaveChangesAsync();
+        //        }
+        //    }
         }
+
     }
-}

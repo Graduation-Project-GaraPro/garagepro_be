@@ -1,7 +1,9 @@
 ﻿using BusinessObject.Manager;
+using Dtos.FeedBacks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using System.Security.Claims;
 
 namespace Garage_pro_api.Controllers
 {
@@ -23,42 +25,88 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] FeedBack feedback)
+        public async Task<IActionResult> CreateFeedback([FromBody] FeedBackCreateDto feedback)
         {
-            if (feedback == null)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+            // Lấy userId từ token
+            try
             {
-                return BadRequest("Feedback is null.");
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+                if (feedback == null)
+                {
+                    return BadRequest("Feedback is null.");
+                }
+                var feedbacks = await _feedbackService.CreateFeedbackAsync(feedback, userId);
+                return Ok(feedbacks);
             }
-            await _feedbackService.AddAsync(feedback);
-            return CreatedAtAction(nameof(feedback), new { id = feedback.FeedBackId }, feedback);
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+
+            }
         }
 
+        // ✅ Cập nhật feedback
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] FeedBack feedback)
+        public async Task<IActionResult> UpdateFeedback(Guid id, [FromBody] FeedBackUpdateDto feedback)
         {
-            if (feedback == null || id != feedback.FeedBackId)
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
             {
-                return BadRequest("Feedback is null or ID mismatch.");
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var updatedFeedback = await _feedbackService.UpdateFeedbackAsync(id, feedback, userId);
+                return Ok(updatedFeedback);
             }
-            var existingFeedback = await _feedbackService.GetByIdAsync(id);
-            if (existingFeedback == null)
+            catch (Exception ex)
             {
-                return NotFound("Feedback not found.");
+                return BadRequest(new { message = ex.Message });
             }
-            await _feedbackService.UpdateAsync(feedback);
-            return NoContent();
         }
 
+        // ✅ Xoá feedback
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var existingFeedback = await _feedbackService.GetByIdAsync(id);
-            if (existingFeedback == null)
+            try
             {
-                return NotFound("Feedback not found.");
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var result = await _feedbackService.DeleteFeedbackAsync(id, userId);
+                if (!result)
+                    return NotFound("Feedback not found or not yours.");
+
+                return NoContent();
             }
-            await _feedbackService.DeleteAsync(id);
-            return NoContent();
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpGet("{idBranch}")]
+        public async Task<IActionResult> GetFeedbacksByBranchId(Guid idBranch)
+        {
+            try
+            {
+                var feedbacks = await _feedbackService.GetFeedbacksByBranchIdAsync(idBranch);
+                return Ok(feedbacks);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

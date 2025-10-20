@@ -17,5 +17,7 @@ namespace Services.QuotationServices
         Task<bool> DeleteQuotationAsync(Guid quotationId);
         Task<bool> QuotationExistsAsync(Guid quotationId);
         Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);
+        Task<bool> ApproveQuotationAsync(Guid quotationId);
+        Task<bool> RejectQuotationAsync(Guid quotationId);
     }
 }

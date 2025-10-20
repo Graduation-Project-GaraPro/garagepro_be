@@ -1,10 +1,11 @@
+using BusinessObject.Authentication;
+using BusinessObject.Customers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Authentication;
 
 namespace BusinessObject.Branches
 {
@@ -45,12 +46,17 @@ namespace BusinessObject.Branches
 
         // Navigation properties
         public virtual ICollection<RepairOrder>? RepairOrders { get; set; } = null!;
+        //repair request 
+        public virtual ICollection<RepairRequest>? RepairRequests { get; set; } = null!;
         public virtual ICollection<Part>? Parts { get; set; } = null!;
         public virtual ICollection<ApplicationUser> Staffs { get; set; } = new List<ApplicationUser>();
 
         // Many-to-many
         public virtual ICollection<BranchService> BranchServices { get; set; } = new List<BranchService>();
-        
+
+        // Quotation relationship
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
+
     }
 
 
