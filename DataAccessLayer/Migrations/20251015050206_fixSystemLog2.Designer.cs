@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015050206_fixSystemLog2")]
+    partial class fixSystemLog2
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1722,6 +1725,31 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("ServiceInspections");
                 });
 
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("LogCategories", (string)null);
+                });
+
             modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.Property<long>("Id")
@@ -1732,6 +1760,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<string>("ApplicationUserId")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Details")
                         .HasColumnType("nvarchar(max)");
@@ -1783,6 +1814,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ApplicationUserId");
+
+                    b.HasIndex("CategoryId");
 
                     b.HasIndex("Level");
 
@@ -2940,10 +2973,18 @@ namespace DataAccessLayer.Migrations
                         .WithMany("SystemLogs")
                         .HasForeignKey("ApplicationUserId");
 
+                    b.HasOne("BusinessObject.SystemLogs.LogCategory", "Category")
+                        .WithMany("SystemLogs")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });
@@ -3298,6 +3339,11 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ChildServiceCategories");
 
                     b.Navigation("Services");
+                });
+
+            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
+                {
+                    b.Navigation("SystemLogs");
                 });
 
             modelBuilder.Entity("BusinessObject.Technician.Specifications", b =>

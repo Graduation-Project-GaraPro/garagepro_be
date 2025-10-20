@@ -70,7 +70,7 @@ namespace Garage_pro_api.DbInit
                         Users = 0,
                         NormalizedName = roleName.ToUpper(),
                         Description = $"Default {roleName} role",
-                        IsDefault = roleName == "Customer",
+                        IsDefault = true,
                         CreatedAt = DateTime.UtcNow
                     };
                     await _roleManager.CreateAsync(role);

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Repositories.LogRepositories
 {
@@ -27,15 +28,40 @@ namespace Repositories.LogRepositories
         public async Task<IEnumerable<SystemLog>> GetAllAsync()
         {
             return await _context.SystemLogs
-                .OrderByDescending(l => l.Timestamp)
+                .OrderByDescending(x => x.Timestamp)
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<SystemLog>> GetRecentAsync(int count = 50)
+        public async Task<IEnumerable<SystemLog>> GetByDateRangeAsync(DateTime fromDate, DateTime toDate)
         {
             return await _context.SystemLogs
-                .OrderByDescending(l => l.Timestamp)
-                .Take(count)
+                
+                .Where(x => x.Timestamp >= fromDate && x.Timestamp <= toDate)
+                .OrderByDescending(x => x.Timestamp)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<SystemLog>> GetBySourceAsync(LogSource source)
+        {
+            return await _context.SystemLogs
+                .Where(x => x.Source == source)
+                .OrderByDescending(x => x.Timestamp)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<SystemLog>> GetByUserIdAsync(string userId)
+        {
+            return await _context.SystemLogs              
+                .Where(x => x.UserId == userId)
+                .OrderByDescending(x => x.Timestamp)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<SystemLog>> GetByLevelAsync(LogLevel level)
+        {
+            return await _context.SystemLogs               
+                .Where(x => x.Level == level)
+                .OrderByDescending(x => x.Timestamp)
                 .ToListAsync();
         }
     }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +12,8 @@ namespace Repositories.LogRepositories
     {
         Task AddAsync(SystemLog log);
         Task<IEnumerable<SystemLog>> GetAllAsync();
-        Task<IEnumerable<SystemLog>> GetRecentAsync(int count = 50);
+        Task<IEnumerable<SystemLog>> GetByDateRangeAsync(DateTime fromDate, DateTime toDate);
+        Task<IEnumerable<SystemLog>> GetBySourceAsync(LogSource source);
+        Task<IEnumerable<SystemLog>> GetByUserIdAsync(string userId);
     }
 }

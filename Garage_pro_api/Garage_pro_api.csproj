@@ -39,6 +39,7 @@
 
   <ItemGroup>
     <Folder Include="Logs\" />
+    <Folder Include="SignalRHubs\" />
   </ItemGroup>
 
 </Project>

@@ -44,20 +44,10 @@ using Services.CampaignServices;
 using Repositories.LogRepositories;
 using Services.LogServices;
 using Serilog;
+using Garage_pro_api.DbInterceptor;
+using Microsoft.Extensions.Options;
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy
-                .WithOrigins("http://localhost:3000")
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
 
 // Add services to the container.
 
@@ -108,8 +98,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<MappingProfile>();
 });
 
-builder.Services.AddDbContext<MyAppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 
 builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
 {
@@ -138,6 +127,9 @@ else
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
 }
+
+
+
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -197,7 +189,7 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
 
-
+builder.Services.AddSignalR();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -302,6 +294,8 @@ builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
 
+builder.Services.AddHostedService<LogCleanupService>();
+
 // Service Quotation
 builder.Services.AddScoped<IServiceService, ServiceService>();
 
@@ -318,14 +312,26 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
+{
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // Truyền IServiceProvider thay vì ILogService
+    options.AddInterceptors(
+    new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
+    );
 
+    // Log để kiểm tra
+    Console.WriteLine("✅ DatabaseLoggingInterceptor registered");
+});
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        builder => builder  
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
+    options.AddPolicy("AllowFrontend",
+        builder =>
+            builder
+                .WithOrigins("http://localhost:3000") // 👈 Chỉ định origin cụ thể
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials()); // 👈 Cho phép credentials
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -338,8 +344,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseCors("AllowFrontend");
 app.UseSession();
-app.UseMiddleware<UserActivityMiddleware>();
+
 
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
@@ -350,14 +357,17 @@ app.Use(async (context, next) =>
     Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
     await next();
 });
+app.MapHub<LogHub>("/logHub");
 
 app.UseAuthentication();
+app.UseMiddleware<UserActivityMiddleware>();
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 // Initialize database
-
+// Configure SignalR endpoints
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -389,6 +399,7 @@ using (var scope = app.Services.CreateScope())
 {
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
+    
 }
 
 app.Run();

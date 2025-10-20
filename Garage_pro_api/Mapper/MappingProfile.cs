@@ -14,6 +14,8 @@ using Dtos.Services;
 using Dtos.Parts;
 using Dtos.Auth;
 using Dtos.Quotations;
+using Dtos.Campaigns;
+using BusinessObject.Campaigns;
 
 namespace Garage_pro_api.Mapper
 {
@@ -201,8 +203,13 @@ namespace Garage_pro_api.Mapper
             CreateMap<Branch, BranchUpdateDto>()
            .ReverseMap();
             // OperatingHour -> OperatingHourDto
+
+
             CreateMap<OperatingHour, OperatingHourDto>();
 
+            // Campaign
+            CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
             // Part -> PartDto
             CreateMap<Part, PartDto>();
             CreateMap<Part, PartServiceRelatedDto>().ReverseMap();

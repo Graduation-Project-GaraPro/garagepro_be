@@ -1,4 +1,6 @@
-﻿using Services.LogServices;
+﻿using System.Security.Claims;
+using BusinessObject.SystemLogs;
+using Services.LogServices;
 
 namespace Garage_pro_api.Middlewares
 {
@@ -14,15 +16,60 @@ namespace Garage_pro_api.Middlewares
         public async Task InvokeAsync(HttpContext context, ILogService logService)
         {
             var user = context.User.Identity?.Name ?? "Anonymous";
-            var userId = context.User.FindFirst("sub")?.Value ?? "N/A";
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? null;
+            
             var ip = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
             var agent = context.Request.Headers["User-Agent"].ToString();
             var path = context.Request.Path;
+            var method = context.Request.Method;
 
-            // log access, không nhạy cảm
-            await logService.LogUserActivityAsync(userId, user, $"Accessed {path}", ip, agent);
+            // Gọi pipeline kế tiếp và bắt trạng thái trả về
+            var originalResponseBody = context.Response.Body;
+            using var memoryStream = new MemoryStream();
+            context.Response.Body = memoryStream;
 
             await _next(context);
+
+            // Đọc lại status code sau khi xử lý request
+            memoryStream.Position = 0;
+            await memoryStream.CopyToAsync(originalResponseBody);
+            context.Response.Body = originalResponseBody;
+
+            var statusCode = context.Response.StatusCode;
+
+            if (statusCode == StatusCodes.Status401Unauthorized)
+            {
+                //  Người dùng chưa đăng nhập
+                await logService.LogSecurityAsync(
+                    $"Unauthorized access attempt to {method} {path}",
+                    userId
+                );
+            }
+            else if (statusCode == StatusCodes.Status403Forbidden)
+            {
+                //  Người dùng đăng nhập nhưng không có quyền
+                await logService.LogSecurityAsync(
+                    $"Forbidden access attempt by {user} to {method} {path}",
+                    userId
+                );
+            }
+            else if (statusCode >= 200 && statusCode < 300)
+            {
+                //  Truy cập hợp lệ, chỉ log hoạt động người dùng
+                //await logService.LogUserActivityAsync(
+                //    $"Accessed {method} {path}",
+                //    userId,
+                //    user
+                //);
+            }
+            else if (statusCode >= 400)
+            {
+                //  Lỗi client hoặc server
+                await logService.LogSystemAsync(
+                    $"Error {statusCode} when accessing {method} {path}",
+                    LogLevel.Warning
+                );
+            }
         }
     }
 }

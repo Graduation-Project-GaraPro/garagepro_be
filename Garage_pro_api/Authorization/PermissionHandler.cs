@@ -26,7 +26,7 @@ namespace Garage_pro_api.Authorization
             AuthorizationHandlerContext context,
             PermissionRequirement requirement)
         {
-            // 1. Lấy user hiện tại
+            // 1. Lấy user hiện tạiC
             var user = await _userManager.GetUserAsync(context.User);
             if (user == null) return;
 
