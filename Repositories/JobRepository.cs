@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
+//using BusinessObject.InspectionAndRepair;
 using BusinessObject.Technician;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
@@ -404,8 +405,11 @@ namespace Repositories
 
         public async Task<Repair?> GetActiveRepairForJobAsync(Guid jobId)
         {
+            //return await _context.Repairs
+            //    .FirstOrDefaultAsync(r => r.JobId == jobId && r.Status == RepairStatus.InProgress);
+
             return await _context.Repairs
-                .FirstOrDefaultAsync(r => r.JobId == jobId && r.Status == RepairStatus.InProgress);
+                .FirstOrDefaultAsync(r => r.JobId == jobId );
         }
 
         public async Task<bool> StartRepairForJobAsync(Guid jobId, Repair repair)
@@ -415,7 +419,7 @@ namespace Repositories
             if (activeRepair != null) return false;
 
             repair.JobId = jobId;
-            repair.Status = RepairStatus.InProgress;
+            //repair.Status = RepairStatus.InProgress;
             repair.StartTime = DateTime.UtcNow;
 
             _context.Repairs.Add(repair);

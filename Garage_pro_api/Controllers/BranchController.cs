@@ -1,4 +1,5 @@
-﻿using Dtos.Branches;
+﻿using BusinessObject.Branches;
+using Dtos.Branches;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -38,6 +39,35 @@ namespace Garage_pro_api.Controllers
                     page,
                     pageSize
                 });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpGet("GetAllBranchesBasis")]
+        public async Task<IActionResult> GetAllBranchesBasis()
+                {
+            try
+            {
+                var result = await _branchService.GetAllBranchesBasicAsync();
+
+                // Project only the fields you want to expose
+                var branches = result.Select(s => new
+                {
+                    s.BranchId,
+                    s.BranchName,
+                    s.City,
+                    s.District,
+                    s.Ward,
+                    s.PhoneNumber ,
+                    s.Email,
+                    s.Description ,
+                    s.IsActive 
+            });
+
+                return Ok(branches);
             }
             catch (Exception ex)
             {

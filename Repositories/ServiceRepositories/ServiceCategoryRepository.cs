@@ -22,9 +22,9 @@ namespace Repositories.ServiceRepositories
         public async Task<IEnumerable<ServiceCategory>> GetAllAsync()
         {
             return await _context.ServiceCategories
-                .Include(sc => sc.Services)
+                .Include(sc => sc.Services).ThenInclude(s => s.ServiceParts).ThenInclude(s => s.Part).ThenInclude(p=>p.PartCategory)
                 .Include(sc => sc.ChildServiceCategories)
-                    .ThenInclude(c => c.Services)
+                    .ThenInclude(c => c.Services).ThenInclude(s=>s.ServiceParts).ThenInclude(s=>s.Part).ThenInclude(p => p.PartCategory)
                 .Include(sc => sc.ChildServiceCategories)
                     .ThenInclude(c => c.ChildServiceCategories) // nếu muốn nhiều cấp
                 .ToListAsync();
