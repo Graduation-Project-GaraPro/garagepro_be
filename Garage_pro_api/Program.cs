@@ -50,6 +50,7 @@ using AutoMapper;
 
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
+using VNPAY.NET;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -340,6 +341,22 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+
+// VNPAY config
+builder.Services.AddSingleton<IVnpay>(sp =>
+{
+    var config = builder.Configuration;
+
+    var vnpay = new Vnpay();
+    vnpay.Initialize(
+        config["Vnpay:TmnCode"],
+        config["Vnpay:HashSecret"],
+        config["Vnpay:BaseUrl"],     // https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+        config["Vnpay:CallbackUrl"]  // ReturnUrl (callback client)
+    );
+
+    return vnpay;
+});
 
 builder.Services.AddCors(options =>
 {
