@@ -178,7 +178,9 @@ namespace Services.LogServices
         public async Task<IEnumerable<SystemLog>> GetUserActivityLogsAsync()
             => await _logRepository.GetBySourceAsync(LogSource.UserActivity);
 
-        public async Task<IEnumerable<SystemLogDto>> GetAllSystemLogsAsync()
+        public async Task<IEnumerable<SystemLogDto
+            
+            >> GetAllSystemLogsAsync()
             => (await _logRepository.GetAllAsync()).Select(MapToDto);
 
         public async Task<IEnumerable<SystemLogDto>> GetLogsBySourceAsync(LogSource source)

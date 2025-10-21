@@ -24,7 +24,7 @@ namespace Services
             _userManager = userManager;
         }
 
-        public async Task<string> GenerateJwtToken(ApplicationUser user)
+        public async Task<string> GenerateJwtToken(ApplicationUser user, int time)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
@@ -56,7 +56,7 @@ namespace Services
             {
                 Subject = new ClaimsIdentity(claims),
                 // Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpireMinutes"])),
-                Expires = DateTime.UtcNow.AddSeconds(1000), 
+                Expires = DateTime.UtcNow.AddMinutes(time), 
                 Issuer = jwtSettings["Issuer"],
                 Audience = jwtSettings["Audience"],
                 SigningCredentials = new SigningCredentials(
