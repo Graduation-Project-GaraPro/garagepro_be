@@ -47,7 +47,6 @@ using System.Text;
 using Microsoft.AspNetCore.OData;
 using Repositories.VehicleRepositories;
 using AutoMapper;
-
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
 using Repositories.LogRepositories;
@@ -56,13 +55,14 @@ using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
-var builder = WebApplication.CreateBuilder(args);
 
+var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
 builder.Services.AddControllers()
     .AddOData(options => options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -108,8 +108,6 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<MappingProfile>();
 });
 
-
-
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.Password.RequiredLength = 1;
@@ -138,9 +136,6 @@ else
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
     builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
-
-
-
 
 // JWT Authentication
 var jwtSettings = builder.Configuration.GetSection("Jwt");
@@ -275,13 +270,9 @@ builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
 
-
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
-
-//builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
-//builder.Services.AddScoped<ISystemLogService, SystemLogService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
@@ -289,7 +280,6 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 builder.Services.AddScoped<IBranchRepository, BranchRepository>();
-
 builder.Services.AddScoped<IBranchService, BranchService>();
 
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
@@ -309,9 +299,8 @@ builder.Services.AddHostedService<LogCleanupService>();
 // Service Quotation
 builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
 builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationService>();
-//repair request
 
-
+// repair request
 builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
 builder.Services.AddScoped<IRequestServiceRepository, RequestServiceRepository>();
 builder.Services.AddScoped<IRepairRequestRepository, RepairRequestRepository>();
@@ -319,10 +308,9 @@ builder.Services.AddScoped<IRepairRequestService, RepairRequestService>();
 // Nếu dùng Scoped lifetime như các repository khác
 builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 
-//
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-//vehicle
+// vehicle
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
@@ -331,10 +319,6 @@ builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
 builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
 builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
 builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
-
-
-
-
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
@@ -349,13 +333,16 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+
+// Database configuration - FIXED: Removed misplaced async and fixed the configuration
 builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
     // Truyền IServiceProvider thay vì ILogService
     options.AddInterceptors(
-    new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
+        new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
     );
+});
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -375,16 +362,29 @@ builder.Services.AddSingleton<IVnpay>(sp =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
-        builder =>
-            builder
-                .WithOrigins("http://localhost:3000") // 👈 Chỉ định origin cụ thể
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials()); // 👈 Cho phép credentials
+    options.AddPolicy("AllowFrontendAndAndroid", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://localhost:3000",       // frontend web
+                "https://10.0.2.2:7113",       // Android Emulator
+                "http://192.168.1.96:7113"    // LDPlayer / LAN
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
 });
 
-builder.Services.AddEndpointsApiExplorer();
+// Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5117);  // HTTP (tùy chọn)
+    options.ListenAnyIP(7113, listenOptions =>
+    {
+        listenOptions.UseHttps(); // HTTPS trên cổng 7113
+    });
+});
 
 var app = builder.Build();
 
@@ -394,9 +394,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
 app.UseCors("AllowFrontend");
 app.UseSession();
-
 
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
@@ -416,8 +416,8 @@ app.UseAuthorization();            // phải chạy trước để gắn User h�
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
+
 // Initialize database
-// Configure SignalR endpoints
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -449,10 +449,8 @@ using (var scope = app.Services.CreateScope())
 
 using (var scope = app.Services.CreateScope())
 {
-    
     var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
     await dbInitializer.Initialize();
-    
 }
 
 app.Run();

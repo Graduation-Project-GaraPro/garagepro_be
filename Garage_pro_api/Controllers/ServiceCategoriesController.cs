@@ -24,7 +24,12 @@ namespace Garage_pro_api.Controllers
             var categories = await _service.GetAllCategoriesAsync();
             return Ok(categories);
         }
-
+        [HttpGet("forBooking")]
+        public async Task<ActionResult<IEnumerable<ServiceCategoryForBooking>>> GetAllBasic()
+        {
+            var categories = await _service.GetAllCategoriesForBookingAsync();
+            return Ok(categories);
+        }
         // GET: api/ServiceCategories/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<ServiceCategoryDto>> GetById(Guid id)

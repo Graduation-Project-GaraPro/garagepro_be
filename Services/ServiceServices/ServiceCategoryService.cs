@@ -5,7 +5,9 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject;
+using BusinessObject.Campaigns;
 using Dtos.Branches;
+using Dtos.Parts;
 using Dtos.Services;
 using Microsoft.EntityFrameworkCore;
 using Repositories.ServiceRepositories;
@@ -27,6 +29,84 @@ namespace Services.ServiceServices
         {
             var categories = await _repository.GetAllAsync();
             return _mapper.Map<IEnumerable<ServiceCategoryDto>>(categories);
+        }
+        public async Task<IEnumerable<ServiceCategoryForBooking>> GetAllCategoriesForBookingAsync()
+        {
+            // Lấy tất cả categories + services + part + promotional campaigns
+            var categories = await _repository.GetAllAsync();
+
+            var result = categories.Select(cat => new ServiceCategoryForBooking
+            {
+                ServiceCategoryId = cat.ServiceCategoryId,
+                CategoryName = cat.CategoryName,
+                Services = cat.Services.Select(service => new ServiceDtoForBooking
+                {
+                    ServiceId = service.ServiceId,
+                    ServiceCategoryId = service.ServiceCategoryId,
+                    ServiceName = service.ServiceName,
+                    Description = service.Description,
+                    Price = service.Price,
+                    DiscountedPrice = CalculateDiscountedPrice(service),
+                    EstimatedDuration = service.EstimatedDuration,
+                    IsActive = service.IsActive,
+                    IsAdvanced = service.IsAdvanced,
+                    CreatedAt = service.CreatedAt,
+                    UpdatedAt = service.UpdatedAt,
+                    ServiceCategory = new GetCategoryForServiceDto
+                    {
+                        ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
+                        CategoryName = service.ServiceCategory.CategoryName
+                    },
+                    PartCategories = service.ServiceParts
+                        .Where(sp => sp.Part != null)
+                        .GroupBy(sp => sp.Part!.PartCategoryId)
+                        .Select(g => new PartCategoryForBooking
+                        {
+                            PartCategoryId = g.Key,
+                            CategoryName = g.First().Part!.PartCategory.CategoryName,
+                            Parts = g.Select(sp => new PartDto
+                            {
+                                PartId = sp.PartId,
+                                Name = sp.Part!.Name,
+                                Price = sp.Part.Price
+                            }).ToList()
+                        }).ToList()
+                }).ToList()
+            }).ToList();
+
+            return result;
+        }
+
+
+        // Hàm helper tính giá sau ưu đãi
+        private decimal CalculateDiscountedPrice(Service service)
+        {
+            decimal price = service.Price;
+
+            var activeCampaigns = service.PromotionalCampaignServices
+                .Where(pcs => pcs.PromotionalCampaign.IsActive &&
+                              pcs.PromotionalCampaign.StartDate <= DateTime.UtcNow &&
+                              pcs.PromotionalCampaign.EndDate >= DateTime.UtcNow)
+                .Select(pcs => pcs.PromotionalCampaign)
+                .ToList();
+
+            foreach (var campaign in activeCampaigns)
+            {
+                switch (campaign.DiscountType)
+                {
+                    case DiscountType.Percentage:
+                        price -= price * campaign.DiscountValue / 100;
+                        break;
+                    case DiscountType.Fixed:
+                        price -= campaign.DiscountValue;
+                        break;
+                    case DiscountType.FreeService:
+                        price = 0;
+                        break;
+                }
+            }
+
+            return Math.Max(price, 0);
         }
 
         public async Task<ServiceCategoryDto> GetCategoryByIdAsync(Guid id)
