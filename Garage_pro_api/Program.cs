@@ -55,6 +55,7 @@ using Services.LogServices;
 using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
+using VNPAY.NET;
 var builder = WebApplication.CreateBuilder(args);
 
 
@@ -356,9 +357,22 @@ builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
     new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
     );
 
-    // Log để kiểm tra
-    Console.WriteLine("✅ DatabaseLoggingInterceptor registered");
+// VNPAY config
+builder.Services.AddSingleton<IVnpay>(sp =>
+{
+    var config = builder.Configuration;
+
+    var vnpay = new Vnpay();
+    vnpay.Initialize(
+        config["Vnpay:TmnCode"],
+        config["Vnpay:HashSecret"],
+        config["Vnpay:BaseUrl"],     // https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+        config["Vnpay:CallbackUrl"]  // ReturnUrl (callback client)
+    );
+
+    return vnpay;
 });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
