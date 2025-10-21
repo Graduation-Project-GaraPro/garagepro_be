@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.SystemLogs;
+using Dtos;
 using Dtos.Logs;
 using Microsoft.Extensions.Logging;
 
