@@ -51,6 +51,7 @@ using AutoMapper;
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
 using VNPAY.NET;
+using Repositories.PaymentRepositories;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddCors(options =>
@@ -315,14 +316,18 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 //vehicle
+
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
-builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleBrandServices, VehicleBrandService>();
 builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
 builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
+
+//PAYMENT
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 
 

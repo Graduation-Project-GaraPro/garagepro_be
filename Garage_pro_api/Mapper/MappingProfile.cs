@@ -5,20 +5,20 @@ using BusinessObject.Branches;
 using BusinessObject.Customers;
 using BusinessObject.Manager;
 using BusinessObject.Policies;
-
 using BusinessObject.Roles;
+using BusinessObject.Vehicles;
+using Dtos.Auth;
 using Dtos.Auth;
 using Dtos.Branches;
 using Dtos.Customers;
 using Dtos.FeedBacks;
 using Dtos.Parts;
-using Dtos.Policies;
-using Dtos.Roles;
-using Dtos.Vehicles;
-using Dtos.Services;
 using Dtos.Parts;
-using Dtos.Auth;
+using Dtos.Policies;
 using Dtos.Quotations;
+using Dtos.Roles;
+using Dtos.Services;
+using Dtos.Vehicles;
 
 namespace Garage_pro_api.Mapper
 {
@@ -247,10 +247,14 @@ namespace Garage_pro_api.Mapper
            .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model != null ? src.Model.ModelName : null))
            .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color != null ? src.Color.ColorName : null));
 
-            
-           
 
-           
+
+            //vehicleColor
+            // VehicleColor -> VehicleColorDto
+            CreateMap<VehicleColor, VehicleColorDto>().ReverseMap();
+            CreateMap<VehicleModel, VehicleModelDto>().ReverseMap();
+
+
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
      .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
