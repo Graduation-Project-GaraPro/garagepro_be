@@ -1,4 +1,5 @@
 ﻿using BusinessObject.Manager;
+using Dtos.FeedBacks;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,12 +10,12 @@ namespace Services
 {
     public interface IFeedBackService
     {
-        Task<List<FeedBack>> GetAllAsync();
-        Task<FeedBack> GetByIdAsync(Guid feedbackId);
-        Task AddAsync(FeedBack feedback);
-        Task UpdateAsync(FeedBack feedback);
-        Task DeleteAsync(Guid feedbackId);
-        Task<List<FeedBack>> GetByUserIdAsync(string userId);
-        Task<List<FeedBack>> GetByRepairOrderIdAsync(Guid repairOrderId);
+        Task<IEnumerable<FeedBackReadDto>> GetAllAsync();
+        Task<FeedBackReadDto> CreateFeedbackAsync(FeedBackCreateDto dto, string userId);
+        Task<FeedBackReadDto> UpdateFeedbackAsync(Guid feedbackId,FeedBackUpdateDto dto, string userId);
+        Task<bool> DeleteFeedbackAsync(Guid feedbackId, string userId);
+        Task<IEnumerable<FeedBackReadDto>> GetFeedbacksByBranchIdAsync(Guid branchId);
+        Task<IEnumerable<FeedBackReadDto>> GetFeedbacksByUserIdAsync(string userId);
+        Task<IEnumerable<FeedBackReadDto>> GetByRepairOrderIdAsync(Guid repairOrderId);
     }
 }

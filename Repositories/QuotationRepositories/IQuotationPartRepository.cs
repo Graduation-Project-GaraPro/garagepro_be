@@ -9,8 +9,9 @@ namespace Repositories.QuotationRepositories
     {
         Task<QuotationPart> CreateAsync(QuotationPart quotationPart);
         Task<QuotationPart> GetByIdAsync(Guid quotationPartId);
-        Task<IEnumerable<QuotationPart>> GetByQuotationIdAsync(Guid quotationId);
+        Task<IEnumerable<QuotationPart>> GetByQuotationServiceIdAsync(Guid quotationServiceId);
         Task<QuotationPart> UpdateAsync(QuotationPart quotationPart);
         Task<bool> DeleteAsync(Guid quotationPartId);
+        
     }
 }

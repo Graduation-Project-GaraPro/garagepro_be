@@ -23,7 +23,7 @@ namespace Dtos.Quotations
         public string CustomerName { get; set; }
         public string VehicleInfo { get; set; }
         public ICollection<QuotationServiceDto> QuotationServices { get; set; }
-        public ICollection<QuotationPartDto> QuotationParts { get; set; }
+        
     }
 
     public class QuotationServiceDto
@@ -45,7 +45,8 @@ namespace Dtos.Quotations
     public class QuotationPartDto
     {
         public Guid QuotationPartId { get; set; }
-        public Guid QuotationId { get; set; }
+       
+             public Guid QuotationServiceId { get; set; }
         public Guid PartId { get; set; }
         public bool IsSelected { get; set; }
         public decimal Price { get; set; }
@@ -72,7 +73,7 @@ namespace Dtos.Quotations
         public string Note { get; set; }
         
         public ICollection<CreateQuotationServiceDto> QuotationServices { get; set; }
-        public ICollection<CreateQuotationPartDto> QuotationParts { get; set; }
+       
     }
 
     public class CreateQuotationServiceDto
@@ -86,6 +87,7 @@ namespace Dtos.Quotations
         public decimal Price { get; set; }
 
         public decimal Quantity { get; set; } = 1;
+        public ICollection<CreateQuotationPartDto> QuotationParts { get; set; }
     }
 
     public class CreateQuotationPartDto
@@ -126,7 +128,7 @@ namespace Dtos.Quotations
         public string CustomerNote { get; set; }
         
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }
-        public ICollection<CustomerQuotationPartDto> SelectedParts { get; set; }
+        
     }
 
     public class CustomerQuotationServiceDto

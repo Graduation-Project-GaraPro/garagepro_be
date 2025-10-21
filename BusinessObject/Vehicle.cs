@@ -1,4 +1,4 @@
-using BusinessObject.Authentication;
+﻿using BusinessObject.Authentication;
 using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
@@ -60,7 +60,7 @@ namespace BusinessObject
 
         [ForeignKey("ModelId")]
         public virtual VehicleModel Model { get; set; }
-
+        //modelCOlỏId
         [ForeignKey("ColorId")]
         public virtual VehicleColor Color { get; set; }
 

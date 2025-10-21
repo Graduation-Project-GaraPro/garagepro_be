@@ -11,5 +11,8 @@ namespace Repositories.PartRepositories
     public interface IPartRepository
     {
         Task<bool> ExistsAsync(Expression<Func<Part, bool>> predicate);
+        Task<Part?> GetByIdAsync(Guid partId);
+
+      
     }
 }

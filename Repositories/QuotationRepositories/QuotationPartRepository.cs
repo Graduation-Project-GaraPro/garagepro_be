@@ -30,13 +30,7 @@ namespace Repositories.QuotationRepositories
                 .FirstOrDefaultAsync(qp => qp.QuotationPartId == quotationPartId);
         }
 
-        public async Task<IEnumerable<QuotationPart>> GetByQuotationIdAsync(Guid quotationId)
-        {
-            return await _context.QuotationParts
-                .Include(qp => qp.Part)
-                .Where(qp => qp.QuotationId == quotationId)
-                .ToListAsync();
-        }
+      
 
         public async Task<QuotationPart> UpdateAsync(QuotationPart quotationPart)
         {
@@ -54,6 +48,14 @@ namespace Repositories.QuotationRepositories
             _context.QuotationParts.Remove(quotationPart);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<IEnumerable<QuotationPart>> GetByQuotationServiceIdAsync(Guid quotationServiceId)
+        {
+            return await _context.QuotationParts
+                .Include(qsp => qsp.Part)
+                .Where(qsp => qsp.QuotationServiceId == quotationServiceId)
+                .ToListAsync();
         }
     }
 }

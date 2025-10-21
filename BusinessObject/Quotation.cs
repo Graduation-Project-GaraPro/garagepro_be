@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using BusinessObject.Authentication;
+using BusinessObject.Customers;
 
 namespace BusinessObject
 {
@@ -28,7 +29,7 @@ namespace BusinessObject
         public DateTime? CustomerResponseAt { get; set; }
 
         [MaxLength(20)]
-        public string Status { get; set; } // Pending, Sent, Approved, Rejected, Expired
+        public Status Status { get; set; } // Pending, Sent, Approved, Rejected, Expired
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal TotalAmount { get; set; }
@@ -37,7 +38,7 @@ namespace BusinessObject
         public decimal DiscountAmount { get; set; }
 
         [MaxLength(500)]
-        public string Note { get; set; }
+        public string? Note { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
 
@@ -46,6 +47,15 @@ namespace BusinessObject
         public virtual ApplicationUser User { get; set; } // Customer
         public virtual Vehicle Vehicle { get; set; }
         public virtual ICollection<QuotationService> QuotationServices { get; set; } = new List<QuotationService>();
-        public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
+
+        //public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
+    }
+    public enum Status
+    {
+        Pending,
+        Sent,
+        Approved,
+        Rejected,
+        Expired
     }
 }
