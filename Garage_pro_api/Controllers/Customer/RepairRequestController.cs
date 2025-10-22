@@ -21,7 +21,7 @@ namespace Garage_pro_api.Controllers.Customer
 
         // POST: api/RepairRequests
         [HttpPost]
-        public async Task<IActionResult> CreateRepairRequest([FromBody] CreateRequestDto dto)
+        public async Task<IActionResult> CreateRepairRequest([FromBody] CreateRepairRequestWithImageDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -33,7 +33,7 @@ namespace Garage_pro_api.Controllers.Customer
                     if (string.IsNullOrEmpty(userId))
                         return Unauthorized();
 
-                    var createdRequest = await _repairRequestService.CreateRepairRequestAsync(dto, userId);
+                    var createdRequest = await _repairRequestService.CreateRepairWithImageRequestAsync(dto, userId);
                 return Ok(createdRequest);
             }
             catch (Exception ex)
@@ -41,6 +41,24 @@ namespace Garage_pro_api.Controllers.Customer
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        [HttpPost("withImage")]
+        public async Task<IActionResult> CreateRepairRequestWithImage([FromForm] CreateRepairRequestWithImageDto dto)
+        {
+           
+
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var result = await _repairRequestService.CreateRepairWithImageRequestAsync(dto, userId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         //Put: api/RepairRequest/{requestId}
         [HttpPut("{requestId}")]
         public async Task<IActionResult> UpdateRepairRequest(Guid requestId, [FromBody] UpdateRepairRequestDto dto)

@@ -368,12 +368,15 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
-                "http://192.168.1.96:7113"    // LDPlayer / LAN
+                "http://192.168.1.96:7113"   // LDPlayer / LAN
+
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
+
+
 });
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
@@ -395,7 +398,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
+//app.UseCors("AllowFrontend");
+app.UseCors("AllowAll");
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();

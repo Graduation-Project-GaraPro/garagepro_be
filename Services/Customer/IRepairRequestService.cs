@@ -25,7 +25,7 @@ namespace Services.Customer
         //Task<IEnumerable<RequestPartDto>> GetPartsAsync(Guid repairRequestId);
         //Task<RequestPartDto> AddPartAsync(RequestPartDto dto);
         //Task<bool> DeletePartAsync(Guid partId);
-
+        Task<RepairRequestDto> CreateRepairWithImageRequestAsync(CreateRepairRequestWithImageDto dto, string userId);
         Task<IEnumerable<RequestServiceDto>> GetServicesAsync(Guid repairRequestId);
         Task<RequestServiceDto> AddServiceAsync(RequestServiceDto dto);
         Task<bool> DeleteServiceAsync(Guid requestServiceId);
