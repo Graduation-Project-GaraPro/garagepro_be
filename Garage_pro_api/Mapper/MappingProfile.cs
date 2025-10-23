@@ -231,16 +231,37 @@ namespace Garage_pro_api.Mapper
             CreateMap<RequestServiceDto, RequestService>()
                 .ForMember(dest => dest.RequestServiceId, opt => opt.MapFrom(src => Guid.NewGuid()));
 
+            CreateMap<RequestPart, RPPartDtoDetail>()
+            .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
+            .ForMember(dest => dest.price, opt => opt.MapFrom(src => src.Part.Price))
+            .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Part.Name));
+
+            CreateMap<RequestService, RPServiceDetail>()
+            .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
+            .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
+            .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Service.Price))
+            
+            .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
 
 
-            //Map repair request
-            CreateMap<RepairRequest, RepairRequestDto>()
-               .ForMember(dest => dest.RepairRequestID, opt => opt.MapFrom(src => src.RepairRequestID))
+            CreateMap<RepairRequest, RPDetailDto>().ForMember(dest => dest.RepairRequestID, opt => opt.MapFrom(src => src.RepairRequestID))
                .ForMember(dest => dest.VehicleID, opt => opt.MapFrom(src => src.VehicleID))
                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src =>
                    src.RepairImages.Select(img => img.ImageUrl).ToList()))
                .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
+
+            CreateMap<RepairRequest, RepairRequestDto>()
+             
+             ;
+            //Map repair request
+            //CreateMap<RepairRequest, RepairRequestDto>()
+            //   .ForMember(dest => dest.RepairRequestID, opt => opt.MapFrom(src => src.RepairRequestID))
+            //   .ForMember(dest => dest.VehicleID, opt => opt.MapFrom(src => src.VehicleID))
+            //   .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
+            //   .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src =>
+            //       src.RepairImages.Select(img => img.ImageUrl).ToList()))
+            //   .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
             // Map reuqest Servcie
             CreateMap<RequestService, RequestServiceDto>()
      .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))

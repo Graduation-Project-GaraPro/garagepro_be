@@ -127,5 +127,10 @@ namespace Repositories.Customers
             await _context.SaveChangesAsync();
             return true;
         }
+
+        public IQueryable<RepairRequest> GetQueryable()
+        {
+            return _context.RepairRequests.AsQueryable();
+        }
     }
 }

@@ -3,6 +3,7 @@ using BusinessObject;
 using BusinessObject.Customers;
 using Dtos.Customers;
 using Dtos.Parts;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Repositories.Customers;
 using Repositories.RepairRequestRepositories;
@@ -38,16 +39,77 @@ namespace Services.Customer
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
+        public async Task<object> GetPagedAsync(
+            int pageNumber = 1,
+            int pageSize = 10,
+            Guid? vehicleId = null,
+            RepairRequestStatus? status = null,
+            Guid? branchId = null,
+            string? userId = null)
+        {
+            var query = _unitOfWork.RepairRequests.GetQueryable();
+
+            // ✅ Lọc theo UserID đang đăng nhập
+            if (!string.IsNullOrWhiteSpace(userId))
+                query = query.Where(r => r.UserID == userId);
+
+            // ✅ Lọc theo VehicleId
+            if (vehicleId.HasValue)
+                query = query.Where(r => r.VehicleID == vehicleId.Value);
+
+            // ✅ Lọc theo Status
+            if (status.HasValue)
+                query = query.Where(r => r.Status == status.Value);
+
+            // ✅ Lọc theo BranchId
+            if (branchId.HasValue)
+                query = query.Where(r => r.BranchId == branchId.Value);
+
+            // ✅ Đếm tổng bản ghi
+            var totalCount = await query.CountAsync();
+
+            // ✅ Sort theo RequestDate (mới nhất trước)
+            var data = await query
+                .OrderByDescending(r => r.RequestDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(r => new RepairRequestDto
+                {
+                    RepairRequestID = r.RepairRequestID,
+                    VehicleID = r.VehicleID,
+                    UserID = r.UserID,
+                    Description = r.Description,
+                    BranchId = r.BranchId,
+                    RequestDate = r.RequestDate,
+                    CompletedDate = r.CompletedDate,
+                    Status = r.Status,
+                    CreatedAt = r.CreatedAt,
+                    UpdatedAt = r.UpdatedAt,
+                    EstimatedCost = r.EstimatedCost
+                })
+                .ToListAsync();
+
+            // ✅ Kết quả phân trang
+            return new
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Data = data
+            };
+        }
+
         public async Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId)
         {
             var requests = await _unitOfWork.RepairRequests.GetByUserIdAsync(userId);
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
-        public async Task<RepairRequestDto> GetByIdAsync(Guid id)
+        public async Task<RPDetailDto> GetByIdAsync(Guid id)
         {
             var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
-            return _mapper.Map<RepairRequestDto>(request);
+            return _mapper.Map<RPDetailDto>(request);
         }
 
         public async Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId)

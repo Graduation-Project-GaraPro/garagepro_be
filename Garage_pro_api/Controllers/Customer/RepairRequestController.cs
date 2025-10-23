@@ -1,4 +1,5 @@
-﻿using Dtos.Customers;
+﻿using BusinessObject.Customers;
+using Dtos.Customers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
@@ -112,6 +113,18 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(request);
         }
 
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetPaged(
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? vehicleId = null,
+            [FromQuery] RepairRequestStatus? status = null,
+            [FromQuery] Guid? branchId = null)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var result = await _repairRequestService.GetPagedAsync(pageNumber, pageSize, vehicleId, status, branchId, userId);
+            return Ok(result);
+        }
 
         // GET: api/RepairRequests
         [HttpGet("user-requests")]

@@ -363,7 +363,7 @@ namespace Garage_pro_api.DbInit
         private async Task SeedServicesAsync()
         {
             //if (!_context.Services.Any())
-            if (_context.Services.Any())
+            if (!_context.Services.Any())
             {
                 var maintenance = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Maintenance");
                 var repair = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Repair");

@@ -15,6 +15,9 @@ namespace Repositories.Customers
         Task<bool> UpdateAsync(RepairRequest repairRequest);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> ExistsAsync(Guid id);
-      
+
+        
+        IQueryable<RepairRequest> GetQueryable();
+
     }
 }
