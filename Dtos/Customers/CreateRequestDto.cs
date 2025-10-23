@@ -15,7 +15,7 @@ namespace Dtos.Customers
         public Guid BranchId { get; set; }
         [Required]
         public Guid VehicleID { get; set; }
-        [Required, StringLength(500, ErrorMessage = "Description max 500 chars")]
+        //[Required, StringLength(500, ErrorMessage = "Description max 500 chars")]
         public string? Description { get; set; }
         [Required]
         public DateTime RequestDate { get; set; }

@@ -292,11 +292,13 @@ namespace Garage_pro_api.DbInit
             if (!_context.PartCategories.Any())
             {
                 var categories = new List<PartCategory>
-            {
-                new PartCategory { CategoryName = "Engine" },
-                new PartCategory { CategoryName = "Brakes" },
-                new PartCategory { CategoryName = "Electrical" }
-            };
+        {
+            new PartCategory { CategoryName = "Engine" },
+            new PartCategory { CategoryName = "Brakes" },
+            new PartCategory { CategoryName = "Electrical" },
+            new PartCategory { CategoryName = "Suspension" },
+            new PartCategory { CategoryName = "Cooling System" }
+        };
                 _context.PartCategories.AddRange(categories);
                 await _context.SaveChangesAsync();
             }
@@ -308,11 +310,32 @@ namespace Garage_pro_api.DbInit
             {
                 var engineCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Engine");
                 var brakeCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Brakes");
+                var electricalCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Electrical");
+                var suspensionCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Suspension");
+                var coolingCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Cooling System");
 
                 var parts = new List<Part>
         {
+            // Engine parts
             new Part { Name = "Air Filter", PartCategoryId = engineCategory.LaborCategoryId, Price = 150000, Stock = 50, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Brake Pad", PartCategoryId = brakeCategory.LaborCategoryId, Price = 400000, Stock = 30, CreatedAt = DateTime.UtcNow }
+            new Part { Name = "Oil Filter", PartCategoryId = engineCategory.LaborCategoryId, Price = 100000, Stock = 70, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Spark Plug", PartCategoryId = engineCategory.LaborCategoryId, Price = 80000, Stock = 100, CreatedAt = DateTime.UtcNow },
+
+            // Brakes
+            new Part { Name = "Brake Pad", PartCategoryId = brakeCategory.LaborCategoryId , Price = 400000, Stock = 30, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Brake Disc", PartCategoryId = brakeCategory.LaborCategoryId, Price = 700000, Stock = 25, CreatedAt = DateTime.UtcNow },
+
+            // Electrical
+            new Part { Name = "Battery", PartCategoryId = electricalCategory.LaborCategoryId, Price = 1200000, Stock = 20, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Alternator", PartCategoryId = electricalCategory.LaborCategoryId, Price = 2500000, Stock = 10, CreatedAt = DateTime.UtcNow },
+
+            // Suspension
+            new Part { Name = "Shock Absorber", PartCategoryId = suspensionCategory.LaborCategoryId, Price = 900000, Stock = 15, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Control Arm", PartCategoryId = suspensionCategory.LaborCategoryId, Price = 650000, Stock = 18, CreatedAt = DateTime.UtcNow },
+
+            // Cooling System
+            new Part { Name = "Radiator", PartCategoryId = coolingCategory.LaborCategoryId, Price = 1800000, Stock = 8, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Coolant Hose", PartCategoryId = coolingCategory.LaborCategoryId, Price = 120000, Stock = 40, CreatedAt = DateTime.UtcNow }
         };
 
                 _context.Parts.AddRange(parts);
@@ -322,13 +345,16 @@ namespace Garage_pro_api.DbInit
 
         private async Task SeedServiceCategoriesAsync()
         {
+            //if (!_context.ServiceCategories.Any())
             if (!_context.ServiceCategories.Any())
             {
                 var categories = new List<ServiceCategory>
-            {
-                new ServiceCategory { CategoryName = "Maintenance",Description="This mantainance car" },
-                new ServiceCategory { CategoryName = "Repair" ,Description="This mantainance car"}
-            };
+        {
+            new ServiceCategory { CategoryName = "Maintenance", Description = "General maintenance services for vehicles" },
+            new ServiceCategory { CategoryName = "Repair", Description = "Repair services for damaged parts" },
+            new ServiceCategory { CategoryName = "Inspection", Description = "Vehicle inspection and diagnostics" },
+            new ServiceCategory { CategoryName = "Upgrade", Description = "Performance and aesthetic upgrades" }
+        };
                 _context.ServiceCategories.AddRange(categories);
                 await _context.SaveChangesAsync();
             }
@@ -336,23 +362,21 @@ namespace Garage_pro_api.DbInit
 
         private async Task SeedServicesAsync()
         {
-            if (!_context.Services.Any())
+            //if (!_context.Services.Any())
+            if (_context.Services.Any())
             {
-                var maintenanceCategory = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Maintenance");
-                var repairCategory = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Repair");
-
-                // Nếu chưa có ServiceType, có thể tạo tạm
-                var defaultServiceTypeId = Guid.NewGuid();
+                var maintenance = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Maintenance");
+                var repair = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Repair");
+                var inspection = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Inspection");
+                var upgrade = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Upgrade");
 
                 var services = new List<Service>
         {
             new Service
             {
                 ServiceName = "Oil Change",
-                Description = "This is Oil Change",
-                ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
-
-
+                Description = "Replace old engine oil with new one",
+                ServiceCategoryId = maintenance.ServiceCategoryId,
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -361,10 +385,40 @@ namespace Garage_pro_api.DbInit
             new Service
             {
                 ServiceName = "Brake Repair",
-                Description = "This is Brake Repair",
-                ServiceCategoryId = repairCategory.ServiceCategoryId,
+                Description = "Replace worn brake pads and discs",
+                ServiceCategoryId = repair.ServiceCategoryId,
                 Price = 1200000,
                 EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Battery Replacement",
+                Description = "Replace and install a new car battery",
+                ServiceCategoryId = repair.ServiceCategoryId,
+                Price = 1500000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Full Vehicle Inspection",
+                Description = "Complete diagnostic and safety inspection",
+                ServiceCategoryId = inspection.ServiceCategoryId,
+                Price = 500000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Suspension Upgrade",
+                Description = "Install new suspension system for better handling",
+                ServiceCategoryId = upgrade.ServiceCategoryId,
+                Price = 2500000,
+                EstimatedDuration = 4,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }
@@ -374,35 +428,65 @@ namespace Garage_pro_api.DbInit
                 await _context.SaveChangesAsync();
             }
         }
+
         private async Task SeedServicePartsAsync()
         {
             if (!_context.ServiceParts.Any())
             {
                 var oilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Oil Change");
                 var brakeRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Repair");
+                var batteryReplace = await _context.Services.FirstAsync(s => s.ServiceName == "Battery Replacement");
+                var suspensionUpgrade = await _context.Services.FirstAsync(s => s.ServiceName == "Suspension Upgrade");
+                var inspection = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Full Vehicle Inspection");
 
                 var airFilter = await _context.Parts.FirstAsync(p => p.Name == "Air Filter");
+                var oilFilter = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter");
+                var sparkPlug = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug");
                 var brakePad = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad");
+                var brakeDisc = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc");
+                var battery = await _context.Parts.FirstAsync(p => p.Name == "Battery");
+                var alternator = await _context.Parts.FirstAsync(p => p.Name == "Alternator");
+                var shockAbsorber = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber");
+                var controlArm = await _context.Parts.FirstAsync(p => p.Name == "Control Arm");
+                var radiator = await _context.Parts.FirstAsync(p => p.Name == "Radiator");
+                var coolantHose = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose");
 
-                _context.ServiceParts.Add(new ServicePart
-                {
-                    ServiceId = oilChange.ServiceId,
-                    PartId = airFilter.PartId,
+                var mappings = new List<ServicePart>
+        {
+            // 🔧 Oil Change Service — nhiều linh kiện liên quan
+            new ServicePart { ServiceId = oilChange.ServiceId, PartId = oilFilter.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = oilChange.ServiceId, PartId = airFilter.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = oilChange.ServiceId, PartId = sparkPlug.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = oilChange.ServiceId, PartId = coolantHose.PartId, CreatedAt = DateTime.UtcNow },
 
-                    CreatedAt = DateTime.UtcNow
-                });
+            // 🚗 Brake Repair — nhiều bộ phận phanh
+            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = brakePad.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = brakeDisc.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = controlArm.PartId, CreatedAt = DateTime.UtcNow },
 
-                _context.ServiceParts.Add(new ServicePart
-                {
-                    ServiceId = brakeRepair.ServiceId,
-                    PartId = brakePad.PartId,
+            // 🔋 Battery Replacement — thêm alternator và dây nối
+            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = battery.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = alternator.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = sparkPlug.PartId, CreatedAt = DateTime.UtcNow },
 
-                    CreatedAt = DateTime.UtcNow
-                });
+            // 🛞 Suspension Upgrade — nhiều linh kiện treo
+            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = shockAbsorber.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = controlArm.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = brakeDisc.PartId, CreatedAt = DateTime.UtcNow },
 
+            // 🔍 Full Vehicle Inspection — kiểm tra tổng quát
+            new ServicePart { ServiceId = inspection.ServiceId, PartId = airFilter.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = inspection.ServiceId, PartId = oilFilter.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = inspection.ServiceId, PartId = radiator.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = inspection.ServiceId, PartId = coolantHose.PartId, CreatedAt = DateTime.UtcNow }
+        };
+
+                _context.ServiceParts.AddRange(mappings);
                 await _context.SaveChangesAsync();
             }
         }
+
+
         private async Task SeedBranchesAsync()
         {
             if (!_context.Branches.Any())
