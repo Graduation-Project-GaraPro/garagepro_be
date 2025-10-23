@@ -11,7 +11,7 @@ namespace Dtos.Services
     {
         public Guid ServiceCategoryId { get; set; }
         public string CategoryName { get; set; }
-        public Guid ServiceTypeId { get; set; }
+        //public Guid ServiceTypeId { get; set; }
         public Guid? ParentServiceCategoryId { get; set; }
         public string Description { get; set; }
         public bool IsActive { get; set; }
