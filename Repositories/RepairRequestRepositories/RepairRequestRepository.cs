@@ -21,11 +21,15 @@ namespace Repositories.Customers
         {
             return await _context.RepairRequests
                 .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RequestParts)
                     .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
+                .Include(r => r.Customer)
                 .ToListAsync();
         }
 
@@ -51,6 +55,23 @@ namespace Repositories.Customers
                 .Include(r => r.RequestParts)
                     .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
+                .FirstOrDefaultAsync(r => r.RepairRequestID == id);
+        }
+
+        // New method for managers with full details
+        public async Task<RepairRequest> GetByIdWithDetailsAsync(Guid id)
+        {
+            return await _context.RepairRequests
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(r => r.RequestServices)
+                    .ThenInclude(rs => rs.Service)
+                .Include(r => r.RequestParts)
+                    .ThenInclude(rp => rp.Part)
+                .Include(r => r.RepairImages)
+                .Include(r => r.Customer)
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
 

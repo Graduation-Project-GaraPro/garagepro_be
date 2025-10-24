@@ -109,7 +109,8 @@ namespace Garage_pro_api.Controllers
         //            VehicleId = createRequestDto.VehicleId,
         //            RoType = createRequestDto.RepairOrderType,
         //            Note = createRequestDto.VehicleConcern,
-        //            LabelId = createRequestDto.LabelId,
+        //            // Removed LabelId as labels should be accessed through OrderStatus
+        //            // LabelId = createRequestDto.LabelId,
         //            UserId = createRequestDto.CustomerId,
         //            // Set default values for required fields
         //            StatusId = Guid.NewGuid(), // This should be set to a proper status ID
@@ -164,6 +165,20 @@ namespace Garage_pro_api.Controllers
                     return BadRequest("User is not assigned to a branch");
                 }
 
+                // Validate that the customer exists
+                var customer = await _userService.GetByIdAsync(createRoDto.CustomerId);
+                if (customer == null)
+                {
+                    return BadRequest("Customer not found");
+                }
+
+                // Validate that the vehicle exists
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(createRoDto.VehicleId);
+                if (vehicle == null)
+                {
+                    return BadRequest("Vehicle not found");
+                }
+
                 // Get the default "Pending" status
                 var statusColumns = await _orderStatusService.GetOrderStatusesByColumnsAsync();
                 var pendingStatus = statusColumns.Pending.FirstOrDefault();
@@ -178,7 +193,8 @@ namespace Garage_pro_api.Controllers
                     EstimatedCompletionDate = createRoDto.EstimatedCompletionDate,
                     EstimatedAmount = createRoDto.EstimatedAmount,
                     Note = createRoDto.Note,
-                    LabelId = createRoDto.LabelId,
+                    // Removed LabelId as labels should be accessed through OrderStatus
+                    // LabelId = createRoDto.LabelId,
                     EstimatedRepairTime = createRoDto.EstimatedRepairTime,
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
@@ -200,7 +216,12 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                // Log the full exception details for debugging
+                return BadRequest(new { 
+                    message = "An error occurred while creating the repair order", 
+                    details = ex.Message,
+                    innerException = ex.InnerException?.Message
+                });
             }
         }
 

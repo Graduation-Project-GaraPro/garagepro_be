@@ -1,14 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject.Authentication;
-using Dtos.RoBoard;
 using Microsoft.AspNetCore.Identity;
-using Repositories;
-using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Repositories;
+using Dtos.RoBoard;
 
 namespace Services
 {
@@ -99,7 +99,21 @@ namespace Services
             var validationResults = new List<ValidationResult>();
             if (!Validator.TryValidateObject(createCustomerDto, validationContext, validationResults, true))
             {
-                throw new ValidationException("Invalid customer data: " + string.Join("; ", validationResults.Select(vr => vr.ErrorMessage)));
+                var errorMessage = string.Join("; ", validationResults.Select(vr => vr.ErrorMessage));
+                var validationException = new ValidationException($"Invalid customer data: {errorMessage}");
+                throw validationException;
+            }
+            
+            // Additional custom validation
+            if (string.IsNullOrWhiteSpace(createCustomerDto.FirstName) || 
+                string.IsNullOrWhiteSpace(createCustomerDto.LastName))
+            {
+                throw new ValidationException("First name and last name are required");
+            }
+            
+            if (string.IsNullOrWhiteSpace(createCustomerDto.PhoneNumber))
+            {
+                throw new ValidationException("Phone number is required");
             }
             
             // Check if customer with same phone number already exists
@@ -141,7 +155,8 @@ namespace Services
             var result = await _userManager.CreateAsync(customer, defaultPassword);
             if (!result.Succeeded)
             {
-                throw new InvalidOperationException("Failed to create customer: " + string.Join("; ", result.Errors.Select(e => e.Description)));
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Failed to create customer: {errors}");
             }
             
             // Add to Customer role

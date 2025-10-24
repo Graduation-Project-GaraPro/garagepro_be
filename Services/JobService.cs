@@ -235,7 +235,7 @@ namespace Services
             return await _jobRepository.UpdateJobStatusAsync(jobId, newStatus, changeNote);
         }
 
-        public async Task<IEnumerable<Job>> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates)
+        public async Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates)
         {
             if (updates == null || !updates.Any())
                 throw new ArgumentException("Updates cannot be null or empty", nameof(updates));
@@ -278,8 +278,8 @@ namespace Services
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
 
-            // Job must be approved by customer to be assigned to technician
-            return job.Status == JobStatus.CustomerApproved;
+            // Job must be in Pending status to be assigned to technician
+            return job.Status == JobStatus.Pending;
         }
 
         public async Task<bool> HasActiveTechnicianAsync(Guid jobId)
@@ -427,10 +427,7 @@ namespace Services
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-                [JobStatus.Pending] = new List<JobStatus> { JobStatus.WaitingCustomerApproval },
-                [JobStatus.WaitingCustomerApproval] = new List<JobStatus> { JobStatus.CustomerApproved, JobStatus.CustomerRejected },
-                [JobStatus.CustomerApproved] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-                [JobStatus.CustomerRejected] = new List<JobStatus> { JobStatus.Pending }, // Can be revised and resent
+                [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
                 [JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
                 [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician }, // Can be reassigned
                 [JobStatus.Completed] = new List<JobStatus>() // Terminal status
@@ -444,10 +441,7 @@ namespace Services
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-                [JobStatus.Pending] = new List<JobStatus> { JobStatus.WaitingCustomerApproval },
-                [JobStatus.WaitingCustomerApproval] = new List<JobStatus> { JobStatus.CustomerApproved, JobStatus.CustomerRejected },
-                [JobStatus.CustomerApproved] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-                [JobStatus.CustomerRejected] = new List<JobStatus> { JobStatus.Pending },
+                [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
                 [JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
                 [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician },
                 [JobStatus.Completed] = new List<JobStatus>()
@@ -465,7 +459,7 @@ namespace Services
         public async Task<bool> SetJobEstimateExpirationAsync(Guid jobId, int expirationDays)
         {
             if (expirationDays <= 0)
-                throw new ArgumentException("Expiration days must be greater than zero", nameof(expirationDays));
+                throw new ArgumentException("Expiration days must be positive", nameof(expirationDays));
 
             return await _jobRepository.SetJobEstimateExpirationAsync(jobId, expirationDays);
         }
@@ -520,26 +514,8 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            // Get service details to create job
-            // Note: We would need IServiceRepository injected to get service details
-            // For now, creating basic job structure
-            
-            var job = new Job
-            {
-                ServiceId = serviceId,
-                RepairOrderId = repairOrderId,
-                JobName = $"Service Job - {DateTime.UtcNow:yyyy-MM-dd}", // Default name, can be updated
-                Status = JobStatus.Pending,
-                Level = 1, // Default priority
-                CreatedAt = DateTime.UtcNow,
-                Note = $"Job created by manager {managerId}"
-                // TotalAmount will be calculated when parts are added or from Service.Price
-            };
-
-            return await _jobRepository.CreateAsync(job);
+            return await _jobRepository.CreateJobFromServiceAsync(serviceId, repairOrderId, managerId);
         }
-        
-        
 
         #endregion
     }

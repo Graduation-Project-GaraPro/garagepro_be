@@ -221,10 +221,8 @@ builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
 builder.Services.AddScoped<ILabelRepository, LabelRepository>();
-builder.Services.AddScoped<IColorRepository, ColorRepository>();
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 builder.Services.AddScoped<ILabelService, LabelService>();
-builder.Services.AddScoped<IColorService, ColorService>();
 
 // RepairOrder repository and service
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
@@ -261,6 +259,7 @@ builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceR
 // builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServicePartRepository, Repositories.QuotationRepositories.QuotationServicePartRepository>();
 builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
 
 // Vehicle brand, model, and color repositories
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
@@ -302,6 +301,21 @@ builder.Services.AddScoped<IServiceService, ServiceService>();
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
+
+// Inspection services
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
+
+// Technician services
+builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+
+// Repair Request services - Adding missing registrations
+builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
+builder.Services.AddScoped<Services.Customer.IRepairRequestService, Services.Customer.RepairRequestService>();
+
+// Adding missing RequestPart and RequestService repository registrations
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestPartRepository, Repositories.RepairRequestRepositories.RequestPartRepository>();
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestServiceRepository, Repositories.RepairRequestRepositories.RequestServiceRepository>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();

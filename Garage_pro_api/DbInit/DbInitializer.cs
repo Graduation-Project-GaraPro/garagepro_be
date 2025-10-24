@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -199,6 +199,13 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
+                    
+                    // ✅ Vehicle Management
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId }
                 };
 
             foreach (var perm in defaultPermissions)
@@ -228,7 +235,7 @@ namespace Garage_pro_api.DbInit
                                     "BOOKING_VIEW", "BOOKING_MANAGE",
             
                                     // Role
-                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN",
+                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
             
                                     // ✅ Branch Management
                                     "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE",
@@ -244,7 +251,8 @@ namespace Garage_pro_api.DbInit
                                 "Manager", new[]
                                 {
                                     "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
-                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW"
+                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
+                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
                                 }
                             },
                             {
@@ -481,54 +489,43 @@ namespace Garage_pro_api.DbInit
                 var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
                 var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
-                // Create default colors if they don't exist
-                var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ?? 
-                              new Color { ColorName = "Red", HexCode = "#FF0000" };
-                var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ?? 
-                                 new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
-                var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ?? 
-                                new Color { ColorName = "Green", HexCode = "#00FF00" };
-
-                // Add colors to context if they were newly created
-                if (!_context.Colors.Any(c => c.ColorName == "Red"))
-                    _context.Colors.Add(redColor);
-                if (!_context.Colors.Any(c => c.ColorName == "Yellow"))
-                    _context.Colors.Add(yellowColor);
-                if (!_context.Colors.Any(c => c.ColorName == "Green"))
-                    _context.Colors.Add(greenColor);
-
-                await _context.SaveChangesAsync();
-
                 // Only create labels if we have the corresponding order statuses
                 if (pendingStatus != null && inProgressStatus != null && completedStatus != null)
                 {
-                    var labels = new List<Label>
+                    // Check if labels already exist
+                    if (!_context.Labels.Any())
                     {
-                        new Label 
-                        { 
-                            LabelName = "Pending", 
-                            Description = "Order is waiting to be processed", 
-                            OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
-                            ColorId = redColor.ColorId
-                        },
-                        new Label 
-                        { 
-                            LabelName = "In Progress", 
-                            Description = "Order is being worked on", 
-                            OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
-                            ColorId = yellowColor.ColorId
-                        },
-                        new Label 
-                        { 
-                            LabelName = "Done", 
-                            Description = "Order completed", 
-                            OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
-                            ColorId = greenColor.ColorId
-                        }
-                    };
+                        var labels = new List<Label>
+                        {
+                            new Label 
+                            { 
+                                LabelName = "Pending", 
+                                Description = "Order is waiting to be processed", 
+                                OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Red",
+                                HexCode = "#FF0000"
+                            },
+                            new Label 
+                            { 
+                                LabelName = "In Progress", 
+                                Description = "Order is being worked on", 
+                                OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Yellow",
+                                HexCode = "#FFFF00"
+                            },
+                            new Label 
+                            { 
+                                LabelName = "Done", 
+                                Description = "Order completed", 
+                                OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Green",
+                                HexCode = "#00FF00"
+                            }
+                        };
 
-                    _context.Labels.AddRange(labels);
-                    await _context.SaveChangesAsync();
+                        _context.Labels.AddRange(labels);
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
         }

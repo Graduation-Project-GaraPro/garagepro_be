@@ -21,21 +21,11 @@ namespace BusinessObject
         // Add a property to indicate manager recommendation
         public bool IsRecommended { get; set; } = false; // Manager recommendation
 
-        // Add an optional note from the manager
-        [MaxLength(500)]
-        public string? RecommendationNote { get; set; } // Made nullable
-
         [Column(TypeName = "decimal(18,2)")]
-        public decimal Price { get; set; }
+        public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Quantity { get; set; } = 1;
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal TotalPrice { get; set; }
-
-        [Required]
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         public virtual QuotationService QuotationService { get; set; }

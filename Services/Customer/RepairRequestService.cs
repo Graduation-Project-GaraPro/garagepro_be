@@ -53,6 +53,72 @@ namespace Services.Customer
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
+        // New method for managers
+        public async Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync()
+        {
+            var requests = await _repairRequestRepository.GetAllAsync();
+            var managerDtos = new List<ManagerRepairRequestDto>();
+
+            foreach (var request in requests)
+            {
+                var customer = await _userRepository.GetByIdAsync(request.UserID);
+                var vehicle = request.Vehicle;
+                
+                var dto = new ManagerRepairRequestDto
+                {
+                    RequestID = request.RepairRequestID,
+                    VehicleID = request.VehicleID,
+                    CustomerID = request.UserID,
+                    CustomerName = customer?.FullName ?? "Unknown Customer",
+                    VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                    Description = request.Description,
+                    RequestDate = request.RequestDate,
+                    CompletedDate = request.CompletedDate,
+                    IsCompleted = request.IsCompleted,
+                    ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                    Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                    Parts = _mapper.Map<List<RequestPartDto>>(request.RequestParts?.ToList() ?? new List<RequestPart>()),
+                    CreatedAt = request.CreatedAt,
+                    UpdatedAt = request.UpdatedAt
+                };
+
+                managerDtos.Add(dto);
+            }
+
+            return managerDtos;
+        }
+
+        // New method for getting a single request for managers
+        public async Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id)
+        {
+            var request = await _repairRequestRepository.GetByIdWithDetailsAsync(id);
+            if (request == null)
+                return null;
+
+            var customer = await _userRepository.GetByIdAsync(request.UserID);
+            var vehicle = request.Vehicle;
+            
+            var dto = new ManagerRepairRequestDto
+            {
+                RequestID = request.RepairRequestID,
+                VehicleID = request.VehicleID,
+                CustomerID = request.UserID,
+                CustomerName = customer?.FullName ?? "Unknown Customer",
+                VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                Description = request.Description,
+                RequestDate = request.RequestDate,
+                CompletedDate = request.CompletedDate,
+                IsCompleted = request.IsCompleted,
+                ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                Parts = _mapper.Map<List<RequestPartDto>>(request.RequestParts?.ToList() ?? new List<RequestPart>()),
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
+            };
+
+            return dto;
+        }
+
         public async Task<RepairRequestDto> GetByIdAsync(Guid id)
         {
             var request = await _repairRequestRepository.GetByIdAsync(id);

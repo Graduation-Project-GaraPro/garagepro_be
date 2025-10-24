@@ -1,6 +1,5 @@
 using BusinessObject;
 using Repositories;
-using ColorEntity = BusinessObject.Color;
 
 namespace Services
 {
@@ -8,13 +7,11 @@ namespace Services
     {
         private readonly ILabelRepository _labelRepository;
         private readonly IOrderStatusRepository _orderStatusRepository;
-        private readonly IColorRepository _colorRepository;
 
-        public LabelService(ILabelRepository labelRepository, IOrderStatusRepository orderStatusRepository, IColorRepository colorRepository)
+        public LabelService(ILabelRepository labelRepository, IOrderStatusRepository orderStatusRepository)
         {
             _labelRepository = labelRepository;
             _orderStatusRepository = orderStatusRepository;
-            _colorRepository = colorRepository;
         }
 
         public async Task<IEnumerable<Label>> GetAllLabelsAsync()
@@ -52,10 +49,6 @@ namespace Services
             if (!await _orderStatusRepository.ExistsAsync(label.OrderStatusId))
                 throw new KeyNotFoundException($"Order status with ID {label.OrderStatusId} not found");
 
-            // Validate that color exists and is active
-            if (!await _colorRepository.ExistsAsync(label.ColorId))
-                throw new KeyNotFoundException($"Color with ID {label.ColorId} not found");
-
             // Set creation values
             label.LabelId = Guid.NewGuid();
 
@@ -83,10 +76,6 @@ namespace Services
             if (!await _orderStatusRepository.ExistsAsync(label.OrderStatusId))
                 throw new KeyNotFoundException($"Order status with ID {label.OrderStatusId} not found");
 
-            // Validate that color exists and is active
-            if (!await _colorRepository.ExistsAsync(label.ColorId))
-                throw new KeyNotFoundException($"Color with ID {label.ColorId} not found");
-
             return await _labelRepository.UpdateAsync(label);
         }
 
@@ -105,11 +94,6 @@ namespace Services
         public async Task<bool> LabelExistsAsync(Guid id)
         {
             return await _labelRepository.ExistsAsync(id);
-        }
-
-        public async Task<IEnumerable<ColorEntity>> GetAvailableColorsAsync()
-        {
-            return await _colorRepository.GetActiveColorsAsync();
         }
     }
 }

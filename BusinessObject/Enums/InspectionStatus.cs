@@ -11,7 +11,5 @@ namespace BusinessObject.Enums
         Pending = 0,
         InProgress = 1,
         Completed = 2,
-        ReviewRequired = 3,//customer review and update 
-        Approved = 4
     }
 }

@@ -3,6 +3,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Repositories.QuotationRepositories
@@ -30,6 +31,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.QuotationServiceParts)
+                .ThenInclude(qsp => qsp.Part)
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 
@@ -40,9 +44,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                // Remove the direct QuotationParts relationship
-                // .Include(q => q.QuotationParts)
-                // .ThenInclude(qp => qp.Part)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.QuotationServiceParts)
+                .ThenInclude(qsp => qsp.Part)
                 .Where(q => q.InspectionId == inspectionId)
                 .ToListAsync();
         }
@@ -54,10 +58,24 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                // Remove the direct QuotationParts relationship
-                // .Include(q => q.QuotationParts)
-                // .ThenInclude(qp => qp.Part)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.QuotationServiceParts)
+                .ThenInclude(qsp => qsp.Part)
                 .Where(q => q.UserId == userId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Quotation>> GetByRepairOrderIdAsync(Guid repairOrderId)
+        {
+            return await _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.QuotationServiceParts)
+                .ThenInclude(qsp => qsp.Part)
+                .Where(q => q.RepairOrderId == repairOrderId)
                 .ToListAsync();
         }
 
@@ -68,9 +86,9 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle)
                 .Include(q => q.QuotationServices)
                 .ThenInclude(qs => qs.Service)
-                // Remove the direct QuotationParts relationship
-                // .Include(q => q.QuotationParts)
-                // .ThenInclude(qp => qp.Part)
+                .Include(q => q.QuotationServices)
+                .ThenInclude(qs => qs.QuotationServiceParts)
+                .ThenInclude(qsp => qsp.Part)
                 .ToListAsync();
         }
 

@@ -11,6 +11,7 @@ namespace Repositories.QuotationRepositories
         Task<Quotation> GetByIdAsync(Guid quotationId);
         Task<IEnumerable<Quotation>> GetByInspectionIdAsync(Guid inspectionId);
         Task<IEnumerable<Quotation>> GetByUserIdAsync(string userId);
+        Task<IEnumerable<Quotation>> GetByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<Quotation>> GetAllAsync();
         Task<Quotation> UpdateAsync(Quotation quotation);
         Task<bool> DeleteAsync(Guid quotationId);

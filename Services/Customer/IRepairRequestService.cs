@@ -11,6 +11,8 @@ namespace Services.Customer
     {
         Task<IEnumerable<RepairRequestDto>> GetAllAsync();
         Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId);
+        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); // New method for managers
+        Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id); // New method for getting single request for manager
         Task<RepairRequestDto> GetByIdAsync(Guid id);
         Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId);
         Task<RepairRequestDto> UpdateRepairRequestAsync(Guid id, UpdateRepairRequestDto dto);

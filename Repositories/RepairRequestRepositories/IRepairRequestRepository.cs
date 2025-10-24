@@ -10,6 +10,7 @@ namespace Repositories.Customers
         Task<IEnumerable<RepairRequest>> GetAllAsync();
         Task<IEnumerable<RepairRequest>> GetByUserIdAsync(String userId);
         Task<RepairRequest> GetByIdAsync(Guid id);
+        Task<RepairRequest> GetByIdWithDetailsAsync(Guid id); // New method for managers
         Task<RepairRequest> AddAsync(RepairRequest repairRequest);
         Task<RepairRequest> UpdateAsync(RepairRequest repairRequest);
         Task<bool> DeleteAsync(Guid id);

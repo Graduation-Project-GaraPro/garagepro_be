@@ -25,11 +25,14 @@ namespace BusinessObject
         public string Description { get; set; }
 
         [Required]
-        [ForeignKey(nameof(Color))]
-        public Guid ColorId { get; set; }
+        [MaxLength(50)] // Color name
+        public string ColorName { get; set; }
+
+        [Required]
+        [MaxLength(7)] // Hex color code like #FF5733
+        public string HexCode { get; set; }
 
         // Navigation properties
         public virtual OrderStatus OrderStatus { get; set; } = null!;
-        public virtual Color Color { get; set; } = null!;
     }
 }

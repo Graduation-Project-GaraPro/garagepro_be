@@ -93,7 +93,8 @@ namespace Dtos.RepairOrder
 
     //    public bool OdometerNotWorking { get; set; }
 
-    //    public int? LabelId { get; set; }
+    //    // Removed LabelId as labels should be accessed through OrderStatus
+    //    // public int? LabelId { get; set; }
 
     //    [Required]
     //    public string Status { get; set; }
@@ -124,7 +125,8 @@ namespace Dtos.RepairOrder
         [MaxLength(500)]
         public string Note { get; set; }
         
-        public int? LabelId { get; set; }
+        // Removed LabelId as labels should be accessed through OrderStatus
+        // public int? LabelId { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
     }

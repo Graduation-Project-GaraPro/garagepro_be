@@ -45,6 +45,13 @@ namespace Garage_pro_api.Controllers
             return Ok(quotations);
         }
 
+        [HttpGet("repair-order/{repairOrderId}")]
+        public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByRepairOrderId(Guid repairOrderId)
+        {
+            var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
+            return Ok(quotations);
+        }
+
         [HttpGet("user")]
         public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByUserId()
         {

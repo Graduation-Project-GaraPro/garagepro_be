@@ -560,7 +560,7 @@ namespace Services
                 PaidStatus = repairOrder.PaidStatus,
                 StatusId = repairOrder.StatusId,
                 StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
-                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.Color?.HexCode ?? "#808080",
+                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
                 Labels = repairOrder.OrderStatus?.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
                 CustomerName = repairOrder.User?.FullName ?? "Unknown Customer",
                 CustomerEmail = repairOrder.User?.Email ?? "",
@@ -638,9 +638,8 @@ namespace Services
                 Description = label.Description,
                 Color = new RoBoardColorDto
                 {
-                    ColorId = label.Color?.ColorId ?? Guid.Empty,
-                    ColorName = label.Color?.ColorName ?? "Default",
-                    HexCode = label.Color?.HexCode ?? "#808080"
+                    ColorName = label.ColorName ?? "Default",
+                    HexCode = label.HexCode ?? "#808080"
                 }
             };
         }

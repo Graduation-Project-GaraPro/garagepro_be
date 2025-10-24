@@ -45,12 +45,11 @@ namespace Services
 
         // Status Management
         Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null);
-        Task<IEnumerable<Job>> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
+        Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
 
         // Business Logic Validation
         Task<bool> CanCompleteJobAsync(Guid jobId);
         Task<bool> CanStartJobAsync(Guid jobId);
-        Task<bool> CanSendJobToCustomerAsync(Guid jobId);
         Task<bool> CanAssignJobToTechnicianAsync(Guid jobId);
         Task<bool> HasActiveTechnicianAsync(Guid jobId);
 
@@ -99,7 +98,5 @@ namespace Services
         Task<Job?> GetLatestJobRevisionAsync(Guid originalJobId);
         Task<bool> ExpireOldEstimatesAsync();
         Task<Job> CreateJobFromServiceAsync(Guid serviceId, Guid repairOrderId, string managerId);
-        
-
     }
 }

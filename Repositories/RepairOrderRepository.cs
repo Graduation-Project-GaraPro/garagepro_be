@@ -70,7 +70,6 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -84,7 +83,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -107,7 +105,6 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -127,7 +124,6 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -220,7 +216,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -335,7 +330,6 @@ namespace Repositories
         public async Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
         {
             return await _context.Labels
-                .Include(l => l.Color)
                 .Where(l => l.OrderStatusId == statusId)
                 .ToListAsync();
         }
@@ -526,7 +520,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -548,7 +541,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)

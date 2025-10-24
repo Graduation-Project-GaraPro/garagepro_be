@@ -1,5 +1,4 @@
 using BusinessObject;
-using ColorEntity = BusinessObject.Color;
 
 namespace Services
 {
@@ -12,6 +11,6 @@ namespace Services
         Task<Label> UpdateLabelAsync(Label label);
         Task<bool> DeleteLabelAsync(Guid id);
         Task<bool> LabelExistsAsync(Guid id);
-        Task<IEnumerable<ColorEntity>> GetAvailableColorsAsync();
+        // Removed GetAvailableColorsAsync as we're using fixed color data
     }
 }
