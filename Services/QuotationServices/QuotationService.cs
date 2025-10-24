@@ -17,16 +17,16 @@ namespace Services.QuotationServices
     {
         private readonly IQuotationRepository _quotationRepository;
         private readonly IQuotationServiceRepository _quotationServiceRepository;
-        private readonly IQuotationServicePartRepository _quotationServicePartRepository; // Changed from IQuotationPartRepository
+        private readonly IQuotationServicePartRepository _quotationServicePartRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IPartRepository _partRepository;
-        private readonly IRepairOrderRepository _repairOrderRepository; // Add this
+        private readonly IRepairOrderRepository _repairOrderRepository; 
         private readonly IMapper _mapper;
 
         public QuotationManagementService(
             IQuotationRepository quotationRepository,
             IQuotationServiceRepository quotationServiceRepository,
-            IQuotationServicePartRepository quotationServicePartRepository, // Changed from IQuotationPartRepository
+            IQuotationServicePartRepository quotationServicePartRepository, 
             IMapper mapper) : this(quotationRepository, quotationServiceRepository, quotationServicePartRepository, null, null, null, mapper)
         {
         }
@@ -37,7 +37,7 @@ namespace Services.QuotationServices
             IQuotationServicePartRepository quotationServicePartRepository,
             IServiceRepository serviceRepository,
             IPartRepository partRepository,
-            IRepairOrderRepository repairOrderRepository, // Add this
+            IRepairOrderRepository repairOrderRepository,
             IMapper mapper)
         {
             _quotationRepository = quotationRepository;
@@ -45,7 +45,7 @@ namespace Services.QuotationServices
             _quotationServicePartRepository = quotationServicePartRepository;
             _serviceRepository = serviceRepository;
             _partRepository = partRepository;
-            _repairOrderRepository = repairOrderRepository; // Add this
+            _repairOrderRepository = repairOrderRepository;
             _mapper = mapper;
         }
 
