@@ -384,6 +384,11 @@ namespace Services.BranchServices
             var branches = await _branchRepo.GetAllAsync();
             return _mapper.Map<IEnumerable<BranchReadDto>>(branches);
         }
+        public async Task<IEnumerable<Branch>> GetAllBranchesBasicAsync()
+        {
+            var branches = await _branchRepo.GetAllAsync();
+            return branches;
+        }
 
 
         public async Task<(IEnumerable<BranchReadDto> Branches, int TotalCount)>

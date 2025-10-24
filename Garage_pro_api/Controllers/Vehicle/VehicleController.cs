@@ -1,4 +1,5 @@
-﻿using Dtos.Vehicles;
+﻿
+using Dtos.Vehicles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.VehicleServices;
@@ -8,7 +9,6 @@ using System.Threading.Tasks;
 
 namespace Garage_pro_api.Controllers.Vehicle
 {
-    [AllowAnonymous]
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
@@ -31,13 +31,12 @@ namespace Garage_pro_api.Controllers.Vehicle
         [HttpGet("user")]
         public async Task<IActionResult> GetUserVehicles()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-            {
-                return BadRequest("User ID not found in token");
-            }
-            
-            var vehicles = await _vehicleService.GetUserVehiclesAsync(userId);
+            // Lấy userId từ token
+            var UserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(UserId))
+                return Unauthorized();
+            var vehicles = await _vehicleService.GetUserVehiclesAsync(UserId);
             return Ok(vehicles);
         }
 
@@ -57,25 +56,15 @@ namespace Garage_pro_api.Controllers.Vehicle
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Check if UserID is provided in the DTO
-            if (!string.IsNullOrEmpty(vehicleDto.UserID))
-            {
-                // Use the provided UserID directly
-                var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto);
-                return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
-            }
-            else
-            {
-                // If no UserID provided, try to get it from the token (fallback for direct user vehicle creation)
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return BadRequest("User ID not found in token and not provided in request");
-                }
-                
-                var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto, userId);
-                return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
-            }
+            // Lấy userId từ token
+            var UserId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+            if (string.IsNullOrEmpty(UserId))
+                return Unauthorized();
+
+
+            var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto, UserId);
+            return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
         }
 
         [HttpPut("{id}")]

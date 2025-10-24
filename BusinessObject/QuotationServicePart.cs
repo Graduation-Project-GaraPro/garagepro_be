@@ -26,7 +26,7 @@ namespace BusinessObject
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Quantity { get; set; } = 1;
-
+        
         // Navigation properties
         public virtual QuotationService QuotationService { get; set; }
         public virtual Part Part { get; set; }

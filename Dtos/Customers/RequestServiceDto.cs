@@ -8,8 +8,10 @@ namespace Dtos.Customers
 {
     public class RequestServiceDto
     {
-        public Guid ServiceID { get; set; }
-        public string ServiceName { get; set; }
-        public decimal Price { get; set; }
+        public Guid ServiceId { get; set; }
+        public List<RequestPartDto> Parts { get; set; } = new List<RequestPartDto>();
+        //  public string ServiceName { get; set; }
+        // public decimal Price { get; set; }
+         //public int quatity { get; set; }
     }
 }

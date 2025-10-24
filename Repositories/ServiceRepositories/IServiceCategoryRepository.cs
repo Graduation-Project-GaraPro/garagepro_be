@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
+using Microsoft.EntityFrameworkCore;
 
 namespace Repositories.ServiceRepositories
 {
@@ -12,6 +13,21 @@ namespace Repositories.ServiceRepositories
         Task<IEnumerable<ServiceCategory>> GetAllAsync();
         Task<ServiceCategory> GetByIdAsync(Guid id);
         Task<IEnumerable<Service>> GetServicesByCategoryIdAsync(Guid categoryId);
+
+        Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesByParentAsync(
+            Guid parentServiceCategoryId,
+            int pageNumber,
+            int pageSize,
+            Guid? childServiceCategoryId = null,
+            string? searchTerm = null);
+
+        Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesForBookingAsync(
+        int pageNumber,
+        int pageSize,
+        Guid? serviceCategoryId = null,
+        string? searchTerm = null);
+        Task<IEnumerable<ServiceCategory>> GetParentCategoriesAsync();
+        
         IQueryable<ServiceCategory> Query();
         void Add(ServiceCategory category);
         void Update(ServiceCategory category);

@@ -1,9 +1,10 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
 using BusinessObject.Customers;
+using BusinessObject.Manager;
 using BusinessObject.Notifications;
 using BusinessObject.Policies;
 using BusinessObject.Roles;
@@ -12,8 +13,12 @@ using BusinessObject.Technician;
 using BusinessObject.Vehicles;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 using BusinessObject.Manager;
-
 
 namespace DataAccessLayer
 {
@@ -61,10 +66,8 @@ namespace DataAccessLayer
         public DbSet<ServicePart> ServiceParts { get; set; }
 
         public DbSet<SystemLog> SystemLogs { get; set; }
-        public DbSet<SecurityLog> SecurityLogs { get; set; }
-        public DbSet<SecurityLogRelation> SecurityLogRelations { get; set; }
-        public DbSet<LogCategory> LogCategories { get; set; }
-        public DbSet<LogTag> LogTags { get; set; }
+
+        
 
         // Notification
         public DbSet<CategoryNotification> CategoryNotifications { get; set; }
@@ -72,6 +75,7 @@ namespace DataAccessLayer
 
         //Technician
         public DbSet<Technician> Technicians { get; set; }
+
 
         public DbSet<PermissionCategory> PermissionCategories { get; set; }
         public DbSet<Permission> Permissions { get; set; }
@@ -82,7 +86,7 @@ namespace DataAccessLayer
         //AiChat
         public DbSet<AIChatMessage> AiChatMessages { get; set; }
         public DbSet<AIChatSession> AiChatSessions { get; set; }
-       
+
         public DbSet<AIDiagnostic_Keyword> AIDiagnostic_Keywords { get; set; }
         public DbSet<AIResponseTemplate> AIResponseTemplates { get; set; }
         //Vehicle
@@ -96,8 +100,10 @@ namespace DataAccessLayer
         public DbSet<RepairImage> RepairImages { get; set; }
         public DbSet<RequestPart> RequestParts { get; set; }
         public DbSet<RequestService> RequestServices { get; set; }
+
         public DbSet<PromotionalCampaign> PromotionalCampaigns { get; set; }
         public DbSet<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -154,28 +160,6 @@ namespace DataAccessLayer
                       .HasForeignKey(qsp => qsp.QuotationServiceId)
                       .OnDelete(DeleteBehavior.Cascade);
             });
-
-            /*
-            // Removed QuotationPart configuration as the entity was removed
-            modelBuilder.Entity<QuotationPart>(entity =>
-            {
-                entity.HasOne(qp => qp.Quotation)
-                      .WithMany(q => q.QuotationParts)
-                      .HasForeignKey(qp => qp.QuotationId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(qp => qp.Part)
-                      .WithMany()
-                      .HasForeignKey(qp => qp.PartId)
-                      .OnDelete(DeleteBehavior.Restrict);
-                      
-                // Add the new relationship with QuotationService
-                entity.HasOne(qp => qp.QuotationService)
-                      .WithMany(qs => qs.QuotationParts) // Add QuotationParts collection to QuotationService
-                      .HasForeignKey(qp => qp.QuotationServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
-            */
 
             // Add the new QuotationServicePart configuration
             modelBuilder.Entity<QuotationServicePart>(entity =>
@@ -503,132 +487,80 @@ namespace DataAccessLayer
             //Log System
             modelBuilder.Entity<SystemLog>(entity =>
             {
+                entity.ToTable("SystemLogs");
+
                 entity.HasKey(e => e.Id);
 
+                entity.Property(e => e.Id)
+                    .ValueGeneratedOnAdd();
+
+                entity.Property(e => e.Timestamp)
+                    .IsRequired();
+
                 entity.Property(e => e.Level)
-                     .HasConversion<string>()   // Lưu dưới dạng nvarchar
-                      .HasMaxLength(20)          // Giữ max length 20 như trước
-                      .IsRequired();
+                    .HasConversion<string>() // Lưu enum dưới dạng string (vd: "Info", "Error")
+                    .HasMaxLength(20)
+                    .IsRequired();
+
+                entity.Property(e => e.Tag)
+                    .HasConversion<string>() // nếu bạn có enum LogTagType
+                    .HasMaxLength(50)
+                    .IsRequired(false);
 
                 entity.Property(e => e.Source)
-                    .HasMaxLength(255);
+               .HasConversion<string>()    // ✅ Lưu dưới dạng nvarchar
+               .HasMaxLength(50)
+               .IsRequired();
+
+                entity.Property(e => e.Message)
+                    .IsRequired();
+
+                entity.Property(e => e.Details)
+                    .IsRequired(false);
+
+                entity.Property(e => e.UserId)
+                    .HasMaxLength(450) // ASP.NET Identity mặc định là nvarchar(450)
+                    .IsRequired(false);
 
                 entity.Property(e => e.UserName)
-                    .HasMaxLength(255);
+                    .HasMaxLength(255)
+                    .IsRequired(false);
 
                 entity.Property(e => e.IpAddress)
-                    .HasMaxLength(45);
+                    .HasMaxLength(45)
+                    .IsRequired(false);
+
+                entity.Property(e => e.UserAgent)
+                    .IsRequired(false);
 
                 entity.Property(e => e.SessionId)
-                    .HasMaxLength(100);
+                    .HasMaxLength(100)
+                    .IsRequired(false);
 
                 entity.Property(e => e.RequestId)
-                    .HasMaxLength(100);
+                    .HasMaxLength(100)
+                    .IsRequired(false);
 
                 // Quan hệ với ApplicationUser
                 entity.HasOne(e => e.User)
-                    .WithMany() // hoặc tạo ICollection<SystemLog> trong ApplicationUser nếu muốn navigation
+                    .WithMany() // Nếu ApplicationUser chưa có ICollection<SystemLog>
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // Quan hệ với LogCategory
-                entity.HasOne(e => e.Category)
-                    .WithMany(c => c.SystemLogs)
-                    .HasForeignKey(e => e.CategoryId)
-                    .OnDelete(DeleteBehavior.Restrict);
+                
 
-                // Quan hệ với LogTag
-                entity.HasMany(e => e.Tags)
-                    .WithOne(t => t.SystemLog)
-                    .HasForeignKey(t => t.LogId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                // Quan hệ với SecurityLogRelation (RelatedLog)
-                entity.HasMany(e => e.SecurityLogRelations)
-                    .WithOne(r => r.RelatedLog)
-                    .HasForeignKey(r => r.RelatedLogId)
-                    .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
+                // Index giúp truy vấn nhanh hơn
+                entity.HasIndex(e => e.Timestamp);
+                entity.HasIndex(e => e.Level);
+                entity.HasIndex(e => e.UserId);
+                
             });
 
-            // =========================
-            // LogCategory
-            // =========================
-            modelBuilder.Entity<LogCategory>(entity =>
-            {
-                entity.HasKey(e => e.Id);
 
-                entity.Property(e => e.Name)
-                    .IsRequired()
-                    .HasMaxLength(50);
+            
 
-                entity.Property(e => e.Description)
-                    .IsRequired(false);
-            });
 
-            // =========================
-            // LogTag
-            // =========================
-            modelBuilder.Entity<LogTag>(entity =>
-            {
-                entity.HasKey(e => e.Id);
 
-                entity.Property(e => e.Tag)
-                    .HasConversion<string>()
-                    .HasMaxLength(100);
-            });
-
-            // =========================
-            // SecurityLog
-            // =========================
-            modelBuilder.Entity<SecurityLog>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.Property(e => e.ThreatLevel)
-                    .HasMaxLength(20);
-
-                entity.Property(e => e.Action)
-                    .HasMaxLength(50);
-
-                entity.Property(e => e.Resource)
-                    .HasMaxLength(255);
-
-                entity.Property(e => e.Outcome)
-                    .HasMaxLength(20);
-
-                // Quan hệ 1-1 với SystemLog
-                entity.HasOne(e => e.SystemLog)
-                    .WithOne()
-                    .HasForeignKey<SecurityLog>(e => e.Id)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                // Quan hệ với SecurityLogRelation
-                entity.HasMany(e => e.Relations)
-                    .WithOne(r => r.SecurityLog)
-                    .HasForeignKey(r => r.SecurityLogId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // =========================
-            // SecurityLogRelation
-            // =========================
-
-            modelBuilder.Entity<SecurityLogRelation>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                // Quan hệ với SecurityLog
-                entity.HasOne(e => e.SecurityLog)
-                    .WithMany(s => s.Relations)
-                    .HasForeignKey(e => e.SecurityLogId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                // Quan hệ với RelatedLog (SystemLog)
-                entity.HasOne(e => e.RelatedLog)
-                    .WithMany(l => l.SecurityLogRelations)
-                    .HasForeignKey(e => e.RelatedLogId)
-                    .OnDelete(DeleteBehavior.Restrict); // tránh Multiple Cascade Paths
-            });
 
             // -------- SecurityPolicies --------
             modelBuilder.Entity<SecurityPolicy>(entity =>
@@ -747,46 +679,38 @@ namespace DataAccessLayer
                 .HasForeignKey(sc => sc.ParentServiceCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-           
 
-                
-                modelBuilder.Entity<FeedBack>(entity =>
-                {
-                    entity.ToTable("FeedBacks");                
-                    entity.HasKey(f => f.FeedBackId);           
 
-                    entity.Property(f => f.Description)
-                          .HasMaxLength(1000);                  
 
-                    entity.Property(f => f.Rating)
-                          .IsRequired();                        
+            modelBuilder.Entity<FeedBack>(entity =>
+            {
+                entity.ToTable("FeedBacks");
+                entity.HasKey(f => f.FeedBackId);
 
-                    entity.Property(f => f.CreatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");   
+                entity.Property(f => f.Description)
+                      .HasMaxLength(1000);
 
-                    entity.Property(f => f.UpdatedAt)
-                          .HasDefaultValueSql("GETUTCDATE()");
+                entity.Property(f => f.Rating)
+                      .IsRequired();
 
-                    
-                    entity.HasOne(f => f.User)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.UserId)
-                          .OnDelete(DeleteBehavior.Cascade);
+                entity.Property(f => f.CreatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
 
-                   
-                    entity.HasOne(f => f.RepairOrder)
-                          .WithMany()                           
-                          .HasForeignKey(f => f.RepairOrderId)
-                          .OnDelete(DeleteBehavior.Cascade);
-                });
-   
-            // Color-Label relationship
-            // Removed as we're using fixed color data
-            // modelBuilder.Entity<Label>()
-            //     .HasOne(l => l.Color)
-            //     .WithMany(c => c.Labels)
-            //     .HasForeignKey(l => l.ColorId)
-            //     .OnDelete(DeleteBehavior.Restrict);
+                entity.Property(f => f.UpdatedAt)
+                      .HasDefaultValueSql("GETUTCDATE()");
+
+
+                entity.HasOne(f => f.User)
+                      .WithMany()
+                      .HasForeignKey(f => f.UserId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+
+                entity.HasOne(f => f.RepairOrder)
+                      .WithMany()
+                      .HasForeignKey(f => f.RepairOrderId)
+                      .OnDelete(DeleteBehavior.Cascade);
+            });
 
             // Job relationships - prevent cascade delete conflicts
             modelBuilder.Entity<Job>()
@@ -961,7 +885,7 @@ namespace DataAccessLayer
             });
 
             // Many-to-many Branch <-> Service
-            modelBuilder.Entity<BranchService>() .HasKey(bs => new { bs.BranchId, bs.ServiceId });
+            modelBuilder.Entity<BranchService>().HasKey(bs => new { bs.BranchId, bs.ServiceId });
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>()
              .HasOne(bs => bs.Branch)
@@ -976,7 +900,7 @@ namespace DataAccessLayer
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            
+
 
             // ServicePart configuration
             modelBuilder.Entity<ServicePart>(entity =>
@@ -1017,7 +941,27 @@ namespace DataAccessLayer
                 .HasOne(pcs => pcs.Service)
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
+            // 🔹 RepairRequest - RequestService (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RequestServices)
+                .WithOne(rs => rs.RepairRequest)
+                .HasForeignKey(rs => rs.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
 
+            // 🔹 RequestService - RequestPart (1-n)
+            modelBuilder.Entity<RequestService>()
+                .HasMany(rs => rs.RequestParts)
+                .WithOne(rp => rp.RequestService)
+                .HasForeignKey(rp => rp.RequestServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 🔹 (Nếu có) RepairRequest - RepairImage (1-n)
+            modelBuilder.Entity<RepairRequest>()
+                .HasMany(r => r.RepairImages)
+                .WithOne(img => img.RepairRequest)
+                .HasForeignKey(img => img.RepairRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+           
             modelBuilder.Entity<VoucherUsage>(entity =>
             {
                 entity.ToTable("VoucherUsage");
@@ -1043,5 +987,6 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
             });
         }
+
     }
-}
+    }

@@ -250,9 +250,10 @@ namespace Garage_pro_api.Controllers
             await _userManager.UpdateAsync(user);
 
             // Tạo JWT token
-            var accessToken = await _tokenService.GenerateJwtToken(user);
+            var accessToken = await _tokenService.GenerateJwtToken(user, 10); 
+            var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
 
-            Response.Cookies.Append("X-Refresh-Token", accessToken, new CookieOptions
+            Response.Cookies.Append("X-Refresh-Token", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
@@ -316,7 +317,7 @@ namespace Garage_pro_api.Controllers
                 await _userManager.AddToRoleAsync(user, "Customer");
             }
 
-            var accessToken = await _tokenService.GenerateJwtToken(user);
+            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
 
             var response = new AuthResponseDto
             {
@@ -440,7 +441,7 @@ namespace Garage_pro_api.Controllers
                 if (user == null)
                     return Unauthorized();
 
-                var newToken = await _tokenService.GenerateJwtToken(user);
+                var newToken = await _tokenService.GenerateJwtToken(user, 10);
 
                 return Ok(new AuthResponseDto
                 {

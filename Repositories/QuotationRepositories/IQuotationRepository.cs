@@ -1,3 +1,5 @@
+
+
 using BusinessObject;
 using System;
 using System.Collections.Generic;
@@ -7,6 +9,10 @@ namespace Repositories.QuotationRepositories
 {
     public interface IQuotationRepository
     {
+       
+       
+       
+        // Task<Quotation> UpdateQuotationAsync(Quotation quotation);
         Task<Quotation> CreateAsync(Quotation quotation);
         Task<Quotation> GetByIdAsync(Guid quotationId);
         Task<IEnumerable<Quotation>> GetByInspectionIdAsync(Guid inspectionId);

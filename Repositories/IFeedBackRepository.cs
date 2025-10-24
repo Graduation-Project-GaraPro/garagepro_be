@@ -16,5 +16,6 @@ namespace Repositories
         Task DeleteAsync(Guid feedbackId);
         Task<List<FeedBack>> GetByUserIdAsync(string userId);
         Task<List<FeedBack>> GetByRepairOrderIdAsync(Guid repairOrderId);
+        Task<IEnumerable<FeedBack>> GetFeedbackByBranchIdAsync(Guid BranchId);
     }
 }

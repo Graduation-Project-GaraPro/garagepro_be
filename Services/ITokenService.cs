@@ -10,7 +10,7 @@ namespace Services
 {
     public interface ITokenService
     {
-        Task<string> GenerateJwtToken(ApplicationUser user);
+        Task<string> GenerateJwtToken(ApplicationUser user, int time);
         ClaimsPrincipal ValidateToken(string token);
     }
 }

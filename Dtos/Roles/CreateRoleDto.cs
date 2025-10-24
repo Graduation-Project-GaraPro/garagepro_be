@@ -10,7 +10,7 @@ namespace Dtos.Roles
     {
         public string Name { get; set; } = null!;
         public string? Description { get; set; }
-        public bool IsDefault { get; set; }
+        
         public IEnumerable<Guid> PermissionIds { get; set; } = new List<Guid>();
         public string GrantedBy { get; set; } = null!;
         public string? GrantedUserId { get; set; }

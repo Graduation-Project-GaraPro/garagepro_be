@@ -8,6 +8,8 @@ using BusinessObject.SystemLogs;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject.Notifications;
 using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Manager;
 namespace BusinessObject.Authentication
 {
     public class ApplicationUser : IdentityUser
@@ -42,11 +44,18 @@ namespace BusinessObject.Authentication
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
         public virtual IEnumerable<Notification> Notifications { get; set; } = new List<Notification>();
         public virtual Technician.Technician Technician { get; set; }
+        //repair request 
+        public virtual ICollection<RepairRequest> RepairRequests { get; set; } = new List<RepairRequest>();
+        
+        
+        //feedback 
+        public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 
         // --------------------------
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }
+
     }
 
 }

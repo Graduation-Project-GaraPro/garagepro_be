@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using BusinessObject.Authentication;
 using BusinessObject.Enums; // Add this using statement
+using BusinessObject.Customers;
 
 namespace BusinessObject
 {
@@ -41,7 +42,7 @@ namespace BusinessObject
         public decimal DiscountAmount { get; set; } = 0;
 
         [MaxLength(500)]
-        public string Note { get; set; }
+        public string? Note { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
 

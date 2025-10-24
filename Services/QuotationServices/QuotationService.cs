@@ -1,4 +1,4 @@
-using AutoMapper;
+﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums; // Add this using statement
 using Dtos.Quotations;
@@ -275,6 +275,32 @@ namespace Services.QuotationServices
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);
+        }
+
+        public async Task<bool> ApproveQuotationAsync(Guid quotationId)
+        {
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (quotation == null)
+                throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+
+            quotation.Status = BusinessObject.Enums.QuotationStatus.Approved;
+            quotation.CustomerResponseAt = DateTime.UtcNow;
+
+            await _quotationRepository.UpdateAsync(quotation);
+            return true;
+        }
+
+        public async Task<bool> RejectQuotationAsync(Guid quotationId)
+        {
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (quotation == null)
+                throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+
+            quotation.Status = BusinessObject.Enums.QuotationStatus.Rejected;
+            quotation.CustomerResponseAt = DateTime.UtcNow;
+
+            await _quotationRepository.UpdateAsync(quotation);
+            return true;
         }
     }
 }
