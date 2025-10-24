@@ -140,7 +140,13 @@ namespace Garage_pro_api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { 
+                    message = "Invalid model state", 
+                    errors = ModelState.Select(x => new { 
+                        field = x.Key, 
+                        errors = x.Value.Errors.Select(e => e.ErrorMessage) 
+                    }) 
+                });
             }
 
             try
@@ -149,34 +155,44 @@ namespace Garage_pro_api.Controllers
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                 {
-                    return Unauthorized("User not authenticated");
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 // Get the user from the user service to extract their branch ID
                 var user = await _userService.GetByIdAsync(userId);
                 if (user == null)
                 {
-                    return Unauthorized("User not found");
+                    return Unauthorized(new { message = "User not found", userId = userId });
                 }
 
                 // Ensure the user has a branch assigned
                 if (!user.BranchId.HasValue)
                 {
-                    return BadRequest("User is not assigned to a branch");
+                    return BadRequest(new { 
+                        message = "User is not assigned to a branch", 
+                        userId = userId,
+                        userBranchId = user.BranchId 
+                    });
                 }
 
                 // Validate that the customer exists
                 var customer = await _userService.GetByIdAsync(createRoDto.CustomerId);
                 if (customer == null)
                 {
-                    return BadRequest("Customer not found");
+                    return BadRequest(new { 
+                        message = "Customer not found", 
+                        customerId = createRoDto.CustomerId 
+                    });
                 }
 
                 // Validate that the vehicle exists
                 var vehicle = await _vehicleService.GetVehicleByIdAsync(createRoDto.VehicleId);
                 if (vehicle == null)
                 {
-                    return BadRequest("Vehicle not found");
+                    return BadRequest(new { 
+                        message = "Vehicle not found", 
+                        vehicleId = createRoDto.VehicleId 
+                    });
                 }
 
                 // Get the default "Pending" status
@@ -220,7 +236,8 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { 
                     message = "An error occurred while creating the repair order", 
                     details = ex.Message,
-                    innerException = ex.InnerException?.Message
+                    innerException = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
                 });
             }
         }

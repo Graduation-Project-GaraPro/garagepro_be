@@ -1,4 +1,3 @@
-
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
@@ -27,10 +26,7 @@ namespace BusinessObject
         public DateTime ReceiveDate { get; set; } = DateTime.UtcNow;
 
         [Required]
-        [MaxLength(50)]
-        public string RepairOrderType { get; set; }//repair request, quotation, emergency 
-        public RoType RoType { get; set; } // Updated to use enum
-
+        public RoType RoType { get; set; } //repair request, quotation, emergency 
 
         public DateTime? EstimatedCompletionDate { get; set; }
 
