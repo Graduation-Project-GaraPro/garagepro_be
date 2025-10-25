@@ -274,7 +274,7 @@ builder.Services.AddMemoryCache(); // Cho IMemoryCache
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IRevenueService, RevenueService>();
+//builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
@@ -412,7 +412,7 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 //builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 //builder.Services.AddScoped<PaymentService>();
 
-builder.Services.AddScoped<IRevenueService, RevenueService>();
+//builder.Services.AddScoped<IRevenueService, RevenueService>();
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 builder.Services.AddScoped<IInspectionService, InspectionService>();
