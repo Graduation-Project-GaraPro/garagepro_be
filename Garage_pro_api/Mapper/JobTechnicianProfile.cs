@@ -17,15 +17,27 @@ namespace Garage_pro_api.Mapper
                .ForMember(dest => dest.Customer, opt => opt.MapFrom(src => src.RepairOrder.Vehicle.User))
                .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.JobParts.Select(jp => jp.Part)))
                .ForMember(dest => dest.Repair, opt => opt.MapFrom(src => src.Repair))
+
+              .ForMember(dest => dest.Technicians, opt => opt.MapFrom(src =>
+                   src.JobTechnicians.Select(jt => jt.Technician)))
                .ReverseMap();
 
             CreateMap<Vehicle, VehicleDto>().ReverseMap();
+
             CreateMap<ApplicationUser, CustomerDto>()
                 .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => $"{src.FirstName} {src.LastName}".Trim()));
+
             CreateMap<Part, PartDto>()
                 .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Name));
+
             CreateMap<Repair, RepairDto>().ReverseMap();
+
+            CreateMap<Technician, TechnicianDto>()
+               .ForMember(dest => dest.FullName, opt => opt.MapFrom(src =>
+                   $"{src.User.FirstName} {src.User.LastName}".Trim()))
+               .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.User.Email))
+               .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.User.PhoneNumber));
         }
     }
 }

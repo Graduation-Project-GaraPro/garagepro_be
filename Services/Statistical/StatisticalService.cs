@@ -1,7 +1,5 @@
 ﻿using AutoMapper;
-using DataAccessLayer;
 using Dtos.Statistical;
-using Microsoft.EntityFrameworkCore;
 using Repositories.Statistical;
 using System;
 using System.Linq;
@@ -13,26 +11,21 @@ namespace Services.Statistical
     {
         private readonly IStatisticalRepository _repo;
         private readonly IMapper _mapper;
-        private readonly MyAppDbContext _context;
 
-        public StatisticalService(IStatisticalRepository repo, IMapper mapper, MyAppDbContext context)
+        public StatisticalService(IStatisticalRepository repo, IMapper mapper)
         {
             _repo = repo;
             _mapper = mapper;
-            _context = context;
         }
 
         public async Task<TechnicianStatisticDto> GetTechnicianStatisticAsync(string userId)
         {
-            var technician = await _context.Technicians
-                .Where(t => t.UserId == userId)
-                .Select(t => t.TechnicianId)
-                .FirstOrDefaultAsync();
+            var technician = await _repo.GetTechnicianByUserIdAsync(userId);
 
-            if (technician == Guid.Empty)
+            if (technician == null)
                 throw new UnauthorizedAccessException("Không tìm thấy thông tin Technician cho tài khoản này.");
 
-            var techData = await _repo.GetTechnicianWithJobsAsync(technician);
+            var techData = await _repo.GetTechnicianWithJobsAsync(technician.TechnicianId);
             if (techData == null)
                 throw new Exception("Không thể tải dữ liệu thống kê cho Technician này.");
 

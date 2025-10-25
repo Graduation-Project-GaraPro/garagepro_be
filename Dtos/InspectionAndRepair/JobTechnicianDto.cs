@@ -26,8 +26,17 @@ namespace Dtos.InspectionAndRepair
         public CustomerDto Customer { get; set; }
         public List<PartDto> Parts { get; set; }
         public RepairDto Repair { get; set; }
+        public List<TechnicianDto> Technicians { get; set; }
+
     }
-   
+    public class TechnicianDto
+    {
+        public Guid TechnicianId { get; set; }
+       // public string UserId { get; set; }
+        public string FullName { get; set; }
+        public string Email { get; set; }
+        public string PhoneNumber { get; set; }
+    }
 
     public class PartDto
     {

@@ -89,8 +89,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
 
-    c.CustomSchemaIds(type => type.FullName); // dùng FullName để phân biệt
-    // Thêm thông tin cho Swagger UI
+    c.CustomSchemaIds(type => type.FullName); 
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "My API",

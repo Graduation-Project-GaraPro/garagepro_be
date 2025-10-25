@@ -15,6 +15,11 @@ namespace Repositories.Statistical
             _context = context;
         }
 
+        public async Task<Technician> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
         public async Task<Technician> GetTechnicianWithJobsAsync(Guid technicianId)
         {
             return await _context.Technicians

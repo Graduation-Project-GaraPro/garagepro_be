@@ -23,6 +23,7 @@ namespace Services.InspectionAndRepair
 
         public async Task<List<JobTechnicianDto>> GetJobsByTechnicianAsync(string userId)
         {
+
             var jobs = await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
 
             // Lọc các trạng thái cần thiết
@@ -47,19 +48,49 @@ namespace Services.InspectionAndRepair
             var jobs = await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
             var job = jobs.FirstOrDefault(j => j.JobId == dto.JobId);
 
+            //Kiểm tra Job tồn tại và thuộc quyền Technician
             if (job == null)
-                throw new Exception("Bạn không có quyền cập nhật công việc này hoặc Job không tồn tại.");
+                throw new Exception("Công việc không tồn tại hoặc bạn không có quyền cập nhật công việc này.");
 
-            //// Kiểm tra trạng thái hiện tại
-            //if (job.Status == JobStatus.Completed && dto.JobStatus != JobStatus.Completed)
-            //    throw new Exception("Không thể thay đổi trạng thái của Job đã hoàn thành.");
+            //Kiểm tra Job có Repair chưa
+            if (job.Repair == null)
+                throw new Exception("Không thể cập nhật trạng thái vì công việc này chưa có thông tin sửa chữa (Repair).");
 
+            //Kiểm tra trạng thái hợp lệ (chỉ 2, 3, 4)
+            var validStatuses = new[] { JobStatus.InProgress, JobStatus.Completed, JobStatus.OnHold };
+            if (!validStatuses.Contains(dto.JobStatus))
+                throw new Exception("Chỉ được cập nhật trạng thái giữa: InProgress, Completed, và OnHold.");
+
+            //Nếu job đã Completed rồi thì không được đổi trạng thái nữa
+            if (job.Status == JobStatus.Completed && dto.JobStatus != JobStatus.Completed)
+                throw new Exception("Không thể thay đổi trạng thái vì công việc này đã hoàn thành.");
+
+            //Nếu trạng thái hiện tại không thuộc nhóm cho phép
+            if (!validStatuses.Contains(job.Status))
+                throw new Exception("Không thể cập nhật công việc vì trạng thái hiện tại không hợp lệ để chuyển đổi.");
+
+            //Cập nhật trạng thái
             job.Status = dto.JobStatus;
             job.UpdatedAt = DateTime.UtcNow;
+
+            //Tính thời gian bắt đầu và kết thúc sửa chữa
+
+            if (dto.JobStatus == JobStatus.Completed)
+            {
+                var repair = job.Repair;
+                repair.EndTime = DateTime.UtcNow;
+
+                if (repair.StartTime.HasValue)
+                {
+                    repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
+                }
+            }
 
             await _jobTechnicianRepository.UpdateJobAsync(job);
             return true;
         }
+
+
 
 
     }

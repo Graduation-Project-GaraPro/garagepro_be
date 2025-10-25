@@ -36,9 +36,32 @@ namespace Dtos.InspectionAndRepair
         public Guid VehicleId { get; set; }
         public string LicensePlate { get; set; } = string.Empty;
         public string VIN { get; set; } = string.Empty;
+
+        // Navigation objects instead of just IDs
+        public VehicleBrandDto? Brand { get; set; }
+        public VehicleModelDto? Model { get; set; }
+        public VehicleColorDto? Color { get; set; }
+    }
+
+    public class VehicleBrandDto
+    {
         public Guid BrandId { get; set; }
+        public string BrandName { get; set; } = string.Empty;
+        public string? Country { get; set; }
+    }
+
+    public class VehicleModelDto
+    {
         public Guid ModelId { get; set; }
+        public string ModelName { get; set; } = string.Empty;
+        public int ManufacturingYear { get; set; }
+    }
+
+    public class VehicleColorDto
+    {
         public Guid ColorId { get; set; }
+        public string ColorName { get; set; } = string.Empty;
+        public string? HexCode { get; set; }
     }
 
     public class CustomerDto
@@ -57,8 +80,26 @@ namespace Dtos.InspectionAndRepair
         public decimal ServicePrice { get; set; }
         public decimal  ActualDuration { get; set; }
         public string? Notes { get; set; }
+        public bool IsAdvanced { get; set; }
+        public List<RepairOrderServicePartDto> Parts { get; set; } = new();
+        public List<ServicePartDto> AllServiceParts { get; set; } = new();
+    }
+    public class ServicePartDto
+    {
+        public Guid ServicePartId { get; set; }
+        public Guid PartId { get; set; }
+        public string? PartName { get; set; }
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
     }
 
+    public class RepairOrderServicePartDto
+    {
+        public Guid RepairOrderServicePartId { get; set; }
+        public Guid PartId { get; set; }
+        public string? PartName { get; set; }
+        public string? Notes { get; set; }
+    }
     public class ServiceInspectionDto
     {
         public Guid ServiceInspectionId { get; set; }

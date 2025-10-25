@@ -9,6 +9,7 @@ namespace Garage_pro_api.Mapper
         public RepairHistoryProfile()
         {
             CreateMap<Job, JobHistoryDto>();
+
             CreateMap<JobPart, JobPartDto>()
                 .ForMember(dest => dest.PartName, opt => opt.MapFrom(src => src.Part.Name));
             CreateMap<RepairOrderService, ServiceDto>()

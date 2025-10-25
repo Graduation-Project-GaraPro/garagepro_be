@@ -22,16 +22,25 @@ namespace Repositories.InspectionAndRepair
         {
             return await _context.RepairOrders
                 .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)      
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)      
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Color)     
                 .Include(r => r.User)
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.Service)
+                .Include(r => r.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.JobTechnicians)
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.JobParts)
                         .ThenInclude(jp => jp.Part)
                 .Include(r => r.Jobs)
-                    .ThenInclude(j => j.Repair) 
+                    .ThenInclude(j => j.Repair)
                 .FirstOrDefaultAsync(r => r.RepairOrderId == repairOrderId);
         }
 
@@ -47,6 +56,8 @@ namespace Repositories.InspectionAndRepair
         {
             return await _context.Jobs
                 .Include(j => j.JobTechnicians)
+                    .ThenInclude(jt => jt.Technician)
+                        .ThenInclude(t => t.User)
                 .Include(j => j.Service)
                 .FirstOrDefaultAsync(j => j.JobId == jobId);
         }

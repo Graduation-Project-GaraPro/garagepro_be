@@ -95,14 +95,6 @@ namespace Services.InspectionAndRepair
             repair.Description = dto.Description;
             repair.Notes = dto.Notes;
 
-            // Khi Job hoàn thành -> tính ActualTime
-            if (job.Status == JobStatus.Completed)
-            {
-                repair.EndTime = DateTime.UtcNow;
-                if (repair.StartTime.HasValue)
-                    repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
-            }
-
             await _repairRepository.UpdateRepairAsync(repair);
             await _repairRepository.SaveChangesAsync();
 

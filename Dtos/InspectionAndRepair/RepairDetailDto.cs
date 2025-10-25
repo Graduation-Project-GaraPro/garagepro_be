@@ -11,6 +11,7 @@ namespace Dtos.InspectionAndRepair
         public Guid RepairOrderId { get; set; }
         public string VIN { get; set; }
         public string VehicleLicensePlate { get; set; }
+        public VehicleDto Vehicle { get; set; }
         public string CustomerName { get; set; }
         public string CustomerEmail { get; set; }
         public string CustomerPhone { get; set; }
@@ -39,6 +40,7 @@ namespace Dtos.InspectionAndRepair
 
         public List<JobPartDto> Parts { get; set; }
         public RepairDto Repairs { get; set; }
+        public List<TechnicianDto> Technicians { get; set; }
     }
 
     public class JobPartDto

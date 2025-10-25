@@ -17,6 +17,11 @@ namespace Repositories.RepairHistory
         {
             _context = context;
         }
+        public async Task<Technician> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
 
         public async Task<Technician> GetTechnicianWithCompletedJobsAsync(Guid technicianId)
         {
@@ -30,6 +35,21 @@ namespace Repositories.RepairHistory
                         .ThenInclude(j => j.RepairOrder)
                             .ThenInclude(ro => ro.Vehicle)
                                 .ThenInclude(v => v.User)
+                .Include(t => t.JobTechnicians)
+                    .ThenInclude(jt => jt.Job)
+                        .ThenInclude(j => j.RepairOrder)
+                            .ThenInclude(ro => ro.Vehicle)
+                                .ThenInclude(v => v.Brand) 
+                .Include(t => t.JobTechnicians)
+                    .ThenInclude(jt => jt.Job)
+                        .ThenInclude(j => j.RepairOrder)
+                            .ThenInclude(ro => ro.Vehicle)
+                                .ThenInclude(v => v.Model) 
+                .Include(t => t.JobTechnicians)
+                    .ThenInclude(jt => jt.Job)
+                        .ThenInclude(j => j.RepairOrder)
+                            .ThenInclude(ro => ro.Vehicle)
+                                .ThenInclude(v => v.Color) 
                 .Include(t => t.JobTechnicians)
                     .ThenInclude(jt => jt.Job)
                         .ThenInclude(j => j.RepairOrder)

@@ -11,5 +11,6 @@ namespace Repositories.RepairHistory
     public interface IRepairHistoryRepository
     {
         Task<Technician> GetTechnicianWithCompletedJobsAsync(Guid technicianId);
+        Task<Technician> GetTechnicianByUserIdAsync(string userId);
     }
 }

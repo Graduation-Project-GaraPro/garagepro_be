@@ -118,7 +118,7 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 _repo.AddServiceInspection(serviceInspection);
             }
 
-            // 🔹 Xử lý Suggested Parts theo logic IsAdvanced
+            // Xử lý Suggested Parts theo logic IsAdvanced
             if (serviceUpdate.SuggestedPartIds != null && serviceUpdate.SuggestedPartIds.Any())
             {
                 if (serviceUpdate.ConditionStatus != ConditionStatus.Replace &&
@@ -128,19 +128,19 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 var service = repairOrderService.Service;
                 var servicePartIds = service.ServiceParts.Select(sp => sp.PartId).ToList();
 
-                // 🔸 Kiểm tra Part hợp lệ
+                // Kiểm tra Part hợp lệ
                 foreach (var partId in serviceUpdate.SuggestedPartIds)
                 {
                     if (!servicePartIds.Contains(partId))
                         throw new InvalidOperationException($"Phụ tùng ID {partId} không hợp lệ cho dịch vụ {service.ServiceName}.");
                 }
 
-                // 🔸 Lấy danh sách PartInspection hiện có
+                // Lấy danh sách PartInspection hiện có
                 var oldPartInspections = inspection.PartInspections
                     .Where(pi => servicePartIds.Contains(pi.PartId))
                     .ToList();
 
-                // 🔸 Nếu Service.IsAdvanced == false → chỉ được chọn 1 part
+                // Nếu Service.IsAdvanced == false → chỉ được chọn 1 part
                 if (!service.IsAdvanced)
                 {
                     if (serviceUpdate.SuggestedPartIds.Count > 1)
@@ -162,14 +162,17 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 }
                 else
                 {
-                    // 🔸 Service.IsAdvanced == true → cho phép nhiều part
-                    // Kiểm tra xem part đã chọn trước đó chưa
+                    // Service.IsAdvanced == true → cho phép nhiều part
+                    // Lấy danh sách part đã gợi ý trước đó
                     var existingPartIds = oldPartInspections.Select(pi => pi.PartId).ToHashSet();
-                    foreach (var partId in serviceUpdate.SuggestedPartIds)
-                    {
-                        if (existingPartIds.Contains(partId))
-                            throw new InvalidOperationException($"Phụ tùng {partId} đã được gợi ý trước đó cho dịch vụ {service.ServiceName}.");
 
+                    // Lọc ra các part mới chưa được suggest
+                    var newPartIds = serviceUpdate.SuggestedPartIds
+                        .Where(partId => !existingPartIds.Contains(partId))
+                        .ToList();
+
+                    foreach (var partId in newPartIds)
+                    {
                         _repo.AddPartInspection(new PartInspection
                         {
                             PartInspectionId = Guid.NewGuid(),
@@ -179,11 +182,21 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                             CreatedAt = DateTime.UtcNow
                         });
                     }
+
+                    // ✅ Optional: Log nếu có part đã tồn tại (for debugging)
+                    var duplicatePartIds = serviceUpdate.SuggestedPartIds
+                        .Where(partId => existingPartIds.Contains(partId))
+                        .ToList();
+
+                    if (duplicatePartIds.Any())
+                    {
+                        Console.WriteLine($"Các part đã tồn tại: {string.Join(", ", duplicatePartIds)}");
+                    }
                 }
             }
         }
 
-        // 🔹 Cập nhật trạng thái Inspection
+        // Cập nhật trạng thái Inspection
         if (request.IsCompleted)
             inspection.Status = InspectionStatus.Pending;
         else if (inspection.Status == InspectionStatus.New)
@@ -198,38 +211,38 @@ public class InspectionTechnicianService : IInspectionTechnicianService
 
     public async Task<bool> RemovePartFromInspectionAsync(Guid inspectionId, Guid serviceId, Guid partInspectionId, string userId)
     {
-        // 1️⃣ Kiểm tra kỹ thuật viên có hợp lệ không
+        // Kiểm tra kỹ thuật viên có hợp lệ không
         var technician = await _repo.GetTechnicianByUserIdAsync(userId);
         if (technician == null)
             throw new InvalidOperationException("Bạn không có quyền.");
 
-        // 2️⃣ Lấy Inspection có liên quan đến technician
+        // Lấy Inspection có liên quan đến technician
         var inspection = await _repo.GetInspectionByIdAndTechnicianIdAsync(inspectionId, technician.TechnicianId);
         if (inspection == null)
             throw new InvalidOperationException("Không tìm thấy Inspection hoặc bạn không có quyền.");
 
-        // 3️⃣ Kiểm tra trạng thái Inspection
+        // Kiểm tra trạng thái Inspection
         if (inspection.Status == InspectionStatus.Completed)
             throw new InvalidOperationException("Không thể xóa phụ tùng trong Inspection đã hoàn thành.");
         if (inspection.Status != InspectionStatus.Pending && inspection.Status != InspectionStatus.InProgress)
             throw new InvalidOperationException("Chỉ có thể xóa phụ tùng khi Inspection đang Pending hoặc InProgress.");
 
-        // 4️⃣ Xác định service inspection hợp lệ
+        // Xác định service inspection hợp lệ
         var serviceInspection = inspection.ServiceInspections.FirstOrDefault(si => si.ServiceId == serviceId);
         if (serviceInspection == null)
             throw new InvalidOperationException("Không tìm thấy dịch vụ này trong Inspection.");
 
-        // 5️⃣ Tìm bản ghi PartInspection cần xóa
+        // Tìm bản ghi PartInspection cần xóa
         var partInspection = inspection.PartInspections.FirstOrDefault(pi => pi.PartInspectionId == partInspectionId);
         if (partInspection == null)
             throw new InvalidOperationException("Không tìm thấy phụ tùng trong Inspection.");
 
-        // 6️⃣ Kiểm tra part có thuộc service đó không
+        // Kiểm tra part có thuộc service đó không
         var validPartIds = serviceInspection.Service.ServiceParts.Select(sp => sp.PartId).ToList();
         if (!validPartIds.Contains(partInspection.PartId))
             throw new InvalidOperationException("Phụ tùng không thuộc dịch vụ được chọn.");
 
-        // 7️⃣ Xóa partInspection
+        // Xóa partInspection
         _repo.RemovePartInspections(new List<PartInspection> { partInspection });
         await _repo.SaveChangesAsync();
 

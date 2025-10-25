@@ -26,13 +26,29 @@ namespace Repositories.InspectionAndRepair
                     .ThenInclude(j => j.Service)  // Để lấy ServiceName
                 .Include(jt => jt.Job)
                     .ThenInclude(j => j.RepairOrder)  // Để lấy RepairOrderId
-                        .ThenInclude(ro => ro.Vehicle)  // Thêm: Lấy Vehicle từ RepairOrder
-                            .ThenInclude(v => v.User)  // Thêm: Lấy Customer (User) từ Vehicle
+                        .ThenInclude(ro => ro.User)  // Thêm: Lấy Vehicle từ RepairOrder
+                            //.ThenInclude(v => v.User)  // Thêm: Lấy Customer (User) từ Vehicle
+                 .Include(jt => jt.Job)
+                    .ThenInclude(j => j.RepairOrder) 
+                        .ThenInclude(ro => ro.Vehicle)  
+                            .ThenInclude(v => v.Brand)
+                 .Include(jt => jt.Job)
+                    .ThenInclude(j => j.RepairOrder)  
+                        .ThenInclude(ro => ro.Vehicle)  
+                            .ThenInclude(v => v.Color)
+                 .Include(jt => jt.Job)
+                    .ThenInclude(j => j.RepairOrder)  
+                        .ThenInclude(ro => ro.Vehicle)  
+                            .ThenInclude(v => v.Model)
                 .Include(jt => jt.Job)
                     .ThenInclude(j => j.JobParts)
                         .ThenInclude(jp => jp.Part)  // Để lấy Parts
                 .Include(jt => jt.Job)
-                    .ThenInclude(j => j.Repair)  // Để lấy Repairs (đã có, nhưng đảm bảo load đầy đủ)
+                    .ThenInclude(j => j.Repair)  // Để lấy Repairs 
+                .Include(jt => jt.Job)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jobTech => jobTech.Technician)
+                            .ThenInclude(tech => tech.User)
                 .Select(jt => jt.Job)
                 .ToListAsync();
         }

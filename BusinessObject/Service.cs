@@ -19,8 +19,6 @@ namespace BusinessObject
         [Required]
         public Guid ServiceCategoryId { get; set; }
 
-        
-
         [Required]
         [MaxLength(100)]
         public string ServiceName { get; set; }
@@ -40,8 +38,6 @@ namespace BusinessObject
 
         public Guid? BranchId { get; set; }
 
-
-      
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

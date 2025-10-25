@@ -7,5 +7,6 @@ namespace Repositories.Statistical
     public interface IStatisticalRepository
     {
         Task<Technician> GetTechnicianWithJobsAsync(Guid technicianId);
+        Task<Technician> GetTechnicianByUserIdAsync(string userId);
     }
 }

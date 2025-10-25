@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BusinessObject.Enums;
 using DataAccessLayer;
+using Dtos.InspectionAndRepair;
 using Dtos.RepairHistory;
 using Microsoft.EntityFrameworkCore;
 using Repositories.RepairHistory;
@@ -27,8 +28,7 @@ namespace Services.RepairHistory
 
         public async Task<List<RepairHistoryDto>> GetRepairHistoryByUserIdAsync(string userId)
         {
-            var technician = await _context.Technicians
-                .FirstOrDefaultAsync(t => t.UserId == userId);
+            var technician = await _repo.GetTechnicianByUserIdAsync(userId);
 
             if (technician == null)
                 throw new UnauthorizedAccessException("Không tìm thấy thông tin Technician.");
@@ -52,14 +52,38 @@ namespace Services.RepairHistory
             {
                 var vehicle = g.First().RepairOrder.Vehicle;
                 var owner = vehicle.User;
+
                 return new RepairHistoryDto
                 {
-                    VehicleModelId = vehicle.ModelId.ToString(),
-                    LicensePlate = vehicle.LicensePlate,
-                    VIN = vehicle.VIN,
-                    OwnerFullName = owner.FullName,
-                    OwnerPhone = owner.PhoneNumber,
-                    OwnerEmail = owner.Email,
+                    Vehicle = new VehicleDto
+                    {
+                        VehicleId = vehicle.VehicleId,
+                        LicensePlate = vehicle.LicensePlate,
+                        VIN = vehicle.VIN,
+                        Brand = vehicle.Brand == null ? null : new VehicleBrandDto
+                        {
+                            BrandId = vehicle.Brand.BrandID,
+                            BrandName = vehicle.Brand.BrandName
+                        },
+                        Model = vehicle.Model == null ? null : new VehicleModelDto
+                        {
+                            ModelId = vehicle.Model.ModelID,
+                            ModelName = vehicle.Model.ModelName,
+                            ManufacturingYear = vehicle.Model.ManufacturingYear
+                        },
+                        Color = vehicle.Color == null ? null : new VehicleColorDto
+                        {
+                            ColorId = vehicle.Color.ColorID,
+                            ColorName = vehicle.Color.ColorName
+                        }
+                    },
+                    Owner = new CustomerDto
+                    {
+                        CustomerId = owner.Id,
+                        FullName = $"{owner.FirstName} {owner.LastName}".Trim(),
+                        Email = owner.Email,
+                        PhoneNumber = owner.PhoneNumber
+                    },
                     RepairCount = vehicle.RepairOrders?.Count() ?? 1,
                     CompletedJobs = g.Select(job => new JobHistoryDto
                     {
@@ -69,7 +93,7 @@ namespace Services.RepairHistory
                         Deadline = job.Deadline,
                         Level = job.Level,
                         CustomerIssue = job.RepairOrder.Note,
-                        JobParts = job.JobParts.Select(p => new JobPartDto
+                        JobParts = job.JobParts.Select(p => new Dtos.RepairHistory.JobPartDto
                         {
                             PartName = p.Part.Name,
                             Quantity = p.Quantity,
