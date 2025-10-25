@@ -6,23 +6,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject.Technician
+namespace BusinessObject.InspectionAndRepair
 {
-    public class Specifications
+    public class SpecificationsData
     {
         [Key]
-        public Guid SpecificationsID { get; set; }
+        public Guid DataID { get; set; }
 
         [Required]
         [MaxLength(200)]
-        public string Title { get; set; }
+        public string Value { get; set; } // Giá trị cụ thể của xe
 
         // FK -> VehicleLookup
         [ForeignKey(nameof(VehicleLookup))]
         public Guid LookupID { get; set; }
         public virtual VehicleLookup VehicleLookup { get; set; }
 
-        // Navigation property
-        public virtual ICollection<SpecificationsData> SpecificationsData { get; set; }
+        // FK -> Specification
+        [ForeignKey(nameof(Specification))]
+        public Guid FieldTemplateID { get; set; }
+        public virtual Specification Specification { get; set; }
     }
 }

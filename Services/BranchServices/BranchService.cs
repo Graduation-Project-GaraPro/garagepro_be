@@ -325,7 +325,7 @@ namespace Services.BranchServices
             }
             catch (Exception ex)
             {
-               
+
                 throw new ApplicationException("An error occurred while updating branch statuses.", ex);
             }
         }

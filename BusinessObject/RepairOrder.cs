@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+
 using BusinessObject.Manager;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -61,6 +62,7 @@ namespace BusinessObject
         public bool IsArchived { get; set; } = false;
 
         public DateTime? ArchivedAt { get; set; }
+
 
         public string? ArchivedByUserId { get; set; }
 

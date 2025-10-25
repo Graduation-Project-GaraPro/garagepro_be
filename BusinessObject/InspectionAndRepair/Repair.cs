@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject.Technician
+namespace BusinessObject.InspectionAndRepair
 {
     public class Repair
     {
@@ -18,15 +18,11 @@ namespace BusinessObject.Technician
 
         [MaxLength(500)]
         public string Description { get; set; }
-
-        [Required]
-        public RepairStatus Status { get; set; }
-
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
 
-        public long? ActualTime { get; set; }
-        public long? EstimatedTime { get; set; }
+        public TimeSpan? ActualTime { get; set; } 
+        public TimeSpan? EstimatedTime { get; set; } 
 
         [MaxLength(500)]
         public string Notes { get; set; }

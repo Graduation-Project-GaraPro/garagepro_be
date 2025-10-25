@@ -1,4 +1,5 @@
-using System;
+
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +9,11 @@ namespace BusinessObject.Enums
 {
     public enum JobStatus
     {
-        Pending = 0,           // Initial status when job is created
-        AssignedToTechnician = 1,  // Manager assigned job to technician
-        InProgress = 2,        // Technician started working on job
-        Completed = 3          // Job completed
+        Pending = 0,       //Lúc tạo Job nhưng Manager chưa gán cho Technician    
+        New = 1,  	 //Manager tạo Job và gán cho Technician
+        InProgress = 2,  //Technician đang làm
+        Completed = 3,  //Technician đã hoàn thiện Job
+        OnHold = 4          //Technician chờ phụ tùng hoặc gặp vấn đề khi  sửa chữa
+
     }
 }

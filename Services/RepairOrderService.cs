@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
+
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using Dtos.RepairOrder;
@@ -570,6 +571,7 @@ namespace Services
                 VehicleModel = "Unknown Model", // TODO: Add model navigation when available
                 VehicleColor = "Unknown Color", // TODO: Add color navigation when available
                 BranchName = repairOrder.Branch?.BranchName ?? "Unknown Branch",
+
                 //BranchAddress = repairOrder.Branch != null ? 
                 //    $"{repairOrder.Branch.Street}, {repairOrder.Branch.Ward}, {repairOrder.Branch.District}, {repairOrder.Branch.City}" : "",
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
@@ -583,6 +585,7 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
+
             };
         }
 
@@ -864,14 +867,14 @@ namespace Services
             int pageSize = 50)
         {
             var archivedOrders = await _repairOrderRepository.GetArchivedRepairOrdersAsync(filters);
-            
+
             // Apply sorting
             var sortedOrders = sortBy?.ToLower() switch
             {
-                "archivedat" => sortOrder?.ToLower() == "desc" 
+                "archivedat" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ArchivedAt)
                     : archivedOrders.OrderBy(ro => ro.ArchivedAt),
-                "receivedate" => sortOrder?.ToLower() == "desc" 
+                "receivedate" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ReceiveDate)
                     : archivedOrders.OrderBy(ro => ro.ReceiveDate),
                 _ => archivedOrders.OrderByDescending(ro => ro.ArchivedAt)

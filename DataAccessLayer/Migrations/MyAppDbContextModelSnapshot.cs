@@ -427,6 +427,15 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("ServicePartId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -718,6 +727,196 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Inspections");
                 });
 
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.JobTechnician", b =>
+                {
+                    b.Property<Guid>("JobTechnicianId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("TechnicianId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("JobTechnicianId");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("TechnicianId");
+
+                    b.ToTable("JobTechnicians");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Repair", b =>
+                {
+                    b.Property<Guid>("RepairId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<TimeSpan?>("ActualTime")
+                        .HasColumnType("time");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<TimeSpan?>("EstimatedTime")
+                        .HasColumnType("time");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StartTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("RepairId");
+
+                    b.HasIndex("JobId")
+                        .IsUnique();
+
+                    b.ToTable("Repairs");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Specification", b =>
+                {
+                    b.Property<Guid>("SpecificationID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<Guid>("TemplateID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("SpecificationID");
+
+                    b.HasIndex("Label");
+
+                    b.HasIndex("TemplateID", "DisplayOrder");
+
+                    b.ToTable("Specification");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationCategory", b =>
+                {
+                    b.Property<Guid>("CategoryID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("CategoryID");
+
+                    b.HasIndex("DisplayOrder");
+
+                    b.ToTable("SpecificationCategory");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationsData", b =>
+                {
+                    b.Property<Guid>("DataID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("FieldTemplateID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LookupID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("DataID");
+
+                    b.HasIndex("FieldTemplateID");
+
+                    b.HasIndex("LookupID", "FieldTemplateID")
+                        .IsUnique();
+
+                    b.ToTable("SpecificationsData");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Technician", b =>
+                {
+                    b.Property<Guid>("TechnicianId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<double>("Efficiency")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Quality")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Score")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Speed")
+                        .HasColumnType("float");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("TechnicianId");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Technicians");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.VehicleLookup", b =>
+                {
+                    b.Property<Guid>("LookupID")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Automaker")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NameCar")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("LookupID");
+
+                    b.HasIndex("Automaker", "NameCar");
+
+                    b.ToTable("VehicleLookups");
+                });
+
             modelBuilder.Entity("BusinessObject.Job", b =>
                 {
                     b.Property<Guid>("JobId")
@@ -912,29 +1111,10 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("FeedBacks", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
-                {
-                    b.Property<Guid>("CategoryID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("CategoryName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("CategoryID");
-
-                    b.ToTable("CategoryNotifications");
-                });
-
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
                     b.Property<Guid>("NotificationID")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CategoryID")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Content")
@@ -963,8 +1143,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("NotificationID");
-
-                    b.HasIndex("CategoryID");
 
                     b.HasIndex("UserID");
 
@@ -1535,6 +1713,54 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("RepairOrderServiceParts");
                 });
 
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Users")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex")
+                        .HasFilter("[NormalizedName] IS NOT NULL");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
             modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1628,6 +1854,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1707,6 +1936,10 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("ConditionStatus")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1715,11 +1948,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("ServiceInspectionId");
 
@@ -1799,167 +2027,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("SystemLogs", (string)null);
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.JobTechnician", b =>
-                {
-                    b.Property<Guid>("JobTechnicianId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("TechnicianId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("JobTechnicianId");
-
-                    b.HasIndex("JobId");
-
-                    b.HasIndex("TechnicianId");
-
-                    b.ToTable("JobTechnicians");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Repair", b =>
-                {
-                    b.Property<Guid>("RepairId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<long?>("ActualTime")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long?>("EstimatedTime")
-                        .HasColumnType("bigint");
-
-                    b.Property<Guid>("JobId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Notes")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("StartTime")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("RepairId");
-
-                    b.HasIndex("JobId");
-
-                    b.ToTable("Repairs");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Specifications", b =>
-                {
-                    b.Property<Guid>("SpecificationsID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("LookupID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("SpecificationsID");
-
-                    b.HasIndex("LookupID");
-
-                    b.ToTable("Specifications");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.SpecificationsData", b =>
-                {
-                    b.Property<Guid>("DataID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Label")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid>("SpecificationsID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Value")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("DataID");
-
-                    b.HasIndex("SpecificationsID");
-
-                    b.ToTable("SpecificationsData");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Technician", b =>
-                {
-                    b.Property<Guid>("TechnicianId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<double>("Efficiency")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Quality")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Score")
-                        .HasColumnType("float");
-
-                    b.Property<double>("Speed")
-                        .HasColumnType("float");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.HasKey("TechnicianId");
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("Technicians");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.VehicleLookup", b =>
-                {
-                    b.Property<Guid>("LookupID")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("Automaker")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NameCar")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("LookupID");
-
-                    b.ToTable("VehicleLookups");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
@@ -2124,42 +2191,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("VehicleModelColors");
                 });
 
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("ConcurrencyStamp")
-                        .IsConcurrencyToken()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Discriminator")
-                        .IsRequired()
-                        .HasMaxLength(21)
-                        .HasColumnType("nvarchar(21)");
-
-                    b.Property<string>("Name")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("NormalizedName")
-                        .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("NormalizedName")
-                        .IsUnique()
-                        .HasDatabaseName("RoleNameIndex")
-                        .HasFilter("[NormalizedName] IS NOT NULL");
-
-                    b.ToTable("AspNetRoles", (string)null);
-
-                    b.HasDiscriminator().HasValue("IdentityRole");
-
-                    b.UseTphMappingStrategy();
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.Property<int>("Id")
@@ -2279,34 +2310,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("RepairRequestID");
 
                     b.ToTable("RepairOrderRepairRequest");
-                });
-
-            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
-                {
-                    b.HasBaseType("Microsoft.AspNetCore.Identity.IdentityRole");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Users")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.HasDiscriminator().HasValue("ApplicationRole");
                 });
 
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
@@ -2543,7 +2546,7 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.Technician.Technician", "Technician")
+                    b.HasOne("BusinessObject.InspectionAndRepair.Technician", "Technician")
                         .WithMany("Inspections")
                         .HasForeignKey("TechnicianId")
                         .OnDelete(DeleteBehavior.Restrict);
@@ -2551,6 +2554,77 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrder");
 
                     b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.JobTechnician", b =>
+                {
+                    b.HasOne("BusinessObject.Job", "Job")
+                        .WithMany("JobTechnicians")
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.InspectionAndRepair.Technician", "Technician")
+                        .WithMany("JobTechnicians")
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+
+                    b.Navigation("Technician");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Repair", b =>
+                {
+                    b.HasOne("BusinessObject.Job", "Job")
+                        .WithOne("Repair")
+                        .HasForeignKey("BusinessObject.InspectionAndRepair.Repair", "JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Job");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Specification", b =>
+                {
+                    b.HasOne("BusinessObject.InspectionAndRepair.SpecificationCategory", "SpecificationCategory")
+                        .WithMany("Specifications")
+                        .HasForeignKey("TemplateID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SpecificationCategory");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationsData", b =>
+                {
+                    b.HasOne("BusinessObject.InspectionAndRepair.Specification", "Specification")
+                        .WithMany("SpecificationsDatas")
+                        .HasForeignKey("FieldTemplateID")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.InspectionAndRepair.VehicleLookup", "VehicleLookup")
+                        .WithMany("SpecificationsDatas")
+                        .HasForeignKey("LookupID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Specification");
+
+                    b.Navigation("VehicleLookup");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Technician", b =>
+                {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
+                        .WithOne("Technician")
+                        .HasForeignKey("BusinessObject.InspectionAndRepair.Technician", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("BusinessObject.Job", b =>
@@ -2627,19 +2701,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
                 {
-                    b.HasOne("BusinessObject.Notifications.CategoryNotification", "CategoryNotification")
-                        .WithMany("Notifications")
-                        .HasForeignKey("CategoryID")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("CategoryNotification");
 
                     b.Navigation("User");
                 });
@@ -2992,69 +3058,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("BusinessObject.Technician.JobTechnician", b =>
-                {
-                    b.HasOne("BusinessObject.Job", "Job")
-                        .WithMany("JobTechnicians")
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Technician.Technician", "Technician")
-                        .WithMany("JobTechnicians")
-                        .HasForeignKey("TechnicianId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Job");
-
-                    b.Navigation("Technician");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Repair", b =>
-                {
-                    b.HasOne("BusinessObject.Job", "Job")
-                        .WithMany("Repairs")
-                        .HasForeignKey("JobId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Job");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Specifications", b =>
-                {
-                    b.HasOne("BusinessObject.Technician.VehicleLookup", "VehicleLookup")
-                        .WithMany("Specifications")
-                        .HasForeignKey("LookupID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("VehicleLookup");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.SpecificationsData", b =>
-                {
-                    b.HasOne("BusinessObject.Technician.Specifications", "Specifications")
-                        .WithMany("SpecificationsData")
-                        .HasForeignKey("SpecificationsID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Specifications");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Technician", b =>
-                {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
-                        .WithOne("Technician")
-                        .HasForeignKey("BusinessObject.Technician.Technician", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
                     b.HasOne("BusinessObject.Vehicles.VehicleBrand", "Brand")
@@ -3122,7 +3125,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3149,7 +3152,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                    b.HasOne("BusinessObject.Roles.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -3266,18 +3269,36 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ServiceInspections");
                 });
 
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Specification", b =>
+                {
+                    b.Navigation("SpecificationsDatas");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationCategory", b =>
+                {
+                    b.Navigation("Specifications");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.Technician", b =>
+                {
+                    b.Navigation("Inspections");
+
+                    b.Navigation("JobTechnicians");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionAndRepair.VehicleLookup", b =>
+                {
+                    b.Navigation("SpecificationsDatas");
+                });
+
             modelBuilder.Entity("BusinessObject.Job", b =>
                 {
                     b.Navigation("JobParts");
 
                     b.Navigation("JobTechnicians");
 
-                    b.Navigation("Repairs");
-                });
-
-            modelBuilder.Entity("BusinessObject.Notifications.CategoryNotification", b =>
-                {
-                    b.Navigation("Notifications");
+                    b.Navigation("Repair")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
@@ -3342,6 +3363,11 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderServiceParts");
                 });
 
+            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
+                {
+                    b.Navigation("RolePermissions");
+                });
+
             modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
                 {
                     b.Navigation("RolePermissions");
@@ -3378,23 +3404,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Services");
                 });
 
-            modelBuilder.Entity("BusinessObject.Technician.Specifications", b =>
-                {
-                    b.Navigation("SpecificationsData");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.Technician", b =>
-                {
-                    b.Navigation("Inspections");
-
-                    b.Navigation("JobTechnicians");
-                });
-
-            modelBuilder.Entity("BusinessObject.Technician.VehicleLookup", b =>
-                {
-                    b.Navigation("Specifications");
-                });
-
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
                     b.Navigation("RepairOrders");
@@ -3419,11 +3428,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("VehicleModelColors");
 
                     b.Navigation("Vehicles");
-                });
-
-            modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
-                {
-                    b.Navigation("RolePermissions");
                 });
 #pragma warning restore 612, 618
         }
