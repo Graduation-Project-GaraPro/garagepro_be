@@ -1,3 +1,4 @@
+
 using AutoMapper;
 using BusinessObject;
 using BusinessObject.Authentication;
@@ -58,6 +59,7 @@ namespace Garage_pro_api.Mapper
                     opt => opt.MapFrom(src => src.Permissions));
 
             // Role → RoleDto
+
             CreateMap<ApplicationUser, ApplicationUserDto>().ReverseMap();
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,

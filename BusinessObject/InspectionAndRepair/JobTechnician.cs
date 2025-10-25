@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject.Technician
+namespace BusinessObject.InspectionAndRepair
 {
     public class JobTechnician
     {
@@ -18,6 +18,9 @@ namespace BusinessObject.Technician
 
         [Required]
         public Guid TechnicianId { get; set; }
+
+        [Required]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
         [ForeignKey(nameof(JobId))]

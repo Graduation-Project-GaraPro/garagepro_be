@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject.Technician
+namespace BusinessObject.InspectionAndRepair
 {
     public class VehicleLookup
     {
@@ -21,6 +21,6 @@ namespace BusinessObject.Technician
         public string NameCar { get; set; }
 
         // Navigation property
-        public virtual ICollection<Specifications> Specifications { get; set; }
+        public virtual ICollection<SpecificationsData> SpecificationsDatas { get; set; }
     }
 }

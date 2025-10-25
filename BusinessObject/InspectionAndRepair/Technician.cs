@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BusinessObject.Technician
+namespace BusinessObject.InspectionAndRepair
 {
     public class Technician
     {

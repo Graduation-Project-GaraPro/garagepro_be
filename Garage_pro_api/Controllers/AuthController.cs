@@ -17,6 +17,7 @@ using System.Text;
 using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 using Services.SmsSenders;
+
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 
@@ -272,6 +273,7 @@ namespace Garage_pro_api.Controllers
                     IsPersistent = true,
                     ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
                 });
+
 
             var response = new AuthResponseDto
             {
