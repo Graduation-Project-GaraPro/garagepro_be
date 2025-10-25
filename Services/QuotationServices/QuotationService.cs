@@ -240,38 +240,42 @@ namespace Services.QuotationServices
             quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
             
-            // Update selected services
+            // Reset all services and parts first
+            foreach (var quotationService in quotation.QuotationServices)
+            {
+                quotationService.IsSelected = false;
+                foreach (var part in quotationService.QuotationServiceParts)
+                {
+                    part.IsSelected = false;
+                }
+            }
+            
+            // Process service selections - customer can only select entire services (with all recommended parts)
             if (responseDto.SelectedServices != null)
             {
                 foreach (var selectedService in responseDto.SelectedServices)
                 {
+                    // Find the service in the quotation
                     var quotationService = quotation.QuotationServices
                         .FirstOrDefault(qs => qs.QuotationServiceId == selectedService.QuotationServiceId);
+                        
                     if (quotationService != null)
                     {
+                        // Customer accepts the entire service
                         quotationService.IsSelected = true;
-                    }
-                }
-            }
-
-            // Update selected service parts
-            if (responseDto.SelectedServiceParts != null)
-            {
-                foreach (var selectedServicePart in responseDto.SelectedServiceParts)
-                {
-                    // Find the service part in all quotation services
-                    var quotationServicePart = quotation.QuotationServices
-                        .SelectMany(qs => qs.QuotationServiceParts)
-                        .FirstOrDefault(qsp => qsp.QuotationServicePartId == selectedServicePart.QuotationServicePartId);
                         
-                    if (quotationServicePart != null)
-                    {
-                        quotationServicePart.IsSelected = true;
+                        // Automatically select all recommended parts for this service
+                        foreach (var part in quotationService.QuotationServiceParts)
+                        {
+                            // Only select parts that are recommended by manager
+                            if (part.IsRecommended)
+                            {
+                                part.IsSelected = true;
+                            }
+                        }
                     }
                 }
             }
-
-            // Note: Removed recalculation of TotalAmount as it's no longer in the Quotation entity
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);
@@ -286,6 +290,20 @@ namespace Services.QuotationServices
             quotation.Status = BusinessObject.Enums.QuotationStatus.Approved;
             quotation.CustomerResponseAt = DateTime.UtcNow;
 
+            // When approving, select all services and their recommended parts
+            foreach (var quotationService in quotation.QuotationServices)
+            {
+                quotationService.IsSelected = true;
+                // Select all recommended parts
+                foreach (var part in quotationService.QuotationServiceParts)
+                {
+                    if (part.IsRecommended)
+                    {
+                        part.IsSelected = true;
+                    }
+                }
+            }
+
             await _quotationRepository.UpdateAsync(quotation);
             return true;
         }
@@ -298,6 +316,17 @@ namespace Services.QuotationServices
 
             quotation.Status = BusinessObject.Enums.QuotationStatus.Rejected;
             quotation.CustomerResponseAt = DateTime.UtcNow;
+
+            // When rejecting, deselect all services and their parts
+            foreach (var quotationService in quotation.QuotationServices)
+            {
+                quotationService.IsSelected = false;
+                // Deselect all parts
+                foreach (var part in quotationService.QuotationServiceParts)
+                {
+                    part.IsSelected = false;
+                }
+            }
 
             await _quotationRepository.UpdateAsync(quotation);
             return true;

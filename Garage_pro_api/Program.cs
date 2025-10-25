@@ -314,6 +314,7 @@ builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
 
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
+builder.Services.AddScoped<IPartService, PartService>();
 
 builder.Services.AddHostedService<LogCleanupService>();
 
@@ -437,7 +438,7 @@ if (app.Environment.IsDevelopment())
 
 // Use CORS with the specific policy for your frontend
 app.UseCors("AllowFrontend");
-app.UseCors("AllowAll");
+//app.UseCors("AllowAll");
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
@@ -469,7 +470,7 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
     Console.WriteLine("Applying pending migrations...");
-    dbContext.Database.Migrate();
+    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
     if (!dbContext.SecurityPolicies.Any())
     {
@@ -494,10 +495,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+//    await dbInitializer.Initialize();
+//}
 
 app.Run();

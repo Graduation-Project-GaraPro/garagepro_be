@@ -107,23 +107,6 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        [HttpPut("customer-response")]
-        public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse(CustomerQuotationResponseDto responseDto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            try
-            {
-                var updatedQuotation = await _quotationService.ProcessCustomerResponseAsync(responseDto);
-                return Ok(updatedQuotation);
-            }
-            catch (ArgumentException ex)
-            {
-                return NotFound(ex.Message);
-            }
-        }
-
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteQuotation(Guid id)
         {

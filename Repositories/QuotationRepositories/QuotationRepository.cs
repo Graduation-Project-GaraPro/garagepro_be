@@ -22,39 +22,6 @@ namespace Repositories.QuotationRepositories
             _mapper = mapper;
         }
 
-        public async Task<List<QuotationDto>> GetQuotationsByUserIdAsync(String userId)
-        {
-            return await _context.Inspections
-                .Include(i => i.RepairOrder)
-                .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-                .Where(i => i.RepairOrder.UserId == userId)
-                .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// dùng projectto ?? map k c?n load h?t ch? c?n nhhuwnxg entities c?n thi?t
-                .ToListAsync();
-        }
-
-        public async Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId)
-        {
-            return await _context.Inspections
-                .Include(i => i.RepairOrder)
-                .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-                .Where(i => i.RepairOrder.UserId == userId && i.RepairOrderId == repairRequestId)
-                .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)
-                .ToListAsync();
-        }
-
-        //update báo giá cho phép thay ??i pârt
-        //public async Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto)
-        //{
-        //    var inspection = await _context.Inspections
-        //        .Include(i => i.RepairOrder)
-        //        .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
-        //        .FirstOrDefaultAsync(i => i.InspectionId == dto.QuotationId && i.RepairOrder.UserId == userId);
-
-        //    if (inspection == null)
-        //        throw new Exception("Quotation not found or not authorized");
-
         public async Task<Quotation> UpdateAsync(Quotation quotation)
         {
             _context.Quotations.Update(quotation);

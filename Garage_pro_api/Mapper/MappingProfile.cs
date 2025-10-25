@@ -172,7 +172,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
                 .ForMember(dest => dest.ServiceDescription, opt => opt.MapFrom(src => src.Service.Description))
-                .ForMember(dest => dest.QuotationServiceParts, opt => opt.MapFrom(src => src.QuotationServiceParts));
+                .ForMember(dest => dest.RecommendedParts, opt => opt.MapFrom(src => src.QuotationServiceParts));
 
             // Add mapping for QuotationServicePart
             CreateMap<QuotationServicePart, QuotationServicePartDto>()
@@ -181,7 +181,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
                 .ForMember(dest => dest.IsSelected, opt => opt.MapFrom(src => src.IsSelected))
                 .ForMember(dest => dest.IsRecommended, opt => opt.MapFrom(src => src.IsRecommended))
-                .ForMember(dest => dest.RecommendationNote, opt => opt.Ignore()) // Not in entity
+                .ForMember(dest => dest.RecommendationNote, opt => opt.MapFrom(src => src.Part.Name + " - Recommended by manager"))
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Price * src.Quantity))

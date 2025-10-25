@@ -12,5 +12,9 @@ namespace Repositories.PartRepositories
     {
         Task<bool> ExistsAsync(Expression<Func<Part, bool>> predicate);
         Task<Part> GetByIdAsync(Guid id);
+        Task<IEnumerable<Part>> GetAllAsync();
+        Task<Part> CreateAsync(Part part);
+        Task<Part> UpdateAsync(Part part);
+        Task<bool> DeleteAsync(Guid id);
     }
 }

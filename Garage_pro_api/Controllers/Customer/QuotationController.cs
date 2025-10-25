@@ -1,4 +1,4 @@
-﻿
+﻿﻿﻿
 using Dtos.Quotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -66,6 +66,30 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(rejectedQuotation);
         }
 
+        // Customer response to quotation with service selections
+        [HttpPost("response")]
+        public async Task<ActionResult<QuotationDto>> CustomerResponse(CustomerQuotationResponseDto responseDto)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+              ?? User.FindFirstValue("sub");
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+                
+            // Verify the quotation belongs to this user
+            var quotation = await _quotationService.GetQuotationByIdAsync(responseDto.QuotationId);
+            if (quotation == null || quotation.UserId != userId)
+                return Unauthorized();
+                
+            try
+            {
+                var updatedQuotation = await _quotationService.ProcessCustomerResponseAsync(responseDto);
+                return Ok(updatedQuotation);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
 
         /// Customer cập nhật Part (chọn Spec)           
         // [HttpPut("update-parts")]
