@@ -223,6 +223,7 @@ builder.Services.AddMemoryCache(); // Cho IMemoryCache
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
@@ -324,6 +325,10 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<PaymentService>();
+
+
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
 
@@ -366,7 +371,9 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "https://localhost:3000",       // frontend web
+                "http://localhost:3000",       // frontend web
+                "http://localhost:5117",       // frontend web
+
                 "https://10.0.2.2:7113",       // Android Emulator
                 "http://192.168.1.96:7113"    // LDPlayer / LAN
             )
@@ -395,7 +402,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
+app.UseCors("AllowFrontendAndAndroid");
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();

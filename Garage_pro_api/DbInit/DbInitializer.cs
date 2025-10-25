@@ -51,7 +51,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
         }
@@ -85,9 +85,9 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000013", "System", "Manager1", "Manager"),
-                ("0900000014", "System", "Manager2", "Manager"),
-                //("0900000005", "Default", "Customer", "Customer"),
+                ("0900000003", "System", "Manager1", "Manager"),
+                ("0900000004", "System", "Manager2", "Manager"),
+                ("0900000005", "Default", "Customer", "Customer"),
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
                 ("0900000008", "Default", "Technician2", "Technician")
@@ -945,89 +945,92 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        //private async Task SeedRepairOrdersAsync()
-        //{
-        //    if (!_context.RepairOrders.Any())
-        //    {
-        //        // Get required entities
-        //        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
-        //        var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
-        //        var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
+        private async Task SeedRepairOrdersAsync()
+        {
+            if (!_context.RepairOrders.Any())
+            {
+                // Get required entities
+                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
+                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
+                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
-        //        var branch = await _context.Branches.FirstOrDefaultAsync();
-        //        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-        //        var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
-        //        var vehicles = await _context.Vehicles.ToListAsync();
+                var branch = await _context.Branches.FirstOrDefaultAsync();
+                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
+                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
+                var vehicles = await _context.Vehicles.ToListAsync();
 
-        //        if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
-        //            branch != null && customerUser != null && vehicles.Any())
-        //        {
-        //            var repairOrders = new List<RepairOrder>
-        //            {
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-5),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
-        //                    Cost = 1500000,
-        //                    EstimatedAmount = 2000000,
-        //                    PaidAmount = 0,
-        //                    PaidStatus = "Unpaid",
-        //                    EstimatedRepairTime = 120,
-        //                    Note = "Regular maintenance service",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-5),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = pendingStatus.OrderStatusId,
-        //                    VehicleId = vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                },
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-3),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
-        //                    Cost = 3000000,
-        //                    EstimatedAmount = 3500000,
-        //                    PaidAmount = 1000000,
-        //                    PaidStatus = "Partial",
-        //                    EstimatedRepairTime = 180,
-        //                    Note = "Brake system repair",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-3),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = inProgressStatus.OrderStatusId,
-        //                    VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                },
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-10),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
-        //                    CompletionDate = DateTime.UtcNow.AddDays(-1),
-        //                    Cost = 5000000,
-        //                    EstimatedAmount = 5000000,
-        //                    PaidAmount = 5000000,
-        //                    PaidStatus = "Paid",
-        //                    EstimatedRepairTime = 240,
-        //                    Note = "Complete vehicle overhaul",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-10),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = completedStatus.OrderStatusId,
-        //                    VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                }
-        //            };
+                if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
+                    branch != null && customerUser != null && vehicles.Any())
+                {
+                    var repairOrders = new List<RepairOrder>
+                    {
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Request",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-5),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+                            Cost = 1500000,
+                            EstimatedAmount = 2000000,
+                            PaidAmount = 0,
+                            PaidStatus = "Unpaid",
+                            EstimatedRepairTime = 120,
+                            Note = "Regular maintenance service",
+                            CreatedAt = DateTime.UtcNow.AddDays(-5),
+                            BranchId = branch.BranchId,
+                            StatusId = pendingStatus.OrderStatusId,
+                            VehicleId = vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        },
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Request",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-3),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+                            Cost = 3000000,
+                            EstimatedAmount = 3500000,
+                            PaidAmount = 1000000,
+                            PaidStatus = "Partial",
+                            EstimatedRepairTime = 180,
+                            Note = "Brake system repair",
+                            CreatedAt = DateTime.UtcNow.AddDays(-3),
+                            BranchId = branch.BranchId,
+                            StatusId = inProgressStatus.OrderStatusId,
+                            VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        },
+                        new RepairOrder
+                        {
+                            RepairOrderType = "Request",
+                            ReceiveDate = DateTime.UtcNow.AddDays(-10),
+                            EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
+                            CompletionDate = DateTime.UtcNow.AddDays(-1),
+                            Cost = 5000000,
+                            EstimatedAmount = 5000000,
+                            PaidAmount = 5000000,
+                            PaidStatus = "Paid",
+                            EstimatedRepairTime = 240,
+                            Note = "Complete vehicle overhaul",
+                            CreatedAt = DateTime.UtcNow.AddDays(-10),
+                            BranchId = branch.BranchId,
+                            StatusId = completedStatus.OrderStatusId,
+                            VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
+                            UserId = customerUser.Id,
+                            RepairRequestId = Guid.NewGuid(),
+                            IsArchived = false,
+                            ArchivedByUserId = null
+                        }
+                    };
 
-        //            _context.RepairOrders.AddRange(repairOrders);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //    }
+                    _context.RepairOrders.AddRange(repairOrders);
+                    await _context.SaveChangesAsync();
+                }
+            }
         }
-
     }
+}
