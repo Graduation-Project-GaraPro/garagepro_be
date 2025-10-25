@@ -138,6 +138,8 @@ namespace Repositories
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                 .Include(ro => ro.Jobs)
+                    .ThenInclude(jo => jo.Service)
                 .Include(ro => ro.Payments)
                 .ToListAsync();
         }
