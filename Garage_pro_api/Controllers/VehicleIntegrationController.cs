@@ -19,7 +19,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/VehicleIntegration/vehicle/{vehicleId}/history
         [HttpGet("vehicle/{vehicleId}/history")]
-        [Authorize(Policy = "VEHICLE_VIEW")]
+        [Authorize(Policy = "BOOKING_VIEW")]
         public async Task<IActionResult> GetVehicleWithServiceHistory(Guid vehicleId)
         {
             var vehicleWithHistory = await _vehicleIntegrationService.GetVehicleWithServiceHistoryAsync(vehicleId);
@@ -31,9 +31,23 @@ namespace Garage_pro_api.Controllers
             return Ok(vehicleWithHistory);
         }
 
+        // GET: api/VehicleIntegration/vehicle/{vehicleId}
+        [HttpGet("vehicle/{vehicleId}")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<IActionResult> GetVehicleWithCustomer(Guid vehicleId)
+        {
+            var vehicle = await _vehicleIntegrationService.GetVehicleWithCustomerAsync(vehicleId);
+            if (vehicle == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(vehicle);
+        }
+
         // GET: api/VehicleIntegration/customer/{userId}/vehicles
         [HttpGet("customer/{userId}/vehicles")]
-        [Authorize(Policy = "VEHICLE_VIEW")]
+        [Authorize(Policy = "BOOKING_VIEW")]
         public async Task<IActionResult> GetVehiclesForCustomer(string userId)
         {
             var vehicles = await _vehicleIntegrationService.GetVehiclesForCustomerAsync(userId);
@@ -42,7 +56,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/VehicleIntegration/vehicle/{vehicleId}/scheduling
         [HttpGet("vehicle/{vehicleId}/scheduling")]
-        [Authorize(Policy = "VEHICLE_SCHEDULE")]
+        [Authorize(Policy = "BOOKING_MANAGE")]
         public async Task<IActionResult> GetVehicleSchedulingInfo(Guid vehicleId)
         {
             var schedulingInfo = await _vehicleIntegrationService.GetVehicleSchedulingInfoAsync(vehicleId);
@@ -56,7 +70,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/VehicleIntegration/vehicle/{vehicleId}/schedule
         [HttpPut("vehicle/{vehicleId}/schedule")]
-        [Authorize(Policy = "VEHICLE_SCHEDULE")]
+        [Authorize(Policy = "BOOKING_MANAGE")]
         public async Task<IActionResult> UpdateVehicleSchedule(Guid vehicleId, [FromBody] DateTime? nextServiceDate)
         {
             var result = await _vehicleIntegrationService.UpdateVehicleScheduleAsync(vehicleId, nextServiceDate);
@@ -70,7 +84,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/VehicleIntegration/vehicle/{vehicleId}/insurance
         [HttpGet("vehicle/{vehicleId}/insurance")]
-        [Authorize(Policy = "VEHICLE_VIEW")]
+        [Authorize(Policy = "BOOKING_VIEW")]
         public async Task<IActionResult> GetVehicleInsuranceInfo(Guid vehicleId)
         {
             var insuranceInfo = await _vehicleIntegrationService.GetVehicleInsuranceInfoAsync(vehicleId);

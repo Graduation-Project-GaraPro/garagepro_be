@@ -21,7 +21,7 @@ namespace Repositories
                 .ToListAsync();
         }
 
-        public async Task<OrderStatus?> GetByIdAsync(Guid id)
+        public async Task<OrderStatus?> GetByIdAsync(int id) // Changed from Guid to int
         {
             return await _context.OrderStatuses
                 .Include(os => os.Labels)
@@ -43,7 +43,7 @@ namespace Repositories
             return orderStatus;
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(int id) // Changed from Guid to int
         {
             var orderStatus = await _context.OrderStatuses.FindAsync(id);
             if (orderStatus == null) return false;
@@ -53,12 +53,12 @@ namespace Repositories
             return true;
         }
 
-        public async Task<bool> ExistsAsync(Guid id)
+        public async Task<bool> ExistsAsync(int id) // Changed from Guid to int
         {
             return await _context.OrderStatuses.AnyAsync(os => os.OrderStatusId == id);
         }
 
-        public async Task<IEnumerable<Label>> GetLabelsByStatusIdAsync(Guid statusId)
+        public async Task<IEnumerable<Label>> GetLabelsByStatusIdAsync(int statusId) // Changed from Guid to int
         {
             return await _context.Labels
                 .Where(l => l.OrderStatusId == statusId)

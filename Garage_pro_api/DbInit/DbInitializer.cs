@@ -1,4 +1,4 @@
-﻿using BusinessObject;
+using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -199,6 +199,13 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
+                    
+                    // ✅ Vehicle Management
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId }
                 };
 
             foreach (var perm in defaultPermissions)
@@ -228,7 +235,7 @@ namespace Garage_pro_api.DbInit
                                     "BOOKING_VIEW", "BOOKING_MANAGE",
             
                                     // Role
-                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASIGN",
+                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
             
                                     // ✅ Branch Management
                                     "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE",
@@ -244,7 +251,8 @@ namespace Garage_pro_api.DbInit
                                 "Manager", new[]
                                 {
                                     "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
-                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW"
+                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
+                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
                                 }
                             },
                             {
@@ -292,44 +300,132 @@ namespace Garage_pro_api.DbInit
             if (!_context.PartCategories.Any())
             {
                 var categories = new List<PartCategory>
-            {
-                new PartCategory { CategoryName = "Engine" },
-                new PartCategory { CategoryName = "Brakes" },
-                new PartCategory { CategoryName = "Electrical" }
-            };
+        {
+            new PartCategory { CategoryName = "Front - Engine" },
+            new PartCategory { CategoryName = "Rear - Engine" },
+            new PartCategory { CategoryName = "Front - Brakes" },
+            new PartCategory { CategoryName = "Rear - Brakes" },
+            new PartCategory { CategoryName = "Front - Electrical System" },
+            new PartCategory { CategoryName = "Rear - Electrical System" },
+            new PartCategory { CategoryName = "Front - Suspension" },
+            new PartCategory { CategoryName = "Rear - Suspension" },
+            new PartCategory { CategoryName = "Front - Cooling System" },
+            new PartCategory { CategoryName = "Rear - Cooling System" }
+        };
+
                 _context.PartCategories.AddRange(categories);
                 await _context.SaveChangesAsync();
             }
         }
 
+
         private async Task SeedPartsAsync()
         {
             if (!_context.Parts.Any())
             {
-                var engineCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Engine");
-                var brakeCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Brakes");
+                var categories = await _context.PartCategories.ToListAsync();
 
-                var parts = new List<Part>
-        {
-            new Part { Name = "Air Filter", PartCategoryId = engineCategory.LaborCategoryId, Price = 150000, Stock = 50, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Brake Pad", PartCategoryId = brakeCategory.LaborCategoryId, Price = 400000, Stock = 30, CreatedAt = DateTime.UtcNow }
-        };
+                var parts = new List<Part>();
+
+                PartCategory? FindCategory(string name) =>
+                    categories.FirstOrDefault(c => c.CategoryName == name);
+
+                // 🔧 Engine
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Air Filter (Cheap)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 120000, Stock = 60, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Oil Filter (Medium)", PartCategoryId = FindCategory("Rear - Engine").LaborCategoryId, Price = 250000, Stock = 40, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Spark Plug (Expensive)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 500000, Stock = 20, CreatedAt = DateTime.UtcNow },
+        });
+
+                // 🛑 Brakes
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Brake Pad (Cheap)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 300000, Stock = 50, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Brake Disc (Medium)", PartCategoryId = FindCategory("Rear - Brakes").LaborCategoryId, Price = 600000, Stock = 25, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Brake Caliper (Expensive)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 1200000, Stock = 15, CreatedAt = DateTime.UtcNow },
+        });
+
+                // ⚡ Electrical System
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Battery (Cheap)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 900000, Stock = 30, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Alternator (Medium)", PartCategoryId = FindCategory("Rear - Electrical System").LaborCategoryId, Price = 1800000, Stock = 20, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Starter Motor (Expensive)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 2800000, Stock = 10, CreatedAt = DateTime.UtcNow },
+        });
+
+                // 🦾 Suspension
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Shock Absorber (Cheap)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 700000, Stock = 35, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Control Arm (Medium)", PartCategoryId = FindCategory("Rear - Suspension").LaborCategoryId, Price = 950000, Stock = 25, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Suspension Strut (Expensive)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 1600000, Stock = 12, CreatedAt = DateTime.UtcNow },
+        });
+
+                // 🌡️ Cooling System
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Coolant Hose (Cheap)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 150000, Stock = 45, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Radiator (Medium)", PartCategoryId = FindCategory("Rear - Cooling System").LaborCategoryId, Price = 1900000, Stock = 10, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Water Pump (Expensive)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 2600000, Stock = 8, CreatedAt = DateTime.UtcNow },
+        });
 
                 _context.Parts.AddRange(parts);
                 await _context.SaveChangesAsync();
             }
         }
 
+
         private async Task SeedServiceCategoriesAsync()
         {
             if (!_context.ServiceCategories.Any())
             {
-                var categories = new List<ServiceCategory>
-            {
-                new ServiceCategory { CategoryName = "Maintenance",Description="This mantainance car" },
-                new ServiceCategory { CategoryName = "Repair" ,Description="This mantainance car"}
-            };
-                _context.ServiceCategories.AddRange(categories);
+                // --- STEP 1: Create parent categories ---
+                var parentCategories = new List<ServiceCategory>
+        {
+            new ServiceCategory { CategoryName = "Maintenance", Description = "General maintenance services for vehicles" },
+            new ServiceCategory { CategoryName = "Repair", Description = "Repair services for damaged parts" },
+            new ServiceCategory { CategoryName = "Inspection", Description = "Vehicle inspection and diagnostics" },
+            new ServiceCategory { CategoryName = "Upgrade", Description = "Performance and aesthetic upgrades" }
+        };
+
+                _context.ServiceCategories.AddRange(parentCategories);
+                await _context.SaveChangesAsync();
+
+                // --- STEP 2: Create child categories ---
+                var maintenance = parentCategories.First(c => c.CategoryName == "Maintenance");
+                var repair = parentCategories.First(c => c.CategoryName == "Repair");
+                var inspection = parentCategories.First(c => c.CategoryName == "Inspection");
+                var upgrade = parentCategories.First(c => c.CategoryName == "Upgrade");
+
+                var childCategories = new List<ServiceCategory>
+        {
+            // 🔧 Maintenance
+            new ServiceCategory { CategoryName = "Oil Change", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Engine oil and filter replacement" },
+            new ServiceCategory { CategoryName = "Tire Rotation", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Rotating tires for even wear" },
+            new ServiceCategory { CategoryName = "Battery Check", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Battery testing and replacement" },
+            new ServiceCategory { CategoryName = "Fluid Refill", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Coolant, brake fluid, and transmission fluid refill" },
+
+            // ⚙️ Repair
+            new ServiceCategory { CategoryName = "Engine Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Engine part replacement and tuning" },
+            new ServiceCategory { CategoryName = "Brake Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Brake pad, caliper, and disc replacement" },
+            new ServiceCategory { CategoryName = "Electrical Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Fixing alternator, starter motor, and wiring issues" },
+            new ServiceCategory { CategoryName = "Suspension Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Shock absorber and suspension arm repair" },
+
+            // 🔍 Inspection
+            new ServiceCategory { CategoryName = "Safety Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check safety systems like brakes, lights, and tires" },
+            new ServiceCategory { CategoryName = "Emissions Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check exhaust and emissions compliance" },
+            new ServiceCategory { CategoryName = "Pre-Purchase Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Comprehensive vehicle check before buying" },
+            new ServiceCategory { CategoryName = "Engine Diagnostic", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Computer-based engine and sensor diagnostics" },
+
+            // 🏎️ Upgrade
+            new ServiceCategory { CategoryName = "Performance Tuning", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Boost vehicle performance and horsepower" },
+            new ServiceCategory { CategoryName = "Lighting Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Install LED or HID lighting systems" },
+            new ServiceCategory { CategoryName = "Interior Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Improve interior design and comfort" },
+            new ServiceCategory { CategoryName = "Exterior Styling", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Add body kits, spoilers, and paint customization" }
+        };
+
+                _context.ServiceCategories.AddRange(childCategories);
                 await _context.SaveChangesAsync();
             }
         }
@@ -338,21 +434,20 @@ namespace Garage_pro_api.DbInit
         {
             if (!_context.Services.Any())
             {
-                var maintenanceCategory = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Maintenance");
-                var repairCategory = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Repair");
+                // Load all categories into memory
+                var categories = await _context.ServiceCategories.ToListAsync();
 
-                // Nếu chưa có ServiceType, có thể tạo tạm
-                var defaultServiceTypeId = Guid.NewGuid();
+                // Helper method to find a category by name
+                Guid GetCategoryId(string name) => categories.First(c => c.CategoryName == name).ServiceCategoryId;
 
                 var services = new List<Service>
         {
+            // 🔧 Maintenance
             new Service
             {
-                ServiceName = "Oil Change",
-                Description = "This is Oil Change",
-                ServiceCategoryId = maintenanceCategory.ServiceCategoryId,
-
-
+                ServiceName = "Basic Oil Change",
+                Description = "Drain old oil and refill with standard engine oil.",
+                ServiceCategoryId = GetCategoryId("Oil Change"),
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -360,11 +455,157 @@ namespace Garage_pro_api.DbInit
             },
             new Service
             {
-                ServiceName = "Brake Repair",
-                Description = "This is Brake Repair",
-                ServiceCategoryId = repairCategory.ServiceCategoryId,
-                Price = 1200000,
+                ServiceName = "Premium Oil Change",
+                Description = "Use synthetic oil for better performance and protection.",
+                ServiceCategoryId = GetCategoryId("Oil Change"),
+                Price = 550000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Tire Rotation Service",
+                Description = "Rotate tires to ensure even wear and longer life.",
+                ServiceCategoryId = GetCategoryId("Tire Rotation"),
+                Price = 200000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Battery Health Check",
+                Description = "Inspect and test vehicle battery condition.",
+                ServiceCategoryId = GetCategoryId("Battery Check"),
+                Price = 150000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // ⚙️ Repair
+            new Service
+            {
+                ServiceName = "Engine Tune-Up",
+                Description = "Adjust and replace necessary engine components for smoother performance.",
+                ServiceCategoryId = GetCategoryId("Engine Repair"),
+                Price = 1800000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Brake Pad Replacement",
+                Description = "Replace worn brake pads and check calipers and rotors.",
+                ServiceCategoryId = GetCategoryId("Brake Repair"),
+                Price = 900000,
                 EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Electrical Wiring Repair",
+                Description = "Diagnose and repair wiring or connection issues.",
+                ServiceCategoryId = GetCategoryId("Electrical Repair"),
+                Price = 1000000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Shock Absorber Replacement",
+                Description = "Replace front or rear shock absorbers for better ride quality.",
+                ServiceCategoryId = GetCategoryId("Suspension Repair"),
+                Price = 1400000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // 🔍 Inspection
+            new Service
+            {
+                ServiceName = "Basic Safety Inspection",
+                Description = "Inspect brakes, tires, and lights for safety compliance.",
+                ServiceCategoryId = GetCategoryId("Safety Inspection"),
+                Price = 350000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Emissions Test",
+                Description = "Check emission levels to meet environmental regulations.",
+                ServiceCategoryId = GetCategoryId("Emissions Inspection"),
+                Price = 400000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Pre-Purchase Inspection",
+                Description = "Full vehicle inspection before purchase, including test drive and report.",
+                ServiceCategoryId = GetCategoryId("Pre-Purchase Inspection"),
+                Price = 600000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Full Engine Diagnostic",
+                Description = "Use OBD tools to detect engine faults and suggest repairs.",
+                ServiceCategoryId = GetCategoryId("Engine Diagnostic"),
+                Price = 700000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // 🏎️ Upgrade
+            new Service
+            {
+                ServiceName = "ECU Performance Tuning",
+                Description = "Remap ECU software for optimized performance and fuel efficiency.",
+                ServiceCategoryId = GetCategoryId("Performance Tuning"),
+                Price = 2500000,
+                EstimatedDuration = 4,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "LED Lighting Installation",
+                Description = "Upgrade headlights and taillights to modern LED systems.",
+                ServiceCategoryId = GetCategoryId("Lighting Upgrade"),
+                Price = 800000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Interior Detailing",
+                Description = "Deep clean and restore car interior with premium materials.",
+                ServiceCategoryId = GetCategoryId("Interior Upgrade"),
+                Price = 1000000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Exterior Body Kit Installation",
+                Description = "Install custom bumpers, spoilers, and side skirts for a sporty look.",
+                ServiceCategoryId = GetCategoryId("Exterior Styling"),
+                Price = 3200000,
+                EstimatedDuration = 5,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }
@@ -374,88 +615,177 @@ namespace Garage_pro_api.DbInit
                 await _context.SaveChangesAsync();
             }
         }
+
         private async Task SeedServicePartsAsync()
         {
             if (!_context.ServiceParts.Any())
             {
-                var oilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Oil Change");
-                var brakeRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Repair");
+                // Lấy các service từ database - sửa tên service cho khớp với dữ liệu đã seed
+                var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
+                var premiumOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Premium Oil Change");
+                var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
+                var batteryHealthCheck = await _context.Services.FirstAsync(s => s.ServiceName == "Battery Health Check");
+                var shockAbsorberReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Shock Absorber Replacement");
+                var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
 
-                var airFilter = await _context.Parts.FirstAsync(p => p.Name == "Air Filter");
-                var brakePad = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad");
+                // Lấy các parts từ database - sửa tên part cho khớp với dữ liệu đã seed
+                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
+                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
+                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
+                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
+                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
+                var batteryCheap = await _context.Parts.FirstAsync(p => p.Name == "Battery (Cheap)");
+                var alternatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Alternator (Medium)");
+                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
+                var controlArmMedium = await _context.Parts.FirstAsync(p => p.Name == "Control Arm (Medium)");
+                var radiatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Radiator (Medium)");
+                var coolantHoseCheap = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose (Cheap)");
 
-                _context.ServiceParts.Add(new ServicePart
-                {
-                    ServiceId = oilChange.ServiceId,
-                    PartId = airFilter.PartId,
+                var mappings = new List<ServicePart>
+        {
+            // 🔧 Basic Oil Change Service
+            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
 
-                    CreatedAt = DateTime.UtcNow
-                });
+            // 🔧 Premium Oil Change Service - dùng linh kiện cao cấp hơn
+            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
 
-                _context.ServiceParts.Add(new ServicePart
-                {
-                    ServiceId = brakeRepair.ServiceId,
-                    PartId = brakePad.PartId,
+            // 🚗 Brake Pad Replacement
+            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakePadCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakeDiscMedium.PartId, CreatedAt = DateTime.UtcNow },
 
-                    CreatedAt = DateTime.UtcNow
-                });
+            // 🔋 Battery Health Check - có thể cần thay thế
+            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = batteryCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = alternatorMedium.PartId, CreatedAt = DateTime.UtcNow },
 
+            // 🛞 Shock Absorber Replacement
+            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = shockAbsorberCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = controlArmMedium.PartId, CreatedAt = DateTime.UtcNow },
+
+            // 🔍 Full Engine Diagnostic - các linh kiện cần kiểm tra
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = coolantHoseCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = radiatorMedium.PartId, CreatedAt = DateTime.UtcNow }
+        };
+
+                _context.ServiceParts.AddRange(mappings);
                 await _context.SaveChangesAsync();
             }
         }
+
         private async Task SeedBranchesAsync()
         {
             if (!_context.Branches.Any())
             {
-                // Tạo Branch
-                var branch1 = new Branch
-                {
-                    BranchName = "Central Branch",
-                    Description = "this is central Branch ",
-                    Street = "123 Main Street",
-                    Ward = "Ward 1",
-                    District = "District 1",
-                    City = "HCMC",
-                    PhoneNumber = "0123456789",
-                    Email = "central@garage.com",
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
+                var branches = new List<Branch>
+        {
+            new Branch
+            {
+                BranchName = "Central Garage - Hồ Chí Minh",
+                Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
+                Street = "123 Nguyễn Thị Minh Khai",
+                Ward = "Phường Bến Thành",
+                District = "Quận 1",
+                City = "Hồ Chí Minh",
+                PhoneNumber = "02838220001",
+                Email = "central.hcm@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Hà Nội Garage",
+                Description = "Professional car repair and maintenance services in Hanoi.",
+                Street = "45 Phạm Hùng",
+                Ward = "Phường Mỹ Đình 2",
+                District = "Quận Nam Từ Liêm",
+                City = "Hà Nội",
+                PhoneNumber = "02437760002",
+                Email = "hanoi@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage",
+                Description = "Trusted auto service center for central region customers.",
+                Street = "88 Nguyễn Văn Linh",
+                Ward = "Phường Nam Dương",
+                District = "Quận Hải Châu",
+                City = "Đà Nẵng",
+                PhoneNumber = "02363880003",
+                Email = "danang@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Cần Thơ Garage",
+                Description = "Serving customers in the Mekong Delta with full maintenance packages.",
+                Street = "22 Trần Hưng Đạo",
+                Ward = "Phường An Cư",
+                District = "Quận Ninh Kiều",
+                City = "Cần Thơ",
+                PhoneNumber = "02923890004",
+                Email = "cantho@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Nha Trang Garage",
+                Description = "High-quality vehicle service center near the coast.",
+                Street = "56 Lê Thánh Tôn",
+                Ward = "Phường Lộc Thọ",
+                District = "Thành phố Nha Trang",
+                City = "Khánh Hòa",
+                PhoneNumber = "02583560005",
+                Email = "nhatrang@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }
+        };
 
-                // Seed OperatingHours (7 ngày)
-                foreach (DayOfWeekEnum day in Enum.GetValues(typeof(DayOfWeekEnum)))
+                // Seed OperatingHours (7 ngày cho tất cả chi nhánh)
+                foreach (var branch in branches)
                 {
-                    branch1.OperatingHours.Add(new OperatingHour
+                    foreach (DayOfWeekEnum day in Enum.GetValues(typeof(DayOfWeekEnum)))
                     {
-                        DayOfWeek = day,
-                        IsOpen = true,
-                        OpenTime = new TimeSpan(8, 0, 0),   // 08:00
-                        CloseTime = new TimeSpan(17, 0, 0)  // 17:00
-                    });
+                        branch.OperatingHours.Add(new OperatingHour
+                        {
+                            DayOfWeek = day,
+                            IsOpen = true,
+                            OpenTime = new TimeSpan(8, 0, 0),   // 08:00
+                            CloseTime = new TimeSpan(17, 30, 0) // 17:30
+                        });
+                    }
+
+                    // Gán staff
+                    var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
+                    var technicianUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000006");
+
+                    if (managerUser != null) branch.Staffs.Add(managerUser);
+                    if (technicianUser != null) branch.Staffs.Add(technicianUser);
+
+                    // Gán dịch vụ
+                    var services = await _context.Services.Take(5).ToListAsync();
+                    foreach (var service in services)
+                    {
+                        branch.BranchServices.Add(new BranchService
+                        {
+                            Branch = branch,
+                            Service = service
+                        });
+                    }
                 }
 
-                // Tìm các user đã có sẵn
-                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
-                var technicianUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000004");
-
-                if (managerUser != null) branch1.Staffs.Add(managerUser);
-                if (technicianUser != null) branch1.Staffs.Add(technicianUser);
-
-                // Seed BranchService (nhiều-nhiều)
-                var services = await _context.Services.Take(5).ToListAsync(); // lấy vài service để demo
-                foreach (var service in services)
-                {
-                    branch1.BranchServices.Add(new BranchService
-                    {
-                        Branch = branch1,
-                        Service = service
-                    });
-                }
-
-                _context.Branches.Add(branch1);
+                _context.Branches.AddRange(branches);
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedOrderStatusesAsync()
         {
@@ -481,58 +811,43 @@ namespace Garage_pro_api.DbInit
                 var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
                 var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
+                // Only create labels if we have the corresponding order statuses
                 if (pendingStatus != null && inProgressStatus != null && completedStatus != null)
                 {
-                    // Create default colors if they don't exist
-                    var redColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Red") ??
-                                  new Color { ColorName = "Red", HexCode = "#FF0000" };
-                    var yellowColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Yellow") ??
-                                     new Color { ColorName = "Yellow", HexCode = "#FFFF00" };
-                    var greenColor = await _context.Colors.FirstOrDefaultAsync(c => c.ColorName == "Green") ??
-                                    new Color { ColorName = "Green", HexCode = "#00FF00" };
-
-                    // Add colors to context if they were newly created
-                    if (!_context.Colors.Any(c => c.ColorName == "Red"))
-                        _context.Colors.Add(redColor);
-                    if (!_context.Colors.Any(c => c.ColorName == "Yellow"))
-                        _context.Colors.Add(yellowColor);
-                    if (!_context.Colors.Any(c => c.ColorName == "Green"))
-                        _context.Colors.Add(greenColor);
-
-                    await _context.SaveChangesAsync();
-
-                    // Get the actual color entities from DB
-                    redColor = await _context.Colors.FirstAsync(c => c.ColorName == "Red");
-                    yellowColor = await _context.Colors.FirstAsync(c => c.ColorName == "Yellow");
-                    greenColor = await _context.Colors.FirstAsync(c => c.ColorName == "Green");
-
-                    var labels = new List<Label>
+                    // Check if labels already exist
+                    if (!_context.Labels.Any())
                     {
-                        new Label
+                        var labels = new List<Label>
                         {
-                            LabelName = "New",
-                            Description = "Newly created order",
-                            OrderStatusId = pendingStatus.OrderStatusId,
-                            ColorId = redColor.ColorId
-                        },
-                        new Label
-                        {
-                            LabelName = "In Progress",
-                            Description = "Order is being worked on",
-                            OrderStatusId = inProgressStatus.OrderStatusId,
-                            ColorId = yellowColor.ColorId
-                        },
-                        new Label
-                        {
-                            LabelName = "Done",
-                            Description = "Order completed",
-                            OrderStatusId = completedStatus.OrderStatusId,
-                            ColorId = greenColor.ColorId
-                        }
-                    };
+                            new Label
+                            {
+                                LabelName = "Pending",
+                                Description = "Order is waiting to be processed",
+                                OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Red",
+                                HexCode = "#FF0000"
+                            },
+                            new Label
+                            {
+                                LabelName = "In Progress",
+                                Description = "Order is being worked on",
+                                OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Yellow",
+                                HexCode = "#FFFF00"
+                            },
+                            new Label
+                            {
+                                LabelName = "Done",
+                                Description = "Order completed",
+                                OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
+                                ColorName = "Green",
+                                HexCode = "#00FF00"
+                            }
+                        };
 
-                    _context.Labels.AddRange(labels);
-                    await _context.SaveChangesAsync();
+                        _context.Labels.AddRange(labels);
+                        await _context.SaveChangesAsync();
+                    }
                 }
             }
         }

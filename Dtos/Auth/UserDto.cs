@@ -8,6 +8,7 @@ namespace Dtos.Auth
 {
     public class UserDto
     {
+
         public bool? Gender { get; set; }
         public string? FirstName { get; set; }
         public string? LastName { get; set; }

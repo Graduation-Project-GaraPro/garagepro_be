@@ -11,10 +11,14 @@ namespace Repositories.Customers
         Task<IEnumerable<RepairRequest>> GetByUserIdAsync(String userId);
         Task<RepairRequest> GetByIdAsync(Guid id);
         Task<RepairRequest> GetTrackingByIdAsync(Guid id);
+        Task<RepairRequest> GetByIdWithDetailsAsync(Guid id); // New method for managers
         Task<RepairRequest> AddAsync(RepairRequest repairRequest);
         Task<bool> UpdateAsync(RepairRequest repairRequest);
         Task<bool> DeleteAsync(Guid id);
         Task<bool> ExistsAsync(Guid id);
-      
+
+        
+        IQueryable<RepairRequest> GetQueryable();
+
     }
 }

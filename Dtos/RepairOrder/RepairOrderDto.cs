@@ -55,7 +55,7 @@ namespace Dtos.RepairOrder
         // Foreign keys
         public Guid BranchId { get; set; }
         
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
         
         public Guid VehicleId { get; set; }
         
@@ -93,7 +93,8 @@ namespace Dtos.RepairOrder
 
     //    public bool OdometerNotWorking { get; set; }
 
-    //    public int? LabelId { get; set; }
+    //    // Removed LabelId as labels should be accessed through OrderStatus
+    //    // public int? LabelId { get; set; }
 
     //    [Required]
     //    public string Status { get; set; }
@@ -124,7 +125,8 @@ namespace Dtos.RepairOrder
         [MaxLength(500)]
         public string Note { get; set; }
         
-        public int? LabelId { get; set; }
+        // Removed LabelId as labels should be accessed through OrderStatus
+        // public int? LabelId { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
     }
@@ -168,7 +170,7 @@ namespace Dtos.RepairOrder
         // Foreign keys
         public Guid BranchId { get; set; }
         
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
         
         public Guid VehicleId { get; set; }
         

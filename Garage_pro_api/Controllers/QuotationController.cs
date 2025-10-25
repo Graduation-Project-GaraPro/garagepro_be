@@ -1,3 +1,4 @@
+using BusinessObject.Enums;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -45,16 +46,36 @@ namespace Garage_pro_api.Controllers
             return Ok(quotations);
         }
 
-        [HttpGet("user")]
-        public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByUserId()
+        [HttpGet("repair-order/{repairOrderId}")]
+        public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByRepairOrderId(Guid repairOrderId)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
-                return BadRequest("User ID not found in token");
-
-            var quotations = await _quotationService.GetQuotationsByUserIdAsync(userId);
+            var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
             return Ok(quotations);
         }
+
+            [HttpGet("user")]
+            public async Task<IActionResult> GetByUserId(
+            
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] QuotationStatus? status = null)
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var result = await _quotationService.GetQuotationsByUserIdAsync(userId, pageNumber, pageSize, status);
+                return Ok(result);
+            }
+
+
+        //[HttpGet("user")]
+        //public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByUserId()
+        //{
+        //    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        //    if (string.IsNullOrEmpty(userId))
+        //        return BadRequest("User ID not found in token");
+
+        //    var quotations = await _quotationService.GetQuotationsByUserIdAsync(userId);
+        //    return Ok(quotations);
+        //}
 
         [HttpPost]
         public async Task<ActionResult<QuotationDto>> CreateQuotation(CreateQuotationDto quotationDto)

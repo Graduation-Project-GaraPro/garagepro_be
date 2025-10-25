@@ -8,7 +8,7 @@ namespace Dtos.RoBoard
 {
     public class RoBoardColumnDto
     {
-        public Guid OrderStatusId { get; set; }
+        public int OrderStatusId { get; set; } // Changed from Guid to int
         public string StatusName { get; set; }
         public int RepairOrderCount { get; set; }
         public int OrderIndex { get; set; }

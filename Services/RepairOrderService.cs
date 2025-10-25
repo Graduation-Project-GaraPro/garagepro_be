@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
+
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using Dtos.RepairOrder;
 using Dtos.RoBoard;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs; // Update namespace
 using Repositories;
 
 namespace Services
@@ -16,6 +19,7 @@ namespace Services
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IOrderStatusRepository _orderStatusRepository;
         private readonly ILabelRepository _labelRepository;
+        private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
 
         // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
@@ -28,11 +32,13 @@ namespace Services
         public RepairOrderService(
             IRepairOrderRepository repairOrderRepository,
             IOrderStatusRepository orderStatusRepository,
-            ILabelRepository labelRepository)
+            ILabelRepository labelRepository,
+            IHubContext<RepairOrderHub> hubContext) // Update namespace
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
+            _hubContext = hubContext;
         }
 
         #region Kanban Board Operations
@@ -121,9 +127,18 @@ namespace Services
 
             try
             {
-                // Validate the move first
-                var validation = await ValidateMoveAsync(updateDto.RepairOrderId,
-                    updateDto.PreviousStatusId ?? Guid.Empty, updateDto.NewStatusId);
+                // First, get the current repair order to get its current status
+                var currentRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(updateDto.RepairOrderId);
+                if (currentRepairOrder == null)
+                {
+                    result.Success = false;
+                    result.Message = "Repair order not found";
+                    result.Errors.Add("Invalid repair order ID");
+                    return result;
+                }
+
+                // Validate the move using the current status as the "from" status
+                var validation = await ValidateMoveAsync(updateDto.RepairOrderId, currentRepairOrder.StatusId, updateDto.NewStatusId);
 
                 if (!validation.IsValid)
                 {
@@ -133,21 +148,12 @@ namespace Services
                     return result;
                 }
 
-                var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(updateDto.RepairOrderId);
-                if (repairOrder == null)
-                {
-                    result.Success = false;
-                    result.Message = "Repair order not found";
-                    result.Errors.Add("Invalid repair order ID");
-                    return result;
-                }
-
-                result.OldStatusId = repairOrder.StatusId;
+                result.OldStatusId = currentRepairOrder.StatusId;
                 result.NewStatusId = updateDto.NewStatusId;
 
-                // Update the status
+                // Update the status (without change note)
                 var updateSuccess = await _repairOrderRepository.UpdateRepairOrderStatusAsync(
-                    updateDto.RepairOrderId, updateDto.NewStatusId, updateDto.ChangeNote);
+                    updateDto.RepairOrderId, updateDto.NewStatusId, null); // Pass null for changeNote
 
                 if (updateSuccess)
                 {
@@ -156,6 +162,12 @@ namespace Services
                     result.UpdatedCard = MapToRoBoardCardDto(updatedRepairOrder);
                     result.Success = true;
                     result.Message = "Status updated successfully";
+
+                    // Send real-time update via SignalR
+                    if (_hubContext != null)
+                    {
+                        await _hubContext.Clients.All.SendAsync("RepairOrderMoved", updateDto.RepairOrderId, updateDto.NewStatusId, result.UpdatedCard);
+                    }
                 }
                 else
                 {
@@ -173,40 +185,9 @@ namespace Services
 
             return result;
         }
+       
 
-        public async Task<BatchRoBoardStatusUpdateResultDto> BatchUpdateRepairOrderStatusAsync(BatchUpdateRoBoardStatusDto batchUpdateDto)
-        {
-            var result = new BatchRoBoardStatusUpdateResultDto
-            {
-                ProcessedAt = DateTime.UtcNow,
-                BatchMessage = batchUpdateDto.BatchNote ?? "Batch status update"
-            };
-
-            try
-            {
-                foreach (var update in batchUpdateDto.Updates)
-                {
-                    var singleResult = await UpdateRepairOrderStatusAsync(update);
-                    result.Results.Add(singleResult);
-
-                    if (singleResult.Success)
-                        result.SuccessfulUpdates++;
-                    else
-                        result.FailedUpdates++;
-                }
-
-                result.OverallSuccess = result.FailedUpdates == 0;
-            }
-            catch (Exception ex)
-            {
-                result.OverallSuccess = false;
-                result.BatchMessage = $"Batch operation failed: {ex.Message}";
-            }
-
-            return result;
-        }
-
-        public async Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, Guid fromStatusId, Guid toStatusId)
+        public async Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, int fromStatusId, int toStatusId) // Changed from Guid to int
         {
             var validation = new RoBoardMoveValidationDto
             {
@@ -272,7 +253,7 @@ namespace Services
         public async Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder)
         {
             // Set default status to "Pending" if not specified
-            if (repairOrder.StatusId == Guid.Empty)
+            if (repairOrder.StatusId == 0) // Changed from Guid.Empty to 0 for int
             {
                 var pendingStatus = (await _orderStatusRepository.GetAllAsync())
                     .FirstOrDefault(s => s.StatusName == "Pending");
@@ -280,19 +261,55 @@ namespace Services
                 {
                     repairOrder.StatusId = pendingStatus.OrderStatusId;
                 }
+                else
+                {
+                    // If no pending status exists, create a default one
+                    var defaultStatus = new OrderStatus
+                    {
+                        StatusName = "Pending"
+                    };
+                    var createdStatus = await _orderStatusRepository.CreateAsync(defaultStatus);
+                    repairOrder.StatusId = createdStatus.OrderStatusId;
+                }
             }
 
-            return await _repairOrderRepository.CreateAsync(repairOrder);
+            var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
+
+            // Send real-time update via SignalR
+            if (_hubContext != null)
+            {
+                var cardDto = MapToRoBoardCardDto(createdRepairOrder);
+                await _hubContext.Clients.All.SendAsync("RepairOrderCreated", cardDto);
+            }
+
+            return createdRepairOrder;
         }
 
         public async Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder)
         {
-            return await _repairOrderRepository.UpdateAsync(repairOrder);
+            var updatedRepairOrder = await _repairOrderRepository.UpdateAsync(repairOrder);
+
+            // Send real-time update via SignalR
+            if (_hubContext != null && updatedRepairOrder != null)
+            {
+                var cardDto = MapToRoBoardCardDto(updatedRepairOrder);
+                await _hubContext.Clients.All.SendAsync("RepairOrderUpdated", cardDto);
+            }
+
+            return updatedRepairOrder;
         }
 
         public async Task<bool> DeleteRepairOrderAsync(Guid repairOrderId)
         {
-            return await _repairOrderRepository.DeleteAsync(repairOrderId);
+            var result = await _repairOrderRepository.DeleteAsync(repairOrderId);
+
+            // Send real-time update via SignalR
+            if (_hubContext != null && result)
+            {
+                await _hubContext.Clients.All.SendAsync("RepairOrderDeleted", repairOrderId);
+            }
+
+            return result;
         }
 
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync()
@@ -301,7 +318,7 @@ namespace Services
         }
 
         // NEW: Get repair orders by status
-        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId)
+        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId) // Changed from Guid to int
         {
             return await _repairOrderRepository.GetRepairOrdersByStatusAsync(statusId);
         }
@@ -348,7 +365,7 @@ namespace Services
             return statistics;
         }
 
-        public async Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid> statusIds = null)
+        public async Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int> statusIds = null) // Changed from Guid to int
         {
             return await _repairOrderRepository.GetRepairOrderCountsByStatusAsync(statusIds);
         }
@@ -375,7 +392,7 @@ namespace Services
 
         public async Task<IEnumerable<RoBoardCardDto>> SearchRepairOrdersAsync(
             string searchText,
-            List<Guid> statusIds = null,
+            List<int> statusIds = null, // Changed from Guid to int
             List<Guid> branchIds = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
@@ -389,71 +406,15 @@ namespace Services
 
         #region Business Rules and Validation
 
-        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId)
+        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId) // Changed from Guid to int
         {
             return await _repairOrderRepository.CanMoveToStatusAsync(repairOrderId, newStatusId);
         }
 
-        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(Guid statusId)
+        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
         {
             var labels = await _repairOrderRepository.GetAvailableLabelsForStatusAsync(statusId);
             return labels.Select(MapToRoBoardLabelDto);
-        }
-
-        #endregion
-
-        #region Audit and History
-
-        public async Task<IEnumerable<RoBoardCardDto>> GetRecentlyUpdatedRepairOrdersAsync(int hours = 24)
-        {
-            var repairOrders = await _repairOrderRepository.GetRecentlyUpdatedRepairOrdersAsync(hours);
-            return repairOrders.Select(MapToRoBoardCardDto);
-        }
-
-        #endregion
-
-        #region Simplified 3-Status Operations
-
-        public async Task<RoBoardColumnDto> GetPendingOrdersAsync(RoBoardFiltersDto filters = null)
-        {
-            return await GetColumnByStatusNameAsync("Pending", filters);
-        }
-
-        public async Task<RoBoardColumnDto> GetInProgressOrdersAsync(RoBoardFiltersDto filters = null)
-        {
-            return await GetColumnByStatusNameAsync("In Progress", filters);
-        }
-
-        public async Task<RoBoardColumnDto> GetCompletedOrdersAsync(RoBoardFiltersDto filters = null)
-        {
-            return await GetColumnByStatusNameAsync("Completed", filters);
-        }
-
-        private async Task<RoBoardColumnDto> GetColumnByStatusNameAsync(string statusName, RoBoardFiltersDto filters)
-        {
-            var allStatuses = await _orderStatusRepository.GetAllAsync();
-            var status = allStatuses.FirstOrDefault(s => s.StatusName == statusName);
-
-            if (status == null)
-            {
-                return new RoBoardColumnDto
-                {
-                    StatusName = statusName,
-                    OrderIndex = GetStatusOrderIndex(statusName)
-                };
-            }
-
-            var repairOrders = await _repairOrderRepository.GetRepairOrdersByStatusAsync(status.OrderStatusId);
-
-            return new RoBoardColumnDto
-            {
-                OrderStatusId = status.OrderStatusId,
-                StatusName = status.StatusName,
-                OrderIndex = GetStatusOrderIndex(statusName),
-                Cards = repairOrders.Select(MapToRoBoardCardDto).ToList(),
-                AvailableLabels = (await _orderStatusRepository.GetLabelsByStatusIdAsync(status.OrderStatusId))
-                    .Select(MapToRoBoardLabelDto).ToList()
-            };
         }
 
         #endregion
@@ -600,7 +561,7 @@ namespace Services
                 PaidStatus = repairOrder.PaidStatus,
                 StatusId = repairOrder.StatusId,
                 StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
-                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.Color?.HexCode ?? "#808080",
+                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
                 Labels = repairOrder.OrderStatus?.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
                 CustomerName = repairOrder.User?.FullName ?? "Unknown Customer",
                 CustomerEmail = repairOrder.User?.Email ?? "",
@@ -610,6 +571,7 @@ namespace Services
                 VehicleModel = "Unknown Model", // TODO: Add model navigation when available
                 VehicleColor = "Unknown Color", // TODO: Add color navigation when available
                 BranchName = repairOrder.Branch?.BranchName ?? "Unknown Branch",
+
                 //BranchAddress = repairOrder.Branch != null ? 
                 //    $"{repairOrder.Branch.Street}, {repairOrder.Branch.Ward}, {repairOrder.Branch.District}, {repairOrder.Branch.City}" : "",
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
@@ -623,6 +585,7 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
+
             };
         }
 
@@ -678,9 +641,8 @@ namespace Services
                 Description = label.Description,
                 Color = new RoBoardColorDto
                 {
-                    ColorId = label.Color?.ColorId ?? Guid.Empty,
-                    ColorName = label.Color?.ColorName ?? "Default",
-                    HexCode = label.Color?.HexCode ?? "#808080"
+                    ColorName = label.ColorName ?? "Default",
+                    HexCode = label.HexCode ?? "#808080"
                 }
             };
         }
@@ -905,14 +867,14 @@ namespace Services
             int pageSize = 50)
         {
             var archivedOrders = await _repairOrderRepository.GetArchivedRepairOrdersAsync(filters);
-            
+
             // Apply sorting
             var sortedOrders = sortBy?.ToLower() switch
             {
-                "archivedat" => sortOrder?.ToLower() == "desc" 
+                "archivedat" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ArchivedAt)
                     : archivedOrders.OrderBy(ro => ro.ArchivedAt),
-                "receivedate" => sortOrder?.ToLower() == "desc" 
+                "receivedate" => sortOrder?.ToLower() == "desc"
                     ? archivedOrders.OrderByDescending(ro => ro.ReceiveDate)
                     : archivedOrders.OrderBy(ro => ro.ReceiveDate),
                 _ => archivedOrders.OrderByDescending(ro => ro.ArchivedAt)

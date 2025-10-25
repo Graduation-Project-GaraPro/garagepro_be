@@ -10,33 +10,13 @@ namespace Dtos.RoBoard
         public Guid RepairOrderId { get; set; }
         
         [Required]
-        public Guid NewStatusId { get; set; }
+        public int NewStatusId { get; set; } // Changed from Guid to int
         
-        public Guid? PreviousStatusId { get; set; }
+        public List<Guid>? LabelsToAdd { get; set; } = new List<Guid>();
         
-        // Optional: Specific position within the new column
-        public int? NewOrderIndex { get; set; }
+        public List<Guid>? LabelsToRemove { get; set; } = new List<Guid>();
         
-        // Optional: Add or remove specific labels during the move
-        public List<Guid> LabelsToAdd { get; set; } = new List<Guid>();
-        
-        public List<Guid> LabelsToRemove { get; set; } = new List<Guid>();
-        
-        // Optional: Add notes about the status change
-        [MaxLength(500)]
-        public string ChangeNote { get; set; }
-        
-        // For validation: Frontend can send this to ensure no conflicts
         public DateTime? LastModifiedAt { get; set; }
-    }
-    
-    public class BatchUpdateRoBoardStatusDto
-    {
-        [Required]
-        public List<UpdateRoBoardStatusDto> Updates { get; set; } = new List<UpdateRoBoardStatusDto>();
-        
-        [MaxLength(500)]
-        public string BatchNote { get; set; }
     }
     
     public class RoBoardStatusUpdateResultDto
@@ -47,9 +27,9 @@ namespace Dtos.RoBoard
         
         public Guid RepairOrderId { get; set; }
         
-        public Guid? OldStatusId { get; set; }
+        public int? OldStatusId { get; set; } // Changed from Guid? to int?
         
-        public Guid? NewStatusId { get; set; }
+        public int? NewStatusId { get; set; } // Changed from Guid? to int?
         
         public DateTime UpdatedAt { get; set; }
         
@@ -81,9 +61,9 @@ namespace Dtos.RoBoard
     {
         public Guid RepairOrderId { get; set; }
         
-        public Guid FromStatusId { get; set; }
+        public int FromStatusId { get; set; } // Changed from Guid to int
         
-        public Guid ToStatusId { get; set; }
+        public int ToStatusId { get; set; } // Changed from Guid to int
         
         public bool IsValid { get; set; }
         

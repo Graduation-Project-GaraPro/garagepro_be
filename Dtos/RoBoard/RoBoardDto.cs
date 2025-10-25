@@ -110,7 +110,7 @@ namespace Dtos.RoBoard
     {
         public List<Guid> BranchIds { get; set; } = new List<Guid>();
         
-        public List<Guid> StatusIds { get; set; } = new List<Guid>();
+        public List<int> StatusIds { get; set; } = new List<int>();
         
         public List<Guid> LabelIds { get; set; } = new List<Guid>();
         

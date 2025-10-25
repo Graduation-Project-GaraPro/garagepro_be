@@ -1,5 +1,6 @@
-﻿﻿﻿﻿using BusinessObject.Enums;
-using BusinessObject.Technician;
+
+﻿using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -25,7 +26,7 @@ namespace BusinessObject
         [MaxLength(100)]
         public string JobName { get; set; }
 
-        public JobStatus Status { get; set; } = JobStatus.Pending;
+        public JobStatus Status { get; set; } = JobStatus.New;
 
         public DateTime? Deadline { get; set; }
 
@@ -48,7 +49,7 @@ namespace BusinessObject
         public string? CustomerApprovalNote { get; set; }
         public string? AssignedByManagerId { get; set; }  // UserId of manager who assigned
         public DateTime? AssignedAt { get; set; }
-        
+
         // Estimate expiration and revision properties
         public DateTime? EstimateExpiresAt { get; set; }
         public int RevisionCount { get; set; } = 0;  // Track how many times estimate was revised
@@ -60,6 +61,6 @@ namespace BusinessObject
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual ICollection<JobPart> JobParts { get; set; }
         public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
-        public virtual ICollection<Repair> Repairs { get; set; } = new List<Repair>();
+        public virtual Repair Repair { get; set; }
     }
 }

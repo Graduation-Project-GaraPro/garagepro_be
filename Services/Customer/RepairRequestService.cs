@@ -3,6 +3,7 @@ using BusinessObject;
 using BusinessObject.Customers;
 using Dtos.Customers;
 using Dtos.Parts;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Repositories.Customers;
 using Repositories.RepairRequestRepositories;
@@ -21,6 +22,8 @@ namespace Services.Customer
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICloudinaryService _cloudinaryService;
         private readonly IMapper _mapper;
+        private readonly IRepairRequestRepository _repairRequestRepository;
+        private readonly IUserRepository _userRepository;
 
         public RepairRequestService(
             IUnitOfWork unitOfWork,
@@ -38,17 +41,140 @@ namespace Services.Customer
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
+        public async Task<object> GetPagedAsync(
+            int pageNumber = 1,
+            int pageSize = 10,
+            Guid? vehicleId = null,
+            RepairRequestStatus? status = null,
+            Guid? branchId = null,
+            string? userId = null)
+        {
+            var query = _unitOfWork.RepairRequests.GetQueryable();
+
+            // ✅ Lọc theo UserID đang đăng nhập
+            if (!string.IsNullOrWhiteSpace(userId))
+                query = query.Where(r => r.UserID == userId);
+
+            // ✅ Lọc theo VehicleId
+            if (vehicleId.HasValue)
+                query = query.Where(r => r.VehicleID == vehicleId.Value);
+
+            // ✅ Lọc theo Status
+            if (status.HasValue)
+                query = query.Where(r => r.Status == status.Value);
+
+            // ✅ Lọc theo BranchId
+            if (branchId.HasValue)
+                query = query.Where(r => r.BranchId == branchId.Value);
+
+            // ✅ Đếm tổng bản ghi
+            var totalCount = await query.CountAsync();
+
+            // ✅ Sort theo RequestDate (mới nhất trước)
+            var data = await query
+                .OrderByDescending(r => r.RequestDate)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .Select(r => new RepairRequestDto
+                {
+                    RepairRequestID = r.RepairRequestID,
+                    VehicleID = r.VehicleID,
+                    UserID = r.UserID,
+                    Description = r.Description,
+                    BranchId = r.BranchId,
+                    RequestDate = r.RequestDate,
+                    CompletedDate = r.CompletedDate,
+                    Status = r.Status,
+                    CreatedAt = r.CreatedAt,
+                    UpdatedAt = r.UpdatedAt,
+                    EstimatedCost = r.EstimatedCost
+                })
+                .ToListAsync();
+
+            // ✅ Kết quả phân trang
+            return new
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Data = data
+            };
+        }
+
         public async Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId)
         {
             var requests = await _unitOfWork.RepairRequests.GetByUserIdAsync(userId);
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
-        public async Task<RepairRequestDto> GetByIdAsync(Guid id)
+        // New method for managers
+        public async Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync()
         {
-            var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
-            return _mapper.Map<RepairRequestDto>(request);
+            var requests = await _repairRequestRepository.GetAllAsync();
+            var managerDtos = new List<ManagerRepairRequestDto>();
+
+            foreach (var request in requests)
+            {
+                var customer = await _userRepository.GetByIdAsync(request.UserID);
+                var vehicle = request.Vehicle;
+                
+                var dto = new ManagerRepairRequestDto
+                {
+                    RequestID = request.RepairRequestID,
+                    VehicleID = request.VehicleID,
+                    CustomerID = request.UserID,
+                    CustomerName = customer?.FullName ?? "Unknown Customer",
+                    VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                    Description = request.Description,
+                    RequestDate = request.RequestDate,
+                    CompletedDate = request.CompletedDate,
+                    ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                    Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                    CreatedAt = request.CreatedAt,
+                    UpdatedAt = request.UpdatedAt
+                };
+
+                managerDtos.Add(dto);
+            }
+
+            return managerDtos;
         }
+
+        // New method for getting a single request for managers
+        public async Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id)
+        {
+            var request = await _repairRequestRepository.GetByIdWithDetailsAsync(id);
+            if (request == null)
+                return null;
+
+            var customer = await _userRepository.GetByIdAsync(request.UserID);
+            var vehicle = request.Vehicle;
+            
+            var dto = new ManagerRepairRequestDto
+            {
+                RequestID = request.RepairRequestID,
+                VehicleID = request.VehicleID,
+                CustomerID = request.UserID,
+                CustomerName = customer?.FullName ?? "Unknown Customer",
+                VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                Description = request.Description,
+                RequestDate = request.RequestDate,
+                CompletedDate = request.CompletedDate,
+                ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                CreatedAt = request.CreatedAt,
+                UpdatedAt = request.UpdatedAt
+            };
+
+            return dto;
+        }
+
+        //public async Task<RepairRequestDto> GetByIdAsync(Guid id)
+        //{
+        //    var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
+        //    return _mapper.Map<RPDetailDto>(request);
+        //}
 
         public async Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId)
         {
@@ -284,7 +410,91 @@ namespace Services.Customer
             return _mapper.Map<RepairRequestDto>(repairRequest);
         }
 
+        public async Task<RepairRequestDto> CreateRepairWithImageRequestAsync(CreateRepairRequestWithImageDto dto, string userId)
+        {
+            // 🔹 Kiểm tra quyền sở hữu xe
+            var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
+            if (vehicle == null || vehicle.UserId != userId)
+                throw new Exception("This vehicle does not belong to the current user");
 
+            // 🔹 Khởi tạo đối tượng RepairRequest
+            var repairRequest = new RepairRequest
+            {
+                VehicleID = dto.VehicleID,
+                UserID = userId,
+                BranchId = dto.BranchId,
+                Description = dto.Description,
+                RequestDate = dto.RequestDate,
+                EstimatedCost = 0,
+                RequestServices = new List<RequestService>(),
+                RepairImages = new List<RepairImage>()
+            };
+
+            decimal totalServiceFee = 0;
+            decimal totalPartsFee = 0;
+
+            // 🔹 Duyệt danh sách service khách chọn
+            foreach (var serviceDto in dto.Services)
+            {
+                var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
+                              ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
+
+                var requestService = new RequestService
+                {
+                    ServiceId = service.ServiceId,
+                    ServiceFee = service.Price,
+                    RequestParts = new List<RequestPart>()
+                };
+
+                totalServiceFee += service.Price;
+
+                // 🔹 Nếu có parts kèm theo service
+                if (serviceDto.Parts != null)
+                {
+                    foreach (var partDto in serviceDto.Parts)
+                    {
+                        var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
+                                   ?? throw new Exception($"Part {partDto.PartId} not found");
+
+                        var requestPart = new RequestPart
+                        {
+                            PartId = part.PartId,
+                            UnitPrice = part.Price,
+                        };
+
+                        totalPartsFee += part.Price;
+                        requestService.RequestParts.Add(requestPart);
+                    }
+                }
+
+                repairRequest.RequestServices.Add(requestService);
+            }
+
+            // 🔹 Tổng chi phí ước tính
+            repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
+
+            // 🔹 Upload ảnh (nếu có)
+            if (dto.Images != null && dto.Images.Any())
+            {
+                var uploadedUrls = await _cloudinaryService.UploadImagesAsync(dto.Images);
+
+                foreach (var url in uploadedUrls)
+                {
+                    repairRequest.RepairImages.Add(new RepairImage
+                    {
+                        ImageId = Guid.NewGuid(),
+                        ImageUrl = url
+                    });
+                }
+            }
+
+            // 🔹 Lưu vào database
+            await _unitOfWork.RepairRequests.AddAsync(repairRequest);
+            await _unitOfWork.SaveChangesAsync();
+
+            // 🔹 Map sang DTO trả về
+            return _mapper.Map<RepairRequestDto>(repairRequest);
+        }
         public async Task<bool> DeleteRepairRequestAsync(Guid id)
         {
             var result = await _unitOfWork.RepairRequests.DeleteAsync(id);

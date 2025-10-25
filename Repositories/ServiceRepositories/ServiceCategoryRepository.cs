@@ -29,8 +29,57 @@ namespace Repositories.ServiceRepositories
                     .ThenInclude(c => c.ChildServiceCategories) // nếu muốn nhiều cấp
                 .ToListAsync();
         }
+        public async Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesByParentAsync(
+            Guid parentServiceCategoryId,
+            int pageNumber,
+            int pageSize,
+            Guid? childServiceCategoryId = null,
+            string? searchTerm = null)
+        {
+            var query = _context.ServiceCategories
+                .Include(c => c.Services)
+                    .ThenInclude(s => s.ServiceParts)
+                        .ThenInclude(sp => sp.Part)
+                            .ThenInclude(p => p.PartCategory)
+                .Include(c => c.ChildServiceCategories)
+                .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId)
+                .AsQueryable();
 
+            // 🔹 Lọc theo childServiceCategoryId
+            if (childServiceCategoryId.HasValue)
+            {
+                query = query.Where(c => c.ServiceCategoryId == childServiceCategoryId.Value);
+            }
 
+            // 🔹 Tìm kiếm theo tên category con hoặc ServiceName
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c =>
+                    c.CategoryName.Contains(searchTerm) ||                     // Tìm trong chính category này
+                    c.ChildServiceCategories.Any(cc => cc.CategoryName.Contains(searchTerm)) ||  // Tìm trong child
+                    c.Services.Any(s => s.ServiceName.Contains(searchTerm))    // Tìm trong service
+                );
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var categories = await query
+                .OrderBy(c => c.CategoryName)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (categories, totalCount);
+        }
+
+        public async Task<IEnumerable<ServiceCategory>> GetParentCategoriesAsync()
+        {
+            return await _context.ServiceCategories           
+                .Include(c => c.ChildServiceCategories)      // Load các category con (nếu muốn hiển thị cây)
+                .Where(c => c.ParentServiceCategoryId == null)
+                .OrderBy(c => c.CategoryName)
+                .ToListAsync();
+        }
         public async Task<ServiceCategory> GetByIdAsync(Guid id)
         {
             return await _context.ServiceCategories
@@ -40,6 +89,42 @@ namespace Repositories.ServiceRepositories
                 .FirstOrDefaultAsync(sc => sc.ServiceCategoryId == id);
         }
 
+        public async Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesForBookingAsync(
+        int pageNumber,
+        int pageSize,
+        Guid? serviceCategoryId = null,
+        string? searchTerm = null)
+        {
+            var query = _context.ServiceCategories
+                .Include(c => c.Services)
+                    .ThenInclude(s => s.ServiceParts)
+                        .ThenInclude(sp => sp.Part)
+                            .ThenInclude(p => p.PartCategory)
+                .AsQueryable();
+
+            // Filter theo category
+            if (serviceCategoryId.HasValue)
+            {
+                query = query.Where(c => c.ServiceCategoryId == serviceCategoryId);
+            }
+
+            // Search theo ServiceName
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c => c.Services.Any(s => s.ServiceName.Contains(searchTerm)));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            // Phân trang
+            var categories = await query
+                .OrderBy(c => c.CategoryName)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (categories, totalCount);
+        }
 
         public async Task<IEnumerable<Service>> GetServicesByCategoryIdAsync(Guid categoryId)
         {

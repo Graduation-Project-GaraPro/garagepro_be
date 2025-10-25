@@ -30,13 +30,6 @@ namespace BusinessObject.Notifications
         [MaxLength(200)]
         public string Target { get; set; }
 
-
-         // FK -> CategoryNotification
-        [Required]
-        [ForeignKey(nameof(CategoryNotification))]
-        public Guid CategoryID { get; set; }
-        public virtual CategoryNotification CategoryNotification { get; set; }
-
         // FK -> User
         [Required]
         [ForeignKey(nameof(ApplicationUser))]

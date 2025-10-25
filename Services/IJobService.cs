@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 
 namespace Services
 {
@@ -24,25 +24,11 @@ namespace Services
 
         // Job Queries by Context
         Task<IEnumerable<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId);
-        Task<IEnumerable<Job>> GetJobsByServiceIdAsync(Guid serviceId);
         Task<IEnumerable<Job>> GetJobsByStatusAsync(JobStatus status);
-        Task<Job?> GetJobWithFullDetailsAsync(Guid jobId);
-        Task<IEnumerable<Job>> GetPendingJobsByRepairOrderIdAsync(Guid repairOrderId);
-
-        // Customer Approval Workflow
-        Task<bool> SendJobsToCustomerForApprovalAsync(List<Guid> jobIds, string managerId);
-        Task<bool> ProcessCustomerApprovalAsync(Guid jobId, bool isApproved, string? customerNote = null);
-        Task<IEnumerable<Job>> GetJobsWaitingCustomerApprovalAsync(Guid repairOrderId);
-        Task<IEnumerable<Job>> GetJobsApprovedByCustomerAsync(Guid? repairOrderId = null);
-        Task<IEnumerable<Job>> GetJobsRejectedByCustomerAsync(Guid? repairOrderId = null);
 
         // Manager Assignment Workflow
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
-        Task<IEnumerable<Job>> GetJobsReadyForAssignmentAsync(Guid? repairOrderId = null);
-        Task<IEnumerable<Job>> GetJobsAssignedByManagerAsync(string managerId);
-        Task<IEnumerable<Job>> GetJobsByTechnicianIdAsync(Guid technicianId);
-        Task<IEnumerable<Job>> GetUnassignedJobsAsync();
 
         // Job Parts Management
         Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId);
@@ -59,12 +45,11 @@ namespace Services
 
         // Status Management
         Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null);
-        Task<IEnumerable<Job>> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
+        Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
 
         // Business Logic Validation
         Task<bool> CanCompleteJobAsync(Guid jobId);
         Task<bool> CanStartJobAsync(Guid jobId);
-        Task<bool> CanSendJobToCustomerAsync(Guid jobId);
         Task<bool> CanAssignJobToTechnicianAsync(Guid jobId);
         Task<bool> HasActiveTechnicianAsync(Guid jobId);
 
@@ -113,7 +98,5 @@ namespace Services
         Task<Job?> GetLatestJobRevisionAsync(Guid originalJobId);
         Task<bool> ExpireOldEstimatesAsync();
         Task<Job> CreateJobFromServiceAsync(Guid serviceId, Guid repairOrderId, string managerId);
-        
-
     }
 }

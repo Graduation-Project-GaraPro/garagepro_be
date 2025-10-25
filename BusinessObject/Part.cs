@@ -18,8 +18,6 @@ namespace BusinessObject
 
         [Required]
         public Guid PartCategoryId { get; set; }
-
-        
         public Guid? BranchId { get; set; }  // v?n gi? 1-n n?u c?n
 
         [Required, MaxLength(100)]
@@ -44,8 +42,7 @@ namespace BusinessObject
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
         public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
          public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
-        //requestService
-        public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
+
     }
 
 }

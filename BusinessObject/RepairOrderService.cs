@@ -22,10 +22,7 @@ namespace BusinessObject
         public Guid ServiceId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal ServicePrice { get; set; }
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal ActualDuration { get; set; } // in hours
+        public decimal ActualDuration { get; set; }
 
         [MaxLength(500)]
         public string? Notes { get; set; }

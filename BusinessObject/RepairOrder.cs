@@ -1,4 +1,3 @@
-
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
@@ -12,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+
 using BusinessObject.Manager;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -27,10 +27,7 @@ namespace BusinessObject
         public DateTime ReceiveDate { get; set; } = DateTime.UtcNow;
 
         [Required]
-        [MaxLength(50)]
-        public string RepairOrderType { get; set; }//repair request, quotation, emergency 
-        public RoType RoType { get; set; } // Updated to use enum
-
+        public RoType RoType { get; set; } //repair request, quotation, emergency 
 
         public DateTime? EstimatedCompletionDate { get; set; }
 
@@ -54,7 +51,7 @@ namespace BusinessObject
         [MaxLength(500)]
         public string Note { get; set; }
 
-        public int? LabelId { get; set; }
+        // Removed LabelId property as it should be accessed through OrderStatus
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -66,13 +63,14 @@ namespace BusinessObject
 
         public DateTime? ArchivedAt { get; set; }
 
+
         public string? ArchivedByUserId { get; set; }
 
         [Required]
         public Guid BranchId { get; set; }
 
         [Required]
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
 
         [Required]
         public Guid VehicleId { get; set; }
@@ -98,6 +96,8 @@ namespace BusinessObject
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
         public virtual FeedBack? FeedBack { get; set; }
+        // Add navigation property for quotations
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
         public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
