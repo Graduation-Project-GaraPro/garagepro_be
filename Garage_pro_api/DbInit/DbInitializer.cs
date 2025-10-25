@@ -1281,7 +1281,7 @@ namespace Garage_pro_api.DbInit
                     {
                         new RepairOrder
                         {
-                            RepairOrderType = "Request",
+                            RoType = RoType.WalkIn,
                             ReceiveDate = DateTime.UtcNow.AddDays(-5),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
                             Cost = 1500000,
@@ -1301,7 +1301,7 @@ namespace Garage_pro_api.DbInit
                         },
                         new RepairOrder
                         {
-                            RepairOrderType = "Request",
+                            RoType = RoType.WalkIn,
                             ReceiveDate = DateTime.UtcNow.AddDays(-3),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
                             Cost = 3000000,
@@ -1321,7 +1321,7 @@ namespace Garage_pro_api.DbInit
                         },
                         new RepairOrder
                         {
-                            RepairOrderType = "Request",
+                            RoType = RoType.WalkIn,
                             ReceiveDate = DateTime.UtcNow.AddDays(-10),
                             EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
                             CompletionDate = DateTime.UtcNow.AddDays(-1),

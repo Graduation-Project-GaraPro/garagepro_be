@@ -357,7 +357,7 @@ builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRe
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-builder.Services.AddScoped<PaymentService>();
+//builder.Services.AddScoped<PaymentService>();
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
