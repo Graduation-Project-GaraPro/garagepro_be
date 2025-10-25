@@ -325,9 +325,10 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-builder.Services.AddScoped<PaymentService>();
+//builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+//builder.Services.AddScoped<PaymentService>();
 
+builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
