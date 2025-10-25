@@ -1,3 +1,4 @@
+using BusinessObject.Enums;
 using Dtos.Quotations;
 using System;
 using System.Collections.Generic;
@@ -13,6 +14,11 @@ namespace Services.QuotationServices
         Task<IEnumerable<QuotationDto>> GetQuotationsByUserIdAsync(string userId);
         Task<IEnumerable<QuotationDto>> GetQuotationsByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<QuotationDto>> GetAllQuotationsAsync();
+        Task<object> GetQuotationsByUserIdAsync(
+            string userId,
+            int pageNumber,
+            int pageSize,
+            QuotationStatus? status);
         Task<QuotationDto> UpdateQuotationAsync(Guid quotationId, UpdateQuotationDto updateQuotationDto);
         Task<QuotationDto> UpdateQuotationStatusAsync(Guid quotationId, UpdateQuotationStatusDto updateStatusDto);
         Task<bool> DeleteQuotationAsync(Guid quotationId);

@@ -1,6 +1,7 @@
 using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using BusinessObject;
+using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.Quotations;
 using Microsoft.EntityFrameworkCore;
@@ -32,6 +33,40 @@ namespace Repositories.QuotationRepositories
                 .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// dùng projectto ?? map k c?n load h?t ch? c?n nhhuwnxg entities c?n thi?t
                 .ToListAsync();
         }
+
+
+        public async Task<(List<Quotation>, int)> GetQuotationsByUserIdAsync(
+        string userId,
+        int pageNumber,
+        int pageSize,
+        QuotationStatus? status)
+        {
+            var query = _context.Quotations
+                .Include(q => q.User)
+                .Include(q => q.Vehicle)
+                .Include(q => q.RepairOrder)
+                .Include(q => q.Inspection)
+                .Include(q => q.QuotationServices)
+                    .ThenInclude(qs => qs.Service)
+                .Include(q => q.QuotationServices)
+                    .ThenInclude(qs => qs.QuotationServiceParts)
+                        .ThenInclude(qsp => qsp.Part)
+                .Where(q => q.UserId == userId);
+
+            if (status.HasValue)
+                query = query.Where(q => q.Status == status.Value);
+
+            query = query.OrderByDescending(q => q.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var quotations = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (quotations, totalCount);
+        }
+
 
         public async Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId)
         {

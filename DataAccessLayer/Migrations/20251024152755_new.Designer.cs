@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251024085709_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251024152755_new")]
+    partial class @new
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1431,11 +1431,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("RepairOrderType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");

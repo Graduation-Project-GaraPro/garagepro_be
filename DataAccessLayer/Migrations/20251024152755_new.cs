@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class @new : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1138,7 +1138,6 @@ namespace DataAccessLayer.Migrations
                 {
                     RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ReceiveDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    RepairOrderType = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     RoType = table.Column<int>(type: "int", nullable: false),
                     EstimatedCompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CompletionDate = table.Column<DateTime>(type: "datetime2", nullable: true),

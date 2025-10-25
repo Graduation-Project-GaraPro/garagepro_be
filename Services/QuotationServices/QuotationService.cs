@@ -153,6 +153,29 @@ namespace Services.QuotationServices
             return _mapper.Map<QuotationDto>(completeQuotation);
         }
 
+
+        public async Task<object> GetQuotationsByUserIdAsync(
+            string userId,
+            int pageNumber,
+            int pageSize,
+            QuotationStatus? status)
+        {
+            var (quotations, totalCount) = await _quotationRepository
+                .GetQuotationsByUserIdAsync(userId, pageNumber, pageSize, status);
+
+            var quotationDtos = _mapper.Map<List<QuotationDto>>(quotations);
+
+            return new
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Data = quotationDtos
+            };
+        }
+
+
         public async Task<QuotationDto> GetQuotationByIdAsync(Guid quotationId)
         {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
@@ -239,19 +262,10 @@ namespace Services.QuotationServices
             // Update quotation status
             quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
-            
-            // Update selected services
-            if (responseDto.SelectedServices != null)
+
+            foreach (var quotationService in quotation.QuotationServices)
             {
-                foreach (var selectedService in responseDto.SelectedServices)
-                {
-                    var quotationService = quotation.QuotationServices
-                        .FirstOrDefault(qs => qs.QuotationServiceId == selectedService.QuotationServiceId);
-                    if (quotationService != null)
-                    {
-                        quotationService.IsSelected = true;
-                    }
-                }
+                quotationService.IsSelected = true;
             }
 
             // Update selected service parts
@@ -263,7 +277,7 @@ namespace Services.QuotationServices
                     var quotationServicePart = quotation.QuotationServices
                         .SelectMany(qs => qs.QuotationServiceParts)
                         .FirstOrDefault(qsp => qsp.QuotationServicePartId == selectedServicePart.QuotationServicePartId);
-                        
+
                     if (quotationServicePart != null)
                     {
                         quotationServicePart.IsSelected = true;
@@ -271,11 +285,43 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Note: Removed recalculation of TotalAmount as it's no longer in the Quotation entity
+            // Validate part selection based on service type (advanced vs regular)
+            await ValidateAndCorrectPartSelectionAsync(quotation);
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
+
+
+        /// Validates and corrects part selection based on whether services are advanced or not.
+        private async Task ValidateAndCorrectPartSelectionAsync(Quotation quotation)
+        {
+            foreach (var quotationService in quotation.QuotationServices)
+            {
+                // Load the full service information to check if it's advanced
+                var service = await _serviceRepository.GetByIdAsync(quotationService.ServiceId);
+
+                if (service != null)
+                {
+                    // Get all selected parts for this service
+                    var selectedParts = quotationService.QuotationServiceParts
+                        .Where(qsp => qsp.IsSelected)
+                        .ToList();
+
+                    // If it's not an advanced service, ensure only one part is selected
+                    if (!service.IsAdvanced && selectedParts.Count > 1)
+                    {
+                        // Keep only the first selected part and deselect the rest
+                        for (int i = 1; i < selectedParts.Count; i++)
+                        {
+                            selectedParts[i].IsSelected = false;
+                        }
+                    }
+
+                }
+            }
+        }
+
 
         public async Task<bool> ApproveQuotationAsync(Guid quotationId)
         {
