@@ -65,12 +65,11 @@ namespace Repositories
 
         #region Kanban Board Specific Queries
 
-        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(Guid statusId)
+        public async Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId) // Changed from Guid to int
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -84,7 +83,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -107,7 +105,6 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -127,7 +124,6 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -148,7 +144,7 @@ namespace Repositories
 
         #region Status Update Operations
 
-        public async Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, Guid newStatusId, string? changeNote = null)
+        public async Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string? changeNote = null) // Changed from Guid to int
         {
             var repairOrder = await _context.RepairOrders.FindAsync(repairOrderId);
             if (repairOrder == null) return false;
@@ -194,15 +190,7 @@ namespace Repositories
                 if (repairOrder != null)
                 {
                     repairOrder.StatusId = update.NewStatusId;
-                    
-                    if (!string.IsNullOrEmpty(update.ChangeNote))
-                    {
-                        var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                        var statusChangeNote = $"[{timestamp}] Batch update: {update.ChangeNote}";
-                        repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note) 
-                            ? statusChangeNote 
-                            : $"{repairOrder.Note}\n{statusChangeNote}";
-                    }
+                                      
                     
                     updatedOrders.Add(repairOrder);
                 }
@@ -230,7 +218,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -260,7 +247,7 @@ namespace Repositories
 
         #region Statistics and Aggregations
 
-        public async Task<Dictionary<Guid, int>> GetRepairOrderCountsByStatusAsync(List<Guid>? statusIds = null)
+        public async Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int>? statusIds = null) // Changed from Guid to int
         {
             var query = _context.RepairOrders.AsQueryable();
             
@@ -311,7 +298,7 @@ namespace Repositories
 
         #region Validation and Business Rules
 
-        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, Guid newStatusId)
+        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId) // Changed from Guid to int
         {
             var repairOrder = await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
@@ -342,10 +329,9 @@ namespace Repositories
             return true;
         }
 
-        public async Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(Guid statusId)
+        public async Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
         {
             return await _context.Labels
-                .Include(l => l.Color)
                 .Where(l => l.OrderStatusId == statusId)
                 .ToListAsync();
         }
@@ -384,7 +370,7 @@ namespace Repositories
 
         public async Task<IEnumerable<RepairOrder>> SearchRepairOrdersAsync(
             string searchText,
-            List<Guid>? statusIds = null,
+            List<int>? statusIds = null, // Changed from Guid to int
             List<Guid>? branchIds = null,
             DateTime? fromDate = null,
             DateTime? toDate = null)
@@ -536,7 +522,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -558,7 +543,6 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                        .ThenInclude(l => l.Color)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -721,7 +705,7 @@ namespace Repositories
             return await CreateAsync(repairOrder);
         }
 
-        public async Task<IEnumerable<RepairOrder>> GetOrdersForAutoArchiveAsync(Guid statusId, DateTime cutoffDate)
+        public async Task<IEnumerable<RepairOrder>> GetOrdersForAutoArchiveAsync(int statusId, DateTime cutoffDate) // Changed from Guid to int
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)

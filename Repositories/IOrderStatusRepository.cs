@@ -5,11 +5,11 @@ namespace Repositories
     public interface IOrderStatusRepository
     {
         Task<IEnumerable<OrderStatus>> GetAllAsync();
-        Task<OrderStatus?> GetByIdAsync(Guid id);
+        Task<OrderStatus?> GetByIdAsync(int id); // Changed from Guid to int
         Task<OrderStatus> CreateAsync(OrderStatus orderStatus);
         Task<OrderStatus> UpdateAsync(OrderStatus orderStatus);
-        Task<bool> DeleteAsync(Guid id);
-        Task<bool> ExistsAsync(Guid id);
-        Task<IEnumerable<Label>> GetLabelsByStatusIdAsync(Guid statusId);
+        Task<bool> DeleteAsync(int id); // Changed from Guid to int
+        Task<bool> ExistsAsync(int id); // Changed from Guid to int
+        Task<IEnumerable<Label>> GetLabelsByStatusIdAsync(int statusId); // Changed from Guid to int
     }
 }

@@ -70,6 +70,11 @@ namespace Services.VehicleServices
             return vehicleWithHistory;
         }
 
+        public async Task<VehicleWithCustomerDto?> GetVehicleWithCustomerAsync(Guid vehicleId)
+        {
+            return await _vehicleService.GetVehicleWithCustomerAsync(vehicleId);
+        }
+
         public async Task<IEnumerable<VehicleWithCustomerDto>> GetVehiclesForCustomerAsync(string userId)
         {
             var vehicles = await _vehicleService.GetVehiclesByUserIdAsync(userId);

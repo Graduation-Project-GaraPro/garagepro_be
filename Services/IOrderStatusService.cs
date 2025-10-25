@@ -6,9 +6,9 @@ namespace Services
     public interface IOrderStatusService
     {
         Task<RoBoardColumnsDto> GetOrderStatusesByColumnsAsync();
-        Task<OrderStatus?> GetOrderStatusByIdAsync(Guid id);
-        Task<bool> OrderStatusExistsAsync(Guid id);
-        Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(Guid orderStatusId);
+        Task<OrderStatus?> GetOrderStatusByIdAsync(int id); // Changed from Guid to int
+        Task<bool> OrderStatusExistsAsync(int id); // Changed from Guid to int
+        Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(int orderStatusId); // Changed from Guid to int
         Task InitializeDefaultStatusesAsync();
     }
 }

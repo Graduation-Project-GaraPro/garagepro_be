@@ -44,8 +44,7 @@ namespace BusinessObject
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
         public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
          public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
-        //requestService
-        public virtual ICollection<QuotationPart> QuotationParts { get; set; } = new List<QuotationPart>();
+
     }
 
 }

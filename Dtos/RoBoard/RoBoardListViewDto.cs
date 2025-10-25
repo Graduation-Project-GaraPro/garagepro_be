@@ -46,7 +46,7 @@ namespace Dtos.RoBoard
         public decimal CompletionPercentage => EstimatedAmount > 0 ? (PaidAmount / EstimatedAmount) * 100 : 0;
         
         // Status Info
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; }
         
         public string StatusName { get; set; }
         

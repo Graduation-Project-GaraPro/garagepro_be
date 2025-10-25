@@ -8,24 +8,17 @@ namespace Dtos.Customers
 {
     public class RepairRequestDto
     {
-       
-            public Guid RepairRequestID { get; set; }
-            public Guid VehicleID { get; set; }
-            public string UserID { get; set; }
-            public Guid BranchId { get; set; }
-
-            public string? Description { get; set; }
-            public DateTime RequestDate { get; set; }
-            public RepairRequestStatus Status { get; set; }
-
-            public decimal? EstimatedCost { get; set; }   // Tổng tiền ước tính
-            public List<string>? ImageUrls { get; set; }  // URL ảnh
-
-            // Danh sách service khách chọn
-            public List<RequestServiceDto>? RequestServices { get; set; }
-        
-
-
+        public Guid RepairRequestID { get; set; }
+        public Guid VehicleID { get; set; }
+        public string UserID { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public Guid BranchId { get; set; }
+        public DateTime RequestDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public RepairRequestStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
+        public decimal? EstimatedCost { get; set; }
     }
 
 

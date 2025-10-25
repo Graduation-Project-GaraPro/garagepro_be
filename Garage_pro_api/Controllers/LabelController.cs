@@ -34,7 +34,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/label/by-orderstatus/{orderStatusId}
         [HttpGet("by-orderstatus/{orderStatusId}")]
-        public async Task<IActionResult> GetLabelsByOrderStatusId(Guid orderStatusId)
+        public async Task<IActionResult> GetLabelsByOrderStatusId(int orderStatusId) // Changed from Guid to int
         {
             try
             {
@@ -83,7 +83,8 @@ namespace Garage_pro_api.Controllers
                 {
                     LabelName = request.LabelName,
                     Description = request.Description ?? string.Empty,
-                    ColorId = request.ColorId,
+                    ColorName = request.ColorName,
+                    HexCode = request.HexCode,
                     OrderStatusId = request.OrderStatusId
                 };
 
@@ -120,7 +121,8 @@ namespace Garage_pro_api.Controllers
                     LabelId = id,
                     LabelName = request.LabelName,
                     Description = request.Description ?? string.Empty,
-                    ColorId = request.ColorId,
+                    ColorName = request.ColorName,
+                    HexCode = request.HexCode,
                     OrderStatusId = request.OrderStatusId
                 };
 
@@ -175,20 +177,7 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // GET: api/label/colors
-        [HttpGet("colors")]
-        public async Task<IActionResult> GetAvailableColors()
-        {
-            try
-            {
-                var colors = await _labelService.GetAvailableColorsAsync();
-                return Ok(colors);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while retrieving available colors", error = ex.Message });
-            }
-        }
+        // Removed GetAvailableColors endpoint as we're using fixed color data
     }
 
     // Request DTOs
@@ -196,15 +185,17 @@ namespace Garage_pro_api.Controllers
     {
         public string LabelName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public Guid ColorId { get; set; }
-        public Guid OrderStatusId { get; set; }
+        public string ColorName { get; set; } = string.Empty;
+        public string HexCode { get; set; } = string.Empty;
+        public int OrderStatusId { get; set; } // Changed from Guid to int
     }
 
     public class UpdateLabelRequest
     {
         public string LabelName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public Guid ColorId { get; set; }
-        public Guid OrderStatusId { get; set; }
+        public string ColorName { get; set; } = string.Empty;
+        public string HexCode { get; set; } = string.Empty;
+        public int OrderStatusId { get; set; } // Changed from Guid to int
     }
 }

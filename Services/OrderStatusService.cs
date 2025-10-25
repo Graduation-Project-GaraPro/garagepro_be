@@ -57,17 +57,17 @@ namespace Services
             return result;
         }
 
-        public async Task<OrderStatus?> GetOrderStatusByIdAsync(Guid id)
+        public async Task<OrderStatus?> GetOrderStatusByIdAsync(int id) // Changed from Guid to int
         {
             return await _orderStatusRepository.GetByIdAsync(id);
         }
 
-        public async Task<bool> OrderStatusExistsAsync(Guid id)
+        public async Task<bool> OrderStatusExistsAsync(int id) // Changed from Guid to int
         {
             return await _orderStatusRepository.ExistsAsync(id);
         }
 
-        public async Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(Guid orderStatusId)
+        public async Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(int orderStatusId) // Changed from Guid to int
         {
             // Validate that order status exists
             if (!await _orderStatusRepository.ExistsAsync(orderStatusId))
@@ -80,17 +80,37 @@ namespace Services
         {
             var existingStatuses = await _orderStatusRepository.GetAllAsync();
             
-            foreach (var defaultStatus in _defaultStatuses)
+            // Check if we already have the default statuses with the correct names
+            var pendingStatus = existingStatuses.FirstOrDefault(s => s.StatusName == "Pending");
+            var inProgressStatus = existingStatuses.FirstOrDefault(s => s.StatusName == "In Progress");
+            var completedStatus = existingStatuses.FirstOrDefault(s => s.StatusName == "Completed");
+            
+            // If any are missing, we'll add them without specifying IDs (let the database generate them)
+            if (pendingStatus == null)
             {
-                if (!existingStatuses.Any(s => s.StatusName == defaultStatus.Key))
+                var newStatus = new OrderStatus
                 {
-                    var newStatus = new OrderStatus
-                    {
-                        OrderStatusId = Guid.NewGuid(),
-                        StatusName = defaultStatus.Key
-                    };
-                    await _orderStatusRepository.CreateAsync(newStatus);
-                }
+                    StatusName = "Pending"
+                };
+                await _orderStatusRepository.CreateAsync(newStatus);
+            }
+            
+            if (inProgressStatus == null)
+            {
+                var newStatus = new OrderStatus
+                {
+                    StatusName = "In Progress"
+                };
+                await _orderStatusRepository.CreateAsync(newStatus);
+            }
+            
+            if (completedStatus == null)
+            {
+                var newStatus = new OrderStatus
+                {
+                    StatusName = "Completed"
+                };
+                await _orderStatusRepository.CreateAsync(newStatus);
             }
         }
     }

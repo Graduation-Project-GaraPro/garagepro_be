@@ -58,6 +58,22 @@ using VNPAY.NET;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:3000")
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+});
+
+// Add SignalR services
+builder.Services.AddSignalR();
+
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -231,14 +247,15 @@ builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
 builder.Services.AddScoped<ILabelRepository, LabelRepository>();
-builder.Services.AddScoped<IColorRepository, ColorRepository>();
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 builder.Services.AddScoped<ILabelService, LabelService>();
-builder.Services.AddScoped<IColorService, ColorService>();
 
 // RepairOrder repository and service
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
 builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
+
+// Add this line to register the SignalR hub
+builder.Services.AddSignalR();
 
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
@@ -264,7 +281,11 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 // Quotation services
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
-builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+// Update to use the new QuotationServicePartRepository
+// builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServicePartRepository, Repositories.QuotationRepositories.QuotationServicePartRepository>();
+builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
 
 // Vehicle brand, model, and color repositories
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
@@ -299,7 +320,7 @@ builder.Services.AddHostedService<LogCleanupService>();
 
 // Service Quotation
 builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
-builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationService>();
+builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationManagementService>();
 
 // repair request
 builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
@@ -328,6 +349,20 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<PaymentService>();
 
+// Inspection services
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
+
+// Technician services
+builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+
+// Repair Request services - Adding missing registrations
+builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
+builder.Services.AddScoped<Services.Customer.IRepairRequestService, Services.Customer.RepairRequestService>();
+
+// Adding missing RequestPart and RequestService repository registrations
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestPartRepository, Repositories.RepairRequestRepositories.RequestPartRepository>();
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestServiceRepository, Repositories.RepairRequestRepositories.RequestServiceRepository>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -375,12 +410,16 @@ builder.Services.AddCors(options =>
                 "http://localhost:5117",       // frontend web
 
                 "https://10.0.2.2:7113",       // Android Emulator
-                "http://192.168.1.96:7113"    // LDPlayer / LAN
+                "http://192.168.1.96:7113",   // LDPlayer / LAN
+                "http://10.42.97.46:5117"
+
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
+
+
 });
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
@@ -423,6 +462,11 @@ app.UseAuthorization();            // phải chạy trước để gắn User h�
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
+
+app.MapControllers();
+
+// Add this line to map the SignalR hub
+app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 
 // Initialize database
 using (var scope = app.Services.CreateScope())

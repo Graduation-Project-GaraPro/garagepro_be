@@ -24,10 +24,11 @@ namespace Repositories.PartRepositories
         {
             return await _context.Parts.AnyAsync(predicate);
         }
-        public async Task<Part?> GetByIdAsync(Guid partId)
+
+        // Get Part by ID
+        public async Task<Part> GetByIdAsync(Guid id)
         {
-            return await _context.Parts
-                .FirstOrDefaultAsync(p => p.PartId == partId);
+            return await _context.Parts.FindAsync(id);
         }
     }
 }

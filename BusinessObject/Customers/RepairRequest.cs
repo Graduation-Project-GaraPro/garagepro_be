@@ -64,6 +64,6 @@ namespace BusinessObject.Customers
     }
     public enum RepairRequestStatus
     {
-        Pending, Accept, Cancelled
+        Pending, Accept, Arrived, Cancelled
     }
 }

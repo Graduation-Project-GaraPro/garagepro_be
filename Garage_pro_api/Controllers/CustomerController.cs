@@ -1,12 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using Services;
 using Dtos.RoBoard;
+using System;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.OData.Query;
 
 namespace Garage_pro_api.Controllers
@@ -64,7 +63,7 @@ namespace Garage_pro_api.Controllers
                 var customer = await _customerService.GetCustomerByIdAsync(id);
                 if (customer == null)
                 {
-                    return NotFound();
+                    return NotFound(new { message = "Customer not found" });
                 }
                 return Ok(customer);
             }
@@ -78,9 +77,14 @@ namespace Garage_pro_api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateCustomer([FromBody] CreateCustomerDto createCustomerDto)
         {
+            // Check if model state is valid
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                var errors = new SerializableError(ModelState);
+                return BadRequest(new { 
+                    message = "Validation failed", 
+                    errors 
+                });
             }
 
             try
@@ -90,16 +94,23 @@ namespace Garage_pro_api.Controllers
             }
             catch (ValidationException ex)
             {
-                return BadRequest(new { message = "Validation error", details = ex.Message });
+                return BadRequest(new { 
+                    message = "Validation error", 
+                    details = ex.Message,
+                    validationErrors = ex.ValidationResult?.ErrorMessage
+                });
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { 
+                    message = "Operation failed", 
+                    details = ex.Message 
+                });
             }
             catch (Exception ex)
             {
                 // Log the full exception details for debugging
-                return BadRequest(new { 
+                return StatusCode(500, new { 
                     message = "An error occurred while creating the customer", 
                     error = ex.Message,
                     innerException = ex.InnerException?.Message
