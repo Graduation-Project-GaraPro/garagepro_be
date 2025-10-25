@@ -1,4 +1,4 @@
-using BusinessObject.Customers;
+﻿using BusinessObject.Customers;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -21,11 +21,16 @@ namespace Repositories.Customers
         {
             return await _context.RepairRequests
                 .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                  .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
+                .Include(r => r.Customer)
                 .ToListAsync();
         }
 
@@ -35,22 +40,48 @@ namespace Repositories.Customers
                 .Include(r => r.Vehicle)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                 .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .Where(r => r.UserID == userId)
                 .ToListAsync();
         }
-
+        //chỉ get về để update
+        public async Task<RepairRequest> GetTrackingByIdAsync(Guid id)
+        {
+            return await _context.RepairRequests
+                .Include(r => r.RepairImages)
+                .Include(r => r.RequestServices)
+                    .ThenInclude(rs => rs.RequestParts)
+                .FirstOrDefaultAsync(r => r.RepairRequestID == id);
+        }
         public async Task<RepairRequest> GetByIdAsync(Guid id)
         {
             return await _context.RepairRequests
                 .Include(r => r.Vehicle)
+                .Include(r=>r.Branch)
+                .Include(r => r.RepairImages)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
-                .Include(r => r.RequestParts)
-                    .ThenInclude(rp => rp.Part)
+                .Include(r => r.RequestServices)
+                    .ThenInclude(rs => rs.RequestParts)
+                        .ThenInclude(rp => rp.Part)
+                                .FirstOrDefaultAsync(r => r.RepairRequestID == id);
+        }
+
+        // New method for managers with full details
+        public async Task<RepairRequest> GetByIdWithDetailsAsync(Guid id)
+        {
+            return await _context.RepairRequests
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(r => r.RequestServices)
+                    .ThenInclude(rs => rs.Service)
                 .Include(r => r.RepairImages)
+                .Include(r => r.Customer)
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
 
@@ -61,12 +92,19 @@ namespace Repositories.Customers
             return repairRequest;
         }
 
-        public async Task<RepairRequest> UpdateAsync(RepairRequest repairRequest)
+        public async Task<bool> UpdateAsync(RepairRequest repairRequest)
         {
-            _context.Entry(repairRequest).State = EntityState.Modified;
+            var entry = _context.Entry(repairRequest);
+            if (entry.State == EntityState.Detached)
+            {
+                _context.Attach(repairRequest);
+                entry.State = EntityState.Modified;
+            }
+
             await _context.SaveChangesAsync();
-            return repairRequest;
+            return true;
         }
+
 
         public async Task<bool> DeleteAsync(Guid id)
         {
@@ -108,6 +146,11 @@ namespace Repositories.Customers
             _context.RepairImages.Remove(image);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public IQueryable<RepairRequest> GetQueryable()
+        {
+            return _context.RepairRequests.AsQueryable();
         }
     }
 }

@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using BusinessObject.Branches;
 
 using BusinessObject.Campaigns;
+using BusinessObject.Customers;
+
 
 namespace BusinessObject
 {
@@ -57,5 +59,11 @@ namespace BusinessObject
         // Many-to-many
         public virtual ICollection<PromotionalCampaignService>? PromotionalCampaignServices { get; set; }
             = new List<PromotionalCampaignService>();
+
+        // Quotation relationship
+        public virtual ICollection<QuotationService>? QuotationServices { get; set; } = new List<QuotationService>();
+        //request relationship
+        public virtual ICollection<RequestService>? RequestServices { get; set; } = new List<RequestService>();
+
     }
 }

@@ -1,42 +1,51 @@
+using BusinessObject;
 using BusinessObject.Authentication;
-using System.Text;
+using BusinessObject.Policies;
+using BusinessObject.Roles;
 using DataAccessLayer;
+using Garage_pro_api.Authorization;
+using Garage_pro_api.DbInit;
+using Garage_pro_api.Mapper;
+using Garage_pro_api.Middlewares;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Services;
-using BusinessObject;
-using Garage_pro_api.DbInit;
-using Repositories;
-using Services.EmailSenders;
-using Repositories.PolicyRepositories;
-using Services.PolicyServices;
-using Services.Authentication;
-using Garage_pro_api.Middlewares;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using BusinessObject.Policies;
-using Repositories.RoleRepositories;
-using Services.RoleServices;
-using Garage_pro_api.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Garage_pro_api.Mapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Google;
-using Services.SmsSenders;
-using BusinessObject.Roles;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.IdentityModel.Tokens;
+using Repositories;
 using Repositories.BranchRepositories;
-using Services.BranchServices;
-using Repositories.ServiceRepositories;
-using Services.ServiceServices;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Services.Cloudinaries;
+using Repositories.CampaignRepositories;
+using Repositories.Customers;
 using Repositories.PartCategoryRepositories;
-using Services.PartCategoryServices;
 using Repositories.PartRepositories;
+using Repositories.PolicyRepositories;
+using Repositories.QuotationRepositories;
+using Repositories.RepairRequestRepositories;
+using Repositories.RoleRepositories;
+using Repositories.ServiceRepositories;
+using Repositories.UnitOfWork;
+using Repositories.VehicleRepositories;
+using Services;
+using Services.Authentication;
+using Services.BranchServices;
+using Services.CampaignServices;
+using Services.Cloudinaries;
+using Services.Customer;
+using Services.EmailSenders;
+using Services.PartCategoryServices;
+using Services.PolicyServices;
+using Services.QuotationServices;
+using Services.RoleServices;
+using Services.ServiceServices;
+using Services.SmsSenders;
+using Services.VehicleServices;
+using System.Text;
 using Microsoft.AspNetCore.OData;
 using Repositories.VehicleRepositories;
-using Services.VehicleServices;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
@@ -59,6 +68,15 @@ using Services.RepairHistory;
 using Repositories.RepairHistory;
 using Services.CampaignServices;
 using Repositories.CampaignRepositories;
+using Repositories.CampaignRepositories;
+using Services.CampaignServices;
+using Repositories.LogRepositories;
+using Services.LogServices;
+using Serilog;
+using Garage_pro_api.DbInterceptor;
+using Microsoft.Extensions.Options;
+using VNPAY.NET;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -79,10 +97,14 @@ builder.Services.AddControllers()
     });
 
 
+// Add SignalR services
+builder.Services.AddSignalR();
+
 // Add services to the container.
 
 builder.Services.AddControllers()
     .AddOData(options => options.Select().Filter().OrderBy().Expand().Count().SetMaxTop(100));
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
@@ -133,10 +155,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<JobTechnicianProfile>();
 });
 
-builder.Services.AddDbContext<MyAppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddIdentity<ApplicationUser,ApplicationRole> (options =>
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     options.Password.RequiredLength = 1;
     options.Password.RequireDigit = true;
@@ -164,6 +183,7 @@ else
 
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
+    builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
 
 // JWT Authentication
@@ -226,17 +246,28 @@ builder.Services.AddAuthentication(options =>
     googleOptions.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 });
 
-
+builder.Services.AddSignalR();
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.ExpireTimeSpan = TimeSpan.FromMinutes(30);
     options.SlidingExpiration = true;
 });
+
+// Register session
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddScoped<DbInitializer>();
-
+builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
+builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddScoped<ISecurityPolicyRepository, SecurityPolicyRepository>();
 builder.Services.AddScoped<ISecurityPolicyService, SecurityPolicyService>();
 builder.Services.AddMemoryCache(); // Cho IMemoryCache
@@ -251,10 +282,8 @@ builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
 builder.Services.AddScoped<ILabelRepository, LabelRepository>();
-builder.Services.AddScoped<IColorRepository, ColorRepository>();
 builder.Services.AddScoped<IOrderStatusService, OrderStatusService>();
 builder.Services.AddScoped<ILabelService, LabelService>();
-builder.Services.AddScoped<IColorService, ColorService>();
 
 // RepairOrder repository and service
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
@@ -283,8 +312,15 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 
 builder.Services.AddScoped<IPermissionService, PermissionService>(); 
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
+
+// Add this line to register the SignalR hub
+builder.Services.AddSignalR();
+
+
 // Job repository and service
-//builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobService, JobService>();
+
 //builder.Services.AddScoped<IJobService>(provider =>
 //{
 //    var jobRepository = provider.GetRequiredService<IJobRepository>();
@@ -307,21 +343,20 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 // Quotation services
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
-builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+// Update to use the new QuotationServicePartRepository
+// builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
+builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServicePartRepository, Repositories.QuotationRepositories.QuotationServicePartRepository>();
 builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
 
 // Vehicle brand, model, and color repositories
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
 
-
 builder.Services.RemoveAll<IPasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<IPasswordValidator<ApplicationUser>, RealTimePasswordValidator<ApplicationUser>>();
 builder.Services.AddScoped<DynamicAuthenticationService>();
-
-//builder.Services.AddScoped<ISystemLogRepository, SystemLogRepository>();
-//builder.Services.AddScoped<ISystemLogService, SystemLogService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
@@ -329,7 +364,6 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
 builder.Services.AddScoped<IBranchRepository, BranchRepository>();
-
 builder.Services.AddScoped<IBranchService, BranchService>();
 
 builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
@@ -344,12 +378,50 @@ builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
 
+builder.Services.AddHostedService<LogCleanupService>();
+
 // Service Quotation
-builder.Services.AddScoped<IServiceService, ServiceService>();
+builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
+builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationManagementService>();
+
+// repair request
+builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
+builder.Services.AddScoped<IRequestServiceRepository, RequestServiceRepository>();
+builder.Services.AddScoped<IRepairRequestRepository, RepairRequestRepository>();
+builder.Services.AddScoped<IRepairRequestService, RepairRequestService>();
+// Nếu dùng Scoped lifetime như các repository khác
+builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
+
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+// vehicle
+builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IVehicleService, VehicleService>();
+builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
+builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
+builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
+builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
+builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
+
+// Inspection services
+builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
+builder.Services.AddScoped<IInspectionService, InspectionService>();
+
+// Technician services
+builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+
+// Repair Request services - Adding missing registrations
+builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
+builder.Services.AddScoped<Services.Customer.IRepairRequestService, Services.Customer.RepairRequestService>();
+
+// Adding missing RequestPart and RequestService repository registrations
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestPartRepository, Repositories.RepairRequestRepositories.RequestPartRepository>();
+builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestServiceRepository, Repositories.RepairRequestRepositories.RequestServiceRepository>();
 
 // Đăng ký Authorization Handler
 builder.Services.AddScoped<IAuthorizationHandler, PermissionHandler>();
@@ -361,19 +433,65 @@ builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
 
-builder.Services.AddCors(options =>
+// Database configuration - FIXED: Removed misplaced async and fixed the configuration
+builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
 {
-    options.AddPolicy("AllowAll",
-        builder => builder  
-            .AllowAnyOrigin()
-            .AllowAnyMethod()
-            .AllowAnyHeader());
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // Truyền IServiceProvider thay vì ILogService
+    options.AddInterceptors(
+        new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
+    );
 });
 
-builder.Services.AddEndpointsApiExplorer();
+// VNPAY config
+builder.Services.AddSingleton<IVnpay>(sp =>
+{
+    var config = builder.Configuration;
+
+    var vnpay = new Vnpay();
+    vnpay.Initialize(
+        config["Vnpay:TmnCode"],
+        config["Vnpay:HashSecret"],
+        config["Vnpay:BaseUrl"],     // https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+        config["Vnpay:CallbackUrl"]  // ReturnUrl (callback client)
+    );
+
+    return vnpay;
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontendAndAndroid", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000",       // frontend web
+                "https://10.0.2.2:7113",       // Android Emulator
+                "http://192.168.1.96:7113",   // LDPlayer / LAN
+                "http://10.42.97.46:5117"
+
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+
+
+});
+
+// Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.ListenAnyIP(5117);  
+    options.ListenAnyIP(7113, listenOptions =>
+    {
+        listenOptions.UseHttps(); 
+    });
+});
 
 var app = builder.Build();
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontendAndAndroid");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -382,6 +500,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Use CORS with the specific policy for your frontend
+app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
 //app.UseHttpsRedirection();
@@ -392,18 +512,29 @@ app.Use(async (context, next) =>
     Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
     await next();
 });
+app.MapHub<LogHub>("/logHub");
 
 app.UseAuthentication();
 
-app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
+app.UseMiddleware<UserActivityMiddleware>();
+app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseAuthorization();            
+
 app.UseSecurityPolicyEnforcement();
+app.MapControllers();
 
 app.MapControllers();
-// Initialize database
 
+// Add this line to map the SignalR hub
+app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+
+// Initialize database
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+    Console.WriteLine("Applying pending migrations...");
+    dbContext.Database.Migrate();
 
     if (!dbContext.SecurityPolicies.Any())
     {

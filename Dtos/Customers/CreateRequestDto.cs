@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -10,13 +10,18 @@ namespace Dtos.Customers
 {
     public class CreateRequestDto
     {
-        public Guid RequestID { get; set; }
+        // public Guid RequestID { get; set; }
+        [Required]
+        public Guid BranchId { get; set; }
+        [Required]
         public Guid VehicleID { get; set; }
-        public string Description { get; set; }
+        //[Required, StringLength(500, ErrorMessage = "Description max 500 chars")]
+        public string? Description { get; set; }
+        [Required]
         public DateTime RequestDate { get; set; }
-        public string Status { get; set; }
-        public List<IFormFile> Images { get; set; } // file upload
-        public List<RequestServiceDto> Services { get; set; }
-        public List<RequestPartDto> Parts { get; set; }
+      //  public string Status { get; set; }
+        public List<string>? ImageUrls { get; set; } = new List<string>();// URL ảnh hoặc Base64 string
+        public List<RequestServiceDto>? Services { get; set; } = new List<RequestServiceDto>();
+       
     }
 }

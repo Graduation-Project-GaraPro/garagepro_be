@@ -14,5 +14,6 @@ namespace BusinessObject.Enums
         InProgress = 2,  //Technician đang làm
         Completed = 3,  //Technician đã hoàn thiện Job
         OnHold = 4          //Technician chờ phụ tùng hoặc gặp vấn đề khi  sửa chữa
+
     }
 }

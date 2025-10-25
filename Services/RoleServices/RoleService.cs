@@ -52,7 +52,11 @@ namespace Services.RoleServices
             var result = new List<RoleDto>();
 
             foreach (var role in roles)
+            {
+                role.Users = _roleRepo.GetUsersByRoleIdAsync(role.Id).Result.Count();
                 result.Add(await MapRoleWithPermissions(role));
+                
+            }
 
             return result;
         }
@@ -86,7 +90,7 @@ namespace Services.RoleServices
                 Name = dto.Name,
                 NormalizedName = dto.Name.ToUpperInvariant(),
                 Description = dto.Description,
-                IsDefault = dto.IsDefault,
+                IsDefault = false,
                 CreatedAt = DateTime.UtcNow,
                 Users = 0
             };

@@ -9,11 +9,10 @@ namespace Dtos.Customers
 {
     public class RequestPartDto
     {
-        [Required]
-        public Guid PartID { get; set; }
-
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be at least 1")]
-        public int Quantity { get; set; }
+      
+        public Guid PartId { get; set; }
+        // public String PartName { get; set; }
+        //public int Quantity { get; set; }
+       // public decimal price { get; set; }
     }
 }

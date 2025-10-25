@@ -102,7 +102,7 @@ namespace Services.RepairHistory
                         Services = job.RepairOrder.RepairOrderServices?.Select(s => new ServiceDto
                         {
                             ServiceName = s.Service.ServiceName,
-                            ServicePrice = s.ServicePrice,
+                            //ServicePrice = s.ServicePrice,
                             ActualDuration = s.ActualDuration,
                             Notes = s.Notes
                         }).ToList() ?? new List<ServiceDto>()

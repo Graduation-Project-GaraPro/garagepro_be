@@ -20,7 +20,7 @@ namespace Garage_pro_api.Controllers
 
 
 
-        [Authorize(Policy = "PROMO_VIEW")]
+        //[Authorize(Policy = "PROMO_VIEW")]
 
         [HttpGet("paged")]
         public async Task<ActionResult> GetPaged(
@@ -32,22 +32,30 @@ namespace Garage_pro_api.Controllers
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
-            if (page <= 0) page = 1;
-            if (limit <= 0) limit = 10;
-
-            var (campaigns, totalCount) = await _service.GetPagedAsync(page, limit, search, type, isActive, startDate, endDate);
-
-            return Ok(new
+            try
             {
-                Data = campaigns,
-                Pagination = new
+                if (page <= 0) page = 1;
+                if (limit <= 0) limit = 10;
+
+                var (campaigns, totalCount) = await _service.GetPagedAsync(page, limit, search, type, isActive, startDate, endDate);
+
+                return Ok(new
                 {
-                    Page = page,
-                    Limit = limit,
-                    TotalCount = totalCount,
-                    TotalPages = (int)Math.Ceiling(totalCount / (double)limit)
-                }
-            });
+                    Data = campaigns,
+                    Pagination = new
+                    {
+                        Page = page,
+                        Limit = limit,
+                        TotalCount = totalCount,
+                        TotalPages = (int)Math.Ceiling(totalCount / (double)limit)
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving campaigns", detail = ex.Message });
+            }
+           
         }
 
         [Authorize(Policy = "PROMO_VIEW")]

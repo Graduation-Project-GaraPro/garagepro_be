@@ -502,13 +502,19 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
                 {
+                    b.Property<Guid>("PromotionalCampaignServiceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<Guid>("PromotionalCampaignId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("PromotionalCampaignId", "ServiceId");
+                    b.HasKey("PromotionalCampaignServiceId");
+
+                    b.HasIndex("PromotionalCampaignId");
 
                     b.HasIndex("ServiceId");
 
@@ -545,30 +551,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("VoucherUsage", (string)null);
                 });
 
-            modelBuilder.Entity("BusinessObject.Color", b =>
-                {
-                    b.Property<Guid>("ColorId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("ColorName")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("HexCode")
-                        .IsRequired()
-                        .HasMaxLength(7)
-                        .HasColumnType("nvarchar(7)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.HasKey("ColorId");
-
-                    b.ToTable("Colors");
-                });
-
             modelBuilder.Entity("BusinessObject.Customers.RepairImage", b =>
                 {
                     b.Property<Guid>("ImageId")
@@ -596,6 +578,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("datetime2");
 
@@ -606,11 +591,14 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<bool>("IsCompleted")
-                        .HasColumnType("bit");
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -623,6 +611,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("RepairRequestID");
+
+                    b.HasIndex("BranchId");
 
                     b.HasIndex("UserID");
 
@@ -640,20 +630,20 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("RepairRequestID")
+                    b.Property<Guid>("RequestServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("number")
-                        .HasColumnType("int");
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,2)");
 
-                    b.Property<long>("totalAmount")
-                        .HasColumnType("bigint");
+                    b.Property<decimal>("totalAmount")
+                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("RequestPartId");
 
                     b.HasIndex("PartId");
 
-                    b.HasIndex("RepairRequestID");
+                    b.HasIndex("RequestServiceId");
 
                     b.ToTable("RequestParts");
                 });
@@ -667,14 +657,11 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<decimal>("ServiceFee")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<long>("TotalAmount")
-                        .HasColumnType("bigint");
-
-                    b.Property<int>("numberService")
-                        .HasColumnType("int");
 
                     b.HasKey("RequestServiceId");
 
@@ -703,6 +690,21 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<decimal>("InspectionPrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InspectionType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IssueRating")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
@@ -710,7 +712,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<Guid>("TechnicianId")
+                    b.Property<Guid?>("TechnicianId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -1034,25 +1036,30 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid>("ColorId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<string>("ColorName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("HexCode")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("nvarchar(7)");
+
                     b.Property<string>("LabelName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid>("OrderStatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("OrderStatusId")
+                        .HasColumnType("int");
 
                     b.HasKey("LabelId");
-
-                    b.HasIndex("ColorId");
 
                     b.HasIndex("OrderStatusId");
 
@@ -1064,6 +1071,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("FeedBackId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ApplicationUserId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -1091,6 +1101,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("FeedBackId");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("RepairOrderId");
 
@@ -1139,9 +1151,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
                 {
-                    b.Property<Guid>("OrderStatusId")
+                    b.Property<int>("OrderStatusId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OrderStatusId"));
 
                     b.Property<string>("StatusName")
                         .IsRequired()
@@ -1281,24 +1295,17 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<DateTime>("CreatedAt")
+                    b.Property<int>("Method")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("PaidAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PaymentMethod")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("PaymentStatus")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1414,6 +1421,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -1426,13 +1436,18 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("InspectionId")
+                    b.Property<Guid?>("InspectionId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Note")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("RepairRequestID")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime?>("SentToCustomerAt")
                         .HasColumnType("datetime2");
@@ -1454,7 +1469,13 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("QuotationId");
 
+                    b.HasIndex("BranchId");
+
                     b.HasIndex("InspectionId");
+
+                    b.HasIndex("RepairOrderId");
+
+                    b.HasIndex("RepairRequestID");
 
                     b.HasIndex("UserId");
 
@@ -1463,14 +1484,46 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("Quotations");
                 });
 
-            modelBuilder.Entity("BusinessObject.QuotationPart", b =>
+            modelBuilder.Entity("BusinessObject.QuotationService", b =>
                 {
-                    b.Property<Guid>("QuotationPartId")
+                    b.Property<Guid>("QuotationServiceId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<bool>("IsSelected")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("QuotationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ServiceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ServiceId1")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("QuotationServiceId");
+
+                    b.HasIndex("QuotationId");
+
+                    b.HasIndex("ServiceId");
+
+                    b.HasIndex("ServiceId1");
+
+                    b.ToTable("QuotationServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationServicePart", b =>
+                {
+                    b.Property<Guid>("QuotationServicePartId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("IsRecommended")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsSelected")
                         .HasColumnType("bit");
@@ -1484,55 +1537,16 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal>("Quantity")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("QuotationId")
+                    b.Property<Guid>("QuotationServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<decimal>("TotalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("QuotationPartId");
+                    b.HasKey("QuotationServicePartId");
 
                     b.HasIndex("PartId");
 
-                    b.HasIndex("QuotationId");
+                    b.HasIndex("QuotationServiceId");
 
-                    b.ToTable("QuotationParts");
-                });
-
-            modelBuilder.Entity("BusinessObject.QuotationService", b =>
-                {
-                    b.Property<Guid>("QuotationServiceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<bool>("IsSelected")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("Quantity")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<Guid>("QuotationId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("TotalPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("QuotationServiceId");
-
-                    b.HasIndex("QuotationId");
-
-                    b.HasIndex("ServiceId");
-
-                    b.ToTable("QuotationServices");
+                    b.ToTable("QuotationServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -1577,9 +1591,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("LabelId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1602,8 +1613,8 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("RoType")
                         .HasColumnType("int");
 
-                    b.Property<Guid>("StatusId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<int>("StatusId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -1651,9 +1662,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("ServicePrice")
-                        .HasColumnType("decimal(18,2)");
 
                     b.HasKey("RepairOrderServiceId");
 
@@ -1950,103 +1958,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("ServiceInspections");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("LogCategories");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("LogId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Tag")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LogId");
-
-                    b.ToTable("LogTags");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
-                {
-                    b.Property<long>("Id")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Action")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Outcome")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Resource")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("ThreatLevel")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("SecurityLogs");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<long>("RelatedLogId")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("SecurityLogId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RelatedLogId");
-
-                    b.HasIndex("SecurityLogId");
-
-                    b.ToTable("SecurityLogRelations");
-                });
-
             modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.Property<long>("Id")
@@ -2058,15 +1969,10 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("ApplicationUserId")
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<int>("CategoryId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Details")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IpAddress")
-                        .IsRequired()
                         .HasMaxLength(45)
                         .HasColumnType("nvarchar(45)");
 
@@ -2080,32 +1986,33 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("RequestId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("SessionId")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Source")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Tag")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTimeOffset>("Timestamp")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<string>("UserAgent")
-                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("UserName")
-                        .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
@@ -2113,11 +2020,13 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ApplicationUserId");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("Level");
+
+                    b.HasIndex("Timestamp");
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SystemLogs");
+                    b.ToTable("SystemLogs", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
@@ -2388,6 +2297,21 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("RepairOrderRepairRequest", b =>
+                {
+                    b.Property<Guid>("RepairOrdersRepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("RepairRequestID")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("RepairOrdersRepairOrderId", "RepairRequestID");
+
+                    b.HasIndex("RepairRequestID");
+
+                    b.ToTable("RepairOrderRepairRequest");
+                });
+
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
@@ -2551,8 +2475,14 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
                 {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("RepairRequests")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
-                        .WithMany()
+                        .WithMany("RepairRequests")
                         .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2563,6 +2493,8 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Branch");
+
                     b.Navigation("Customer");
 
                     b.Navigation("Vehicle");
@@ -2571,20 +2503,20 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Customers.RequestPart", b =>
                 {
                     b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
+                        .WithMany("RequestParts")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                    b.HasOne("BusinessObject.Customers.RequestService", "RequestService")
                         .WithMany("RequestParts")
-                        .HasForeignKey("RepairRequestID")
+                        .HasForeignKey("RequestServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Part");
 
-                    b.Navigation("RepairRequest");
+                    b.Navigation("RequestService");
                 });
 
             modelBuilder.Entity("BusinessObject.Customers.RequestService", b =>
@@ -2596,7 +2528,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany()
+                        .WithMany("RequestServices")
                         .HasForeignKey("ServiceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2617,8 +2549,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.InspectionAndRepair.Technician", "Technician")
                         .WithMany("Inspections")
                         .HasForeignKey("TechnicianId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("RepairOrder");
 
@@ -2736,25 +2667,21 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Label", b =>
                 {
-                    b.HasOne("BusinessObject.Color", "Color")
-                        .WithMany("Labels")
-                        .HasForeignKey("ColorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("Labels")
                         .HasForeignKey("OrderStatusId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Color");
-
                     b.Navigation("OrderStatus");
                 });
 
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
+                        .WithMany("FeedBacks")
+                        .HasForeignKey("ApplicationUserId");
+
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
                         .WithMany()
                         .HasForeignKey("RepairOrderId")
@@ -2880,11 +2807,23 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Quotation", b =>
                 {
+                    b.HasOne("BusinessObject.Branches.Branch", null)
+                        .WithMany("Quotations")
+                        .HasForeignKey("BranchId");
+
                     b.HasOne("BusinessObject.Inspection", "Inspection")
                         .WithMany("Quotations")
                         .HasForeignKey("InspectionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
+                        .WithMany("Quotations")
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("BusinessObject.Customers.RepairRequest", null)
+                        .WithMany("Quotations")
+                        .HasForeignKey("RepairRequestID");
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany()
@@ -2900,28 +2839,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("Inspection");
 
+                    b.Navigation("RepairOrder");
+
                     b.Navigation("User");
 
                     b.Navigation("Vehicle");
-                });
-
-            modelBuilder.Entity("BusinessObject.QuotationPart", b =>
-                {
-                    b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany()
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Quotation", "Quotation")
-                        .WithMany("QuotationParts")
-                        .HasForeignKey("QuotationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-
-                    b.Navigation("Quotation");
                 });
 
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
@@ -2938,9 +2860,32 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Service", null)
+                        .WithMany("QuotationServices")
+                        .HasForeignKey("ServiceId1");
+
                     b.Navigation("Quotation");
 
                     b.Navigation("Service");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationServicePart", b =>
+                {
+                    b.HasOne("BusinessObject.Part", "Part")
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.QuotationService", "QuotationService")
+                        .WithMany("QuotationServiceParts")
+                        .HasForeignKey("QuotationServiceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Part");
+
+                    b.Navigation("QuotationService");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -3099,65 +3044,16 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Service");
                 });
 
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogTag", b =>
-                {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
-                        .WithMany("Tags")
-                        .HasForeignKey("LogId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SystemLog");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
-                {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "SystemLog")
-                        .WithOne()
-                        .HasForeignKey("BusinessObject.SystemLogs.SecurityLog", "Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SystemLog");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLogRelation", b =>
-                {
-                    b.HasOne("BusinessObject.SystemLogs.SystemLog", "RelatedLog")
-                        .WithMany("SecurityLogRelations")
-                        .HasForeignKey("RelatedLogId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.SystemLogs.SecurityLog", "SecurityLog")
-                        .WithMany("Relations")
-                        .HasForeignKey("SecurityLogId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("RelatedLog");
-
-                    b.Navigation("SecurityLog");
-                });
-
             modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
                 {
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
                         .WithMany("SystemLogs")
                         .HasForeignKey("ApplicationUserId");
 
-                    b.HasOne("BusinessObject.SystemLogs.LogCategory", "Category")
-                        .WithMany("SystemLogs")
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Category");
 
                     b.Navigation("User");
                 });
@@ -3278,6 +3174,21 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("RepairOrderRepairRequest", b =>
+                {
+                    b.HasOne("BusinessObject.RepairOrder", null)
+                        .WithMany()
+                        .HasForeignKey("RepairOrdersRepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Customers.RepairRequest", null)
+                        .WithMany()
+                        .HasForeignKey("RepairRequestID")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.Navigation("Keywords");
@@ -3299,7 +3210,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
+                    b.Navigation("FeedBacks");
+
                     b.Navigation("Notifications");
+
+                    b.Navigation("RepairRequests");
 
                     b.Navigation("SystemLogs");
 
@@ -3315,7 +3230,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("Parts");
 
+                    b.Navigation("Quotations");
+
                     b.Navigation("RepairOrders");
+
+                    b.Navigation("RepairRequests");
 
                     b.Navigation("Staffs");
                 });
@@ -3327,18 +3246,18 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("VoucherUsages");
                 });
 
-            modelBuilder.Entity("BusinessObject.Color", b =>
-                {
-                    b.Navigation("Labels");
-                });
-
             modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
                 {
+                    b.Navigation("Quotations");
+
                     b.Navigation("RepairImages");
 
-                    b.Navigation("RequestParts");
-
                     b.Navigation("RequestServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.Customers.RequestService", b =>
+                {
+                    b.Navigation("RequestParts");
                 });
 
             modelBuilder.Entity("BusinessObject.Inspection", b =>
@@ -3399,6 +3318,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairOrderServiceParts");
 
+                    b.Navigation("RequestParts");
+
                     b.Navigation("ServiceParts");
                 });
 
@@ -3414,9 +3335,12 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Quotation", b =>
                 {
-                    b.Navigation("QuotationParts");
-
                     b.Navigation("QuotationServices");
+                });
+
+            modelBuilder.Entity("BusinessObject.QuotationService", b =>
+                {
+                    b.Navigation("QuotationServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -3426,6 +3350,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Jobs");
 
                     b.Navigation("Payments");
+
+                    b.Navigation("Quotations");
 
                     b.Navigation("RepairOrderServices");
 
@@ -3460,7 +3386,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("PromotionalCampaignServices");
 
+                    b.Navigation("QuotationServices");
+
                     b.Navigation("RepairOrderServices");
+
+                    b.Navigation("RequestServices");
 
                     b.Navigation("ServiceInspections");
 
@@ -3472,23 +3402,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ChildServiceCategories");
 
                     b.Navigation("Services");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.LogCategory", b =>
-                {
-                    b.Navigation("SystemLogs");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SecurityLog", b =>
-                {
-                    b.Navigation("Relations");
-                });
-
-            modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
-                {
-                    b.Navigation("SecurityLogRelations");
-
-                    b.Navigation("Tags");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicle", b =>

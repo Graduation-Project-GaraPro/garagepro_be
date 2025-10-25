@@ -24,7 +24,101 @@ namespace Garage_pro_api.Controllers
             var categories = await _service.GetAllCategoriesAsync();
             return Ok(categories);
         }
+        [HttpGet("parents")]
+        public async Task<ActionResult<IEnumerable<ServiceCategoryDto>>> GetParentCategories()
+        {
+            try
+            {
+                var categories = await _service.GetParentCategoriesAsync();
 
+                if (categories == null || !categories.Any())
+                    return NotFound(new { Message = "No parent service categories found." });
+
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An unexpected error occurred while retrieving parent categories.",
+                    Details = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("fromParent/{parentId}")]
+        public async Task<ActionResult<object>> GetAllFromParentCategory(
+            Guid parentId,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? childServiceCategoryId = null,
+            [FromQuery] string? searchTerm = null)
+        {
+            try
+            {
+                var result = await _service.GetAllServiceCategoryFromParentCategoryAsync(
+                    parentId,
+                    pageNumber,
+                    pageSize,
+                    childServiceCategoryId,
+                    searchTerm
+                );
+
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An unexpected error occurred while retrieving service categories.",
+                    Details = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("forBooking")]
+        public async Task<ActionResult<object>> GetAllForBooking(
+             [FromQuery] int pageNumber = 1,
+             [FromQuery] int pageSize = 10,
+             [FromQuery] Guid? serviceCategoryId = null,
+             [FromQuery] string? searchTerm = null)
+        {
+            try
+            {
+                if (pageNumber <= 0 || pageSize <= 0)
+                    return BadRequest(new { Message = "PageNumber and PageSize must be greater than zero." });
+
+                var result = await _service.GetAllCategoriesForBookingAsync(pageNumber, pageSize, serviceCategoryId, searchTerm);
+
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                // Lỗi do tham số không hợp lệ
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // Lỗi không tìm thấy dữ liệu
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Lỗi hệ thống
+                // Gợi ý: có thể log lại lỗi nếu bạn dùng ILogger
+                // _logger.LogError(ex, "Error occurred while getting service categories for booking");
+
+                return StatusCode(500, new
+                {
+                    Message = "An unexpected error occurred while retrieving data.",
+                    Details = ex.Message
+                });
+            }
+        }
         // GET: api/ServiceCategories/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<ServiceCategoryDto>> GetById(Guid id)

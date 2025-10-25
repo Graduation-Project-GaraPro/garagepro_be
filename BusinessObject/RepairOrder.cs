@@ -1,3 +1,7 @@
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Manager;
 using BusinessObject.Enums;
 using System;
 using System.Collections.Generic;
@@ -23,7 +27,7 @@ namespace BusinessObject
         public DateTime ReceiveDate { get; set; } = DateTime.UtcNow;
 
         [Required]
-        public RoType RoType { get; set; } // Updated to use enum
+        public RoType RoType { get; set; } //repair request, quotation, emergency 
 
         public DateTime? EstimatedCompletionDate { get; set; }
 
@@ -47,7 +51,7 @@ namespace BusinessObject
         [MaxLength(500)]
         public string Note { get; set; }
 
-        public int? LabelId { get; set; }
+        // Removed LabelId property as it should be accessed through OrderStatus
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -66,7 +70,7 @@ namespace BusinessObject
         public Guid BranchId { get; set; }
 
         [Required]
-        public Guid StatusId { get; set; }
+        public int StatusId { get; set; } // Changed from Guid to int
 
         [Required]
         public Guid VehicleId { get; set; }
@@ -80,6 +84,9 @@ namespace BusinessObject
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
+      
+        public virtual ICollection<RepairRequest> RepairRequest { get; set; } 
+
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
         public virtual Vehicle Vehicle { get; set; }
@@ -89,6 +96,8 @@ namespace BusinessObject
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
         public virtual FeedBack? FeedBack { get; set; }
+        // Add navigation property for quotations
+        public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
         public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }

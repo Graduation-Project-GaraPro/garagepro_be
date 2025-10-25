@@ -109,7 +109,8 @@ namespace Garage_pro_api.Controllers
         //            VehicleId = createRequestDto.VehicleId,
         //            RoType = createRequestDto.RepairOrderType,
         //            Note = createRequestDto.VehicleConcern,
-        //            LabelId = createRequestDto.LabelId,
+        //            // Removed LabelId as labels should be accessed through OrderStatus
+        //            // LabelId = createRequestDto.LabelId,
         //            UserId = createRequestDto.CustomerId,
         //            // Set default values for required fields
         //            StatusId = Guid.NewGuid(), // This should be set to a proper status ID
@@ -139,7 +140,13 @@ namespace Garage_pro_api.Controllers
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState);
+                return BadRequest(new { 
+                    message = "Invalid model state", 
+                    errors = ModelState.Select(x => new { 
+                        field = x.Key, 
+                        errors = x.Value.Errors.Select(e => e.ErrorMessage) 
+                    }) 
+                });
             }
 
             try
@@ -148,26 +155,50 @@ namespace Garage_pro_api.Controllers
                 var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userId))
                 {
-                    return Unauthorized("User not authenticated");
+                    return Unauthorized(new { message = "User not authenticated" });
                 }
 
                 // Get the user from the user service to extract their branch ID
                 var user = await _userService.GetByIdAsync(userId);
                 if (user == null)
                 {
-                    return Unauthorized("User not found");
+                    return Unauthorized(new { message = "User not found", userId = userId });
                 }
 
                 // Ensure the user has a branch assigned
                 if (!user.BranchId.HasValue)
                 {
-                    return BadRequest("User is not assigned to a branch");
+                    return BadRequest(new { 
+                        message = "User is not assigned to a branch", 
+                        userId = userId,
+                        userBranchId = user.BranchId 
+                    });
+                }
+
+                // Validate that the customer exists
+                var customer = await _userService.GetByIdAsync(createRoDto.CustomerId);
+                if (customer == null)
+                {
+                    return BadRequest(new { 
+                        message = "Customer not found", 
+                        customerId = createRoDto.CustomerId 
+                    });
+                }
+
+                // Validate that the vehicle exists
+                var vehicle = await _vehicleService.GetVehicleByIdAsync(createRoDto.VehicleId);
+                if (vehicle == null)
+                {
+                    return BadRequest(new { 
+                        message = "Vehicle not found", 
+                        vehicleId = createRoDto.VehicleId 
+                    });
                 }
 
                 // Get the default "Pending" status
                 var statusColumns = await _orderStatusService.GetOrderStatusesByColumnsAsync();
                 var pendingStatus = statusColumns.Pending.FirstOrDefault();
-                var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : Guid.NewGuid();
+                var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : 1;
 
                 // Create a new repair order based on the simplified DTO
                 var repairOrder = new BusinessObject.RepairOrder
@@ -178,7 +209,8 @@ namespace Garage_pro_api.Controllers
                     EstimatedCompletionDate = createRoDto.EstimatedCompletionDate,
                     EstimatedAmount = createRoDto.EstimatedAmount,
                     Note = createRoDto.Note,
-                    LabelId = createRoDto.LabelId,
+                    // Removed LabelId as labels should be accessed through OrderStatus
+                    // LabelId = createRoDto.LabelId,
                     EstimatedRepairTime = createRoDto.EstimatedRepairTime,
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
@@ -200,7 +232,13 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex.Message });
+                // Log the full exception details for debugging
+                return BadRequest(new { 
+                    message = "An error occurred while creating the repair order", 
+                    details = ex.Message,
+                    innerException = ex.InnerException?.Message,
+                    stackTrace = ex.StackTrace
+                });
             }
         }
 
@@ -213,8 +251,52 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Implementation would go here
-            return NoContent();
+            // First, get the existing repair order to preserve customer and vehicle information
+            var existingRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(id);
+            if (existingRepairOrder == null)
+            {
+                return NotFound();
+            }
+
+            // Ensure customer and vehicle cannot be changed to different entities
+            if (updateRepairOrderDto.UserId != existingRepairOrder.UserId)
+            {
+                return BadRequest("Cannot change customer. Please create a new repair order for a different customer.");
+            }
+
+            if (updateRepairOrderDto.VehicleId != existingRepairOrder.VehicleId)
+            {
+                return BadRequest("Cannot change vehicle. Please create a new repair order for a different vehicle.");
+            }
+
+            // Map the update DTO to the existing repair order
+            existingRepairOrder.ReceiveDate = updateRepairOrderDto.ReceiveDate;
+            existingRepairOrder.RoType = updateRepairOrderDto.RoType;
+            existingRepairOrder.EstimatedCompletionDate = updateRepairOrderDto.EstimatedCompletionDate;
+            existingRepairOrder.CompletionDate = updateRepairOrderDto.CompletionDate;
+            existingRepairOrder.Cost = updateRepairOrderDto.Cost;
+            existingRepairOrder.EstimatedAmount = updateRepairOrderDto.EstimatedAmount;
+            existingRepairOrder.PaidAmount = updateRepairOrderDto.PaidAmount;
+            existingRepairOrder.PaidStatus = updateRepairOrderDto.PaidStatus;
+            existingRepairOrder.EstimatedRepairTime = updateRepairOrderDto.EstimatedRepairTime;
+            existingRepairOrder.Note = updateRepairOrderDto.Note;
+            existingRepairOrder.UpdatedAt = DateTime.UtcNow;
+            existingRepairOrder.IsArchived = updateRepairOrderDto.IsArchived;
+            existingRepairOrder.ArchivedAt = updateRepairOrderDto.ArchivedAt;
+            existingRepairOrder.ArchivedByUserId = updateRepairOrderDto.ArchivedByUserId;
+            existingRepairOrder.BranchId = updateRepairOrderDto.BranchId;
+            existingRepairOrder.StatusId = updateRepairOrderDto.StatusId; // This is now an int
+
+            try
+            {
+                var updatedRepairOrder = await _repairOrderService.UpdateRepairOrderAsync(existingRepairOrder);
+                var repairOrderDto = _repairOrderService.MapToRepairOrderDto(updatedRepairOrder);
+                return Ok(repairOrderDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // DELETE: api/RepairOrder/5
@@ -251,13 +333,14 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/status/{statusId}
         [HttpGet("status/{statusId}")]
         [EnableQuery]
-        public async Task<IActionResult> GetRepairOrdersByStatus(Guid statusId)
+        public async Task<IActionResult> GetRepairOrdersByStatus(int statusId) // Changed from Guid to int
         {
             var repairOrders = await _repairOrderService.GetRepairOrdersByStatusAsync(statusId);
             return Ok(repairOrders);
         }
-        
+
         // POST: api/RepairOrder/status/update
+        [AllowAnonymous]
         [HttpPost("status/update")]
         public async Task<IActionResult> UpdateRepairOrderStatus([FromBody] UpdateRoBoardStatusDto updateDto)
         {
@@ -275,23 +358,6 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
         
-        // POST: api/RepairOrder/status/batch-update
-        [HttpPost("status/batch-update")]
-        public async Task<IActionResult> BatchUpdateRepairOrderStatus([FromBody] BatchUpdateRoBoardStatusDto batchUpdateDto)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            var result = await _repairOrderService.BatchUpdateRepairOrderStatusAsync(batchUpdateDto);
-            if (!result.OverallSuccess)
-            {
-                return BadRequest(result);
-            }
-
-            return Ok(result);
-        }
         
         // POST: api/RepairOrder/archive
         [HttpPost("archive")]
