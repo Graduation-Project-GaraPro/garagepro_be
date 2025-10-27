@@ -33,6 +33,21 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        [HttpGet]
+        [AllowAnonymous] // Allow anonymous access for testing
+        public async Task<IActionResult> GetOrderStatuses()
+        {
+            try
+            {
+                var statusColumns = await _orderStatusService.GetAllOrderStatusAsync();
+                return Ok(statusColumns);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving order statuses", error = ex.Message });
+            }
+        }
+
         // GET: api/orderstatus/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetOrderStatusById(int id) // Changed from Guid to int

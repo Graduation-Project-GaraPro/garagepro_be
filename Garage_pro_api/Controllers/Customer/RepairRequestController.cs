@@ -102,16 +102,16 @@ namespace Garage_pro_api.Controllers.Customer
             }
         }
 
-        //// GET: api/RepairRequests/{id}
-        //[HttpGet("{id}")]
-        //public async Task<IActionResult> GetRepairRequestById(Guid id)
-        //{
-        //    var request = await _repairRequestService.GetByIdAsync(id);
-        //    if (request == null)
-        //        return NotFound();
+        // GET: api/RepairRequests/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetRepairRequestById(Guid id)
+        {
+            var request = await _repairRequestService.GetByIdDetailsAsync(id);
+            if (request == null)
+                return NotFound();
 
-        //    return Ok(request);
-        //}
+            return Ok(request);
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> GetPaged(

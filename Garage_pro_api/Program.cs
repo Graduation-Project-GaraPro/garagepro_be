@@ -76,6 +76,8 @@ using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Repositories.RepairProgressRepositories;
+using Services.RepairProgressServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -313,6 +315,9 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 builder.Services.AddScoped<IPermissionService, PermissionService>(); 
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
+
+builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
+builder.Services.AddScoped<IRepairProgressService, RepairProgressService>();
 // Add this line to register the SignalR hub
 builder.Services.AddSignalR();
 

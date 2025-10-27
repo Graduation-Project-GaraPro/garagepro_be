@@ -100,7 +100,7 @@ namespace BusinessObject
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
-        public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
+        public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();
     }
 }

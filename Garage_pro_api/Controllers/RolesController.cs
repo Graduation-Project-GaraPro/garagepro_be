@@ -1,4 +1,6 @@
-﻿using BusinessObject.Authentication;
+﻿using System.Data;
+using BusinessObject.Authentication;
+using CloudinaryDotNet.Actions;
 using Dtos.Roles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -91,8 +93,29 @@ namespace Garage_pro_api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(string id)
         {
-            await _roleService.DeleteRoleAsync(id);
-            return NoContent();
+            try
+            {
+                var role = await _roleService.GetRoleByIdAsync(id);
+                if (role == null)
+                    throw new KeyNotFoundException("Role not found");
+                // Check if role is default
+                if (role.IsDefault)
+                    throw new InvalidOperationException("Cannot delete default role.");
+
+
+                var users = await _roleService.GetUsersByRoleIdAsync(role.Id);
+                if (users.Count > 0)
+                    throw new InvalidOperationException("Cannot delete role. This role is currently assigned to users.");
+
+                await _roleService.DeleteRoleAsync(id);
+                return NoContent();
+            }
+            catch(Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = ex.Message });
+            }
+           
         }
         [Authorize(Policy = "ROLE_VIEW")]
         [HttpGet("{roleId}/users")]
@@ -101,6 +124,7 @@ namespace Garage_pro_api.Controllers
             try
             {
                 var users = await _roleService.GetUsersByRoleIdAsync(roleId);
+
                 return Ok(users);
             }
             catch (Exception ex)

@@ -122,7 +122,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPut("customer-response")]
-        public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse(CustomerQuotationResponseDto responseDto)
+        public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse([FromBody]CustomerQuotationResponseDto responseDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
