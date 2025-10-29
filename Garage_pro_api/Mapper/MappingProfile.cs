@@ -244,7 +244,7 @@ namespace Garage_pro_api.Mapper
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
             CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
             CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
-           
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
 
 
 
