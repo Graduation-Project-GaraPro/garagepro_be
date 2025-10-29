@@ -68,7 +68,7 @@ namespace Services.PolicyServices
             existing.SessionTimeout = updatedPolicy.SessionTimeout;
             existing.MaxLoginAttempts = updatedPolicy.MaxLoginAttempts;
             existing.AccountLockoutTime = updatedPolicy.AccountLockoutTime;
-            existing.MfaRequired = updatedPolicy.MfaRequired;
+            
             existing.PasswordExpiryDays = updatedPolicy.PasswordExpiryDays;
             existing.EnableBruteForceProtection = updatedPolicy.EnableBruteForceProtection;
             existing.UpdatedBy = adminId;
@@ -232,7 +232,7 @@ namespace Services.PolicyServices
                 policy.SessionTimeout = snapshot.SessionTimeout;
                 policy.MaxLoginAttempts = snapshot.MaxLoginAttempts;
                 policy.AccountLockoutTime = snapshot.AccountLockoutTime;
-                policy.MfaRequired = snapshot.MfaRequired;
+                //policy.MfaRequired = snapshot.MfaRequired;
                 policy.PasswordExpiryDays = snapshot.PasswordExpiryDays;
                 policy.EnableBruteForceProtection = snapshot.EnableBruteForceProtection;
                 policy.UpdatedBy = null;
@@ -297,7 +297,7 @@ namespace Services.PolicyServices
                 policy.SessionTimeout = prevValues.SessionTimeout;
                 policy.MaxLoginAttempts = prevValues.MaxLoginAttempts;
                 policy.AccountLockoutTime = prevValues.AccountLockoutTime;
-                policy.MfaRequired = prevValues.MfaRequired;
+                //policy.MfaRequired = prevValues.MfaRequired;
                 policy.PasswordExpiryDays = prevValues.PasswordExpiryDays;
                 policy.EnableBruteForceProtection = prevValues.EnableBruteForceProtection;
                 policy.UpdatedBy = null;

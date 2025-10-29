@@ -12,5 +12,6 @@ namespace Repositories.PartRepositories
     {
         Task<bool> ExistsAsync(Expression<Func<Part, bool>> predicate);
         Task<Part> GetByIdAsync(Guid id);
+        IQueryable<Part> Query();
     }
 }

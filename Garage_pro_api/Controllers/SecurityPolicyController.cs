@@ -97,7 +97,7 @@ namespace Garage_pro_api.Controllers
                     SessionTimeout = request.SessionTimeout,
                     MaxLoginAttempts = request.MaxLoginAttempts,
                     AccountLockoutTime = request.AccountLockoutTime,
-                    MfaRequired = request.MfaRequired,
+                    //MfaRequired = request.MfaRequired,
                     PasswordExpiryDays = request.PasswordExpiryDays,
                     EnableBruteForceProtection = request.EnableBruteForceProtection
                 };
@@ -164,7 +164,7 @@ namespace Garage_pro_api.Controllers
                 SessionTimeout = policy.SessionTimeout,
                 MaxLoginAttempts = policy.MaxLoginAttempts,
                 AccountLockoutTime = policy.AccountLockoutTime,
-                MfaRequired = policy.MfaRequired,
+                
                 PasswordExpiryDays = policy.PasswordExpiryDays,
                 EnableBruteForceProtection = policy.EnableBruteForceProtection,
                 UpdatedBy = policy.UpdatedBy,

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using BusinessObject;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Repositories.ServiceRepositories
 {
@@ -47,9 +48,22 @@ namespace Repositories.ServiceRepositories
             return _context.Services
                 .Include(s => s.ServiceCategory)
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
-                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part).AsQueryable();
+                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .Include(s => s.RepairOrderServices)
+                .Include(s => s.ServiceInspections)
+                .Include(s => s.Jobs)
+                .Include(s => s.PromotionalCampaignServices)
+                .Include(s => s.QuotationServices)
+                .Include(s => s.RequestServices)
+
+                .AsQueryable();
             // nếu muốn Include category luôn:
             // return _context.Services.Include(s => s.ServiceCategory).AsQueryable();
+        }
+
+        public async Task<IDbContextTransaction> BeginTransactionAsync()
+        {
+            return await _context.Database.BeginTransactionAsync();
         }
         public async Task AddAsync(Service service)
         {

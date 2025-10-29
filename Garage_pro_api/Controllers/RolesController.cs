@@ -89,7 +89,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(StatusCodes.Status500InternalServerError, new { message =  ex.Message });
             }
         }
-        [Authorize(Policy = "ROLE_DELETE")]
+        //[Authorize(Policy = "ROLE_DELETE")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteRole(string id)
         {

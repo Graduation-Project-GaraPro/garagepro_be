@@ -631,7 +631,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.SessionTimeout).IsRequired();
                 entity.Property(e => e.MaxLoginAttempts).IsRequired();
                 entity.Property(e => e.AccountLockoutTime).IsRequired();
-                entity.Property(e => e.MfaRequired).IsRequired();
+                
                 entity.Property(e => e.PasswordExpiryDays).IsRequired();
                 entity.Property(e => e.EnableBruteForceProtection).IsRequired();
 

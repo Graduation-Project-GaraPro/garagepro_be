@@ -145,11 +145,11 @@ namespace Services.Authentication
             await _signInManager.Context.SignInAsync(principal, authProperties);
         }
 
-        public async Task<bool> RequiresMfaAsync(ApplicationUser user)
-        {
-            var policy = await _securityPolicyService.GetCurrentAsync();
-            return policy?.MfaRequired == true;
-        }
+        //public async Task<bool> RequiresMfaAsync(ApplicationUser user)
+        //{
+        //    var policy = await _securityPolicyService.GetCurrentAsync();
+        //    return policy?.MfaRequired == true;
+        //}
 
         public async Task<bool> IsPasswordExpiredAsync(ApplicationUser user)
         {

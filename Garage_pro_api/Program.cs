@@ -534,7 +534,7 @@ app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 
-// Initialize database
+//Initialize database
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -553,7 +553,6 @@ using (var scope = app.Services.CreateScope())
             SessionTimeout = 30,
             MaxLoginAttempts = 5,
             AccountLockoutTime = 15,
-            MfaRequired = false,
             PasswordExpiryDays = 90,
             EnableBruteForceProtection = true,
             CreatedAt = DateTime.UtcNow,

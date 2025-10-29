@@ -13,17 +13,18 @@ namespace Dtos.Services
         public Guid ServiceCategoryId { get; set; }
 
         [Required(ErrorMessage = "Service name is required")]
-        [MaxLength(100, ErrorMessage = "Service name cannot exceed 100 characters")]
+        [MaxLength(100, ErrorMessage = "Service name cannot exceed 100 characters"), MinLength(3)]
         public string ServiceName { get; set; } = string.Empty;
 
-        [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
-        public string? Description { get; set; }
+        [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters"),MinLength(10)]
+        public string Description { get; set; }
 
-        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
+        [Range(1000, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 1000")]
         public decimal Price { get; set; }
 
-        [Range(1, double.MaxValue, ErrorMessage = "Estimated duration must be at least 1 minute")]
+        [Range(1, double.MaxValue, ErrorMessage = "Estimated duration must be greater than or equal to 1")]
         public decimal EstimatedDuration { get; set; }
+
 
         public bool IsActive { get; set; } = true;
         public bool IsAdvanced { get; set; } = false;
