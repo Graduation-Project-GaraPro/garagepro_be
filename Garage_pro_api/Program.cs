@@ -79,6 +79,7 @@ using VNPAY.NET;
 using Repositories.RepairProgressRepositories;
 using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
+using Services.UserServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -439,14 +440,15 @@ builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
 
+
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // Database configuration - FIXED: Removed misplaced async and fixed the configuration
-builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    // Truyền IServiceProvider thay vì ILogService
-    options.AddInterceptors(
-        new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
-    );
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
 
 builder.Services.AddHostedService<CampaignExpirationService>();

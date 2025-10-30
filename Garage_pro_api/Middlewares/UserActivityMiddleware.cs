@@ -55,12 +55,37 @@ namespace Garage_pro_api.Middlewares
             }
             else if (statusCode >= 200 && statusCode < 300)
             {
-                //  Truy cập hợp lệ, chỉ log hoạt động người dùng
-                //await logService.LogUserActivityAsync(
-                //    $"Accessed {method} {path}",
-                //    userId,
-                //    user
-                //);
+                // Truy cập hợp lệ, chỉ log hoạt động người dùng
+                var pathValue = path.Value ?? string.Empty;
+
+                // Bỏ qua các endpoint thống kê
+                var isStatsEndpoint =
+                    pathValue.Contains("/api/ActivityLogs/stats", StringComparison.OrdinalIgnoreCase) ||
+                    pathValue.Contains("/api/ActivityLogs/quick-stats", StringComparison.OrdinalIgnoreCase) ||
+                    pathValue.Contains("/api/ActivityLogs/statistics", StringComparison.OrdinalIgnoreCase);
+
+                if (!isStatsEndpoint)
+                {
+                    // Xác định hành động tương ứng với HTTP method
+                    string userAction = method.ToUpper() switch
+                    {
+                        "GET" => $"viewed information at {pathValue}",
+                        "POST" => $"created a new resource at {pathValue}",
+                        "PUT" => $"updated resource at {pathValue}",
+                        "PATCH" => $"partially updated resource at {pathValue}",
+                        "DELETE" => $"deleted resource at {pathValue}",
+                        _ => $"accessed {pathValue} using {method}"
+                    };
+
+                    // Định dạng thân thiện hiển thị trên giao diện
+                    string logMessage = $"User {user ?? userId} {userAction}";
+
+                    await logService.LogUserActivityAsync(
+                        logMessage,
+                        userId,
+                        user
+                    );
+                }
             }
             else if (statusCode >= 400)
             {
