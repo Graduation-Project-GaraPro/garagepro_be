@@ -16,85 +16,95 @@ namespace Garage_pro_api.Middlewares
         public async Task InvokeAsync(HttpContext context, ILogService logService)
         {
             var user = context.User.Identity?.Name ?? "Anonymous";
-            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? null;
-            
+            var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var ip = context.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
             var agent = context.Request.Headers["User-Agent"].ToString();
-            var path = context.Request.Path;
+            var path = context.Request.Path.Value ?? string.Empty;
             var method = context.Request.Method;
 
-            // Gọi pipeline kế tiếp và bắt trạng thái trả về
-            var originalResponseBody = context.Response.Body;
+            // Ghi nhận nội dung phản hồi tạm thời
+            var originalBody = context.Response.Body;
             using var memoryStream = new MemoryStream();
             context.Response.Body = memoryStream;
 
             await _next(context);
 
-            // Đọc lại status code sau khi xử lý request
+            // Sao chép lại nội dung response về output gốc
             memoryStream.Position = 0;
-            await memoryStream.CopyToAsync(originalResponseBody);
-            context.Response.Body = originalResponseBody;
+            await memoryStream.CopyToAsync(originalBody);
+            context.Response.Body = originalBody;
 
             var statusCode = context.Response.StatusCode;
 
-            if (statusCode == StatusCodes.Status401Unauthorized)
+            // Nhóm các hành động log theo loại
+            switch (statusCode)
             {
-                //  Người dùng chưa đăng nhập
-                await logService.LogSecurityAsync(
-                    $"Unauthorized access attempt to {method} {path}",
-                    userId
-                );
-            }
-            else if (statusCode == StatusCodes.Status403Forbidden)
-            {
-                //  Người dùng đăng nhập nhưng không có quyền
-                await logService.LogSecurityAsync(
-                    $"Forbidden access attempt by {user} to {method} {path}",
-                    userId
-                );
-            }
-            else if (statusCode >= 200 && statusCode < 300)
-            {
-                // Truy cập hợp lệ, chỉ log hoạt động người dùng
-                var pathValue = path.Value ?? string.Empty;
-
-                // Bỏ qua các endpoint thống kê
-                var isStatsEndpoint =
-                    pathValue.Contains("/api/ActivityLogs/stats", StringComparison.OrdinalIgnoreCase) ||
-                    pathValue.Contains("/api/ActivityLogs/quick-stats", StringComparison.OrdinalIgnoreCase) ||
-                    pathValue.Contains("/api/ActivityLogs/statistics", StringComparison.OrdinalIgnoreCase);
-
-                if (!isStatsEndpoint)
-                {
-                    // Xác định hành động tương ứng với HTTP method
-                    string userAction = method.ToUpper() switch
-                    {
-                        "GET" => $"viewed information at {pathValue}",
-                        "POST" => $"created a new resource at {pathValue}",
-                        "PUT" => $"updated resource at {pathValue}",
-                        "PATCH" => $"partially updated resource at {pathValue}",
-                        "DELETE" => $"deleted resource at {pathValue}",
-                        _ => $"accessed {pathValue} using {method}"
-                    };
-
-                    // Định dạng thân thiện hiển thị trên giao diện
-                    string logMessage = $"User {user ?? userId} {userAction}";
-
+                case StatusCodes.Status401Unauthorized:
                     await logService.LogUserActivityAsync(
-                        logMessage,
-                        userId,
-                        user
+                        $"Unauthorized access attempt to {method} {path} from IP {ip}",
+                        userId,user
                     );
-                }
+                    break;
+
+                case StatusCodes.Status403Forbidden:
+                    await logService.LogSecurityAsync(
+                        $"Forbidden access attempt by {user} ({userId}) to {method} {path} from IP {ip}",
+                        userId
+                    );
+                    break;
+
+                case StatusCodes.Status400BadRequest:
+                    await logService.LogSystemAsync(
+                        $"Client error {statusCode} on {method} {path} by {user} ({userId})",
+                        LogLevel.Information
+                    );
+                    break;
+
+                default:
+                    if (statusCode >= 200 && statusCode < 300)
+                    {
+                        if (!IsStatsEndpoint(path))
+                        {
+                            var action = method.ToUpper() switch
+                            {
+                                "GET" => $"viewed information at {path}",
+                                "POST" => $"created a new resource at {path}",
+                                "PUT" => $"updated resource at {path}",
+                                "PATCH" => $"partially updated resource at {path}",
+                                "DELETE" => $"deleted resource at {path}",
+                                _ => $"accessed {path} using {method}"
+                            };
+
+                            await logService.LogUserActivityAsync(
+                                $"User {user} ({userId}) {action}",
+                                userId,
+                                user
+                            );
+                        }
+                    }
+                    else if (statusCode >= 400)
+                    {
+                        await logService.LogSystemAsync(
+                            $"Unexpected error {statusCode} on {method} {path} by {user} ({userId})",
+                            LogLevel.Warning
+                        );
+                    }
+                    else if (statusCode >= 500)
+                    {
+                        await logService.LogSystemAsync(
+                            $"Server error {statusCode} on {method} {path} by {user} ({userId}) from {ip}",
+                            LogLevel.Error
+                        );
+                    }
+                    break;
+                   
             }
-            else if (statusCode >= 400)
-            {
-                //  Lỗi client hoặc server
-                await logService.LogSystemAsync(
-                    $"Error {statusCode} when accessing {method} {path}",
-                    LogLevel.Warning
-                );
-            }
+
+           
+            static bool IsStatsEndpoint(string path) =>
+                path.Contains("/api/ActivityLogs/stats", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("/api/ActivityLogs/quick-stats", StringComparison.OrdinalIgnoreCase) ||
+                path.Contains("/api/ActivityLogs/statistics", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

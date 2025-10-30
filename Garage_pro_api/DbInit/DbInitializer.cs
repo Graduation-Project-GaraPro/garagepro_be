@@ -204,6 +204,7 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" }
     };
 
             foreach (var cat in categories)
@@ -226,6 +227,7 @@ namespace Garage_pro_api.DbInit
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
+            var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
 
             var defaultPermissions = new List<Permission>
                 {
@@ -277,7 +279,12 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId }
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId },
+
+                     // ✅ Log View
+
+                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId }
+
                 };
 
             foreach (var perm in defaultPermissions)
@@ -316,7 +323,9 @@ namespace Garage_pro_api.DbInit
                                     "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",
             
                                     // ✅ Promotional Management
-                                    "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE"
+                                    "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE",
+                                    // ✅ Promotional Management
+                                    "LOG_VIEW"
                                 }
                             },
                             {

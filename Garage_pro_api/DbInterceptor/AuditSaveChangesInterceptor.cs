@@ -33,7 +33,7 @@ namespace Garage_pro_api.DbInterceptor
                 var action = entry.State.ToString();
 
                 //logService.Info($"User '{user}' performed {action} on {entityName}");
-                logService.LogDatabaseAsync(action, entityName,LogLevel.Information);
+                //logService.LogDatabaseAsync(action, entityName,LogLevel.Information);
             }
 
             return base.SavingChanges(eventData, result);
