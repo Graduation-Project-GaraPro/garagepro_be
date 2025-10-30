@@ -77,6 +77,7 @@ using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
 
+using Repositories.PaymentRepositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -396,23 +397,38 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // vehicle
+//vehicle
+
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
-builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleBrandServices, VehicleBrandService>();
 builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
 builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
+
+//PAYMENT
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+
+
+
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
+<<<<<<< HEAD
 //builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 //builder.Services.AddScoped<PaymentService>();
 
 //builder.Services.AddScoped<IRevenueService, RevenueService>();
+=======
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+//builder.Services.AddScoped<PaymentService>();
+
+>>>>>>> backup_nminh
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 builder.Services.AddScoped<IInspectionService, InspectionService>();
@@ -437,6 +453,9 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
 
 // Database configuration - FIXED: Removed misplaced async and fixed the configuration
 builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
@@ -470,6 +489,11 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
+<<<<<<< HEAD
+=======
+                "http://localhost:3001",
+
+>>>>>>> backup_nminh
                 "http://localhost:3000",
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
@@ -506,6 +530,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontendAndAndroid");
+<<<<<<< HEAD
+=======
+// Use CORS with the specific policy for your frontend
+>>>>>>> backup_nminh
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
@@ -533,6 +561,8 @@ app.MapControllers();
 
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+
 
 // Initialize database
 using (var scope = app.Services.CreateScope())
