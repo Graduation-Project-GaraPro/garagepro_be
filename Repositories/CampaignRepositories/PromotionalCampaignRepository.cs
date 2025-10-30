@@ -17,11 +17,13 @@ namespace Repositories.CampaignRepositories
         {
             _context = context;
         }
-        public async Task<IQueryable<PromotionalCampaign>> QueryAsync()
+        public  IQueryable<PromotionalCampaign> Query()
         {
             return _context.PromotionalCampaigns
                 .Include(pc => pc.PromotionalCampaignServices)
                 .ThenInclude(pcs => pcs.Service)
+                .Include(pc => pc.VoucherUsages).ThenInclude(v=>v.Customer)
+                .Include(pc => pc.VoucherUsages).ThenInclude(v=>v.RepairOrder)
                 .AsQueryable();
         }
         public async Task<IEnumerable<PromotionalCampaign>> GetAllAsync()
@@ -32,9 +34,14 @@ namespace Repositories.CampaignRepositories
                 .ToListAsync();
         }
 
+       
+
         public async Task<PromotionalCampaign?> GetByIdAsync(Guid id)
         {
             return await _context.PromotionalCampaigns
+                .Include(pc => pc.PromotionalCampaignServices)
+                .ThenInclude(pcs => pcs.Service)
+                .Include(pc => pc.VoucherUsages)
                 .FirstOrDefaultAsync(pc => pc.Id == id);
         }
 
@@ -43,6 +50,7 @@ namespace Repositories.CampaignRepositories
             return await _context.PromotionalCampaigns
                 .Include(pc => pc.PromotionalCampaignServices)
                 .ThenInclude(pcs => pcs.Service)
+                 .Include(pc => pc.VoucherUsages)
                 .FirstOrDefaultAsync(pc => pc.Id == id);
         }
 

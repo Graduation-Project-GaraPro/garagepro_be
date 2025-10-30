@@ -138,7 +138,7 @@ namespace Garage_pro_api.Mapper
                 // Removed TotalAmount and DiscountAmount mappings as they're no longer in the entity
                 .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note))
                 .ForMember(dest => dest.ExpiresAt, opt => opt.MapFrom(src => src.ExpiresAt))
-                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FirstName + " "+ src.User.LastName))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => $"{src.Vehicle.Brand.BrandName} {src.Vehicle.Model.ModelName}"))
                 .ForMember(dest => dest.QuotationServiceParts, opt => opt.Ignore())
                 .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection))
@@ -242,6 +242,20 @@ namespace Garage_pro_api.Mapper
 
             // Campaign
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
+            CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+            CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+
+
+            CreateMap<VoucherUsageDto, VoucherUsage>().ReverseMap();
+
+
+
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
+
+
+
+
+
             CreateMap<Service, ServiceRelatedToCampaignDto>();
             // Part -> PartDto
             CreateMap<Part, PartDto>();

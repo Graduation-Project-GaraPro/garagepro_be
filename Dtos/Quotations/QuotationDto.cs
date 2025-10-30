@@ -130,7 +130,7 @@ namespace Dtos.Quotations
         [Required]
         public string Status { get; set; } // Approved, Rejected
 
-        public string CustomerNote { get; set; }
+        public string? CustomerNote { get; set; }
         
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }
         // Change to use QuotationServicePart instead of direct QuotationPart

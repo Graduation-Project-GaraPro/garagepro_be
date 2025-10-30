@@ -76,6 +76,10 @@ using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Repositories.RepairProgressRepositories;
+using Services.RepairProgressServices;
+using Garage_pro_api.BackgroundServices;
+using Services.UserServices;
 
 using Repositories.PaymentRepositories;
 var builder = WebApplication.CreateBuilder(args);
@@ -315,6 +319,9 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
+
+builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
+builder.Services.AddScoped<IRepairProgressService, RepairProgressService>();
 // Add this line to register the SignalR hub
 builder.Services.AddSignalR();
 
@@ -453,15 +460,19 @@ builder.Services.Configure<CloudinarySettings>(
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
 
+
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // Database configuration - FIXED: Removed misplaced async and fixed the configuration
-builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    // Truyền IServiceProvider thay vì ILogService
-    options.AddInterceptors(
-        new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
-    );
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
+
+builder.Services.AddHostedService<CampaignExpirationService>();
+
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -553,7 +564,7 @@ app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 
 
-// Initialize database
+//Initialize database
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -572,7 +583,6 @@ using (var scope = app.Services.CreateScope())
             SessionTimeout = 30,
             MaxLoginAttempts = 5,
             AccountLockoutTime = 15,
-            MfaRequired = false,
             PasswordExpiryDays = 90,
             EnableBruteForceProtection = true,
             CreatedAt = DateTime.UtcNow,

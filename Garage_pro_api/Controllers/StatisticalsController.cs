@@ -22,7 +22,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Get()
+        public async Task<IActionResult> GetMyStatisticals()
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)

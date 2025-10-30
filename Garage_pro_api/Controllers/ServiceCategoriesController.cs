@@ -24,6 +24,22 @@ namespace Garage_pro_api.Controllers
             var categories = await _service.GetAllCategoriesAsync();
             return Ok(categories);
         }
+
+
+        [HttpGet("parentValid")]
+        public async Task<ActionResult<IEnumerable<ServiceCategoryDto>>> GetParentValidAll([FromQuery] Guid? serviceCategoryId)
+        {
+            var categories = await _service.GetValidParentCategoriesAsync(serviceCategoryId);
+            return Ok(categories);
+        }
+        [HttpGet("parentsForFilter")]
+        public async Task<IActionResult> GetParentCategoriesForFilter()
+        {
+            var result = await _service.GetParentCategoriesForFilterAsync();
+            return Ok(result);
+        }
+
+
         [HttpGet("parents")]
         public async Task<ActionResult<IEnumerable<ServiceCategoryDto>>> GetParentCategories()
         {
@@ -79,7 +95,15 @@ namespace Garage_pro_api.Controllers
                 });
             }
         }
-
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetFilteredCategories(
+           [FromQuery] Guid? parentServiceCategoryId,
+           [FromQuery] string? searchTerm,
+           [FromQuery] bool? isActive)
+        {
+            var result = await _service.GetAllCategoriesWithFilterAsync(parentServiceCategoryId, searchTerm, isActive);
+            return Ok(result);
+        }
         [HttpGet("forBooking")]
         public async Task<ActionResult<object>> GetAllForBooking(
              [FromQuery] int pageNumber = 1,
@@ -179,9 +203,17 @@ namespace Garage_pro_api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var success = await _service.DeleteCategoryAsync(id);
-            if (!success) return NotFound();
-            return NoContent();
+            try
+            {
+                var success = await _service.DeleteCategoryAsync(id);
+                if (!success) return NotFound();
+                return NoContent();
+            }
+            catch (ApplicationException ex)
+            {
+                return BadRequest(new { message = "An unexpected error occurred.", detail = ex.Message });
+            }
+
         }
     }
 }

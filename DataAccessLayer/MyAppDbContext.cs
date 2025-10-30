@@ -631,7 +631,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.SessionTimeout).IsRequired();
                 entity.Property(e => e.MaxLoginAttempts).IsRequired();
                 entity.Property(e => e.AccountLockoutTime).IsRequired();
-                entity.Property(e => e.MfaRequired).IsRequired();
+                
                 entity.Property(e => e.PasswordExpiryDays).IsRequired();
                 entity.Property(e => e.EnableBruteForceProtection).IsRequired();
 
@@ -989,7 +989,7 @@ namespace DataAccessLayer
             // PromotionalCampaignService n-n Branch
 
             modelBuilder.Entity<PromotionalCampaignService>()
-                .HasKey(e => e.PromotionalCampaignServiceId);
+            .HasKey(pcs => new { pcs.PromotionalCampaignId, pcs.ServiceId });
 
             modelBuilder.Entity<PromotionalCampaignService>()
                 .HasOne(pcs => pcs.PromotionalCampaign)
@@ -1000,6 +1000,8 @@ namespace DataAccessLayer
                 .HasOne(pcs => pcs.Service)
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
+
+
             // 🔹 RepairRequest - RequestService (1-n)
             modelBuilder.Entity<RepairRequest>()
                 .HasMany(r => r.RequestServices)
@@ -1024,7 +1026,8 @@ namespace DataAccessLayer
             modelBuilder.Entity<VoucherUsage>(entity =>
             {
                 entity.ToTable("VoucherUsage");
-
+                entity.Property(v => v.Id)
+                .HasDefaultValueSql("NEWID()");
                 entity.HasKey(v => v.Id);
 
                 entity.Property(v => v.UsedAt)
@@ -1033,7 +1036,7 @@ namespace DataAccessLayer
                 entity.HasOne(v => v.Campaign)
                       .WithMany(c => c.VoucherUsages)
                       .HasForeignKey(v => v.CampaignId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(v => v.Customer)
                       .WithMany()

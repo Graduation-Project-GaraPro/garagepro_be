@@ -502,19 +502,13 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
                 {
-                    b.Property<Guid>("PromotionalCampaignServiceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("PromotionalCampaignId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.HasKey("PromotionalCampaignServiceId");
-
-                    b.HasIndex("PromotionalCampaignId");
+                    b.HasKey("PromotionalCampaignId", "ServiceId");
 
                     b.HasIndex("ServiceId");
 
@@ -525,7 +519,8 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("CampaignId")
                         .HasColumnType("uniqueidentifier");
@@ -1342,9 +1337,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<int>("MaxLoginAttempts")
                         .HasColumnType("int");
-
-                    b.Property<bool>("MfaRequired")
-                        .HasColumnType("bit");
 
                     b.Property<int>("MinPasswordLength")
                         .HasColumnType("int");
@@ -2440,7 +2432,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "Campaign")
                         .WithMany("VoucherUsages")
                         .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")

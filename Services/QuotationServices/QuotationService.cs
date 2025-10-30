@@ -254,43 +254,65 @@ namespace Services.QuotationServices
 
         public async Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto)
         {
-            // Get the quotation with all related data
+            // Lấy quotation cùng toàn bộ dữ liệu liên quan
             var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
             if (quotation == null)
                 throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
 
-            // Update quotation status
+            // Cập nhật trạng thái và thời gian phản hồi của khách hàng
             quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
 
-            foreach (var quotationService in quotation.QuotationServices)
+            // Cập nhật lựa chọn dịch vụ (QuotationServices)
+            if (responseDto.SelectedServices != null && responseDto.SelectedServices.Any())
             {
-                quotationService.IsSelected = true;
-            }
+                var selectedServiceIds = responseDto.SelectedServices
+                    .Select(s => s.QuotationServiceId)
+                    .ToHashSet();
 
-            // Update selected service parts
-            if (responseDto.SelectedServiceParts != null)
-            {
-                foreach (var selectedServicePart in responseDto.SelectedServiceParts)
+                foreach (var qs in quotation.QuotationServices)
                 {
-                    // Find the service part in all quotation services
-                    var quotationServicePart = quotation.QuotationServices
-                        .SelectMany(qs => qs.QuotationServiceParts)
-                        .FirstOrDefault(qsp => qsp.QuotationServicePartId == selectedServicePart.QuotationServicePartId);
-
-                    if (quotationServicePart != null)
-                    {
-                        quotationServicePart.IsSelected = true;
-                    }
+                    qs.IsSelected = selectedServiceIds.Contains(qs.QuotationServiceId);
+                }
+            }
+            else
+            {
+                // Nếu không có dịch vụ nào được gửi lên, có thể giữ nguyên hoặc bỏ chọn tất cả
+                foreach (var qs in quotation.QuotationServices)
+                {
+                    qs.IsSelected = false;
                 }
             }
 
-            // Validate part selection based on service type (advanced vs regular)
+            // Cập nhật lựa chọn phụ tùng (QuotationServiceParts)
+            if (responseDto.SelectedServiceParts != null && responseDto.SelectedServiceParts.Any())
+            {
+                var selectedPartIds = responseDto.SelectedServiceParts
+                    .Select(p => p.QuotationServicePartId)
+                    .ToHashSet();
+
+                foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
+                {
+                    part.IsSelected = selectedPartIds.Contains(part.QuotationServicePartId);
+                }
+            }
+            else
+            {
+                // Nếu không có part nào được chọn, bỏ chọn tất cả
+                foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
+                {
+                    part.IsSelected = false;
+                }
+            }
+
+            // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
             await ValidateAndCorrectPartSelectionAsync(quotation);
 
+            // Lưu lại thay đổi
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
+
 
 
         /// Validates and corrects part selection based on whether services are advanced or not.

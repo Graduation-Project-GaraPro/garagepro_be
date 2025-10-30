@@ -51,5 +51,10 @@ namespace Services.RoleServices
         {
             return await _innerService.GetAllPermissionsGroupedAsync();
         }
+
+        public IQueryable<Permission> Query()
+        {
+            return  _innerService.Query();
+        }
     }
 }

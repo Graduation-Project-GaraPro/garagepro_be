@@ -1,6 +1,7 @@
 ﻿using BusinessObject.Enums;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace Dtos.InspectionAndRepair
 {
@@ -89,7 +90,7 @@ namespace Dtos.InspectionAndRepair
         public Guid ServicePartId { get; set; }
         public Guid PartId { get; set; }
         public string? PartName { get; set; }
-        public int Quantity { get; set; }
+        //public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
     }
 
@@ -121,4 +122,17 @@ namespace Dtos.InspectionAndRepair
         public string? Status { get; set; }
         public DateTime CreatedAt { get; set; }
     }
+    public class AddServiceToInspectionRequest
+    {
+        [Required]
+        public Guid ServiceId { get; set; }
+    }
+    public class AllServiceDto
+    {
+        public Guid ServiceId { get; set; }
+        public string ServiceName { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+        public bool IsAdvanced { get; set; }
+    }
+
 }

@@ -20,6 +20,7 @@ using Services.SmsSenders;
 
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Services.LogServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -34,12 +35,13 @@ namespace Garage_pro_api.Controllers
         private readonly DynamicAuthenticationService _authService;
         private readonly IConfiguration _config;
         private readonly ISmsSender _smsSender;
+        private readonly ILogService _logService;
         // Lưu OTP tạm thời (dev/test)
         private static readonly Dictionary<string, string> _otpTempStore = new();
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService, IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender)
+            ITokenService tokenService, IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender, ILogService logService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -48,6 +50,7 @@ namespace Garage_pro_api.Controllers
             _authService = dynamicAuthenticationService;
             _config = config;
             _smsSender = smsSender;
+            _logService = logService;
         }
 
         //  Gửi OTP
@@ -211,49 +214,40 @@ namespace Garage_pro_api.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Lấy user theo số điện thoại
-            var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+            var signInResult = await _authService.PasswordSignInAsync(model.PhoneNumber, model.Password);
 
-            if (user == null)
-                return BadRequest(new { error = "User not found" });
-
-            // Kiểm tra mật khẩu
-            var passwordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-            if (!passwordValid)
+            if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.LockedOut)
             {
-                // Tăng số lần đăng nhập thất bại nếu cần
-                await _userManager.AccessFailedAsync(user);
-                return BadRequest(new { error = "Invalid login attempt" });
-            }
+                var userInfor = await _userManager.Users
+                    .FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
 
-            // Reset failed count nếu login thành công
-            await _userManager.ResetAccessFailedCountAsync(user);
+                var lockoutInfo = await _authService.GetLockoutInfoAsync(userInfor);
 
-            // Kiểm tra lockout
-            if (await _userManager.IsLockedOutAsync(user))
-            {
-                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
-                var remainingMinutes = lockoutEnd.HasValue
-                    ? (lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes
-                    : 0;
+                // Tạo thông điệp chi tiết
+                var message = $"User '{userInfor.UserName}' (Email: {userInfor.Email}, Phone: {userInfor.PhoneNumber}) " +
+                              $"has been locked out due to multiple failed login attempts. " +
+                              $"Lockout end time: {lockoutInfo.LockoutEnd?.ToLocalTime():f}.";
 
+                // Ghi log bảo mật
+                await _logService.LogSecurityAsync(message,userInfor.Id);
+
+                // Trả về thông tin khóa tài khoản
                 return BadRequest(new
                 {
-                    error = "Account is temporarily locked due to failed login attempts",
-                    lockoutEnd,
-                    remainingMinutes
+                    error = "Account locked out",
+                    details = lockoutInfo
                 });
             }
 
-            // Cập nhật LastLogin
-            user.LastLogin = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
+            if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.Failed)
+                return BadRequest(new { error = "Invalid phone number or password." });
 
-            // Tạo JWT token
-            var accessToken = await _tokenService.GenerateJwtToken(user, 60); 
-            var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
+            // Đăng nhập thành công -> tạo token
+            var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
+            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60);
 
+            // Thêm refresh token vào cookie (tuỳ chọn)
             Response.Cookies.Append("X-Refresh-Token", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
@@ -262,25 +256,14 @@ namespace Garage_pro_api.Controllers
                 Expires = DateTimeOffset.UtcNow.AddDays(7)
             });
 
-            // Tạo ClaimsPrincipal cho Cookie
-            var claimsPrincipal = _tokenService.ValidateToken(accessToken);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                claimsPrincipal,
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
-                });
-
-
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(10).TotalSeconds), // Đồng bộ với thời gian access token
                 UserId = user.Id,
                 Email = user.Email,
+                
                 Roles = await _userManager.GetRolesAsync(user),
             };
 

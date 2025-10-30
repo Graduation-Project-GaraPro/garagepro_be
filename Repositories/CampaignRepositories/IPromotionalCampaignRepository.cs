@@ -10,7 +10,7 @@ namespace Repositories.CampaignRepositories
     public interface IPromotionalCampaignRepository
     {
         Task<IEnumerable<PromotionalCampaign>> GetAllAsync();
-        Task<IQueryable<PromotionalCampaign>> QueryAsync();
+        IQueryable<PromotionalCampaign> Query();
         Task<PromotionalCampaign?> GetByIdAsync(Guid id);
         Task<PromotionalCampaign?> GetWithServicesAsync(Guid id);
 

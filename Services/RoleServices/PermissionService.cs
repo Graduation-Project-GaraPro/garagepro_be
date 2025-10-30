@@ -40,7 +40,11 @@ namespace Services.RoleServices
                 .Include(p => p.Category)  // load Category cho permission
                 .ToListAsync();
         }
-
+        public IQueryable<Permission> Query()
+        {
+            return  _context.Permissions.Include(p=>p.Category).AsQueryable();
+                
+        }
 
         public async Task<List<PermissionCategoryDto>> GetAllPermissionsGroupedAsync()
         {

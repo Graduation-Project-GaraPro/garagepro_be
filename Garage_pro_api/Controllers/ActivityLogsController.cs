@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using BusinessObject.SystemLogs;
 using Dtos.Logs;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Repositories.LogRepositories;
@@ -8,7 +9,9 @@ using Services.LogServices;
 
 namespace Garage_pro_api.Controllers
 {
+    
     [Route("api/[controller]")]
+    [Authorize("LOG_VIEW")]
     [ApiController]
     public class ActivityLogsController : ControllerBase
     {

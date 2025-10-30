@@ -29,6 +29,7 @@ namespace Dtos.InspectionAndRepair
         public List<TechnicianDto> Technicians { get; set; }
 
     }
+
     public class TechnicianDto
     {
         public Guid TechnicianId { get; set; }
