@@ -27,5 +27,8 @@ namespace Dtos.Campaigns
         public DateTime UpdatedAt { get; set; }
 
         public List<ServiceRelatedToCampaignDto> Services { get; set; } = new();
+
+        public virtual ICollection<VoucherUsageDto> VoucherUsages { get; set; }
+       = new List<VoucherUsageDto>();
     }
 }

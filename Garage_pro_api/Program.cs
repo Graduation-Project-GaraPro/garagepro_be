@@ -78,6 +78,7 @@ using Microsoft.Extensions.Options;
 using VNPAY.NET;
 using Repositories.RepairProgressRepositories;
 using Services.RepairProgressServices;
+using Garage_pro_api.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -447,6 +448,9 @@ builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
         new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
     );
 });
+
+builder.Services.AddHostedService<CampaignExpirationService>();
+
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
