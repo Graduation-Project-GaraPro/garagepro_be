@@ -49,14 +49,21 @@ namespace Garage_pro_api.Mapper
               .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name));
 
             CreateMap<BusinessObject.Branches.ServicePart, ServicePartDto>()
-              .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name));
+              .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name))
+              .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.Part.Price));
 
             CreateMap<ServiceInspection, ServiceInspectionDto>()
                 .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.Service.ServiceName))
                 .ForMember(d => d.ConditionStatus, o => o.MapFrom(s => (int)s.ConditionStatus));
 
             CreateMap<PartInspection, PartInspectionDto>();
-                
+
+            CreateMap<Service, AllServiceDto>()
+                .ForMember(d => d.ServiceId, o => o.MapFrom(s => s.ServiceId))
+                .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.ServiceName))
+                .ForMember(d => d.Price, o => o.MapFrom(s => s.Price))
+                .ForMember(d => d.IsAdvanced, o => o.MapFrom(s => s.IsAdvanced));
+
         }
     }
 }
