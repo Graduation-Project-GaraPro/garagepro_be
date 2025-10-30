@@ -251,7 +251,7 @@ namespace Garage_pro_api.Controllers
             await _userManager.UpdateAsync(user);
 
             // Tạo JWT token
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10); 
+            var accessToken = await _tokenService.GenerateJwtToken(user, 60); 
             var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
 
             Response.Cookies.Append("X-Refresh-Token", refreshToken, new CookieOptions

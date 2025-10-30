@@ -447,6 +447,9 @@ builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
 
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
+
 // Database configuration - FIXED: Removed misplaced async and fixed the configuration
 builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
 {
@@ -479,6 +482,8 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
+                "http://localhost:3001",
+
                 "http://localhost:3000",
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
@@ -543,6 +548,8 @@ app.MapControllers();
 
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+
 
 // Initialize database
 using (var scope = app.Services.CreateScope())
