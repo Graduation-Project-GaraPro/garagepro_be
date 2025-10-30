@@ -419,16 +419,12 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
 
-<<<<<<< HEAD
-//builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-//builder.Services.AddScoped<PaymentService>();
 
-//builder.Services.AddScoped<IRevenueService, RevenueService>();
-=======
+
+builder.Services.AddScoped<IRevenueService, RevenueService>();
+
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-//builder.Services.AddScoped<PaymentService>();
 
->>>>>>> backup_nminh
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 builder.Services.AddScoped<IInspectionService, InspectionService>();
@@ -489,11 +485,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-<<<<<<< HEAD
-=======
                 "http://localhost:3001",
-
->>>>>>> backup_nminh
                 "http://localhost:3000",
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
@@ -530,10 +522,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontendAndAndroid");
-<<<<<<< HEAD
-=======
-// Use CORS with the specific policy for your frontend
->>>>>>> backup_nminh
+
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
