@@ -1,8 +1,10 @@
-﻿using System.Text.Json;
+﻿using System.Security.Claims;
+using System.Text.Json;
 using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Policies;
 using Dtos.Policies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +13,7 @@ using Services.PolicyServices;
 namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize("POLICY_MANAGEMENT")]
     [ApiController]
     public class SecurityPolicyController : ControllerBase
     {
@@ -43,7 +46,10 @@ namespace Garage_pro_api.Controllers
         {
             try
             {
-                var policy = await _securityPolicyService.RevertToSnapshotAsync(historyId);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userName = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                var policy = await _securityPolicyService.RevertToSnapshotAsync(historyId,userId);
                 return Ok(policy);
             }
             catch (KeyNotFoundException ex)
@@ -62,7 +68,10 @@ namespace Garage_pro_api.Controllers
         {
             try
             {
-                var policy = await _securityPolicyService.UndoChangeAsync(historyId);
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var userName = User.FindFirst(ClaimTypes.Name)?.Value;
+
+                var policy = await _securityPolicyService.UndoChangeAsync(historyId, userId);
                 return Ok(policy);
             }
             catch (KeyNotFoundException ex)
@@ -85,7 +94,7 @@ namespace Garage_pro_api.Controllers
             //    return Unauthorized();
 
             //var adminId = adminUser.Id;
-
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             try
             {
                 var updatedPolicy = new SecurityPolicy
@@ -99,12 +108,13 @@ namespace Garage_pro_api.Controllers
                     AccountLockoutTime = request.AccountLockoutTime,
                     //MfaRequired = request.MfaRequired,
                     PasswordExpiryDays = request.PasswordExpiryDays,
-                    EnableBruteForceProtection = request.EnableBruteForceProtection
+                    EnableBruteForceProtection = request.EnableBruteForceProtection,
+                    UpdatedBy = userId,
                 };
 
                 await _securityPolicyService.UpdatePolicyAsync(
                     updatedPolicy,
-                    null,
+                    userId,
                     request.ChangeSummary
                 );
 

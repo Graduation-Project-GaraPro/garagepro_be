@@ -16,9 +16,9 @@ namespace Services.PolicyServices
         Task<SecurityPolicyHistory> GetHistoryAsync(Guid historyId);
 
 
-        Task<SecurityPolicyDto> UndoChangeAsync(Guid historyId);
+        Task<SecurityPolicyDto> UndoChangeAsync(Guid historyId, string userId);
 
-        Task<SecurityPolicyDto> RevertToSnapshotAsync(Guid historyId);
+        Task<SecurityPolicyDto> RevertToSnapshotAsync(Guid historyId, string userId);
 
 
         Task<IEnumerable<SecurityPolicyHistory>> GetAllHistoryAsync();

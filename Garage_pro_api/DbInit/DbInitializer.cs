@@ -204,7 +204,8 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" }
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" }
     };
 
             foreach (var cat in categories)
@@ -228,6 +229,7 @@ namespace Garage_pro_api.DbInit
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
+            var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
 
             var defaultPermissions = new List<Permission>
                 {
@@ -283,7 +285,11 @@ namespace Garage_pro_api.DbInit
 
                      // ✅ Log View
 
-                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId }
+                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId },
+
+                     // ✅ PolicySecurity
+
+                     new Permission { Id = Guid.NewGuid(), Code = "POLICY_MANAGEMENT", Name = "Policy Management", Description = "Can view and update, revert Policy,Policy history.", CategoryId = policyCatId }
 
                 };
 
@@ -324,8 +330,11 @@ namespace Garage_pro_api.DbInit
             
                                     // ✅ Promotional Management
                                     "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE",
-                                    // ✅ Promotional Management
-                                    "LOG_VIEW"
+                                    // ✅ LOG MONITORING
+                                    "LOG_VIEW" , 
+                                    
+                                    // ✅ Security Policy
+                                    "POLICY_MANAGEMENT"
                                 }
                             },
                             {
