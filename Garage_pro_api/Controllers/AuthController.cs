@@ -219,7 +219,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { error = "User not found" });
 
             // Kiểm tra mật khẩu
-            var passwordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+            var passwordValid = await _authService.PasswordSignInAsync(user, model.Password);
             if (!passwordValid)
             {
                 // Tăng số lần đăng nhập thất bại nếu cần
