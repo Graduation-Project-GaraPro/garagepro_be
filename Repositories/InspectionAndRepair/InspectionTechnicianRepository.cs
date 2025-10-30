@@ -30,27 +30,28 @@ namespace Repositories.InspectionAndRepair
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
                 .Include(i => i.RepairOrder)
-    .ThenInclude(ro => ro.RepairOrderServices)
-        .ThenInclude(ros => ros.Service)
-            .ThenInclude(s => s.ServiceParts)
-                .ThenInclude(sp => sp.Part)
-
+                    .ThenInclude(ro => ro.RepairOrderServices)
+                        .ThenInclude(ros => ros.Service)
+                            .ThenInclude(s => s.ServiceParts)
+                                .ThenInclude(sp => sp.Part)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.RepairOrderServiceParts)
                             .ThenInclude(rosp => rosp.Part)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
-                      .ThenInclude(b => b.Brand)
+                        .ThenInclude(v => v.Brand)
                 .Include(i => i.RepairOrder)
-                 .ThenInclude(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Model)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Model)
                 .Include(i => i.RepairOrder)
-                 .ThenInclude(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Color)
-                .Include(i => i.RepairOrder.Vehicle)
-                    .ThenInclude(v => v.User)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Color)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.User)
                 .OrderByDescending(i => i.CreatedAt)
+                .AsSplitQuery() //Tách thành nhiều query nhỏ
                 .ToListAsync();
         }
 
@@ -65,28 +66,29 @@ namespace Repositories.InspectionAndRepair
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
                 .Include(i => i.RepairOrder)
-    .ThenInclude(ro => ro.RepairOrderServices)
-        .ThenInclude(ros => ros.Service)
-            .ThenInclude(s => s.ServiceParts)
-                .ThenInclude(sp => sp.Part)
-
+                    .ThenInclude(ro => ro.RepairOrderServices)
+                        .ThenInclude(ros => ros.Service)
+                            .ThenInclude(s => s.ServiceParts)
+                                .ThenInclude(sp => sp.Part)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.RepairOrderServiceParts)
                             .ThenInclude(rosp => rosp.Part)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
-                      .ThenInclude(b => b.Brand)
+                        .ThenInclude(v => v.Brand)
                 .Include(i => i.RepairOrder)
-                 .ThenInclude(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Model)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Model)
                 .Include(i => i.RepairOrder)
-                 .ThenInclude(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Color)
-                .Include(i => i.RepairOrder.Vehicle)
-                    .ThenInclude(v => v.User)
-                .OrderByDescending(i => i.CreatedAt)
-                .FirstOrDefaultAsync();
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Color)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.User)
+                
+                .AsSplitQuery() 
+                .FirstOrDefaultAsync(); 
         }
 
         public async Task<List<RepairOrderService>> GetRepairOrderServicesAsync(Guid repairOrderId)
@@ -109,5 +111,27 @@ namespace Repositories.InspectionAndRepair
 
         public void RemovePartInspections(IEnumerable<PartInspection> inspections)
             => _context.PartInspections.RemoveRange(inspections);
+
+        public async Task<bool> HasRepairOrderServicesAsync(Guid repairOrderId)
+        {
+            return await _context.RepairOrderServices
+                .AnyAsync(ros => ros.RepairOrderId == repairOrderId);
+        }
+
+        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
+        {
+            return await _context.Services
+                .Include(s => s.ServiceParts)
+                    .ThenInclude(sp => sp.Part)
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+        }
+        public async Task<List<Service>> GetAllServicesAsync()
+        {
+            return await _context.Services
+                .OrderBy(s => s.ServiceName)
+                .ToListAsync();
+        }
+        public void RemoveServiceInspection(ServiceInspection serviceInspection)
+            => _context.ServiceInspections.Remove(serviceInspection);
     }
 }

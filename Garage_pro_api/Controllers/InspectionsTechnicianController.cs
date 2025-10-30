@@ -124,5 +124,77 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        [HttpGet("services")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> GetAllServices()
+        {
+            try
+            {
+                var services = await _inspectionService.GetAllServicesAsync();
+                return Ok(services);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi lấy danh sách service.", Error = ex.Message });
+            }
+        }
+
+        [HttpPost("{inspectionId}/services")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> AddServiceToInspection(Guid inspectionId, [FromBody] AddServiceToInspectionRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+
+            try
+            {
+                var dto = await _inspectionService.AddServiceToInspectionAsync(inspectionId, request, user.Id);
+                return Ok(new
+                {
+                    Message = "Thêm service vào Inspection thành công.",
+                    Inspection = dto
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi thêm service vào Inspection.", Error = ex.Message });
+            }
+        }
+
+        [HttpDelete("{inspectionId}/services/{serviceInspectionId}")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> RemoveServiceFromInspection(Guid inspectionId, Guid serviceInspectionId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+
+            try
+            {
+                var dto = await _inspectionService.RemoveServiceFromInspectionAsync(inspectionId, serviceInspectionId, user.Id);
+                return Ok(new
+                {
+                    Message = "Xóa service khỏi Inspection thành công.",
+                    Inspection = dto
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi xóa service khỏi Inspection.", Error = ex.Message });
+            }
+        }
+
     }
 }
