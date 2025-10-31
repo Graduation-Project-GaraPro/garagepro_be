@@ -90,8 +90,8 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000013", "System", "Manager1", "Manager"),
-                ("0900000014", "System", "Manager2", "Manager"),
+                ("0900000003", "System", "Manager1", "Manager"),
+                ("0900000004", "System", "Manager2", "Manager"),
                 ("0900000005", "Default", "Customer", "Customer"),
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
@@ -386,10 +386,10 @@ namespace Garage_pro_api.DbInit
         }
 
         private async Task SeedPartCategoriesAsync()
-{
-    if (!_context.PartCategories.Any())
-    {
-        var categories = new List<PartCategory>
+        {
+            if (!_context.PartCategories.Any())
+            {
+                var categories = new List<PartCategory>
         {
             new PartCategory { CategoryName = "Front - Engine" },
             new PartCategory { CategoryName = "Rear - Engine" },
@@ -403,10 +403,10 @@ namespace Garage_pro_api.DbInit
             new PartCategory { CategoryName = "Rear - Cooling System" }
         };
 
-        _context.PartCategories.AddRange(categories);
-        await _context.SaveChangesAsync();
-    }
-}
+                _context.PartCategories.AddRange(categories);
+                await _context.SaveChangesAsync();
+            }
+        }
 
 
         private async Task SeedPartsAsync()
@@ -909,26 +909,26 @@ namespace Garage_pro_api.DbInit
                     {
                         var labels = new List<Label>
                         {
-                            new Label 
-                            { 
-                                LabelName = "Pending", 
-                                Description = "Order is waiting to be processed", 
+                            new Label
+                            {
+                                LabelName = "Pending",
+                                Description = "Order is waiting to be processed",
                                 OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Red",
                                 HexCode = "#FF0000"
                             },
-                            new Label 
-                            { 
-                                LabelName = "In Progress", 
-                                Description = "Order is being worked on", 
+                            new Label
+                            {
+                                LabelName = "In Progress",
+                                Description = "Order is being worked on",
                                 OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Yellow",
                                 HexCode = "#FFFF00"
                             },
-                            new Label 
-                            { 
-                                LabelName = "Done", 
-                                Description = "Order completed", 
+                            new Label
+                            {
+                                LabelName = "Done",
+                                Description = "Order completed",
                                 OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Green",
                                 HexCode = "#00FF00"

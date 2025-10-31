@@ -81,18 +81,19 @@ using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
 using Services.UserServices;
 
+using Repositories.PaymentRepositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
 var modelBuilder = new ODataConventionModelBuilder();
 builder.Services.AddControllers()
     .AddOData(options => options
-        .Select()           
-        .Filter()           
-        .OrderBy()          
-        .Expand()           
-        .Count()            
-        .SetMaxTop(100)     
+        .Select()
+        .Filter()
+        .OrderBy()
+        .Expand()
+        .Count()
+        .SetMaxTop(100)
         .AddRouteComponents("odata", modelBuilder.GetEdmModel())
     )
     .AddJsonOptions(opt =>
@@ -115,14 +116,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
 
-    c.CustomSchemaIds(type => type.FullName); 
+    c.CustomSchemaIds(type => type.FullName);
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "My API",
         Version = "v1"
     });
 
-    // Th�m c?u h�nh cho Bearer Token
+    // Th�m c?u h�nh cho Bearer Token
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
@@ -278,6 +279,7 @@ builder.Services.AddMemoryCache(); // Cho IMemoryCache
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+//builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
@@ -314,7 +316,7 @@ builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
 
-builder.Services.AddScoped<IPermissionService, PermissionService>(); 
+builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
 
@@ -402,18 +404,33 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // vehicle
+//vehicle
+
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
-builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleBrandServices, VehicleBrandService>();
 builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
 builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
+
+//PAYMENT
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+
+
+
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
+
+
+
+builder.Services.AddScoped<IRevenueService, RevenueService>();
+
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
@@ -439,6 +456,9 @@ builder.Services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProv
 builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
+
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
 
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -476,6 +496,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
+                "http://localhost:3001",
                 "http://localhost:3000",
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
@@ -494,10 +515,10 @@ builder.Services.AddCors(options =>
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(5117);  
+    options.ListenAnyIP(5117);
     options.ListenAnyIP(7113, listenOptions =>
     {
-        listenOptions.UseHttps(); 
+        listenOptions.UseHttps();
     });
 });
 
@@ -511,7 +532,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Use CORS with the specific policy for your frontend
+app.UseCors("AllowFrontendAndAndroid");
+
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
@@ -530,7 +552,7 @@ app.UseAuthentication();
 app.UseMiddleware<UserActivityMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
 
-app.UseAuthorization();            
+app.UseAuthorization();
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
@@ -539,6 +561,8 @@ app.MapControllers();
 
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+
 
 //Initialize database
 using (var scope = app.Services.CreateScope())

@@ -58,7 +58,8 @@ namespace Dtos.RepairOrder
         public int StatusId { get; set; } // Changed from Guid to int
         
         public Guid VehicleId { get; set; }
-        
+        public VehicleDto Vehicle { get; set; }
+
         public string UserId { get; set; }
         
         public Guid RepairRequestId { get; set; }
