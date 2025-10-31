@@ -244,7 +244,7 @@ namespace Garage_pro_api.Controllers
 
             // Đăng nhập thành công -> tạo token
             var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            var accessToken = await _tokenService.GenerateJwtToken(user, 120);
             var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60);
 
             // Thêm refresh token vào cookie (tuỳ chọn)
@@ -260,7 +260,7 @@ namespace Garage_pro_api.Controllers
             {
                 Token = accessToken,
                 
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(10).TotalSeconds), // Đồng bộ với thời gian access token
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(100).TotalSeconds), // Đồng bộ với thời gian access token
                 UserId = user.Id,
                 Email = user.Email,
                 

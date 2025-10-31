@@ -82,11 +82,11 @@ namespace Garage_pro_api.Middlewares
                             );
                         }
                     }
-                    else if (statusCode >= 400)
+                    else if (statusCode >= 400 && statusCode <500)
                     {
                         await logService.LogSystemAsync(
                             $"Unexpected error {statusCode} on {method} {path} by {user} ({userId})",
-                            LogLevel.Warning
+                            LogLevel.Information
                         );
                     }
                     else if (statusCode >= 500)
