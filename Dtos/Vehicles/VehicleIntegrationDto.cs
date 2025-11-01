@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using BusinessObject.Enums;
 using Dtos.RoBoard;
 
 namespace Dtos.Vehicles
@@ -80,6 +81,28 @@ namespace Dtos.Vehicles
 
         [StringLength(50)]
         public string PaidStatus { get; set; }
+    }
+
+    public class VehicleRoHistoryDto
+    {
+        public Guid RepairOrderId { get; set; }
+        
+        public DateTime ReceiveDate { get; set; }
+        
+        public string RepairOrderType { get; set; }
+        
+        public DateTime? CompletionDate { get; set; }
+        
+        [StringLength(100)]
+        public string BranchName { get; set; }
+
+        [StringLength(100)]
+        public string CustomerName { get; set; }
+
+        public decimal EstimatedAmount { get; set; }
+        public decimal PaidAmount { get; set; }
+
+        public PaidStatus PaidStatus { get; set; }
     }
 
     // Add the missing VehicleWithCustomerDto class

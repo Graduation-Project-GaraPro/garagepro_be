@@ -11,6 +11,7 @@ using Dtos.RoBoard;
 using System.Security.Claims;
 using BusinessObject.Authentication;
 using Services.VehicleServices;
+using BusinessObject.Enums;
 
 namespace Garage_pro_api.Controllers
 {
@@ -216,7 +217,7 @@ namespace Garage_pro_api.Controllers
                     StatusId = statusId,
                     BranchId = user.BranchId.Value, // Get branch ID from authenticated user
                     RepairRequestId = Guid.NewGuid(),
-                    PaidStatus = "Unpaid", // Default paid status
+                    PaidStatus = PaidStatus.Unpaid, // Default paid status
                     // Other fields will use their default values
                     Cost = 0, // Auto-generated
                     CreatedAt = DateTime.UtcNow // Auto-generated

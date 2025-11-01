@@ -48,8 +48,18 @@ namespace Garage_pro_api.Controllers
         [HttpGet("repair-order/{repairOrderId}")]
         public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByRepairOrderId(Guid repairOrderId)
         {
-            var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
-            return Ok(quotations);
+            try
+            {
+                var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
+                return Ok(quotations);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Error in GetQuotationsByRepairOrderId: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"An error occurred while fetching quotations: {ex.Message}");
+            }
         }
 
         [HttpGet("user")]
@@ -104,6 +114,30 @@ namespace Garage_pro_api.Controllers
             catch (ArgumentException ex)
             {
                 return NotFound(ex.Message);
+            }
+        }
+
+        // Copy approved quotation to jobs - Manager only
+        [HttpPost("{id}/copy-to-jobs")]
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult<bool>> CopyQuotationToJobs(Guid id)
+        {
+            try
+            {
+                var result = await _quotationService.CopyQuotationToJobsAsync(id);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
 

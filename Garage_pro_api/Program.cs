@@ -283,7 +283,27 @@ builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceR
 // Update to use the new QuotationServicePartRepository
 // builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationPartRepository, Repositories.QuotationRepositories.QuotationPartRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServicePartRepository, Repositories.QuotationRepositories.QuotationServicePartRepository>();
-builder.Services.AddScoped<Services.QuotationServices.IQuotationService, Services.QuotationServices.QuotationManagementService>(); // Updated to use the correct implementation
+builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provider =>
+{
+    var quotationRepository = provider.GetRequiredService<Repositories.QuotationRepositories.IQuotationRepository>();
+    var quotationServiceRepository = provider.GetRequiredService<Repositories.QuotationRepositories.IQuotationServiceRepository>();
+    var quotationServicePartRepository = provider.GetRequiredService<Repositories.QuotationRepositories.IQuotationServicePartRepository>();
+    var serviceRepository = provider.GetRequiredService<Repositories.ServiceRepositories.IServiceRepository>();
+    var partRepository = provider.GetRequiredService<Repositories.PartRepositories.IPartRepository>();
+    var repairOrderRepository = provider.GetRequiredService<Repositories.IRepairOrderRepository>();
+    var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
+    var mapper = provider.GetRequiredService<IMapper>();
+    
+    return new Services.QuotationServices.QuotationManagementService(
+        quotationRepository,
+        quotationServiceRepository,
+        quotationServicePartRepository,
+        serviceRepository,
+        partRepository,
+        repairOrderRepository,
+        jobService, // Add this parameter
+        mapper);
+});
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
 
 // Vehicle brand, model, and color repositories
@@ -317,10 +337,6 @@ builder.Services.AddScoped<IPartRepository, PartRepository>();
 builder.Services.AddScoped<IPartService, PartService>();
 
 builder.Services.AddHostedService<LogCleanupService>();
-
-// Service Quotation
-builder.Services.AddScoped<IQuotationRepository, QuotationRepository>();
-builder.Services.AddScoped<IQuotationService, Services.QuotationServices.QuotationManagementService>();
 
 // repair request
 builder.Services.AddScoped<IRequestPartRepository, RequestPartRepository>();
@@ -458,8 +474,6 @@ app.UseMiddleware<ExceptionMiddleware>();
 app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
 
 app.UseSecurityPolicyEnforcement();
-app.MapControllers();
-
 app.MapControllers();
 
 // Add this line to map the SignalR hub

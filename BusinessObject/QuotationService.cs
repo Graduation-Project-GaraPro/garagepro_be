@@ -19,6 +19,8 @@ namespace BusinessObject
         [Required]
         public bool IsSelected { get; set; } = false; // Customer approval
 
+        public bool IsRequired { get; set; } = false; // Indicates if this is a required service
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
 

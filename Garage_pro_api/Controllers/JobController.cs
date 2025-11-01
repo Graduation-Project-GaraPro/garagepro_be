@@ -5,6 +5,7 @@ using Services;
 using BusinessObject;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Linq;
 
 namespace Garage_pro_api.Controllers
 {
@@ -27,7 +28,45 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
-            return Ok(jobs);
+            
+            var jobDtos = new List<JobDto>();
+            foreach (var job in jobs)
+            {
+                // Get job parts
+                var jobParts = await _jobService.GetJobPartsAsync(job.JobId);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+
+                var jobDto = new JobDto
+                {
+                    JobId = job.JobId,
+                    ServiceId = job.ServiceId,
+                    RepairOrderId = job.RepairOrderId,
+                    JobName = job.JobName,
+                    Status = job.Status,
+                    Deadline = job.Deadline,
+                    Note = job.Note,
+                    CreatedAt = job.CreatedAt,
+                    UpdatedAt = job.UpdatedAt,
+                    Level = job.Level,
+                    AssignedByManagerId = job.AssignedByManagerId,
+                    AssignedAt = job.AssignedAt,
+                    Parts = jobPartDtos.ToList()
+                };
+                
+                jobDtos.Add(jobDto);
+            }
+
+            return Ok(jobDtos);
         }
 
         // GET: api/Job/5
@@ -41,6 +80,20 @@ namespace Garage_pro_api.Controllers
                 return NotFound();
             }
 
+            // Get job parts
+            var jobParts = await _jobService.GetJobPartsAsync(id);
+            var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+            {
+                JobPartId = jobPart.JobPartId,
+                JobId = jobPart.JobId,
+                PartId = jobPart.PartId,
+                Quantity = jobPart.Quantity,
+                UnitPrice = jobPart.UnitPrice,
+                CreatedAt = jobPart.CreatedAt,
+                UpdatedAt = jobPart.UpdatedAt,
+                PartName = jobPart.Part?.Name ?? ""
+            });
+
             var jobDto = new JobDto
             {
                 JobId = job.JobId,
@@ -49,20 +102,13 @@ namespace Garage_pro_api.Controllers
                 JobName = job.JobName,
                 Status = job.Status,
                 Deadline = job.Deadline,
-                TotalAmount = job.TotalAmount,
                 Note = job.Note,
                 CreatedAt = job.CreatedAt,
                 UpdatedAt = job.UpdatedAt,
                 Level = job.Level,
-                SentToCustomerAt = job.SentToCustomerAt,
-                CustomerResponseAt = job.CustomerResponseAt,
-                CustomerApprovalNote = job.CustomerApprovalNote,
                 AssignedByManagerId = job.AssignedByManagerId,
                 AssignedAt = job.AssignedAt,
-                EstimateExpiresAt = job.EstimateExpiresAt,
-                RevisionCount = job.RevisionCount,
-                OriginalJobId = job.OriginalJobId,
-                RevisionReason = job.RevisionReason
+                Parts = jobPartDtos.ToList()
             };
 
             return Ok(jobDto);
@@ -75,29 +121,43 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetJobsByRepairOrder(Guid repairOrderId)
         {
             var jobs = await _jobService.GetJobsByRepairOrderIdAsync(repairOrderId);
-            var jobDtos = jobs.Select(job => new JobDto
+            
+            var jobDtos = new List<JobDto>();
+            foreach (var job in jobs)
             {
-                JobId = job.JobId,
-                ServiceId = job.ServiceId,
-                RepairOrderId = job.RepairOrderId,
-                JobName = job.JobName,
-                Status = job.Status,
-                Deadline = job.Deadline,
-                TotalAmount = job.TotalAmount,
-                Note = job.Note,
-                CreatedAt = job.CreatedAt,
-                UpdatedAt = job.UpdatedAt,
-                Level = job.Level,
-                SentToCustomerAt = job.SentToCustomerAt,
-                CustomerResponseAt = job.CustomerResponseAt,
-                CustomerApprovalNote = job.CustomerApprovalNote,
-                AssignedByManagerId = job.AssignedByManagerId,
-                AssignedAt = job.AssignedAt,
-                EstimateExpiresAt = job.EstimateExpiresAt,
-                RevisionCount = job.RevisionCount,
-                OriginalJobId = job.OriginalJobId,
-                RevisionReason = job.RevisionReason
-            });
+                // Get job parts
+                var jobParts = await _jobService.GetJobPartsAsync(job.JobId);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+
+                var jobDto = new JobDto
+                {
+                    JobId = job.JobId,
+                    ServiceId = job.ServiceId,
+                    RepairOrderId = job.RepairOrderId,
+                    JobName = job.JobName,
+                    Status = job.Status,
+                    Deadline = job.Deadline,
+                    Note = job.Note,
+                    CreatedAt = job.CreatedAt,
+                    UpdatedAt = job.UpdatedAt,
+                    Level = job.Level,
+                    AssignedByManagerId = job.AssignedByManagerId,
+                    AssignedAt = job.AssignedAt,
+                    Parts = jobPartDtos.ToList()
+                };
+                
+                jobDtos.Add(jobDto);
+            }
 
             return Ok(jobDtos);
         }
@@ -271,6 +331,33 @@ namespace Garage_pro_api.Controllers
             }
 
             return NoContent();
+        }
+
+        // GET: api/Job/{id}/parts
+        [HttpGet("{id}/parts")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<ActionResult> GetJobParts(Guid id)
+        {
+            try
+            {
+                var jobParts = await _jobService.GetJobPartsAsync(id);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+                return Ok(jobPartDtos);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while fetching job parts: {ex.Message}");
+            }
         }
     }
 }

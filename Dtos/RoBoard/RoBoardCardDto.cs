@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using BusinessObject.Enums;
 
 namespace Dtos.RoBoard
 {
@@ -8,8 +9,6 @@ namespace Dtos.RoBoard
     {
         public Guid RepairOrderId { get; set; }
         
-        [Required]
-        [MaxLength(50)]
         public string RepairOrderType { get; set; }
         
         public DateTime ReceiveDate { get; set; }
@@ -25,8 +24,7 @@ namespace Dtos.RoBoard
         public decimal PaidAmount { get; set; }
         
         [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
         

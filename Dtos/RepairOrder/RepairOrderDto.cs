@@ -32,8 +32,7 @@ namespace Dtos.RepairOrder
         public decimal PaidAmount { get; set; }
         
         [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
         
@@ -150,8 +149,7 @@ namespace Dtos.RepairOrder
         public decimal PaidAmount { get; set; }
         
         [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
         

@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.RoBoard;
 using Microsoft.EntityFrameworkCore;
@@ -749,7 +750,7 @@ namespace Repositories
 
             if (isFullyPaid && fullPaymentDate.HasValue)
             {
-                repairOrder.PaidStatus = "Paid";
+                repairOrder.PaidStatus = PaidStatus.Paid;
                 // Update payment amount to estimated amount if fully paid
                 repairOrder.PaidAmount = repairOrder.EstimatedAmount;
             }
