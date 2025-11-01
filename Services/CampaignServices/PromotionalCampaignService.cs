@@ -83,28 +83,29 @@ namespace Services.CampaignServices
             return true;
         }
 
-            public async Task<bool> ActivateAsync(Guid id)
-            {
-                var campaign = await _repository.Query()
-                    .FirstOrDefaultAsync(c => c.Id == id);
+        public async Task<bool> ActivateAsync(Guid id)
+        {
+            var campaign = await _repository.Query()
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-                if (campaign == null)
-                    throw new KeyNotFoundException("Campaign not found.");
+            if (campaign == null)
+                throw new KeyNotFoundException("Campaign not found.");
 
-                // 🔹 Validate: không được kích hoạt nếu đã hết hạn
-                if (campaign.EndDate.Date < DateTime.Today)
-                    throw new InvalidOperationException("Cannot activate a campaign that has already expired.");
+            // 🔹 Validate: không được kích hoạt nếu đã hết hạn
+            // SỬA: Đổi điều kiện từ > thành <
+            if (campaign.EndDate.Date < DateTime.Today)
+                throw new InvalidOperationException("Cannot activate a campaign that has already expired.");
 
-                // 🔹 Validate: không được kích hoạt nếu đã hết lượt sử dụng
-                if (campaign.UsageLimit.HasValue && campaign.VoucherUsages.Count >= campaign.UsageLimit)
-                    throw new InvalidOperationException("Cannot activate a campaign that has reached its usage limit.");
+            // 🔹 Validate: không được kích hoạt nếu đã hết lượt sử dụng
+            if (campaign.UsageLimit.HasValue && campaign.VoucherUsages.Count >= campaign.UsageLimit)
+                throw new InvalidOperationException("Cannot activate a campaign that has reached its usage limit.");
 
-                // ✅ Hợp lệ → gọi repo để cập nhật
-                await _repository.UpdateStatusAsync(id, true);
-                await _repository.SaveChangesAsync();
+            // ✅ Hợp lệ → gọi repo để cập nhật
+            await _repository.UpdateStatusAsync(id, true);
+            await _repository.SaveChangesAsync();
 
-                return true;
-            }
+            return true;
+        }
 
         public async Task<bool> DeactivateAsync(Guid id)
             {

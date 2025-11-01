@@ -262,7 +262,7 @@ namespace Services.QuotationServices
             // Cập nhật trạng thái và thời gian phản hồi của khách hàng
             quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
-
+            quotation.Note = responseDto.CustomerNote;
             // Cập nhật lựa chọn dịch vụ (QuotationServices)
             if (responseDto.SelectedServices != null && responseDto.SelectedServices.Any())
             {

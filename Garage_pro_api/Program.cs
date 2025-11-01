@@ -593,10 +593,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+//    await dbInitializer.Initialize();
+//}
 
 app.Run();

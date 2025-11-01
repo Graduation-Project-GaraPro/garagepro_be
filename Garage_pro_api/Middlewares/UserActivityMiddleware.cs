@@ -76,7 +76,7 @@ namespace Garage_pro_api.Middlewares
                             };
 
                             await logService.LogUserActivityAsync(
-                                $"User {user} ({userId}) {action}",
+                                $"User {user} {userId} {action}",
                                 userId,
                                 user
                             );
@@ -92,7 +92,7 @@ namespace Garage_pro_api.Middlewares
                     else if (statusCode >= 500)
                     {
                         await logService.LogSystemAsync(
-                            $"Server error {statusCode} on {method} {path} by {user} ({userId}) from {ip}",
+                            $"Server error {statusCode} on {method} {path} by {user} Id {userId} from {ip}",
                             LogLevel.Error
                         );
                     }
