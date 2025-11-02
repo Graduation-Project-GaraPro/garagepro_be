@@ -132,7 +132,7 @@ namespace Services.QuotationServices
                                 PartId = partDto.PartId,
                                 IsSelected = partDto.IsSelected,
                                 // Set the new properties
-                                IsRecommended = partDto.IsRecommended,
+                                //IsRecommended = partDto.IsRecommended,
                                 Price = part.Price, // Store the actual part price at the time of quotation creation
                                 Quantity = partDto.Quantity
                             };
@@ -173,6 +173,49 @@ namespace Services.QuotationServices
                 TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
                 Data = quotationDtos
             };
+        }
+
+
+        public async Task<QuotationDetailDto> GetQuotationDetailByIdAsync(Guid quotationId)
+        {
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+
+            //if (quotation == null)
+            //    return new Exception("Not Found Quotation");
+
+            var dto = _mapper.Map<QuotationDetailDto>(quotation);
+
+            // Tạo danh sách PartCategories cho từng service
+            foreach (var serviceDto in dto.QuotationServices)
+            {
+                var serviceEntity = quotation.QuotationServices.First(x => x.QuotationServiceId == serviceDto.QuotationServiceId);
+
+                serviceDto.PartCategories = serviceEntity.QuotationServiceParts
+                                            .Where(p => p.Part != null && p.Part.PartCategory != null) // tránh null
+                                            .GroupBy(p => new
+                                            {
+                                                p.Part.PartCategoryId,
+                                                CategoryName = p.Part.PartCategory.CategoryName
+                                            })
+                                            .Select(g => new QuotationPartCategoryDTO
+                                            {
+                                                PartCategoryId = g.Key.PartCategoryId,
+                                                PartCategoryName = g.Key.CategoryName,
+                                                Parts = g.Select(p => new QuotationPart
+                                                {
+                                                    QuotationServicePartId = p.QuotationServicePartId,
+                                                    PartId = p.PartId,
+                                                    PartName = p.Part?.Name ?? "Unknown Part",
+                                                    Price = p.Price,
+                                                    Quantity = p.Quantity,
+                                                    IsSelected = p.IsSelected
+                                                }).ToList()
+                                            }).ToList();
+            }
+
+            //return Ok(dto);
+
+            return dto;
         }
 
 

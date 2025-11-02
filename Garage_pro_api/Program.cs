@@ -158,6 +158,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<RepairMappingProfile>();
     cfg.AddProfile<InspectionTechnicianProfile>();
     cfg.AddProfile<JobTechnicianProfile>();
+    cfg.AddProfile<QuotationProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -501,6 +502,8 @@ builder.Services.AddCors(options =>
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
                 "http://192.168.1.96:7113",   // LDPlayer / LAN
+                 "http://192.168.1.96:5117",
+                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117"
 
             )

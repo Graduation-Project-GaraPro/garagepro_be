@@ -43,6 +43,7 @@ namespace BusinessObject
 
         [MaxLength(500)]
         public string? Note { get; set; }
+        public string? CustomerNote { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
 

@@ -1938,6 +1938,7 @@ namespace Garage_pro_api.DbInit
                 QuotationId = quotations[0].QuotationId,
                 ServiceId = brakePadReplacement.ServiceId,
                 IsSelected = true,
+                IsRequired = true,
                 Price = brakePadReplacement.Price
             },
             new QuotationService
@@ -1945,6 +1946,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = Guid.NewGuid(),
                 QuotationId = quotations[0].QuotationId,
                 ServiceId = fullEngineDiagnostic.ServiceId,
+                IsRequired = true,
                 IsSelected = false,
                 Price = fullEngineDiagnostic.Price
             }
@@ -1962,7 +1964,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakePadCheap.PartId,
                 IsSelected = true,
-                IsRecommended = true,
+                
                 Price = brakePadCheap.Price,
                 Quantity = 2
             },
@@ -1972,7 +1974,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakeDiscMedium.PartId,
                 IsSelected = false,
-                IsRecommended = true,
+                
                 Price = brakeDiscMedium.Price,
                 Quantity = 2
             },
@@ -1982,7 +1984,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = shockAbsorberCheap.PartId,
                 IsSelected = false,
-                IsRecommended = false,
+                
                 Price = shockAbsorberCheap.Price,
                 Quantity = 1
             }
