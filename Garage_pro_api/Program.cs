@@ -82,6 +82,7 @@ using Garage_pro_api.BackgroundServices;
 using Services.UserServices;
 
 using Repositories.PaymentRepositories;
+using Services.FCMServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -490,6 +491,9 @@ builder.Services.AddSingleton<IVnpay>(sp =>
 
     return vnpay;
 });
+
+// Register FcmService
+builder.Services.AddScoped<IFcmService, FcmService>();
 
 builder.Services.AddCors(options =>
 {
