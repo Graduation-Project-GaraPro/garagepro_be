@@ -26,7 +26,26 @@ namespace Services.FCMServices
                 ?? throw new ArgumentNullException("Firebase:CredentialsPath");
         }
 
+        /// <summary>
+        /// Gửi notification thông thường (title + body)
+        /// </summary>
         public async Task SendNotificationAsync(string deviceToken, string title, string body)
+        {
+            await SendFcmMessageAsync(deviceToken, title, body, null);
+        }
+
+        /// <summary>
+        /// Gửi data message, có thể kèm dữ liệu tùy chỉnh
+        /// </summary>
+        public async Task SendDataMessageAsync(string deviceToken, string title, string body, Dictionary<string, string>? data = null)
+        {
+            await SendFcmMessageAsync(deviceToken, title, body, data);
+        }
+
+        /// <summary>
+        /// Hàm chính gửi FCM message
+        /// </summary>
+        private async Task SendFcmMessageAsync(string deviceToken, string title, string body, Dictionary<string, string>? data)
         {
             // 1️⃣ Lấy Access Token từ file JSON
             var credential = GoogleCredential.FromFile(_credentialsPath)
@@ -44,7 +63,8 @@ namespace Services.FCMServices
                     {
                         title = title,
                         body = body
-                    }
+                    },
+                    data = data // null hoặc dictionary tùy chỉnh
                 }
             };
 

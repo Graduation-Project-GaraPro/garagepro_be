@@ -9,5 +9,6 @@ namespace Services.FCMServices
     public interface IFcmService
     {
         Task SendNotificationAsync(string deviceToken, string title, string body);
+        Task SendDataMessageAsync(string deviceToken, string title, string body, Dictionary<string, string> data);
     }
 }
