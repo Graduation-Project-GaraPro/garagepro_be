@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
 using Repositories.InspectionAndRepair;
 using System;
@@ -85,6 +86,13 @@ namespace Services.InspectionAndRepair
                     repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
                 }
             }
+            //if (repair.StartTime.HasValue)
+            //{
+            //    var duration = repair.EndTime.Value - repair.StartTime.Value;
+            //    if (duration.TotalHours >= 24)
+            //        duration = TimeSpan.FromHours(duration.TotalHours % 24);
+            //    repair.ActualTime = duration;
+            //}
 
             await _jobTechnicianRepository.UpdateJobAsync(job);
             return true;

@@ -18,7 +18,12 @@ namespace Services.InspectionAndRepair
         Task<List<AllServiceDto>> GetAllServicesAsync();
         Task<InspectionTechnicianDto> AddServiceToInspectionAsync(Guid inspectionId, AddServiceToInspectionRequest request, string userId);
         Task<InspectionTechnicianDto> RemoveServiceFromInspectionAsync(Guid inspectionId, Guid serviceInspectionId, string userId);
-
+        Task<InspectionTechnicianDto> RemovePartCategoryFromServiceAsync(
+            Guid inspectionId,
+            Guid serviceInspectionId,
+            Guid partCategoryId,
+            string userId
+        );
 
     }
 }

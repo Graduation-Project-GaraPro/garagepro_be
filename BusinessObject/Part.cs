@@ -17,8 +17,9 @@ namespace BusinessObject
         public Guid PartId { get; set; } = Guid.NewGuid();
 
         [Required]
+        [ForeignKey(nameof(PartCategory))]
         public Guid PartCategoryId { get; set; }
-        public Guid? BranchId { get; set; }  // v?n gi? 1-n n?u c?n
+        public Guid? BranchId { get; set; }  
 
         [Required, MaxLength(100)]
         public string Name { get; set; }
@@ -40,7 +41,7 @@ namespace BusinessObject
         public virtual ICollection<JobPart> JobParts { get; set; } = new List<JobPart>();
         public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
-        public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
+       // public virtual ICollection<ServicePart> ServiceParts { get; set; } = new List<ServicePart>();
          public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
 
     }

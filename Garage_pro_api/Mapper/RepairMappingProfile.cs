@@ -53,11 +53,6 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.ModelName))
                 .ForMember(dest => dest.ManufacturingYear, opt => opt.MapFrom(src => src.ManufacturingYear));
 
-            // Map VehicleColor -> VehicleColorDto
-            CreateMap<VehicleColor, VehicleColorDto>()
-                .ForMember(dest => dest.ColorId, opt => opt.MapFrom(src => src.ColorID))
-                .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.ColorName))
-                .ForMember(dest => dest.HexCode, opt => opt.MapFrom(src => src.HexCode));
 
             // Map Vehicle -> VehicleDto
             CreateMap<Vehicle, VehicleDto>()
@@ -65,8 +60,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.LicensePlate, opt => opt.MapFrom(src => src.LicensePlate))
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
                 .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand))
-                .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Model))
-                .ForMember(dest => dest.Color, opt => opt.MapFrom(src => src.Color));
+                .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Model));
 
             CreateMap<ApplicationUser, CustomerDto>()
             .ForMember(dest => dest.CustomerId, opt => opt.MapFrom(src => src.Id))

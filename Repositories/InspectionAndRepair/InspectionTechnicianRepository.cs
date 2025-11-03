@@ -25,15 +25,26 @@ namespace Repositories.InspectionAndRepair
                 .Where(i => i.TechnicianId == technicianId)
                 .Include(i => i.ServiceInspections)
                     .ThenInclude(si => si.Service)
-                        .ThenInclude(s => s.ServiceParts)
-                            .ThenInclude(sp => sp.Part)
+                        .ThenInclude(s => s.ServiceCategory)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                        .ThenInclude(s => s.ServicePartCategories)
+                            .ThenInclude(spc => spc.PartCategory)
+                                .ThenInclude(pc => pc.Parts)
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.PartCategory)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.Service)
-                            .ThenInclude(s => s.ServiceParts)
-                                .ThenInclude(sp => sp.Part)
+                            .ThenInclude(s => s.ServiceCategory)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.RepairOrderServices)
+                        .ThenInclude(ros => ros.Service)
+                            .ThenInclude(s => s.ServicePartCategories)
+                                .ThenInclude(spc => spc.PartCategory)
+                                    .ThenInclude(pc => pc.Parts)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.RepairOrderServiceParts)
@@ -46,12 +57,9 @@ namespace Repositories.InspectionAndRepair
                         .ThenInclude(v => v.Model)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
-                        .ThenInclude(v => v.Color)
-                .Include(i => i.RepairOrder)
-                    .ThenInclude(ro => ro.Vehicle)
                         .ThenInclude(v => v.User)
                 .OrderByDescending(i => i.CreatedAt)
-                .AsSplitQuery() //Tách thành nhiều query nhỏ
+                .AsSplitQuery()
                 .ToListAsync();
         }
 
@@ -61,15 +69,26 @@ namespace Repositories.InspectionAndRepair
                 .Where(i => i.InspectionId == id && i.TechnicianId == technicianId)
                 .Include(i => i.ServiceInspections)
                     .ThenInclude(si => si.Service)
-                        .ThenInclude(s => s.ServiceParts)
-                            .ThenInclude(sp => sp.Part)
+                        .ThenInclude(s => s.ServiceCategory)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                        .ThenInclude(s => s.ServicePartCategories)
+                            .ThenInclude(spc => spc.PartCategory)
+                                .ThenInclude(pc => pc.Parts)
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.PartCategory)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.Service)
-                            .ThenInclude(s => s.ServiceParts)
-                                .ThenInclude(sp => sp.Part)
+                            .ThenInclude(s => s.ServiceCategory)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.RepairOrderServices)
+                        .ThenInclude(ros => ros.Service)
+                            .ThenInclude(s => s.ServicePartCategories)
+                                .ThenInclude(spc => spc.PartCategory)
+                                    .ThenInclude(pc => pc.Parts)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.RepairOrderServices)
                         .ThenInclude(ros => ros.RepairOrderServiceParts)
@@ -82,24 +101,34 @@ namespace Repositories.InspectionAndRepair
                         .ThenInclude(v => v.Model)
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
-                        .ThenInclude(v => v.Color)
-                .Include(i => i.RepairOrder)
-                    .ThenInclude(ro => ro.Vehicle)
                         .ThenInclude(v => v.User)
-                
-                .AsSplitQuery() 
-                .FirstOrDefaultAsync(); 
+                .AsSplitQuery()
+                .FirstOrDefaultAsync();
         }
 
         public async Task<List<RepairOrderService>> GetRepairOrderServicesAsync(Guid repairOrderId)
         {
             return await _context.RepairOrderServices
                 .Include(ros => ros.Service)
-                    .ThenInclude(s => s.ServiceParts)
-                        .ThenInclude(sp => sp.Part)
+                    .ThenInclude(s => s.ServiceCategory)
+                .Include(ros => ros.Service)
+                    .ThenInclude(s => s.ServicePartCategories)
+                        .ThenInclude(spc => spc.PartCategory)
+                            .ThenInclude(pc => pc.Parts)
                 .Where(ros => ros.RepairOrderId == repairOrderId)
                 .ToListAsync();
         }
+
+        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
+        {
+            return await _context.Services
+                .Include(s => s.ServiceCategory)
+                .Include(s => s.ServicePartCategories)
+                    .ThenInclude(spc => spc.PartCategory)
+                        .ThenInclude(pc => pc.Parts)
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+        }
+
 
         public async Task SaveChangesAsync() => await _context.SaveChangesAsync();
 
@@ -117,17 +146,11 @@ namespace Repositories.InspectionAndRepair
             return await _context.RepairOrderServices
                 .AnyAsync(ros => ros.RepairOrderId == repairOrderId);
         }
-
-        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
-        {
-            return await _context.Services
-                .Include(s => s.ServiceParts)
-                    .ThenInclude(sp => sp.Part)
-                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
-        }
+        
         public async Task<List<Service>> GetAllServicesAsync()
         {
             return await _context.Services
+                .Include(s => s.ServiceCategory)
                 .OrderBy(s => s.ServiceName)
                 .ToListAsync();
         }

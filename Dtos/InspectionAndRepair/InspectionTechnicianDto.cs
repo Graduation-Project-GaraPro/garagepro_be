@@ -11,16 +11,14 @@ namespace Dtos.InspectionAndRepair
         public Guid RepairOrderId { get; set; }
         public Guid TechnicianId { get; set; }
         public string StatusText { get; set; } = string.Empty;
-        public int Status { get; set; }
         public string? CustomerConcern { get; set; }
         public string? Finding { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
-
         public RepairOrderDto? RepairOrder { get; set; }
         public List<ServiceInspectionDto> ServiceInspections { get; set; } = new();
-       // public List<PartInspectionDto> PartInspections { get; set; } = new();
-
+        public Guid? ServiceCategoryId { get; set; }
+        public string? CategoryName { get; set; }
         public bool CanUpdate { get; set; }
     }
 
@@ -38,10 +36,8 @@ namespace Dtos.InspectionAndRepair
         public string LicensePlate { get; set; } = string.Empty;
         public string VIN { get; set; } = string.Empty;
 
-        // Navigation objects instead of just IDs
         public VehicleBrandDto? Brand { get; set; }
         public VehicleModelDto? Model { get; set; }
-        public VehicleColorDto? Color { get; set; }
     }
 
     public class VehicleBrandDto
@@ -58,12 +54,6 @@ namespace Dtos.InspectionAndRepair
         public int ManufacturingYear { get; set; }
     }
 
-    public class VehicleColorDto
-    {
-        public Guid ColorId { get; set; }
-        public string ColorName { get; set; } = string.Empty;
-        public string? HexCode { get; set; }
-    }
 
     public class CustomerDto
     {
@@ -79,53 +69,53 @@ namespace Dtos.InspectionAndRepair
         public Guid ServiceId { get; set; }
         public string? ServiceName { get; set; }
         public decimal ServicePrice { get; set; }
-        public decimal  ActualDuration { get; set; }
-        public string? Notes { get; set; }
         public bool IsAdvanced { get; set; }
-        public List<RepairOrderServicePartDto> Parts { get; set; } = new();
-        public List<ServicePartDto> AllServiceParts { get; set; } = new();
+        public Guid? ServiceCategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public List<PartCategoryDto> AllPartCategories { get; set; } = new();
     }
+
     public class ServicePartDto
     {
         public Guid ServicePartId { get; set; }
         public Guid PartId { get; set; }
         public string? PartName { get; set; }
-        //public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
     }
 
-    public class RepairOrderServicePartDto
-    {
-        public Guid RepairOrderServicePartId { get; set; }
-        public Guid PartId { get; set; }
-        public string? PartName { get; set; }
-        public string? Notes { get; set; }
-    }
     public class ServiceInspectionDto
     {
         public Guid ServiceInspectionId { get; set; }
         public Guid ServiceId { get; set; }
         public string? ServiceName { get; set; }
         public ConditionStatus ConditionStatus { get; set; }
-        public DateTime CreatedAt { get; set; }
-
-        // <-- Suggested parts for this service
+        public Guid? ServiceCategoryId { get; set; }
+        public string? CategoryName { get; set; }
+        public bool IsAdvanced { get; set; }
+        public List<PartCategoryDto> AllPartCategories { get; set; } = new();
         public List<PartInspectionDto> SuggestedParts { get; set; } = new();
     }
-
 
     public class PartInspectionDto
     {
         public Guid PartInspectionId { get; set; }
         public Guid PartId { get; set; }
         public string? PartName { get; set; }
-        public string? Status { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public Guid PartCategoryId { get; set; }
+        public string? CategoryName { get; set; }
     }
     public class AddServiceToInspectionRequest
     {
         [Required]
         public Guid ServiceId { get; set; }
+    }
+    public class RemovePartCategoryFromServiceRequest
+    {
+        [Required]
+        public Guid ServiceInspectionId { get; set; }
+
+        [Required]
+        public Guid PartCategoryId { get; set; }
     }
     public class AllServiceDto
     {
@@ -133,6 +123,19 @@ namespace Dtos.InspectionAndRepair
         public string ServiceName { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public bool IsAdvanced { get; set; }
+        public Guid? ServiceCategoryId { get; set; }
+        public string? CategoryName { get; set; }
+    }
+    public class ServiceCategoryDto
+    {
+        public Guid ServiceCategoryId { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+    }
+    public class PartCategoryDto
+    {
+        public Guid PartCategoryId { get; set; }
+        public string CategoryName { get; set; } = string.Empty;
+        public List<ServicePartDto> Parts { get; set; } = new();
     }
 
 }

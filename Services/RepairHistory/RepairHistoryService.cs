@@ -70,11 +70,6 @@ namespace Services.RepairHistory
                             ModelId = vehicle.Model.ModelID,
                             ModelName = vehicle.Model.ModelName,
                             ManufacturingYear = vehicle.Model.ManufacturingYear
-                        },
-                        Color = vehicle.Color == null ? null : new VehicleColorDto
-                        {
-                            ColorId = vehicle.Color.ColorID,
-                            ColorName = vehicle.Color.ColorName
                         }
                     },
                     Owner = new CustomerDto
