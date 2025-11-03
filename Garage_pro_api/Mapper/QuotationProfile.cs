@@ -12,7 +12,7 @@ namespace Garage_pro_api.Mapper
             CreateMap<Quotation, QuotationDetailDto>()
                 .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => src.Vehicle != null
-                    ? $"{src.Vehicle.LicensePlate} - {src.Vehicle.Model}"
+                    ? $"{src.Vehicle.LicensePlate} - {src.Vehicle.Model.ModelName}"
                     : string.Empty))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
@@ -25,6 +25,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.PartCategories, opt => opt.Ignore()) // sẽ gán thủ công sau
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src =>
                     src.QuotationServiceParts.Sum(p => p.Quantity))) // optional
+                .ForMember(dest => dest.IsAdvanced, otp=> otp.MapFrom(s=>s.Service.IsAdvanced))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src =>
                     src.QuotationServiceParts.Sum(p => p.Price * p.Quantity)));
 

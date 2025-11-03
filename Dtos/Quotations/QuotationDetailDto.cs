@@ -40,7 +40,9 @@ namespace Dtos.Quotations
         public Guid QuotationId { get; set; }
         public Guid ServiceId { get; set; }
         public bool IsSelected { get; set; }
+        public bool IsAdvanced { get; set; }
         public bool IsRequired { get; set; } // Indicates if this is a required service
+
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
