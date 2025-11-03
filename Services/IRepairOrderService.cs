@@ -19,7 +19,7 @@ namespace Services
         
         // CRUD Operations
         Task<RoBoardCardDto?> GetRepairOrderCardAsync(Guid repairOrderId);
-        Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder);
+        Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder, List<Guid> selectedServiceIds = null);
         Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder);
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<bool> RepairOrderExistsAsync(Guid repairOrderId);

@@ -12,6 +12,8 @@ using System.Security.Claims;
 using BusinessObject.Authentication;
 using Services.VehicleServices;
 using BusinessObject.Enums;
+using Repositories.ServiceRepositories; // Add this for service repository
+using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
 
 namespace Garage_pro_api.Controllers
 {
@@ -24,19 +26,22 @@ namespace Garage_pro_api.Controllers
         private readonly ICustomerService _customerService;
         private readonly IVehicleService _vehicleService;
         private readonly IOrderStatusService _orderStatusService;
+        private readonly IServiceRepository _serviceRepository; // Add service repository
 
         public RepairOrderController(
             IRepairOrderService repairOrderService, 
             IUserService userService,
             ICustomerService customerService,
             IVehicleService vehicleService,
-            IOrderStatusService orderStatusService)
+            IOrderStatusService orderStatusService,
+            IServiceRepository serviceRepository) // Add service repository parameter
         {
             _repairOrderService = repairOrderService;
             _userService = userService;
             _customerService = customerService;
             _vehicleService = vehicleService;
             _orderStatusService = orderStatusService;
+            _serviceRepository = serviceRepository; // Initialize service repository
         }
 
         // GET: api/RepairOrder
@@ -72,68 +77,6 @@ namespace Garage_pro_api.Controllers
 
             return Ok(repairOrderDto);
         }
-
-        //// POST: api/RepairOrder/create-request
-        //[HttpPost("create-request")]
-        //public async Task<IActionResult> CreateRepairOrderRequest([FromBody] CreateRepairOrderRequestDto createRequestDto)
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return BadRequest(ModelState);
-        //    }
-
-        //    try
-        //    {
-        //        // Get the authenticated user to extract branch ID
-        //        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //        if (string.IsNullOrEmpty(userId))
-        //        {
-        //            return Unauthorized("User not authenticated");
-        //        }
-
-        //        // Get the user from the user service to extract their branch ID
-        //        var user = await _userService.GetByIdAsync(userId);
-        //        if (user == null)
-        //        {
-        //            return Unauthorized("User not found");
-        //        }
-
-        //        // Ensure the user has a branch assigned
-        //        if (!user.BranchId.HasValue)
-        //        {
-        //            return BadRequest("User is not assigned to a branch");
-        //        }
-
-        //        // Create a new repair order based on the frontend request
-        //        var repairOrder = new BusinessObject.RepairOrder
-        //        {
-        //            VehicleId = createRequestDto.VehicleId,
-        //            RoType = createRequestDto.RepairOrderType,
-        //            Note = createRequestDto.VehicleConcern,
-        //            // Removed LabelId as labels should be accessed through OrderStatus
-        //            // LabelId = createRequestDto.LabelId,
-        //            UserId = createRequestDto.CustomerId,
-        //            // Set default values for required fields
-        //            StatusId = Guid.NewGuid(), // This should be set to a proper status ID
-        //            BranchId = user.BranchId.Value, // Get branch ID from authenticated user
-        //            RepairRequestId = Guid.NewGuid(),
-        //            PaidStatus = createRequestDto.Status,
-        //            // Other fields will use their default values
-        //        };
-
-        //        var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder);
-                
-        //        // Return the created repair order
-        //        var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
-        //        var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
-                
-        //        return CreatedAtAction(nameof(GetRepairOrder), new { id = repairOrderDto.RepairOrderId }, repairOrderDto);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return BadRequest(new { message = ex.Message });
-        //    }
-        //}
 
         // POST: api/RepairOrder
         [HttpPost]
@@ -201,6 +144,24 @@ namespace Garage_pro_api.Controllers
                 var pendingStatus = statusColumns.Pending.FirstOrDefault();
                 var statusId = pendingStatus != null ? pendingStatus.OrderStatusId : 1;
 
+                // Calculate estimated time and amount based on selected services
+                decimal totalEstimatedAmount = 0;
+                long totalEstimatedTime = 0;
+
+                List<BusinessObject.Service> selectedServices = new List<BusinessObject.Service>();
+                if (createRoDto.SelectedServiceIds != null && createRoDto.SelectedServiceIds.Any())
+                {
+                    selectedServices = await _serviceRepository.Query()
+                        .Where(s => createRoDto.SelectedServiceIds.Contains(s.ServiceId))
+                        .ToListAsync();
+
+                    foreach (var service in selectedServices)
+                    {
+                        totalEstimatedAmount += service.Price;
+                        totalEstimatedTime += (long)(service.EstimatedDuration * 60); // Convert hours to minutes
+                    }
+                }
+
                 // Create a new repair order based on the simplified DTO
                 var repairOrder = new BusinessObject.RepairOrder
                 {
@@ -208,11 +169,11 @@ namespace Garage_pro_api.Controllers
                     RoType = createRoDto.RoType,
                     ReceiveDate = createRoDto.ReceiveDate,
                     EstimatedCompletionDate = createRoDto.EstimatedCompletionDate,
-                    EstimatedAmount = createRoDto.EstimatedAmount,
+                    EstimatedAmount = totalEstimatedAmount, // Calculated from services
                     Note = createRoDto.Note,
                     // Removed LabelId as labels should be accessed through OrderStatus
                     // LabelId = createRoDto.LabelId,
-                    EstimatedRepairTime = createRoDto.EstimatedRepairTime,
+                    EstimatedRepairTime = totalEstimatedTime, // Calculated from services
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
                     BranchId = user.BranchId.Value, // Get branch ID from authenticated user
@@ -223,7 +184,7 @@ namespace Garage_pro_api.Controllers
                     CreatedAt = DateTime.UtcNow // Auto-generated
                 };
 
-                var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder);
+                var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, createRoDto.SelectedServiceIds);
                 
                 // Return the created repair order
                 var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);

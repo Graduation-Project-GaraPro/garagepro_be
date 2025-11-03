@@ -21,6 +21,9 @@ namespace Repositories
             _context = context;
         }
 
+        // Add public property to access the context
+        public MyAppDbContext Context => _context;
+
         #region Basic CRUD Operations
 
         public async Task<RepairOrder?> GetByIdAsync(Guid repairOrderId)
