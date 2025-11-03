@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,10 +6,10 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
-//using BusinessObject.InspectionAndRepair;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
+
 
 namespace Repositories
 {
@@ -32,7 +33,7 @@ namespace Repositories
                     .ThenInclude(jp => jp.Part)
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
-                .Include(j => j.Repairs)
+                .Include(j => j.Repair)
                 .FirstOrDefaultAsync(j => j.JobId == jobId);
         }
 
@@ -134,7 +135,7 @@ namespace Repositories
                         .ThenInclude(p => p.PartCategory)
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
-                .Include(j => j.Repairs)
+                .Include(j => j.Repair)
                 .FirstOrDefaultAsync(j => j.JobId == jobId);
         }
 
@@ -158,6 +159,7 @@ namespace Repositories
             var job = await _context.Jobs.FindAsync(jobId);
             if (job == null) return false;
 
+
             job.Status = newStatus;
             job.UpdatedAt = DateTime.UtcNow;
 
@@ -167,6 +169,7 @@ namespace Repositories
                 var noteText = $"[{timestamp}] Status changed to {newStatus}: {changeNote}";
                 job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
+
 
             try
             {
@@ -179,9 +182,11 @@ namespace Repositories
             }
         }
 
+
         public async Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates)
         {
             if (updates == null || !updates.Any()) return true;
+
 
             var jobIds = updates.Select(u => u.JobId).ToList();
             var jobs = await _context.Jobs
@@ -215,7 +220,6 @@ namespace Repositories
                 return false;
             }
         }
-
         #endregion
 
         #region Job Assignment and Technician Management
@@ -312,10 +316,10 @@ namespace Repositories
             try
             {
                 await _context.SaveChangesAsync();
-                
+
                 // Update job total amount
                 await UpdateJobTotalAmountAsync(jobPart.JobId);
-                
+
                 return true;
             }
             catch
@@ -332,10 +336,10 @@ namespace Repositories
             try
             {
                 await _context.SaveChangesAsync();
-                
+
                 // Update job total amount
                 await UpdateJobTotalAmountAsync(jobPart.JobId);
-                
+
                 return true;
             }
             catch
@@ -355,10 +359,10 @@ namespace Repositories
             try
             {
                 await _context.SaveChangesAsync();
-                
+
                 // Update job total amount
                 await UpdateJobTotalAmountAsync(jobId);
-                
+
                 return true;
             }
             catch
@@ -395,6 +399,26 @@ namespace Repositories
 
         #endregion
 
+        #region Repair Activities Management
+
+        public async Task<IEnumerable<Repair>> GetJobRepairsAsync(Guid jobId)
+        {
+            return await _context.Repairs
+                .Where(r => r.JobId == jobId)
+                .OrderByDescending(r => r.StartTime)
+                .ToListAsync();
+        }
+        public async Task<Repair?> GetActiveRepairForJobAsync(Guid jobId)
+        {
+            //return await _context.Repairs
+            //    .FirstOrDefaultAsync(r => r.JobId == jobId && r.Status == RepairStatus.InProgress);
+
+            return await _context.Repairs
+                .FirstOrDefaultAsync(r => r.JobId == jobId );
+        }
+
+        #endregion
+
         #region Filtering and Search
 
         public async Task<IEnumerable<Job>> SearchJobsAsync(
@@ -416,7 +440,7 @@ namespace Repositories
             if (!string.IsNullOrEmpty(searchText))
             {
                 var searchLower = searchText.ToLower();
-                query = query.Where(j => 
+                query = query.Where(j =>
                     (j.JobName != null && j.JobName.ToLower().Contains(searchLower)) ||
                     (j.Service.ServiceName != null && j.Service.ServiceName.ToLower().Contains(searchLower)) ||
                     (j.Note != null && j.Note.ToLower().Contains(searchLower)));
@@ -476,6 +500,7 @@ namespace Repositories
             return await query.ToListAsync();
         }
 
+
         public async Task<IEnumerable<Job>> GetJobsWithNavigationPropertiesAsync()
         {
             return await _context.Jobs
@@ -490,49 +515,9 @@ namespace Repositories
 
         #region Business Logic Validation
 
-        public async Task<bool> CanCompleteJobAsync(Guid jobId)
-        {
-            var job = await _context.Jobs
-                .Include(j => j.Repairs)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
+       
 
-            if (job == null) return false;
-
-            // Business rules for job completion
-            // 1. Job must be in progress
-            if (job.Status != JobStatus.InProgress) return false;
-
-            // 2. All repairs should be completed
-            var hasActiveRepairs = job.Repairs.Any(r => r.Status == RepairStatus.InProgress);
-            if (hasActiveRepairs) return false;
-
-            // 3. Must have at least one completed repair (optional business rule)
-            var hasCompletedRepairs = job.Repairs.Any(r => r.Status == RepairStatus.Completed);
-            
-            return hasCompletedRepairs;
-        }
-
-        public async Task<bool> CanStartJobAsync(Guid jobId)
-        {
-            var job = await _context.Jobs
-                .Include(j => j.JobTechnicians)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
-
-            if (job == null) return false;
-
-            // Business rules for starting a job
-            // 1. Job must be assigned to technician (approved by customer and assigned by manager)
-            if (job.Status != JobStatus.AssignedToTechnician) return false;
-
-            // 2. Must have at least one assigned technician
-            return job.JobTechnicians.Any();
-        }
-
-        public async Task<bool> HasActiveTechnicianAsync(Guid jobId)
-        {
-            return await _context.JobTechnicians
-                .AnyAsync(jt => jt.JobId == jobId);
-        }
+        
 
         #endregion
 
@@ -563,96 +548,12 @@ namespace Repositories
 
         #region Completion Tracking
 
-        public async Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null)
-        {
-            if (!await CanCompleteJobAsync(jobId)) return false;
+       
 
-            var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null) return false;
+       
 
-            job.Status = JobStatus.Completed;
-            job.UpdatedAt = DateTime.UtcNow;
-
-            if (!string.IsNullOrEmpty(completionNotes))
-            {
-                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                var completionNote = $"[{timestamp}] Job completed: {completionNotes}";
-                job.Note = string.IsNullOrEmpty(job.Note) 
-                    ? completionNote 
-                    : $"{job.Note}\n{completionNote}";
-            }
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId)
-        {
-            if (!await CanStartJobAsync(jobId)) return false;
-
-            var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null) return false;
-
-            job.Status = JobStatus.InProgress;
-            job.UpdatedAt = DateTime.UtcNow;
-
-            // Ensure technician is assigned
-            await AssignTechnicianToJobAsync(jobId, technicianId);
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<TimeSpan?> GetJobDurationAsync(Guid jobId)
-        {
-            var job = await _context.Jobs
-                .Include(j => j.Repairs)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
-
-            if (job == null) return null;
-
-            // Calculate duration based on repairs
-            var totalMinutes = job.Repairs
-                .Where(r => r.ActualTime.HasValue)
-                .Sum(r => r.ActualTime.Value);
-
-            return totalMinutes > 0 ? TimeSpan.FromMinutes(totalMinutes) : null;
-        }
-
-        public async Task<decimal> GetJobProgressPercentageAsync(Guid jobId)
-        {
-            var job = await _context.Jobs
-                .Include(j => j.Repairs)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
-
-            if (job == null) return 0;
-
-            if (job.Status == JobStatus.Completed) return 100;
-            if (job.Status == JobStatus.Pending) return 0;
-
-            // Calculate progress based on repairs
-            var totalRepairs = job.Repairs.Count;
-            if (totalRepairs == 0) return job.Status == JobStatus.InProgress ? 50 : 0;
-
-            var completedRepairs = job.Repairs.Count(r => r.Status == RepairStatus.Completed);
-            
-            return totalRepairs > 0 ? (decimal)completedRepairs / totalRepairs * 100 : 0;
-        }
-
+        
+        
         #endregion
 
         #region Manager Assignment Workflow
@@ -674,56 +575,11 @@ namespace Repositories
             return await query
                 .OrderBy(j => j.CustomerResponseAt)
                 .ToListAsync();
-        }
+              }
 
-        public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
-        {
-            var job = await _context.Jobs
-                .Include(j => j.JobTechnicians)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
 
-            if (job == null) return false;
+        
 
-            // Can only reassign jobs that are assigned or in progress
-            if (job.Status != JobStatus.AssignedToTechnician && job.Status != JobStatus.InProgress) return false;
-
-            var timestamp = DateTime.UtcNow;
-
-            // Remove existing technician assignments
-            var existingAssignments = job.JobTechnicians.ToList();
-            foreach (var assignment in existingAssignments)
-            {
-                _context.JobTechnicians.Remove(assignment);
-            }
-
-            // Add new technician assignment
-            var newAssignment = new JobTechnician
-            {
-                JobId = jobId,
-                TechnicianId = newTechnicianId
-            };
-            _context.JobTechnicians.Add(newAssignment);
-
-            // Update job status and tracking
-            job.Status = JobStatus.AssignedToTechnician;
-            job.AssignedByManagerId = managerId;
-            job.AssignedAt = timestamp;
-            job.UpdatedAt = timestamp;
-
-            // Add note about reassignment
-            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to new technician by manager {managerId}";
-            job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
 
         public async Task<IEnumerable<Job>> GetJobsAssignedByManagerAsync(string managerId)
         {
@@ -751,7 +607,7 @@ namespace Repositories
 
             foreach (var job in jobs)
             {
-                job.Status = JobStatus.AssignedToTechnician;
+                
                 job.AssignedByManagerId = managerId;
                 job.AssignedAt = timestamp;
                 job.UpdatedAt = timestamp;
@@ -774,6 +630,54 @@ namespace Repositories
                 var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}";
                 job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
+        {
+            var job = await _context.Jobs
+                .Include(j => j.JobTechnicians)
+                .FirstOrDefaultAsync(j => j.JobId == jobId);
+
+            if (job == null) return false;
+
+            var timestamp = DateTime.UtcNow;
+
+            // Remove all current technician assignments
+            var currentAssignments = await _context.JobTechnicians
+                .Where(jt => jt.JobId == jobId)
+                .ToListAsync();
+
+            if (currentAssignments.Any())
+            {
+                _context.JobTechnicians.RemoveRange(currentAssignments);
+            }
+
+            // Add new technician assignment
+            var jobTechnician = new JobTechnician
+            {
+                JobId = jobId,
+                TechnicianId = newTechnicianId
+            };
+            _context.JobTechnicians.Add(jobTechnician);
+
+            // Update job assignment metadata
+            job.AssignedByManagerId = managerId;
+            job.AssignedAt = timestamp;
+            job.UpdatedAt = timestamp;
+
+            // Add note about reassignment
+            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}";
+            job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
 
             try
             {

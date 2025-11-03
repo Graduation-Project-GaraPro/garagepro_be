@@ -19,6 +19,7 @@ namespace Garage_pro_api.Hubs
         {
             // Notify all clients about the new repair order
             await Clients.All.SendAsync("RepairOrderCreated", repairOrder);
+            
         }
 
         // Method to update an existing repair order

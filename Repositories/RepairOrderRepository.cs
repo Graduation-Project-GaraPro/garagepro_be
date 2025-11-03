@@ -138,6 +138,8 @@ namespace Repositories
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                 .Include(ro => ro.Jobs)
+                    .ThenInclude(jo => jo.Service)
                 .Include(ro => ro.Payments)
                 .ToListAsync();
         }
@@ -153,14 +155,14 @@ namespace Repositories
 
             var oldStatusId = repairOrder.StatusId;
             repairOrder.StatusId = newStatusId;
-            
+
             // Add change note to the repair order notes if provided
             if (!string.IsNullOrEmpty(changeNote))
             {
                 var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                 var statusChangeNote = $"[{timestamp}] Status changed: {changeNote}";
-                repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note) 
-                    ? statusChangeNote 
+                repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note)
+                    ? statusChangeNote
                     : $"{repairOrder.Note}\n{statusChangeNote}";
             }
 
@@ -178,22 +180,20 @@ namespace Repositories
         public async Task<IEnumerable<RepairOrder>> BatchUpdateStatusAsync(List<UpdateRoBoardStatusDto> updates)
         {
             if (updates == null || !updates.Any()) return new List<RepairOrder>();
-            
+
             var repairOrderIds = updates.Select(u => u.RepairOrderId).ToList();
             var repairOrders = await _context.RepairOrders
                 .Where(ro => repairOrderIds.Contains(ro.RepairOrderId))
                 .ToListAsync();
-            
+
             var updatedOrders = new List<RepairOrder>();
-            
+
             foreach (var update in updates)
             {
                 var repairOrder = repairOrders.FirstOrDefault(ro => ro.RepairOrderId == update.RepairOrderId);
                 if (repairOrder != null)
                 {
                     repairOrder.StatusId = update.NewStatusId;
-                                      
-                    
                     updatedOrders.Add(repairOrder);
                 }
             }
@@ -202,7 +202,7 @@ namespace Repositories
             {
                 await _context.SaveChangesAsync();
             }
-            
+
             return updatedOrders;
         }
 
@@ -252,7 +252,7 @@ namespace Repositories
         public async Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int>? statusIds = null) // Changed from Guid to int
         {
             var query = _context.RepairOrders.AsQueryable();
-            
+
             if (statusIds != null && statusIds.Any())
             {
                 query = query.Where(ro => statusIds.Contains(ro.StatusId));
@@ -266,7 +266,7 @@ namespace Repositories
         public async Task<Dictionary<string, object>> GetKanbanStatisticsAsync(RoBoardFiltersDto? filters = null)
         {
             var query = _context.RepairOrders.AsQueryable();
-            
+
             if (filters != null)
             {
                 query = ApplyFilters(query, filters);
@@ -275,11 +275,11 @@ namespace Repositories
             var totalOrders = await query.CountAsync();
             var completedOrders = await query.Where(ro => ro.CompletionDate.HasValue).CountAsync();
             var overdueOrders = await query
-                .Where(ro => ro.EstimatedCompletionDate.HasValue && 
-                           ro.EstimatedCompletionDate.Value < DateTime.UtcNow && 
+                .Where(ro => ro.EstimatedCompletionDate.HasValue &&
+                           ro.EstimatedCompletionDate.Value < DateTime.UtcNow &&
                            !ro.CompletionDate.HasValue)
                 .CountAsync();
-            
+
             // Handle potential empty results
             var totalRevenue = await query.SumAsync(ro => (decimal?)ro.PaidAmount) ?? 0;
             var totalEstimated = await query.SumAsync(ro => (decimal?)ro.EstimatedAmount) ?? 0;
@@ -305,7 +305,7 @@ namespace Repositories
             var repairOrder = await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
-            
+
             if (repairOrder == null) return false;
 
             var newStatus = await _context.OrderStatuses.FindAsync(newStatusId);
@@ -327,7 +327,7 @@ namespace Repositories
             // Add more business rules as needed
             // Example: Can't move from "Completed" back to "In Progress"
             // Example: Require certain inspections before moving to specific statuses
-            
+
             return true;
         }
 
@@ -387,6 +387,7 @@ namespace Repositories
             if (!string.IsNullOrEmpty(searchText))
             {
                 var searchLower = searchText.ToLower();
+
                 query = query.Where(ro =>                    
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
                     (ro.Vehicle.VIN != null && ro.Vehicle.VIN.ToLower().Contains(searchLower)) ||
@@ -446,7 +447,7 @@ namespace Repositories
         public async Task<IEnumerable<RepairOrder>> GetRecentlyUpdatedRepairOrdersAsync(int hours = 24)
         {
             var cutoffTime = DateTime.UtcNow.AddHours(-hours);
-            
+
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                 .Include(ro => ro.Branch)
@@ -462,7 +463,7 @@ namespace Repositories
             var repairOrder = await _context.RepairOrders
                 .AsNoTracking()
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
-            
+
             return repairOrder?.CreatedAt; // In a real implementation, you'd track status change history
         }
 
@@ -477,6 +478,7 @@ namespace Repositories
 
             repairOrder.IsArchived = true;
             repairOrder.ArchivedAt = DateTime.UtcNow;
+
             repairOrder.ArchivedByUserId = archivedByUserId;
             repairOrder.UpdatedAt = DateTime.UtcNow;
 
@@ -500,12 +502,12 @@ namespace Repositories
             repairOrder.ArchivedAt = null;
             repairOrder.ArchivedByUserId = null;
             repairOrder.UpdatedAt = DateTime.UtcNow;
-            
+
             // Add restore note to repair order
             var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
             var restoreNote = $"[{timestamp}] Restored by {restoredByUserId}: {reason}";
-            repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note) 
-                ? restoreNote 
+            repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note)
+                ? restoreNote
                 : $"{repairOrder.Note}\n{restoreNote}";
 
             try
@@ -567,7 +569,7 @@ namespace Repositories
             var repairOrder = await _context.RepairOrders
                 .AsNoTracking()
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
-            
+
             return repairOrder?.IsArchived ?? false;
         }
 
@@ -624,8 +626,8 @@ namespace Repositories
 
             if (filters.IsOverdue.HasValue && filters.IsOverdue.Value)
             {
-                query = query.Where(ro => ro.EstimatedCompletionDate.HasValue && 
-                                         ro.EstimatedCompletionDate.Value < DateTime.UtcNow && 
+                query = query.Where(ro => ro.EstimatedCompletionDate.HasValue &&
+                                         ro.EstimatedCompletionDate.Value < DateTime.UtcNow &&
                                          !ro.CompletionDate.HasValue);
             }
 
@@ -665,6 +667,7 @@ namespace Repositories
             if (!string.IsNullOrEmpty(filters.SearchText))
             {
                 var searchLower = filters.SearchText.ToLower();
+
                 query = query.Where(ro => 
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
                     (ro.User.FullName != null && ro.User.FullName.ToLower().Contains(searchLower)) ||
@@ -714,8 +717,8 @@ namespace Repositories
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
                 .Include(ro => ro.Branch)
-                .Where(ro => ro.StatusId == statusId && 
-                           !ro.IsArchived && 
+                .Where(ro => ro.StatusId == statusId &&
+                           !ro.IsArchived &&
                            (ro.CompletionDate.HasValue ? ro.CompletionDate.Value <= cutoffDate : ro.UpdatedAt <= cutoffDate))
                 .ToListAsync();
         }
@@ -762,8 +765,8 @@ namespace Repositories
             {
                 var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                 var completionNote = $"[{timestamp}] Completion update: {notes}";
-                repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note) 
-                    ? completionNote 
+                repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note)
+                    ? completionNote
                     : $"{repairOrder.Note}\n{completionNote}";
             }
 
@@ -779,5 +782,9 @@ namespace Repositories
         }
 
         #endregion
+
+
+
+
     }
 }

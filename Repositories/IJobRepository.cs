@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
-//using BusinessObject.InspectionAndRepair;
-using BusinessObject.Technician;
+
+using BusinessObject.InspectionAndRepair;
 using System.Linq.Expressions;
 
 namespace Repositories
@@ -29,7 +29,6 @@ namespace Repositories
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
         Task<IEnumerable<Job>> GetJobsReadyForAssignmentAsync(Guid? repairOrderId = null);
-        Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId);
 
         // Job parts management
         Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId);
@@ -57,13 +56,6 @@ namespace Repositories
         Task<IEnumerable<Job>> GetJobsWithNavigationPropertiesAsync();
         Task<IEnumerable<Job>> GetRecentlyUpdatedJobsAsync(int hours = 24);
 
-        // Business logic validation
-        Task<bool> CanCompleteJobAsync(Guid jobId);
-        Task<bool> CanStartJobAsync(Guid jobId);
-        Task<bool> HasActiveTechnicianAsync(Guid jobId);
-
-        // Completion tracking
-        Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null);
 
     }
 }

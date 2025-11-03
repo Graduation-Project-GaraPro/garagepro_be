@@ -19,6 +19,13 @@ namespace Services.ServiceServices
             Guid? serviceCategoryId = null,
             string? searchTerm = null);
 
+        Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesForFilterAsync();
+
+        Task<IEnumerable<ServiceCategoryDto>> GetAllCategoriesWithFilterAsync(
+           Guid? parentServiceCategoryId = null,
+           string? searchTerm = null,
+           bool? isActive = null);
+        Task<IEnumerable<ServiceCategoryDto>> GetValidParentCategoriesAsync(Guid? categoryId);
         Task<object> GetAllServiceCategoryFromParentCategoryAsync(
             Guid parentServiceCategoryId,
             int pageNumber = 1,

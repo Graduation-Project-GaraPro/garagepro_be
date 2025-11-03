@@ -40,16 +40,21 @@ namespace Services.Authentication
             
         }
 
-        public async Task<SignInResult> PasswordSignInAsync(string email, string password, bool isPersistent)
+        public async Task<SignInResult> PasswordSignInAsync(string email, string password)
         {
-            var user = await _userManager.FindByEmailAsync(email);
+            var user = await _userManager.FindByNameAsync(email);
             if (user == null)
                 return SignInResult.Failed;
             var policy = await _securityPolicyService.GetCurrentAsync();
 
             // Kiểm tra lockout real-time
             if (policy?.EnableBruteForceProtection == true && await IsAccountLockedOutAsync(user))
+            {
                 return SignInResult.LockedOut;
+            }else
+            {
+
+            }
 
             // Thực hiện đăng nhập
             var result = await _signInManager.CheckPasswordSignInAsync(user, password, lockoutOnFailure: false);
@@ -59,10 +64,10 @@ namespace Services.Authentication
                 await ResetFailedAccessCountAsync(user);
 
                
-                if (policy != null)
-                {
-                    await SetAuthenticationCookieAsync(user, isPersistent, policy.SessionTimeout);
-                }
+                //if (policy != null)
+                //{
+                //    await SetAuthenticationCookieAsync(user, isPersistent, policy.SessionTimeout);
+                //}
 
                 return SignInResult.Success;
             }
@@ -114,15 +119,27 @@ namespace Services.Authentication
 
         public async Task<LockoutInfo> GetLockoutInfoAsync(ApplicationUser user)
         {
-            if (user == null) return new LockoutInfo { IsLockedOut = false };
+            if (user == null)
+                return new LockoutInfo { IsLockedOut = false };
 
             var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
+            var isLockedOut = lockoutEnd.HasValue && lockoutEnd > DateTimeOffset.UtcNow;
+
+            int remainingMinutes = 0;
+            if (isLockedOut && lockoutEnd.HasValue)
+            {
+                var timeRemaining = lockoutEnd.Value - DateTimeOffset.UtcNow;
+                remainingMinutes = (int)Math.Ceiling(timeRemaining.TotalMinutes);
+
+                // Đảm bảo ít nhất là 1 phút
+                remainingMinutes = Math.Max(1, remainingMinutes);
+            }
+
             return new LockoutInfo
             {
-                IsLockedOut = lockoutEnd > DateTimeOffset.UtcNow,
+                IsLockedOut = isLockedOut,
                 LockoutEnd = lockoutEnd,
-                RemainingMinutes = lockoutEnd.HasValue ?
-                    (int)(lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes : 0
+                RemainingMinutes = remainingMinutes
             };
         }
         private async Task ResetFailedAccessCountAsync(ApplicationUser user)
@@ -145,11 +162,11 @@ namespace Services.Authentication
             await _signInManager.Context.SignInAsync(principal, authProperties);
         }
 
-        public async Task<bool> RequiresMfaAsync(ApplicationUser user)
-        {
-            var policy = await _securityPolicyService.GetCurrentAsync();
-            return policy?.MfaRequired == true;
-        }
+        //public async Task<bool> RequiresMfaAsync(ApplicationUser user)
+        //{
+        //    var policy = await _securityPolicyService.GetCurrentAsync();
+        //    return policy?.MfaRequired == true;
+        //}
 
         public async Task<bool> IsPasswordExpiredAsync(ApplicationUser user)
         {

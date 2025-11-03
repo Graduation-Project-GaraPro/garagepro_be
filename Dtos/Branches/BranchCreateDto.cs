@@ -10,6 +10,7 @@ namespace Dtos.Branches
     public class BranchCreateDto
     {
         [Required(ErrorMessage = "Branch name is required")]
+        [MinLength(2)]
         [MaxLength(200, ErrorMessage = "Branch name cannot exceed 200 characters")]
         public string BranchName { get; set; } = string.Empty;
 

@@ -125,7 +125,7 @@ namespace Dtos.Quotations
         [Required]
         public string Status { get; set; } // Approved, Rejected
 
-        public string CustomerNote { get; set; }
+        public string? CustomerNote { get; set; }
         
         // Customer selects services they agree with
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }

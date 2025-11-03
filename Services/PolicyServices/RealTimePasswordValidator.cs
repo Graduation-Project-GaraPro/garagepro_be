@@ -31,6 +31,7 @@ namespace Services.PolicyServices
                 // Password hợp lệ
                 return IdentityResult.Success;
             }
+
             // Gom tất cả thông báo lỗi từ service
             var allErrors = result.Errors
                 .SelectMany(kvp => kvp.Value)
@@ -43,7 +44,6 @@ namespace Services.PolicyServices
                     Description = msg
                 })
                 .ToArray();
-
             return IdentityResult.Failed(identityErrors);
         }
     }

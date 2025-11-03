@@ -19,7 +19,7 @@ namespace BusinessObject.Policies
         public int SessionTimeout { get; set; } // phút
         public int MaxLoginAttempts { get; set; }
         public int AccountLockoutTime { get; set; } // phút
-        public bool MfaRequired { get; set; }
+        
         public int PasswordExpiryDays { get; set; }
         public bool EnableBruteForceProtection { get; set; }
 

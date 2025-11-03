@@ -11,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+
 using BusinessObject.Manager;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
@@ -61,6 +62,7 @@ namespace BusinessObject
 
         public DateTime? ArchivedAt { get; set; }
 
+
         public string? ArchivedByUserId { get; set; }
 
         [Required]
@@ -97,7 +99,7 @@ namespace BusinessObject
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
-        public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
+        public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();
     }
 }

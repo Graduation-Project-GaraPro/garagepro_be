@@ -13,7 +13,7 @@ namespace Services.RoleServices
         Task<bool> RoleHasPermissionAsync(string roleId, string permissionCode);
 
         Task<List<PermissionCategoryDto>> GetAllPermissionsGroupedAsync();
-
+        IQueryable<Permission> Query();
         Task<List<Permission>> GetAllPermissionsAsync();
         Task<HashSet<string>> GetPermissionsByRoleIdAsync(string roleId);
 

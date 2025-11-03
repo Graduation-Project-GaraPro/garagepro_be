@@ -25,6 +25,15 @@ namespace Repositories.PartRepositories
             return await _context.Parts.AnyAsync(predicate);
         }
 
+        public IQueryable<Part> Query()
+        {
+            return _context.Parts
+                .Include(p => p.PartCategory)
+                .Include(p => p.ServiceParts)
+                    .ThenInclude(sp => sp.Part)
+                .AsQueryable();
+        }
+
         // Get Part by ID
         public async Task<Part> GetByIdAsync(Guid id)
         {

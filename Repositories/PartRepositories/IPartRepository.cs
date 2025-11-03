@@ -16,5 +16,6 @@ namespace Repositories.PartRepositories
         Task<Part> CreateAsync(Part part);
         Task<Part> UpdateAsync(Part part);
         Task<bool> DeleteAsync(Guid id);
+        IQueryable<Part> Query();
     }
 }

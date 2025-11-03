@@ -11,6 +11,9 @@ using Dtos.RoBoard;
 using System.Security.Claims;
 using BusinessObject.Authentication;
 using Services.VehicleServices;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
+using Dtos.InspectionAndRepair;
 using BusinessObject.Enums;
 using Repositories.ServiceRepositories; // Add this for service repository
 using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
@@ -27,6 +30,7 @@ namespace Garage_pro_api.Controllers
         private readonly IVehicleService _vehicleService;
         private readonly IOrderStatusService _orderStatusService;
         private readonly IServiceRepository _serviceRepository; // Add service repository
+        private readonly IHubContext<RepairOrderHub> _hubContext;
 
         public RepairOrderController(
             IRepairOrderService repairOrderService, 
@@ -34,7 +38,8 @@ namespace Garage_pro_api.Controllers
             ICustomerService customerService,
             IVehicleService vehicleService,
             IOrderStatusService orderStatusService,
-            IServiceRepository serviceRepository) // Add service repository parameter
+            IServiceRepository serviceRepository, // Add service repository parameter
+            IHubContext<RepairOrderHub> hubContext)
         {
             _repairOrderService = repairOrderService;
             _userService = userService;
@@ -42,6 +47,7 @@ namespace Garage_pro_api.Controllers
             _vehicleService = vehicleService;
             _orderStatusService = orderStatusService;
             _serviceRepository = serviceRepository; // Initialize service repository
+            _hubContext = hubContext;
         }
 
         // GET: api/RepairOrder
@@ -51,7 +57,7 @@ namespace Garage_pro_api.Controllers
         {
             var repairOrders = await _repairOrderService.GetAllRepairOrdersAsync();
             // Map to enhanced DTOs
-            var repairOrderDtos = new List<RepairOrderDto>();
+            var repairOrderDtos = new List<Dtos.RepairOrder.RepairOrderDto>();
             foreach (var ro in repairOrders)
             {
                 var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(ro.RepairOrderId);
@@ -189,8 +195,11 @@ namespace Garage_pro_api.Controllers
                 // Return the created repair order
                 var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
                 var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
-                
+
+
+               // await _hubContext.Clients.All.SendAsync("RepairOrderCreated", repairOrderDto);
                 return CreatedAtAction(nameof(GetRepairOrder), new { id = repairOrderDto.RepairOrderId }, repairOrderDto);
+                
             }
             catch (Exception ex)
             {
@@ -202,6 +211,7 @@ namespace Garage_pro_api.Controllers
                     stackTrace = ex.StackTrace
                 });
             }
+        
         }
 
         // PUT: api/RepairOrder/5

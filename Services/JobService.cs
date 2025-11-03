@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 using Repositories;
 
 namespace Services
@@ -13,7 +13,7 @@ namespace Services
     {
         private readonly IJobRepository _jobRepository;
 
-        public JobService(IJobRepository jobRepository) // Update constructor
+        public JobService(IJobRepository jobRepository)
         {
             _jobRepository = jobRepository;
         }
@@ -30,10 +30,10 @@ namespace Services
             // Business validation before creation
             if (string.IsNullOrWhiteSpace(job.JobName))
                 throw new ArgumentException("Job name is required", nameof(job.JobName));
-            
+
             if (job.ServiceId == Guid.Empty)
                 throw new ArgumentException("Service ID is required", nameof(job.ServiceId));
-            
+
             if (job.RepairOrderId == Guid.Empty)
                 throw new ArgumentException("Repair Order ID is required", nameof(job.RepairOrderId));
 
@@ -81,7 +81,7 @@ namespace Services
         {
             return await _jobRepository.GetJobsWithNavigationPropertiesAsync();
         }
-        
+
         // NEW: Get jobs by status
         public async Task<IEnumerable<Job>> GetJobsByStatusIdAsync(JobStatus status)
         {
@@ -97,12 +97,14 @@ namespace Services
             return await _jobRepository.GetJobsByRepairOrderIdAsync(repairOrderId);
         }
 
+
         public async Task<IEnumerable<Job>> GetJobsByStatusAsync(JobStatus status)
         {
             return await _jobRepository.GetJobsByStatusAsync(status);
         }
 
         #endregion
+
 
         #region Manager Assignment Workflow
 
@@ -141,7 +143,12 @@ namespace Services
             return await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
         }
 
+
+
+
+
         #endregion
+
 
         #region Job Parts Management
 
@@ -208,7 +215,6 @@ namespace Services
         {
             if (updates == null || !updates.Any())
                 throw new ArgumentException("Updates cannot be null or empty", nameof(updates));
-
             // Validate all transitions
             foreach (var (jobId, newStatus, _) in updates)
             {
@@ -223,15 +229,6 @@ namespace Services
 
         #region Business Logic Validation
 
-        public async Task<bool> CanCompleteJobAsync(Guid jobId)
-        {
-            return await _jobRepository.CanCompleteJobAsync(jobId);
-        }
-
-        public async Task<bool> CanStartJobAsync(Guid jobId)
-        {
-            return await _jobRepository.CanStartJobAsync(jobId);
-        }
 
         public async Task<bool> CanSendJobToCustomerAsync(Guid jobId)
         {
@@ -251,11 +248,6 @@ namespace Services
             return job.Status == JobStatus.Pending;
         }
 
-        public async Task<bool> HasActiveTechnicianAsync(Guid jobId)
-        {
-            return await _jobRepository.HasActiveTechnicianAsync(jobId);
-        }
-
         #endregion
 
         #region Search and Filtering
@@ -270,20 +262,6 @@ namespace Services
             DateTime? toDate = null)
         {
             return await _jobRepository.SearchJobsAsync(searchText, statuses, repairOrderIds, serviceIds, technicianIds, fromDate, toDate);
-        }
-
-        #endregion
-
-        #region Completion Tracking
-
-        public async Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null)
-        {
-            return await _jobRepository.MarkJobAsCompletedAsync(jobId, completionNotes);
-        }
-
-        public async Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId)
-        {
-            return await _jobRepository.MarkJobAsInProgressAsync(jobId, technicianId);
         }
 
         #endregion
@@ -315,13 +293,13 @@ namespace Services
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-                [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-                [JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
-                [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician }, // Can be reassigned
+               // [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
+               //[JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
+               // [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician }, // Can be reassigned
                 [JobStatus.Completed] = new List<JobStatus>() // Terminal status
             };
 
-            return allowedTransitions.ContainsKey(currentStatus) && 
+            return allowedTransitions.ContainsKey(currentStatus) &&
                    allowedTransitions[currentStatus].Contains(targetStatus);
         }
 
@@ -329,14 +307,14 @@ namespace Services
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-                [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-                [JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
-                [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician },
+                //[JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
+                //[JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
+                //[JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician },
                 [JobStatus.Completed] = new List<JobStatus>()
             };
 
-            return allowedTransitions.ContainsKey(currentStatus) ? 
-                   allowedTransitions[currentStatus] : 
+            return allowedTransitions.ContainsKey(currentStatus) ?
+                   allowedTransitions[currentStatus] :
                    new List<JobStatus>();
         }
 

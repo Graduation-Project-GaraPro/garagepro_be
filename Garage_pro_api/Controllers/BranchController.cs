@@ -91,7 +91,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        [Authorize(Policy = "BRANCH_CREATE")]
+        //[Authorize(Policy = "BRANCH_CREATE")]
 
         // POST: api/branch
         [HttpPost]
@@ -107,7 +107,7 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
-        [Authorize(Policy = "BRANCH_UPDATE")]
+        //[Authorize(Policy = "BRANCH_UPDATE")]
 
         // PUT: api/branch/{id}
         [HttpPut("{id}")]
@@ -144,7 +144,7 @@ namespace Garage_pro_api.Controllers
             catch (Exception ex)
             {
                 //_logger.LogError(ex, "Failed to activate branches.");
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
         [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]
@@ -164,7 +164,7 @@ namespace Garage_pro_api.Controllers
             catch (Exception ex)
             {
                 //_logger.LogError(ex, "Failed to deactivate branches.");
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
         [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]
@@ -189,12 +189,12 @@ namespace Garage_pro_api.Controllers
             catch (ApplicationException ex)
             {
                 //_logger.LogError(ex, "Failed to toggle branch status for ID {BranchId}", id);
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { message = ex.Message });
             }
             catch (Exception ex)
             {
                 //_logger.LogError(ex, "Unexpected error when toggling branch status for ID {BranchId}", id);
-                return StatusCode(500, new { error = "An unexpected error occurred." });
+                return StatusCode(500, new { message = "An unexpected error occurred." });
             }
         }
         [Authorize(Policy = "BRANCH_DELETE")]
@@ -214,7 +214,7 @@ namespace Garage_pro_api.Controllers
             catch (ApplicationException ex)
             {
                 //_logger.LogError(ex, "Failed to delete branches.");
-                return StatusCode(500, new { error = ex.Message });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
         [Authorize(Policy = "BRANCH_DELETE")]
@@ -232,7 +232,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex });
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

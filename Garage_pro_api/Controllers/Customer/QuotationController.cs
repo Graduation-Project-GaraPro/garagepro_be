@@ -51,6 +51,7 @@ namespace Garage_pro_api.Controllers.Customer
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized();
             var approvedQuotation = await _quotationService.ApproveQuotationAsync(quotationId);
+
             return Ok(approvedQuotation);
         }
         //customer từ chối báo giá

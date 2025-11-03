@@ -6,7 +6,7 @@ using Dtos.Job;
 using Repositories;
 using BusinessObject;
 using BusinessObject.Enums;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 
 namespace Services
 {
@@ -215,8 +215,8 @@ namespace Services
                 TotalJobs = technicianJobs.Count,
                 CompletedJobs = technicianJobs.Count(j => j.Status == JobStatus.Completed),
                 InProgressJobs = technicianJobs.Count(j => j.Status == JobStatus.InProgress),
-                PendingJobs = technicianJobs.Count(j => j.Status == JobStatus.Pending || 
-                    j.Status == JobStatus.AssignedToTechnician),
+                //PendingJobs = technicianJobs.Count(j => j.Status == JobStatus.Pending || 
+                //    j.Status == JobStatus.AssignedToTechnician),
             };
 
             // Add upcoming jobs (next 5 jobs)

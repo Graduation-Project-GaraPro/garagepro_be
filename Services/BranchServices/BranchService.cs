@@ -60,44 +60,78 @@ namespace Services.BranchServices
                 );
 
                 if (isNameDuplicate)
-                {
                     throw new ApplicationException("A branch with the same name already exists.");
-                }
 
                 if (isAddressDuplicate)
-                {
                     throw new ApplicationException("A branch with the same address already exists.");
-                }
 
-
-
-
+                // === Validate operating hours ===
                 var days = dto.OperatingHours
-                            .Select(o => o.DayOfWeek)
-                            .Distinct()
-                            .OrderBy(d => d)
-                            .ToList();
+                 .Select(o => o.DayOfWeek)
+                 .ToList();
 
-                // Kiểm tra đủ 7 ngày
-                if (days.Count != 7 || !Enumerable.Range(1, 7).All(d => days.Contains((BusinessObject.Enums.DayOfWeekEnum)d)))
-                {
-                    throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday).");
-                }
-
-                // Kiểm tra nếu IsOpen == true thì OpenTime và CloseTime không được null
-                foreach (var op in dto.OperatingHours)
-                {
-                    if (op.IsOpen)
+                    // Check không gửi quá 7 ngày
+                    if (days.Count > 7)
                     {
-                        if (!op.OpenTime.HasValue || !op.CloseTime.HasValue)
+                        throw new ApplicationException("Cannot provide more than 7 operating hours (Monday to Sunday).");
+                    }
+
+                    // Check đủ 7 ngày không trùng
+                    if (days.Distinct().Count() != 7 || !Enumerable.Range(1, 7).All(d => days.Contains((BusinessObject.Enums.DayOfWeekEnum)d)))
+                    {
+                        throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday) with no duplicates.");
+                    }
+
+                    // Must have at least one day open
+                    if (!dto.OperatingHours.Any(o => o.IsOpen))
+                    {
+                        throw new ApplicationException("At least one day must be open (IsOpen = true).");
+                    }
+
+                    // Validate Open/Close time
+                    foreach (var op in dto.OperatingHours)
+                    {
+                        if (op.IsOpen && (!op.OpenTime.HasValue || !op.CloseTime.HasValue))
                         {
                             throw new ApplicationException($"Operating hours for {op.DayOfWeek} must have both OpenTime and CloseTime when IsOpen is true.");
                         }
                     }
+
+                    // Optional: ensure only Monday → Sunday
+                    if (dto.OperatingHours.Any(o => (int)o.DayOfWeek < 1 || (int)o.DayOfWeek > 7))
+                    {
+                        throw new ApplicationException("Operating hours can only be set from Monday to Sunday.");
+                    }
+
+                // === Validate Services exist ===
+                var existingServiceIds = await _serviceRepo.Query()
+                    .Where(s => dto.ServiceIds.Contains(s.ServiceId))
+                    .Select(s => s.ServiceId)
+                    .ToListAsync();
+
+                var missingServices = dto.ServiceIds.Except(existingServiceIds).ToList();
+                if (missingServices.Any())
+                {
+                    throw new ApplicationException($"Some service IDs do not exist: {string.Join(", ", missingServices)}");
+                }
+
+               
+
+                // === Validate Staffs exist and are Managers/Technicians ===
+                var allowedUsers = await _userRepository.GetManagersAndTechniciansAsync();
+
+                var validStaffs = allowedUsers
+                    .Where(u => dto.StaffIds != null && dto.StaffIds.Contains(u.Id))
+                    .ToList();
+
+                if (dto.StaffIds != null && dto.StaffIds.Any() && validStaffs.Count != dto.StaffIds.Count)
+                {
+                    var invalidStaffIds = dto.StaffIds.Except(validStaffs.Select(u => u.Id));
+                    throw new ApplicationException($"Some staff IDs are invalid or not allowed: {string.Join(", ", invalidStaffIds)}");
                 }
 
 
-
+                // === Create branch ===
                 var branchId = Guid.NewGuid();
 
                 var branch = new Branch
@@ -113,7 +147,7 @@ namespace Services.BranchServices
                     Description = dto.Description,
                     IsActive = true,
                     CreatedAt = DateTime.UtcNow,
-                    BranchServices = dto.ServiceIds
+                    BranchServices = existingServiceIds
                         .Select(sid => new BusinessObject.Branches.BranchService
                         {
                             BranchId = branchId,
@@ -130,16 +164,11 @@ namespace Services.BranchServices
                         }).ToList()
                 };
 
-                if (dto.StaffIds != null && dto.StaffIds.Any())
+                // Assign valid staffs to branch
+                foreach (var user in validStaffs)
                 {
-                    var Users = await _userRepository.GetAllAsync();
-                    var staffs = Users.Where(u => dto.StaffIds.Contains(u.Id));
-
-                    foreach (var user in staffs)
-                    {
-                        user.BranchId = branchId;
-                        branch.Staffs.Add(user);
-                    }
+                    user.BranchId = branchId;
+                    branch.Staffs.Add(user);
                 }
 
                 await _branchRepo.AddAsync(branch);
@@ -151,9 +180,10 @@ namespace Services.BranchServices
             catch (Exception ex)
             {
                 await tx.RollbackAsync();
-                throw new ApplicationException("Error creating branch " + ex.Message, ex);
+                throw new ApplicationException("Error creating branch: " + ex.Message, ex);
             }
         }
+
 
 
         // UPDATE
@@ -165,13 +195,12 @@ namespace Services.BranchServices
                 var branch = await _branchRepo.GetBranchWithRelationsAsync(dto.BranchId);
                 if (branch == null) return null;
 
-                // Check duplicate name
+                // === Check duplicate name/address ===
                 bool isNameDuplicate = await _branchRepo.ExistsAsync(
                     b => b.BranchId != dto.BranchId &&
                          b.BranchName.ToLower().Trim() == dto.BranchName.ToLower().Trim()
                 );
 
-                // Check duplicate address
                 bool isAddressDuplicate = await _branchRepo.ExistsAsync(
                     b => b.BranchId != dto.BranchId &&
                          b.Street.ToLower().Trim() == dto.Street.ToLower().Trim() &&
@@ -180,43 +209,68 @@ namespace Services.BranchServices
                          b.City.ToLower().Trim() == dto.City.ToLower().Trim()
                 );
 
-                if (isNameDuplicate)
-                {
-                    throw new ApplicationException("Branch name already exists.");
-                }
+                if (isNameDuplicate) throw new ApplicationException("Branch name already exists.");
+                if (isAddressDuplicate) throw new ApplicationException("Branch address already exists.");
 
-                if (isAddressDuplicate)
-                {
-                    throw new ApplicationException("Branch address already exists.");
-                }
-
-                // Validate operating hours: phải đủ 7 ngày
-
+                // === Validate operating hours ===
+                // === Validate operating hours ===
                 var days = dto.OperatingHours
-                            .Select(o => o.DayOfWeek)
-                            .Distinct()
-                            .OrderBy(d => d)
-                            .ToList();
+                 .Select(o => o.DayOfWeek)
+                 .ToList();
 
-                // Kiểm tra đủ 7 ngày
-                if (days.Count != 7 || !Enumerable.Range(1, 7).All(d => days.Contains((BusinessObject.Enums.DayOfWeekEnum)d)))
+                // Check không gửi quá 7 ngày
+                if (days.Count > 7)
                 {
-                    throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday).");
+                    throw new ApplicationException("Cannot provide more than 7 operating hours (Monday to Sunday).");
                 }
 
-                // Kiểm tra nếu IsOpen == true thì OpenTime và CloseTime không được null
+                // Check đủ 7 ngày không trùng
+                if (days.Distinct().Count() != 7 || !Enumerable.Range(1, 7).All(d => days.Contains((BusinessObject.Enums.DayOfWeekEnum)d)))
+                {
+                    throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday) with no duplicates.");
+                }
+
+                // Must have at least one day open
+                if (!dto.OperatingHours.Any(o => o.IsOpen))
+                {
+                    throw new ApplicationException("At least one day must be open (IsOpen = true).");
+                }
+
+                // Validate Open/Close time
                 foreach (var op in dto.OperatingHours)
                 {
-                    if (op.IsOpen)
+                    if (op.IsOpen && (!op.OpenTime.HasValue || !op.CloseTime.HasValue))
                     {
-                        if (!op.OpenTime.HasValue || !op.CloseTime.HasValue)
-                        {
-                            throw new ApplicationException($"Operating hours for {op.DayOfWeek} must have both OpenTime and CloseTime when IsOpen is true.");
-                        }
+                        throw new ApplicationException($"Operating hours for {op.DayOfWeek} must have both OpenTime and CloseTime when IsOpen is true.");
                     }
                 }
 
-                // Update các field cơ bản
+                // Optional: ensure only Monday → Sunday
+                if (dto.OperatingHours.Any(o => (int)o.DayOfWeek < 1 || (int)o.DayOfWeek > 7))
+                {
+                    throw new ApplicationException("Operating hours can only be set from Monday to Sunday.");
+                }
+
+                // === Validate services exist ===
+                var existingServiceIds = await _serviceRepo.Query()
+                    .Where(s => dto.ServiceIds.Contains(s.ServiceId))
+                    .Select(s => s.ServiceId)
+                    .ToListAsync();
+
+                var missingServices = dto.ServiceIds.Except(existingServiceIds).ToList();
+                if (missingServices.Any())
+                    throw new ApplicationException($"Some service IDs do not exist: {string.Join(", ", missingServices)}");
+
+                // === Validate staffs exist and are Managers/Technicians ===
+                var allowedUsers = await _userRepository.GetManagersAndTechniciansAsync();
+                var validStaffs = allowedUsers.Where(u => dto.StaffIds != null && dto.StaffIds.Contains(u.Id)).ToList();
+                if (dto.StaffIds != null && dto.StaffIds.Any() && validStaffs.Count != dto.StaffIds.Count)
+                {
+                    var invalidStaffIds = dto.StaffIds.Except(validStaffs.Select(u => u.Id));
+                    throw new ApplicationException($"Some staff IDs are invalid or not allowed: {string.Join(", ", invalidStaffIds)}");
+                }
+
+                // === Update basic fields ===
                 branch.BranchName = dto.BranchName;
                 branch.PhoneNumber = dto.PhoneNumber;
                 branch.Email = dto.Email;
@@ -228,20 +282,13 @@ namespace Services.BranchServices
                 branch.IsActive = dto.IsActive;
                 branch.UpdatedAt = DateTime.UtcNow;
 
-                // ========================
-                // Update Services (diff)
-                // ========================
+                // === Update Services (diff) ===
                 var currentServiceIds = branch.BranchServices.Select(bs => bs.ServiceId).ToList();
-                var newServiceIds = dto.ServiceIds;
-
-                // Xoá service không còn
-                foreach (var bs in branch.BranchServices.Where(bs => !newServiceIds.Contains(bs.ServiceId)).ToList())
+                foreach (var bs in branch.BranchServices.Where(bs => !existingServiceIds.Contains(bs.ServiceId)).ToList())
                 {
                     branch.BranchServices.Remove(bs);
                 }
-
-                // Thêm service mới
-                foreach (var sid in newServiceIds.Except(currentServiceIds))
+                foreach (var sid in existingServiceIds.Except(currentServiceIds))
                 {
                     branch.BranchServices.Add(new BusinessObject.Branches.BranchService
                     {
@@ -250,9 +297,7 @@ namespace Services.BranchServices
                     });
                 }
 
-                // ========================
-                // Update Operating Hours (diff)
-                // ========================
+                // === Update Operating Hours (diff) ===
                 foreach (var ohDto in dto.OperatingHours)
                 {
                     var existing = branch.OperatingHours.FirstOrDefault(o => o.DayOfWeek == ohDto.DayOfWeek);
@@ -274,36 +319,25 @@ namespace Services.BranchServices
                         });
                     }
                 }
-
-                // Xoá operating hour không còn trong DTO
+                // Remove operating hours not in DTO
                 foreach (var oh in branch.OperatingHours.Where(o => !dto.OperatingHours.Any(d => d.DayOfWeek == o.DayOfWeek)).ToList())
                 {
                     branch.OperatingHours.Remove(oh);
                 }
 
-                // ========================
-                // Update Staffs (diff)
-                // ========================
-                if (dto.StaffIds != null)
+                // === Update Staffs (diff) ===
+                var currentStaffIds = branch.Staffs.Select(s => s.Id).ToList();
+                // Remove staff no longer assigned
+                foreach (var staff in branch.Staffs.Where(s => !validStaffs.Select(u => u.Id).Contains(s.Id)).ToList())
                 {
-                    var currentStaffIds = branch.Staffs.Select(s => s.Id).ToList();
-                    var newStaffIds = dto.StaffIds.ToList();
-
-                    // Staff bị remove → set BranchId = null
-                    foreach (var staff in branch.Staffs.Where(s => !newStaffIds.Contains(s.Id)).ToList())
-                    {
-                        staff.BranchId = null;
-                        branch.Staffs.Remove(staff);
-                    }
-
-                    // Staff mới → gán BranchId
-                    var users = await _userRepository.GetAllAsync();
-                    var newStaffs = users.Where(u => newStaffIds.Except(currentStaffIds).Contains(u.Id));
-                    foreach (var user in newStaffs)
-                    {
-                        user.BranchId = branch.BranchId;
-                        branch.Staffs.Add(user);
-                    }
+                    staff.BranchId = null;
+                    branch.Staffs.Remove(staff);
+                }
+                // Add new valid staffs
+                foreach (var user in validStaffs.Where(u => !currentStaffIds.Contains(u.Id)))
+                {
+                    user.BranchId = branch.BranchId;
+                    branch.Staffs.Add(user);
                 }
 
                 await _branchRepo.SaveChangesAsync();
@@ -314,9 +348,10 @@ namespace Services.BranchServices
             catch (Exception ex)
             {
                 await tx.RollbackAsync();
-                throw new ApplicationException("Error updating branch", ex);
+                throw new ApplicationException("Error updating branch: " + ex.Message, ex);
             }
         }
+
         public async Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive)
         {
             try
@@ -325,7 +360,7 @@ namespace Services.BranchServices
             }
             catch (Exception ex)
             {
-               
+
                 throw new ApplicationException("An error occurred while updating branch statuses.", ex);
             }
         }
@@ -335,39 +370,81 @@ namespace Services.BranchServices
         // DELETE
         public async Task DeleteManyAsync(IEnumerable<Guid> branchIds)
         {
+            using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
+                // Lấy tất cả branch theo ID
+                var branches = await _branchRepo.Query()
+                    .Include(b => b.RepairOrders)
+                    .Include(b => b.RepairRequests)
+                    .Where(b => branchIds.Contains(b.BranchId))
+                    .ToListAsync();
+
+                // Check branch ID tồn tại
+                var notFoundIds = branchIds.Except(branches.Select(b => b.BranchId)).ToList();
+                if (notFoundIds.Any())
+                {
+                    throw new ApplicationException($"The following branch IDs do not exist: {string.Join(", ", notFoundIds)}");
+                }
+
+                // Check branch có RepairOrders hoặc RepairRequests
+                var blockedBranches = branches
+                    .Where(b => (b.RepairOrders != null && b.RepairOrders.Any()) ||
+                                (b.RepairRequests != null && b.RepairRequests.Any()))
+                    .ToList();
+
+                if (blockedBranches.Any())
+                {
+                    var blockedIds = blockedBranches.Select(b => b.BranchId);
+                    throw new ApplicationException($"Cannot delete branches because they have associated Repair Orders or Repair Requests: {string.Join(", ", blockedIds)}");
+                }
+
+                // Xóa những branch hợp lệ
                 await _branchRepo.DeleteManyAsync(branchIds);
+                await _branchRepo.SaveChangesAsync();
+                await tx.CommitAsync();
             }
             catch (DbUpdateException ex)
             {
-                //_logger.LogError(ex, "Database update error while deleting branches: {BranchIds}", string.Join(", ", branchIds));
                 throw new ApplicationException("Unable to delete some branches because they are being referenced by other data.", ex);
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Error deleting branches: {BranchIds}", string.Join(", ", branchIds));
-                throw new ApplicationException("An error occurred while deleting branches.", ex);
+                //throw new ApplicationException("An error occurred while deleting branches.", ex);
+                throw new ApplicationException(ex.Message);
             }
         }
+
 
         public async Task<bool> DeleteBranchAsync(Guid branchId)
         {
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
-                var branch = await _branchRepo.GetByIdAsync(branchId);
+                var branch = await _branchRepo.Query()
+                    .Include(b => b.RepairOrders)
+                    .Include(b => b.RepairRequests)
+                    .FirstOrDefaultAsync(b => b.BranchId == branchId);
+
                 if (branch == null) return false;
+
+                // Check nếu branch đang có RepairOrders hoặc RepairRequests
+                if ((branch.RepairOrders != null && branch.RepairOrders.Any()) ||
+                    (branch.RepairRequests != null && branch.RepairRequests.Any()))
+                {
+                    throw new ApplicationException("Cannot delete branch because it has associated Repair Orders or Repair Requests.");
+                }
 
                 await _branchRepo.DeleteAsync(branch);
                 await _branchRepo.SaveChangesAsync();
                 await tx.CommitAsync();
+
                 return true;
             }
             catch (Exception ex)
             {
                 await tx.RollbackAsync();
-                throw new ApplicationException("Error deleting branch", ex);
+                throw new ApplicationException(ex.Message);
             }
         }
 

@@ -20,7 +20,7 @@ namespace Garage_pro_api.Controllers
 
 
 
-        //[Authorize(Policy = "PROMO_VIEW")]
+        [Authorize(Policy = "PROMO_VIEW")]
 
         [HttpGet("paged")]
         public async Task<ActionResult> GetPaged(
@@ -107,7 +107,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Error creating campaign", detail = ex.Message });
+                return StatusCode(500, new { message = "Error creating campaign ", detail = ex.Message });
             }
         }
         [Authorize(Policy = "PROMO_UPDATE")]
@@ -130,7 +130,6 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error updating campaign", detail = ex.Message });
             }
         }
-
         [Authorize(Policy = "PROMO_TOGGLE")]
 
         [HttpPost("bulk/activate")]
@@ -139,12 +138,25 @@ namespace Garage_pro_api.Controllers
             if (ids == null || !ids.Any())
                 return BadRequest(new { message = "No campaign ids provided." });
 
-            var result = await _service.BulkUpdateStatusAsync(ids, true);
+            try
+            {
+                var result = await _service.BulkUpdateStatusAsync(ids, true);
 
-            if (!result)
-                return NotFound(new { message = "No campaigns found to activate." });
+                if (!result)
+                    return NotFound(new { message = "No campaigns found to activate." });
 
-            return Ok(new { message = "Campaigns activated successfully." });
+                return Ok(new { message = "Campaigns activated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+               
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+               
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
         [Authorize(Policy = "PROMO_TOGGLE")]
 
@@ -154,34 +166,70 @@ namespace Garage_pro_api.Controllers
             if (ids == null || !ids.Any())
                 return BadRequest(new { message = "No campaign ids provided." });
 
-            var result = await _service.BulkUpdateStatusAsync(ids, false);
+            try
+            {
+                var result = await _service.BulkUpdateStatusAsync(ids, false);
 
-            if (!result)
-                return NotFound(new { message = "No campaigns found to deactivate." });
+                if (!result)
+                    return NotFound(new { message = "No campaigns found to deactivate." });
 
-            return Ok(new { message = "Campaigns deactivated successfully." });
+                return Ok(new { message = "Campaigns deactivated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+               
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
         [Authorize(Policy = "PROMO_TOGGLE")]
 
         [HttpPost("{id}/activate")]
         public async Task<IActionResult> Activate(Guid id)
         {
-            var result = await _service.ActivateAsync(id);
-            if (!result)
-                return NotFound(new { message = "Campaign not found." });
+            try
+            {
+                var result = await _service.ActivateAsync(id);
+                if (!result)
+                    return NotFound(new { message = "Campaign not found." });
 
-            return Ok(new { message = "Campaign activated successfully." });
+                return Ok(new { message = "Campaign activated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {
+               
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
         [Authorize(Policy = "PROMO_TOGGLE")]
-
         [HttpPost("{id}/deactivate")]
         public async Task<IActionResult> Deactivate(Guid id)
         {
-            var result = await _service.DeactivateAsync(id);
-            if (!result)
-                return NotFound(new { message = "Campaign not found." });
+            try
+            {
+                var result = await _service.DeactivateAsync(id);
+                if (!result)
+                    return NotFound(new { message = "Campaign not found." });
 
-            return Ok(new { message = "Campaign deactivated successfully." });
+                return Ok(new { message = "Campaign deactivated successfully." });
+            }
+            catch (InvalidOperationException ex)
+            {               
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {              
+                return StatusCode(500, new { message = ex.Message });
+            }
         }
 
         [Authorize(Policy = "PROMO_DELETE")]

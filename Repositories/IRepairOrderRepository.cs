@@ -67,14 +67,14 @@ namespace Repositories
         // Audit and history
         Task<IEnumerable<RepairOrder>> GetRecentlyUpdatedRepairOrdersAsync(int hours = 24);
         Task<DateTime?> GetLastStatusChangeAsync(Guid repairOrderId);
-        
+
         // Archive management
         Task<bool> ArchiveRepairOrderAsync(Guid repairOrderId, string reason, string archivedByUserId);
         Task<bool> RestoreRepairOrderAsync(Guid repairOrderId, string reason, string restoredByUserId);
         Task<IEnumerable<RepairOrder>> GetArchivedRepairOrdersAsync(RoBoardFiltersDto filters = null);
         Task<IEnumerable<RepairOrder>> GetActiveRepairOrdersAsync(RoBoardFiltersDto filters = null);
         Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId);
-        
+
         // Archive Support Methods
         Task<RepairOrder?> GetRepairOrderByIdAsync(Guid repairOrderId);
         Task<RepairOrder> AddAsync(RepairOrder repairOrder);

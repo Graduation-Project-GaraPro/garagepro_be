@@ -1,8 +1,9 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Campaigns;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using BusinessObject.Roles;
 using BusinessObject.Vehicles;
 using DataAccessLayer;
@@ -36,6 +37,8 @@ namespace Garage_pro_api.DbInit
 
             await SeedRolesAsync();
             await SeedUsersAsync();
+
+            await SeedTechniciansAsync();
             await SeedPermissionCategoriesAsync();
             await SeedPermissionsAsync();
             await AssignPermissionsToRolesAsync();
@@ -54,6 +57,8 @@ namespace Garage_pro_api.DbInit
             //await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
+
+            await SeedRepairOrdersAsync();
         }
 
         // 1. Seed Roles
@@ -85,12 +90,14 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000013", "System", "Manager1", "Manager"),
-                ("0900000014", "System", "Manager2", "Manager"),
+                ("0900000003", "System", "Manager1", "Manager"),
+                ("0900000004", "System", "Manager2", "Manager"),
                 ("0900000005", "Default", "Customer", "Customer"),
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
-                ("0900000008", "Default", "Technician2", "Technician")
+                ("0900000008", "Default", "Technician2", "Technician"),
+                // Adding the requested manager user
+                ("0987654321", "Manager", "User", "Manager")
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";
@@ -111,11 +118,81 @@ namespace Garage_pro_api.DbInit
                         EmailConfirmed = true
                     };
 
-                    var result = await _userManager.CreateAsync(user, defaultPassword);
+                    // Use the specific password for the requested manager user
+                    string password = phone == "0987654321" ? "Admin123!" : defaultPassword;
+                    var result = await _userManager.CreateAsync(user, password);
                     if (result.Succeeded)
                         await _userManager.AddToRoleAsync(user, role);
                     else
                         throw new Exception($"Seeding user {phone} failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                }
+            }
+        }
+
+        private async Task SeedTechniciansAsync()
+        {
+            if (!_context.Technicians.Any())
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // Lấy tất cả user có role Technician
+                    var technicianUsers = await _context.Users
+                        .Join(_context.UserRoles,
+                            u => u.Id,
+                            ur => ur.UserId,
+                            (u, ur) => new { User = u, RoleId = ur.RoleId })
+                        .Join(_context.Roles,
+                            ur => ur.RoleId,
+                            r => r.Id,
+                            (ur, r) => new { ur.User, RoleName = r.Name })
+                        .Where(x => x.RoleName == "Technician")
+                        .ToListAsync();
+
+                    if (!technicianUsers.Any())
+                    {
+                        throw new Exception("Không tìm thấy user nào có role Technician");
+                    }
+
+                    var technicians = new List<Technician>();
+                    var random = new Random();
+
+                    foreach (var techUser in technicianUsers)
+                    {
+                        // Tạo điểm số ngẫu nhiên nhưng chất lượng
+                        var quality = (float)Math.Round(random.NextDouble() * 3 + 7, 1); // 7.0 - 10.0
+                        var speed = (float)Math.Round(random.NextDouble() * 3 + 6.5, 1); // 6.5 - 9.5
+                        var efficiency = (float)Math.Round(random.NextDouble() * 3 + 7.2, 1); // 7.2 - 10.2
+
+                        // Tính điểm trung bình (có thể weighted nếu cần)
+                        var score = (float)Math.Round((quality + speed + efficiency) / 3, 1);
+
+                        var technician = new Technician
+                        {
+                            TechnicianId = Guid.NewGuid(),
+                            UserId = techUser.User.Id,
+                            Quality = quality,
+                            Speed = speed,
+                            Efficiency = efficiency,
+                            Score = score
+                        };
+
+                        technicians.Add(technician);
+                    }
+
+                    _context.Technicians.AddRange(technicians);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    Console.WriteLine($"Seeded {technicians.Count} technicians successfully!");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    Console.WriteLine($"Error seeding technicians: {ex.Message}");
+                    throw;
                 }
             }
         }
@@ -132,6 +209,8 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" }
     };
 
             foreach (var cat in categories)
@@ -154,6 +233,8 @@ namespace Garage_pro_api.DbInit
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
+            var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
+            var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
 
             var defaultPermissions = new List<Permission>
                 {
@@ -205,7 +286,16 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId }
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId },
+
+                     // ✅ Log View
+
+                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId },
+
+                     // ✅ PolicySecurity
+
+                     new Permission { Id = Guid.NewGuid(), Code = "POLICY_MANAGEMENT", Name = "Policy Management", Description = "Can view and update, revert Policy,Policy history.", CategoryId = policyCatId }
+
                 };
 
             foreach (var perm in defaultPermissions)
@@ -244,7 +334,12 @@ namespace Garage_pro_api.DbInit
                                     "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",
             
                                     // ✅ Promotional Management
-                                    "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE"
+                                    "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE",
+                                    // ✅ LOG MONITORING
+                                    "LOG_VIEW" , 
+                                    
+                                    // ✅ Security Policy
+                                    "POLICY_MANAGEMENT"
                                 }
                             },
                             {
@@ -301,90 +396,153 @@ namespace Garage_pro_api.DbInit
             {
                 var categories = new List<PartCategory>
         {
-            new PartCategory { CategoryName = "Engine" },
-            new PartCategory { CategoryName = "Brakes" },
-            new PartCategory { CategoryName = "Electrical" },
-            new PartCategory { CategoryName = "Suspension" },
-            new PartCategory { CategoryName = "Cooling System" }
+            new PartCategory { CategoryName = "Front - Engine" },
+            new PartCategory { CategoryName = "Rear - Engine" },
+            new PartCategory { CategoryName = "Front - Brakes" },
+            new PartCategory { CategoryName = "Rear - Brakes" },
+            new PartCategory { CategoryName = "Front - Electrical System" },
+            new PartCategory { CategoryName = "Rear - Electrical System" },
+            new PartCategory { CategoryName = "Front - Suspension" },
+            new PartCategory { CategoryName = "Rear - Suspension" },
+            new PartCategory { CategoryName = "Front - Cooling System" },
+            new PartCategory { CategoryName = "Rear - Cooling System" }
         };
+
                 _context.PartCategories.AddRange(categories);
                 await _context.SaveChangesAsync();
             }
         }
 
+
         private async Task SeedPartsAsync()
         {
             if (!_context.Parts.Any())
             {
-                var engineCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Engine");
-                var brakeCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Brakes");
-                var electricalCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Electrical");
-                var suspensionCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Suspension");
-                var coolingCategory = await _context.PartCategories.FirstAsync(c => c.CategoryName == "Cooling System");
+                var categories = await _context.PartCategories.ToListAsync();
 
-                var parts = new List<Part>
-        {
-            // Engine parts
-            new Part { Name = "Air Filter", PartCategoryId = engineCategory.LaborCategoryId, Price = 150000, Stock = 50, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Oil Filter", PartCategoryId = engineCategory.LaborCategoryId, Price = 100000, Stock = 70, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Spark Plug", PartCategoryId = engineCategory.LaborCategoryId, Price = 80000, Stock = 100, CreatedAt = DateTime.UtcNow },
+                var parts = new List<Part>();
 
-            // Brakes
-            new Part { Name = "Brake Pad", PartCategoryId = brakeCategory.LaborCategoryId , Price = 400000, Stock = 30, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Brake Disc", PartCategoryId = brakeCategory.LaborCategoryId, Price = 700000, Stock = 25, CreatedAt = DateTime.UtcNow },
+                PartCategory? FindCategory(string name) =>
+                    categories.FirstOrDefault(c => c.CategoryName == name);
 
-            // Electrical
-            new Part { Name = "Battery", PartCategoryId = electricalCategory.LaborCategoryId, Price = 1200000, Stock = 20, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Alternator", PartCategoryId = electricalCategory.LaborCategoryId, Price = 2500000, Stock = 10, CreatedAt = DateTime.UtcNow },
+                // 🔧 Engine
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Air Filter (Cheap)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 120000, Stock = 60, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Oil Filter (Medium)", PartCategoryId = FindCategory("Rear - Engine").LaborCategoryId, Price = 250000, Stock = 40, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Spark Plug (Expensive)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 500000, Stock = 20, CreatedAt = DateTime.UtcNow },
+        });
 
-            // Suspension
-            new Part { Name = "Shock Absorber", PartCategoryId = suspensionCategory.LaborCategoryId, Price = 900000, Stock = 15, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Control Arm", PartCategoryId = suspensionCategory.LaborCategoryId, Price = 650000, Stock = 18, CreatedAt = DateTime.UtcNow },
+                // 🛑 Brakes
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Brake Pad (Cheap)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 300000, Stock = 50, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Brake Disc (Medium)", PartCategoryId = FindCategory("Rear - Brakes").LaborCategoryId, Price = 600000, Stock = 25, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Brake Caliper (Expensive)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 1200000, Stock = 15, CreatedAt = DateTime.UtcNow },
+        });
 
-            // Cooling System
-            new Part { Name = "Radiator", PartCategoryId = coolingCategory.LaborCategoryId, Price = 1800000, Stock = 8, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Coolant Hose", PartCategoryId = coolingCategory.LaborCategoryId, Price = 120000, Stock = 40, CreatedAt = DateTime.UtcNow }
-        };
+                // ⚡ Electrical System
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Battery (Cheap)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 900000, Stock = 30, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Alternator (Medium)", PartCategoryId = FindCategory("Rear - Electrical System").LaborCategoryId, Price = 1800000, Stock = 20, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Starter Motor (Expensive)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 2800000, Stock = 10, CreatedAt = DateTime.UtcNow },
+        });
+
+                // 🦾 Suspension
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Shock Absorber (Cheap)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 700000, Stock = 35, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Control Arm (Medium)", PartCategoryId = FindCategory("Rear - Suspension").LaborCategoryId, Price = 950000, Stock = 25, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Suspension Strut (Expensive)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 1600000, Stock = 12, CreatedAt = DateTime.UtcNow },
+        });
+
+                // 🌡️ Cooling System
+                parts.AddRange(new[]
+                {
+            new Part { Name = "Coolant Hose (Cheap)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 150000, Stock = 45, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Radiator (Medium)", PartCategoryId = FindCategory("Rear - Cooling System").LaborCategoryId, Price = 1900000, Stock = 10, CreatedAt = DateTime.UtcNow },
+            new Part { Name = "Water Pump (Expensive)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 2600000, Stock = 8, CreatedAt = DateTime.UtcNow },
+        });
 
                 _context.Parts.AddRange(parts);
                 await _context.SaveChangesAsync();
             }
         }
 
+
         private async Task SeedServiceCategoriesAsync()
         {
-            //if (!_context.ServiceCategories.Any())
             if (!_context.ServiceCategories.Any())
             {
-                var categories = new List<ServiceCategory>
+                // --- STEP 1: Create parent categories ---
+                var parentCategories = new List<ServiceCategory>
         {
             new ServiceCategory { CategoryName = "Maintenance", Description = "General maintenance services for vehicles" },
             new ServiceCategory { CategoryName = "Repair", Description = "Repair services for damaged parts" },
             new ServiceCategory { CategoryName = "Inspection", Description = "Vehicle inspection and diagnostics" },
             new ServiceCategory { CategoryName = "Upgrade", Description = "Performance and aesthetic upgrades" }
         };
-                _context.ServiceCategories.AddRange(categories);
+
+                _context.ServiceCategories.AddRange(parentCategories);
+                await _context.SaveChangesAsync();
+
+                // --- STEP 2: Create child categories ---
+                var maintenance = parentCategories.First(c => c.CategoryName == "Maintenance");
+                var repair = parentCategories.First(c => c.CategoryName == "Repair");
+                var inspection = parentCategories.First(c => c.CategoryName == "Inspection");
+                var upgrade = parentCategories.First(c => c.CategoryName == "Upgrade");
+
+                var childCategories = new List<ServiceCategory>
+        {
+            // 🔧 Maintenance
+            new ServiceCategory { CategoryName = "Oil Change", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Engine oil and filter replacement" },
+            new ServiceCategory { CategoryName = "Tire Rotation", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Rotating tires for even wear" },
+            new ServiceCategory { CategoryName = "Battery Check", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Battery testing and replacement" },
+            new ServiceCategory { CategoryName = "Fluid Refill", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Coolant, brake fluid, and transmission fluid refill" },
+
+            // ⚙️ Repair
+            new ServiceCategory { CategoryName = "Engine Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Engine part replacement and tuning" },
+            new ServiceCategory { CategoryName = "Brake Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Brake pad, caliper, and disc replacement" },
+            new ServiceCategory { CategoryName = "Electrical Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Fixing alternator, starter motor, and wiring issues" },
+            new ServiceCategory { CategoryName = "Suspension Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Shock absorber and suspension arm repair" },
+
+            // 🔍 Inspection
+            new ServiceCategory { CategoryName = "Safety Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check safety systems like brakes, lights, and tires" },
+            new ServiceCategory { CategoryName = "Emissions Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check exhaust and emissions compliance" },
+            new ServiceCategory { CategoryName = "Pre-Purchase Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Comprehensive vehicle check before buying" },
+            new ServiceCategory { CategoryName = "Engine Diagnostic", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Computer-based engine and sensor diagnostics" },
+
+            // 🏎️ Upgrade
+            new ServiceCategory { CategoryName = "Performance Tuning", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Boost vehicle performance and horsepower" },
+            new ServiceCategory { CategoryName = "Lighting Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Install LED or HID lighting systems" },
+            new ServiceCategory { CategoryName = "Interior Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Improve interior design and comfort" },
+            new ServiceCategory { CategoryName = "Exterior Styling", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Add body kits, spoilers, and paint customization" }
+        };
+
+                _context.ServiceCategories.AddRange(childCategories);
                 await _context.SaveChangesAsync();
             }
         }
 
         private async Task SeedServicesAsync()
         {
-            //if (!_context.Services.Any())
             if (!_context.Services.Any())
             {
-                var maintenance = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Maintenance");
-                var repair = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Repair");
-                var inspection = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Inspection");
-                var upgrade = await _context.ServiceCategories.FirstAsync(c => c.CategoryName == "Upgrade");
+                // Load all categories into memory
+                var categories = await _context.ServiceCategories.ToListAsync();
+
+                // Helper method to find a category by name
+                Guid GetCategoryId(string name) => categories.First(c => c.CategoryName == name).ServiceCategoryId;
 
                 var services = new List<Service>
         {
+            // 🔧 Maintenance
             new Service
             {
-                ServiceName = "Oil Change",
-                Description = "Replace old engine oil with new one",
-                ServiceCategoryId = maintenance.ServiceCategoryId,
+                ServiceName = "Basic Oil Change",
+                Description = "Drain old oil and refill with standard engine oil.",
+                ServiceCategoryId = GetCategoryId("Oil Change"),
                 Price = 300000,
                 EstimatedDuration = 1,
                 IsActive = true,
@@ -392,41 +550,157 @@ namespace Garage_pro_api.DbInit
             },
             new Service
             {
-                ServiceName = "Brake Repair",
-                Description = "Replace worn brake pads and discs",
-                ServiceCategoryId = repair.ServiceCategoryId,
-                Price = 1200000,
-                EstimatedDuration = 2,
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow
-            },
-            new Service
-            {
-                ServiceName = "Battery Replacement",
-                Description = "Replace and install a new car battery",
-                ServiceCategoryId = repair.ServiceCategoryId,
-                Price = 1500000,
+                ServiceName = "Premium Oil Change",
+                Description = "Use synthetic oil for better performance and protection.",
+                ServiceCategoryId = GetCategoryId("Oil Change"),
+                Price = 550000,
                 EstimatedDuration = 1,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
             new Service
             {
-                ServiceName = "Full Vehicle Inspection",
-                Description = "Complete diagnostic and safety inspection",
-                ServiceCategoryId = inspection.ServiceCategoryId,
-                Price = 500000,
+                ServiceName = "Tire Rotation Service",
+                Description = "Rotate tires to ensure even wear and longer life.",
+                ServiceCategoryId = GetCategoryId("Tire Rotation"),
+                Price = 200000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Battery Health Check",
+                Description = "Inspect and test vehicle battery condition.",
+                ServiceCategoryId = GetCategoryId("Battery Check"),
+                Price = 150000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // ⚙️ Repair
+            new Service
+            {
+                ServiceName = "Engine Tune-Up",
+                Description = "Adjust and replace necessary engine components for smoother performance.",
+                ServiceCategoryId = GetCategoryId("Engine Repair"),
+                Price = 1800000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Brake Pad Replacement",
+                Description = "Replace worn brake pads and check calipers and rotors.",
+                ServiceCategoryId = GetCategoryId("Brake Repair"),
+                Price = 900000,
                 EstimatedDuration = 2,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             },
             new Service
             {
-                ServiceName = "Suspension Upgrade",
-                Description = "Install new suspension system for better handling",
-                ServiceCategoryId = upgrade.ServiceCategoryId,
+                ServiceName = "Electrical Wiring Repair",
+                Description = "Diagnose and repair wiring or connection issues.",
+                ServiceCategoryId = GetCategoryId("Electrical Repair"),
+                Price = 1000000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Shock Absorber Replacement",
+                Description = "Replace front or rear shock absorbers for better ride quality.",
+                ServiceCategoryId = GetCategoryId("Suspension Repair"),
+                Price = 1400000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // 🔍 Inspection
+            new Service
+            {
+                ServiceName = "Basic Safety Inspection",
+                Description = "Inspect brakes, tires, and lights for safety compliance.",
+                ServiceCategoryId = GetCategoryId("Safety Inspection"),
+                Price = 350000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Emissions Test",
+                Description = "Check emission levels to meet environmental regulations.",
+                ServiceCategoryId = GetCategoryId("Emissions Inspection"),
+                Price = 400000,
+                EstimatedDuration = 1,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Pre-Purchase Inspection",
+                Description = "Full vehicle inspection before purchase, including test drive and report.",
+                ServiceCategoryId = GetCategoryId("Pre-Purchase Inspection"),
+                Price = 600000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Full Engine Diagnostic",
+                Description = "Use OBD tools to detect engine faults and suggest repairs.",
+                ServiceCategoryId = GetCategoryId("Engine Diagnostic"),
+                Price = 700000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+
+            // 🏎️ Upgrade
+            new Service
+            {
+                ServiceName = "ECU Performance Tuning",
+                Description = "Remap ECU software for optimized performance and fuel efficiency.",
+                ServiceCategoryId = GetCategoryId("Performance Tuning"),
                 Price = 2500000,
                 EstimatedDuration = 4,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "LED Lighting Installation",
+                Description = "Upgrade headlights and taillights to modern LED systems.",
+                ServiceCategoryId = GetCategoryId("Lighting Upgrade"),
+                Price = 800000,
+                EstimatedDuration = 2,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Interior Detailing",
+                Description = "Deep clean and restore car interior with premium materials.",
+                ServiceCategoryId = GetCategoryId("Interior Upgrade"),
+                Price = 1000000,
+                EstimatedDuration = 3,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            },
+            new Service
+            {
+                ServiceName = "Exterior Body Kit Installation",
+                Description = "Install custom bumpers, spoilers, and side skirts for a sporty look.",
+                ServiceCategoryId = GetCategoryId("Exterior Styling"),
+                Price = 3200000,
+                EstimatedDuration = 5,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             }
@@ -441,52 +715,54 @@ namespace Garage_pro_api.DbInit
         {
             if (!_context.ServiceParts.Any())
             {
-                var oilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Oil Change");
-                var brakeRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Repair");
-                var batteryReplace = await _context.Services.FirstAsync(s => s.ServiceName == "Battery Replacement");
-                var suspensionUpgrade = await _context.Services.FirstAsync(s => s.ServiceName == "Suspension Upgrade");
-                var inspection = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Full Vehicle Inspection");
+                // Lấy các service từ database - sửa tên service cho khớp với dữ liệu đã seed
+                var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
+                var premiumOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Premium Oil Change");
+                var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
+                var batteryHealthCheck = await _context.Services.FirstAsync(s => s.ServiceName == "Battery Health Check");
+                var shockAbsorberReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Shock Absorber Replacement");
+                var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
 
-                var airFilter = await _context.Parts.FirstAsync(p => p.Name == "Air Filter");
-                var oilFilter = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter");
-                var sparkPlug = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug");
-                var brakePad = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad");
-                var brakeDisc = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc");
-                var battery = await _context.Parts.FirstAsync(p => p.Name == "Battery");
-                var alternator = await _context.Parts.FirstAsync(p => p.Name == "Alternator");
-                var shockAbsorber = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber");
-                var controlArm = await _context.Parts.FirstAsync(p => p.Name == "Control Arm");
-                var radiator = await _context.Parts.FirstAsync(p => p.Name == "Radiator");
-                var coolantHose = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose");
+                // Lấy các parts từ database - sửa tên part cho khớp với dữ liệu đã seed
+                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
+                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
+                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
+                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
+                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
+                var batteryCheap = await _context.Parts.FirstAsync(p => p.Name == "Battery (Cheap)");
+                var alternatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Alternator (Medium)");
+                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
+                var controlArmMedium = await _context.Parts.FirstAsync(p => p.Name == "Control Arm (Medium)");
+                var radiatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Radiator (Medium)");
+                var coolantHoseCheap = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose (Cheap)");
 
                 var mappings = new List<ServicePart>
         {
-            // 🔧 Oil Change Service — nhiều linh kiện liên quan
-            new ServicePart { ServiceId = oilChange.ServiceId, PartId = oilFilter.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = oilChange.ServiceId, PartId = airFilter.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = oilChange.ServiceId, PartId = sparkPlug.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = oilChange.ServiceId, PartId = coolantHose.PartId, CreatedAt = DateTime.UtcNow },
+            // 🔧 Basic Oil Change Service
+            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
 
-            // 🚗 Brake Repair — nhiều bộ phận phanh
-            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = brakePad.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = brakeDisc.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = brakeRepair.ServiceId, PartId = controlArm.PartId, CreatedAt = DateTime.UtcNow },
+            // 🔧 Premium Oil Change Service - dùng linh kiện cao cấp hơn
+            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
 
-            // 🔋 Battery Replacement — thêm alternator và dây nối
-            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = battery.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = alternator.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = batteryReplace.ServiceId, PartId = sparkPlug.PartId, CreatedAt = DateTime.UtcNow },
+            // 🚗 Brake Pad Replacement
+            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakePadCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakeDiscMedium.PartId, CreatedAt = DateTime.UtcNow },
 
-            // 🛞 Suspension Upgrade — nhiều linh kiện treo
-            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = shockAbsorber.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = controlArm.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = suspensionUpgrade.ServiceId, PartId = brakeDisc.PartId, CreatedAt = DateTime.UtcNow },
+            // 🔋 Battery Health Check - có thể cần thay thế
+            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = batteryCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = alternatorMedium.PartId, CreatedAt = DateTime.UtcNow },
 
-            // 🔍 Full Vehicle Inspection — kiểm tra tổng quát
-            new ServicePart { ServiceId = inspection.ServiceId, PartId = airFilter.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = inspection.ServiceId, PartId = oilFilter.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = inspection.ServiceId, PartId = radiator.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = inspection.ServiceId, PartId = coolantHose.PartId, CreatedAt = DateTime.UtcNow }
+            // 🛞 Shock Absorber Replacement
+            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = shockAbsorberCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = controlArmMedium.PartId, CreatedAt = DateTime.UtcNow },
+
+            // 🔍 Full Engine Diagnostic - các linh kiện cần kiểm tra
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = coolantHoseCheap.PartId, CreatedAt = DateTime.UtcNow },
+            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = radiatorMedium.PartId, CreatedAt = DateTime.UtcNow }
         };
 
                 _context.ServiceParts.AddRange(mappings);
@@ -494,60 +770,117 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-
         private async Task SeedBranchesAsync()
         {
             if (!_context.Branches.Any())
             {
-                // Tạo Branch
-                var branch1 = new Branch
-                {
-                    BranchName = "Central Branch",
-                    Description = "this is central Branch ",
-                    Street = "123 Main Street",
-                    Ward = "Ward 1",
-                    District = "District 1",
-                    City = "HCMC",
-                    PhoneNumber = "0123456789",
-                    Email = "central@garage.com",
-                    CreatedAt = DateTime.UtcNow,
-                    IsActive = true
-                };
+                var branches = new List<Branch>
+        {
+            new Branch
+            {
+                BranchName = "Central Garage - Hồ Chí Minh",
+                Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
+                Street = "123 Nguyễn Thị Minh Khai",
+                Ward = "Phường Bến Thành",
+                District = "Quận 1",
+                City = "Hồ Chí Minh",
+                PhoneNumber = "02838220001",
+                Email = "central.hcm@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Hà Nội Garage",
+                Description = "Professional car repair and maintenance services in Hanoi.",
+                Street = "45 Phạm Hùng",
+                Ward = "Phường Mỹ Đình 2",
+                District = "Quận Nam Từ Liêm",
+                City = "Hà Nội",
+                PhoneNumber = "02437760002",
+                Email = "hanoi@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage",
+                Description = "Trusted auto service center for central region customers.",
+                Street = "88 Nguyễn Văn Linh",
+                Ward = "Phường Nam Dương",
+                District = "Quận Hải Châu",
+                City = "Đà Nẵng",
+                PhoneNumber = "02363880003",
+                Email = "danang@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Cần Thơ Garage",
+                Description = "Serving customers in the Mekong Delta with full maintenance packages.",
+                Street = "22 Trần Hưng Đạo",
+                Ward = "Phường An Cư",
+                District = "Quận Ninh Kiều",
+                City = "Cần Thơ",
+                PhoneNumber = "02923890004",
+                Email = "cantho@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            },
+            new Branch
+            {
+                BranchName = "Nha Trang Garage",
+                Description = "High-quality vehicle service center near the coast.",
+                Street = "56 Lê Thánh Tôn",
+                Ward = "Phường Lộc Thọ",
+                District = "Thành phố Nha Trang",
+                City = "Khánh Hòa",
+                PhoneNumber = "02583560005",
+                Email = "nhatrang@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true
+            }
+        };
 
-                // Seed OperatingHours (7 ngày)
-                foreach (DayOfWeekEnum day in Enum.GetValues(typeof(DayOfWeekEnum)))
+                // Seed OperatingHours (7 ngày cho tất cả chi nhánh)
+                foreach (var branch in branches)
                 {
-                    branch1.OperatingHours.Add(new OperatingHour
+                    foreach (DayOfWeekEnum day in Enum.GetValues(typeof(DayOfWeekEnum)))
                     {
-                        DayOfWeek = day,
-                        IsOpen = true,
-                        OpenTime = new TimeSpan(8, 0, 0),   // 08:00
-                        CloseTime = new TimeSpan(17, 0, 0)  // 17:00
-                    });
+                        branch.OperatingHours.Add(new OperatingHour
+                        {
+                            DayOfWeek = day,
+                            IsOpen = true,
+                            OpenTime = new TimeSpan(8, 0, 0),   // 08:00
+                            CloseTime = new TimeSpan(17, 30, 0) // 17:30
+                        });
+                    }
+
+                    // Gán staff
+                    var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
+                    var technicianUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000006");
+
+                    if (managerUser != null) branch.Staffs.Add(managerUser);
+                    if (technicianUser != null) branch.Staffs.Add(technicianUser);
+
+                    // Gán dịch vụ
+                    var services = await _context.Services.Take(5).ToListAsync();
+                    foreach (var service in services)
+                    {
+                        branch.BranchServices.Add(new BranchService
+                        {
+                            Branch = branch,
+                            Service = service
+                        });
+                    }
                 }
 
-                // Tìm các user đã có sẵn
-                var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
-                var technicianUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000004");
-
-                if (managerUser != null) branch1.Staffs.Add(managerUser);
-                if (technicianUser != null) branch1.Staffs.Add(technicianUser);
-
-                // Seed BranchService (nhiều-nhiều)
-                var services = await _context.Services.Take(5).ToListAsync(); // lấy vài service để demo
-                foreach (var service in services)
-                {
-                    branch1.BranchServices.Add(new BranchService
-                    {
-                        Branch = branch1,
-                        Service = service
-                    });
-                }
-
-                _context.Branches.Add(branch1);
+                _context.Branches.AddRange(branches);
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedOrderStatusesAsync()
         {
@@ -581,26 +914,26 @@ namespace Garage_pro_api.DbInit
                     {
                         var labels = new List<Label>
                         {
-                            new Label 
-                            { 
-                                LabelName = "Pending", 
-                                Description = "Order is waiting to be processed", 
+                            new Label
+                            {
+                                LabelName = "Pending",
+                                Description = "Order is waiting to be processed",
                                 OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Red",
                                 HexCode = "#FF0000"
                             },
-                            new Label 
-                            { 
-                                LabelName = "In Progress", 
-                                Description = "Order is being worked on", 
+                            new Label
+                            {
+                                LabelName = "In Progress",
+                                Description = "Order is being worked on",
                                 OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Yellow",
                                 HexCode = "#FFFF00"
                             },
-                            new Label 
-                            { 
-                                LabelName = "Done", 
-                                Description = "Order completed", 
+                            new Label
+                            {
+                                LabelName = "Done",
+                                Description = "Order completed",
                                 OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
                                 ColorName = "Green",
                                 HexCode = "#00FF00"
@@ -959,7 +1292,7 @@ namespace Garage_pro_api.DbInit
                 Id = Guid.NewGuid(),
                 Name = "Loyalty Appreciation",
                 Description = "Fixed discount of 150,000₫ for our returning customers.",
-                Type = CampaignType.Loyalty,
+                Type = CampaignType.Discount,
                 DiscountType = DiscountType.Fixed,
                 DiscountValue = 150000,
                 StartDate = DateTime.UtcNow,
@@ -977,7 +1310,7 @@ namespace Garage_pro_api.DbInit
                 Id = Guid.NewGuid(),
                 Name = "Year-End Free Checkup",
                 Description = "Get a free maintenance check for any service above 1,000,000₫.",
-                Type = CampaignType.Seasonal,
+                Type = CampaignType.Discount,
                 DiscountType = DiscountType.FreeService,
                 DiscountValue = 0,
                 StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
@@ -1022,89 +1355,647 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        //private async Task SeedRepairOrdersAsync()
-        //{
-        //    if (!_context.RepairOrders.Any())
-        //    {
-        //        // Get required entities
-        //        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Pending");
-        //        var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "In Progress");
-        //        var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(os => os.StatusName == "Completed");
 
-        //        var branch = await _context.Branches.FirstOrDefaultAsync();
-        //        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-        //        var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002"); // System Manager
-        //        var vehicles = await _context.Vehicles.ToListAsync();
 
-        //        if (pendingStatus != null && inProgressStatus != null && completedStatus != null &&
-        //            branch != null && customerUser != null && vehicles.Any())
-        //        {
-        //            var repairOrders = new List<RepairOrder>
-        //            {
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-5),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
-        //                    Cost = 1500000,
-        //                    EstimatedAmount = 2000000,
-        //                    PaidAmount = 0,
-        //                    PaidStatus = "Unpaid",
-        //                    EstimatedRepairTime = 120,
-        //                    Note = "Regular maintenance service",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-5),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = pendingStatus.OrderStatusId,
-        //                    VehicleId = vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                },
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-3),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
-        //                    Cost = 3000000,
-        //                    EstimatedAmount = 3500000,
-        //                    PaidAmount = 1000000,
-        //                    PaidStatus = "Partial",
-        //                    EstimatedRepairTime = 180,
-        //                    Note = "Brake system repair",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-3),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = inProgressStatus.OrderStatusId,
-        //                    VehicleId = vehicles.Count > 1 ? vehicles[1].VehicleId : vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                },
-        //                new RepairOrder
-        //                {
-        //                    ReceiveDate = DateTime.UtcNow.AddDays(-10),
-        //                    EstimatedCompletionDate = DateTime.UtcNow.AddDays(-2),
-        //                    CompletionDate = DateTime.UtcNow.AddDays(-1),
-        //                    Cost = 5000000,
-        //                    EstimatedAmount = 5000000,
-        //                    PaidAmount = 5000000,
-        //                    PaidStatus = "Paid",
-        //                    EstimatedRepairTime = 240,
-        //                    Note = "Complete vehicle overhaul",
-        //                    CreatedAt = DateTime.UtcNow.AddDays(-10),
-        //                    BranchId = branch.BranchId,
-        //                    StatusId = completedStatus.OrderStatusId,
-        //                    VehicleId = vehicles.Count > 2 ? vehicles[2].VehicleId : vehicles[0].VehicleId,
-        //                    UserId = customerUser.Id,
-        //                    RepairRequestId = Guid.NewGuid(),
-        //                    IsArchived = false,
-        //                    ArchivedByUserId = null
-        //                }
-        //            };
 
-        //            _context.RepairOrders.AddRange(repairOrders);
-        //            await _context.SaveChangesAsync();
-        //        }
-        //    }
+
+        private async Task SeedRepairOrdersAsync()
+        {
+            if (!_context.RepairOrders.Any())
+            {
+                // Truy vấn database để lấy userId có role Customer
+                var customer = await _context.Users
+                    .Join(_context.UserRoles,
+                        u => u.Id,
+                        ur => ur.UserId,
+                        (u, ur) => new { User = u, RoleId = ur.RoleId })
+                    .Join(_context.Roles,
+                        ur => ur.RoleId,
+                        r => r.Id,
+                        (ur, r) => new { ur.User, RoleName = r.Name })
+                    .FirstOrDefaultAsync(x => x.RoleName == "Customer");
+
+                if (customer == null)
+                {
+                    throw new Exception("Không tìm thấy user có role Customer trong database");
+                }
+
+                var userId = customer.User.Id;
+
+                // Truy vấn database để lấy technicianIds có role Technician
+                var technicians = await _context.Technicians
+                    .Include(t => t.User) // Include user information if needed
+                    .Take(2)
+                    .ToListAsync();
+
+
+                if (technicians.Count < 2)
+                {
+                    throw new Exception("Cần ít nhất 2 technicians trong database");
+                }
+
+                var technicianIds = technicians.Select(t => t.TechnicianId).ToList();
+               
+
+                // Truy vấn vehicleId từ database
+                var vehicle = await _context.Vehicles
+                    .FirstOrDefaultAsync(v => v.VehicleId == Guid.Parse("6D960DA7-D0A8-4C8A-8E8F-1BE2024A5DC6"));
+
+                if (vehicle == null)
+                {
+                    // Nếu không tìm thấy vehicle với ID cụ thể, lấy vehicle đầu tiên
+                    vehicle = await _context.Vehicles.FirstAsync();
+                }
+
+                var vehicleId = vehicle.VehicleId;
+
+                // Lấy các service từ database
+                var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
+                var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
+                var engineTuneUp = await _context.Services.FirstAsync(s => s.ServiceName == "Engine Tune-Up");
+                var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
+                var tireRotation = await _context.Services.FirstAsync(s => s.ServiceName == "Tire Rotation Service");
+
+                // Lấy các parts từ database
+                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
+                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
+                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
+                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
+                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
+                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
+
+                // Lấy branch và status
+                var branch = await _context.Branches.FirstAsync();
+                var pendingStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "Pending");
+                var inProgressStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "In Progress");
+                var completedStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "Completed");
+                
+
+                // Tạo Repair Orders
+                var repairOrders = new List<RepairOrder>
+        {
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-5),
+                RoType = RoType.Scheduled,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+                CompletionDate = DateTime.UtcNow.AddDays(1),
+                Cost = 1450000,
+                EstimatedAmount = 1500000,
+                PaidAmount = 1450000,
+                PaidStatus = PaidStatus.Paid,
+                EstimatedRepairTime = 3,
+                Note = "Regular maintenance service - Oil change and basic check",
+                BranchId = branch.BranchId,
+                StatusId = completedStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(1)
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-2),
+                RoType = RoType.WalkIn,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(5),
+                Cost = 0,
+                EstimatedAmount = 2500000,
+                PaidAmount = 0,
+                PaidStatus = PaidStatus.Unpaid,
+                EstimatedRepairTime = 5,
+                Note = "Brake system repair - Waiting for customer approval",
+                BranchId = branch.BranchId,
+                StatusId = pendingStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                UpdatedAt = DateTime.UtcNow
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-1),
+                RoType = RoType.Breakdown,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+                Cost = 3200000,
+                EstimatedAmount = 3500000,
+                PaidAmount = 2000000,
+                PaidStatus = PaidStatus.Partial,
+                EstimatedRepairTime = 6,
+                Note = "Emergency brake and engine repair - Urgent service required",
+                BranchId = branch.BranchId,
+                StatusId = inProgressStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow,
+                RoType = RoType.Scheduled,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
+                Cost = 0,
+                EstimatedAmount = 800000,
+                PaidAmount = 0,
+                PaidStatus = PaidStatus.Unpaid,
+                EstimatedRepairTime = 2,
+                Note = "Tire rotation and basic inspection",
+                BranchId = branch.BranchId,
+                StatusId = completedStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
+
+                _context.RepairOrders.AddRange(repairOrders);
+                await _context.SaveChangesAsync();
+
+                // Seed RepairOrderServices
+                var repairOrderServices = new List<RepairOrderService>
+        {
+            // Order 1 - Completed maintenance
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[0].RepairOrderId,
+                ServiceId = basicOilChange.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[0].RepairOrderId,
+                ServiceId = tireRotation.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+
+            // Order 2 - Pending quotation
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[1].RepairOrderId,
+                ServiceId = brakePadReplacement.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[1].RepairOrderId,
+                ServiceId = fullEngineDiagnostic.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+
+            // Order 3 - Emergency repair
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[2].RepairOrderId,
+                ServiceId = brakePadReplacement.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[2].RepairOrderId,
+                ServiceId = engineTuneUp.ServiceId,
+               
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+
+            // Order 4 - Approved repair
+            new RepairOrderService
+            {
+                RepairOrderServiceId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[3].RepairOrderId,
+                ServiceId = tireRotation.ServiceId,
+                
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+                _context.RepairOrderServices.AddRange(repairOrderServices);
+                await _context.SaveChangesAsync();
+
+                // Seed Jobs
+                var jobs = new List<Job>
+        {
+            // Order 1 - Completed jobs
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = basicOilChange.ServiceId,
+                RepairOrderId = repairOrders[0].RepairOrderId,
+                JobName = "Basic Oil Change Service",
+                Status = JobStatus.Completed,
+                Deadline = DateTime.UtcNow.AddDays(1),
+                TotalAmount = basicOilChange.Price,
+                Note = "Standard oil change completed successfully",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(1),
+                Level = 1,
+                AssignedAt = DateTime.UtcNow.AddDays(-5),
+                AssignedByManagerId = userId
+            },
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = tireRotation.ServiceId,
+                RepairOrderId = repairOrders[0].RepairOrderId,
+                JobName = "Tire Rotation Service",
+                Status = JobStatus.Completed,
+                Deadline = DateTime.UtcNow.AddDays(1),
+                TotalAmount = tireRotation.Price,
+                Note = "Tire rotation completed - even wear achieved",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(1),
+                Level = 1,
+                AssignedAt = DateTime.UtcNow.AddDays(-5),
+                AssignedByManagerId = userId
+            },
+
+            // Order 2 - Pending approval jobs
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = brakePadReplacement.ServiceId,
+                RepairOrderId = repairOrders[1].RepairOrderId,
+                JobName = "Brake Pad Replacement",
+                Status = JobStatus.Completed,
+                Deadline = DateTime.UtcNow.AddDays(5),
+                TotalAmount = brakePadReplacement.Price,
+                Note = "Waiting for customer approval of brake repair",
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                UpdatedAt = DateTime.UtcNow,
+                Level = 2,
+                SentToCustomerAt = DateTime.UtcNow.AddDays(-1),
+                AssignedByManagerId = userId
+            },
+
+            // Order 3 - In progress jobs
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = brakePadReplacement.ServiceId,
+                RepairOrderId = repairOrders[2].RepairOrderId,
+                JobName = "Emergency Brake Repair",
+                Status = JobStatus.InProgress,
+                Deadline = DateTime.UtcNow.AddDays(1),
+                TotalAmount = brakePadReplacement.Price,
+                Note = "Urgent brake system repair in progress",
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow,
+                Level = 3,
+                AssignedAt = DateTime.UtcNow.AddDays(-1),
+                AssignedByManagerId = userId
+            },
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = engineTuneUp.ServiceId,
+                RepairOrderId = repairOrders[2].RepairOrderId,
+                JobName = "Engine Tune-Up",
+                Status = JobStatus.InProgress,
+                Deadline = DateTime.UtcNow.AddDays(2),
+                TotalAmount = engineTuneUp.Price,
+                Note = "Engine performance optimization",
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow,
+                Level = 2,
+                AssignedAt = DateTime.UtcNow.AddDays(-1),
+                AssignedByManagerId = userId
+            },
+
+            // Order 4 - New jobs
+            new Job
+            {
+                JobId = Guid.NewGuid(),
+                ServiceId = tireRotation.ServiceId,
+                RepairOrderId = repairOrders[3].RepairOrderId,
+                JobName = "Tire Rotation Service",
+                Status = JobStatus.New,
+                Deadline = DateTime.UtcNow.AddDays(3),
+                TotalAmount = tireRotation.Price,
+                Note = "Scheduled tire rotation service",
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                Level = 1,
+                AssignedByManagerId = userId
+            }
+        };
+
+                _context.Jobs.AddRange(jobs);
+                await _context.SaveChangesAsync();
+
+
+
+                // Seed Repairs - Thêm phần này
+                var repairs = new List<Repair>
+        {
+            // Repair for Job 1 - Basic Oil Change (Completed)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[0].JobId,
+                Description = "Complete oil change service including oil filter replacement and lubrication check",
+                StartTime = DateTime.UtcNow.AddDays(-5).AddHours(2),
+                EndTime = DateTime.UtcNow.AddDays(-5).AddHours(3),
+                ActualTime = TimeSpan.FromHours(1),
+                EstimatedTime = TimeSpan.FromHours(1.5),
+                Notes = "Oil changed successfully. Used synthetic oil for better performance. Checked for any leaks - none found."
+            },
+            // Repair for Job 2 - Tire Rotation (Completed)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[1].JobId,
+                Description = "Four-tire rotation with pressure check and visual inspection",
+                StartTime = DateTime.UtcNow.AddDays(-5).AddHours(3),
+                EndTime = DateTime.UtcNow.AddDays(-5).AddHours(4),
+                ActualTime = TimeSpan.FromHours(1),
+                EstimatedTime = TimeSpan.FromHours(1.2),
+                Notes = "Tires rotated in X pattern. All tires show even wear. Tire pressures adjusted to manufacturer specifications."
+            },
+            // Repair for Job 3 - Brake Pad Replacement (Completed)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[2].JobId,
+                Description = "Front brake pad replacement with rotor inspection",
+                StartTime = DateTime.UtcNow.AddDays(-2).AddHours(1),
+                EndTime = DateTime.UtcNow.AddDays(-2).AddHours(3),
+                ActualTime = TimeSpan.FromHours(2),
+                EstimatedTime = TimeSpan.FromHours(2.5),
+                Notes = "Replaced front brake pads. Rotors are in good condition, no need for resurfacing. Brake fluid level adequate."
+            },
+            // Repair for Job 4 - Emergency Brake Repair (In Progress)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[3].JobId,
+                Description = "Emergency brake system diagnosis and repair",
+                StartTime = DateTime.UtcNow.AddDays(-1).AddHours(1),
+                EndTime = null, // Still in progress
+                ActualTime = null, // Not completed yet
+                EstimatedTime = TimeSpan.FromHours(3),
+                Notes = "Diagnosed brake fluid leak from master cylinder. Parts ordered. Awaiting replacement parts for completion."
+            },
+            // Repair for Job 5 - Engine Tune-Up (In Progress)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[4].JobId,
+                Description = "Complete engine tune-up including spark plug replacement and ignition system check",
+                StartTime = DateTime.UtcNow.AddDays(-1).AddHours(2),
+                EndTime = null, // Still in progress
+                ActualTime = null, // Not completed yet
+                EstimatedTime = TimeSpan.FromHours(4),
+                Notes = "Replaced spark plugs. Currently checking ignition coils and fuel injection system. Engine compression test pending."
+            },
+            // Repair for Job 6 - Tire Rotation (New - Not started)
+            new Repair
+            {
+                RepairId = Guid.NewGuid(),
+                JobId = jobs[5].JobId,
+                Description = "Scheduled tire rotation service with wheel balancing",
+                StartTime = null, // Not started yet
+                EndTime = null, // Not started yet
+                ActualTime = null, // Not started yet
+                EstimatedTime = TimeSpan.FromHours(1.5),
+                Notes = "Scheduled service. Will include tire pressure adjustment and visual inspection for uneven wear."
+            }
+        };
+
+                _context.Repairs.AddRange(repairs);
+                await _context.SaveChangesAsync();
+
+
+
+                // Seed JobParts
+                var jobParts = new List<JobPart>
+        {
+            // Job 1 - Oil change parts
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[0].JobId,
+                PartId = oilFilterMedium.PartId,
+                Quantity = 1,
+                UnitPrice = oilFilterMedium.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[0].JobId,
+                PartId = airFilterCheap.PartId,
+                Quantity = 1,
+                UnitPrice = airFilterCheap.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+
+            // Job 3 - Brake repair parts
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[2].JobId,
+                PartId = brakePadCheap.PartId,
+                Quantity = 2,
+                UnitPrice = brakePadCheap.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[2].JobId,
+                PartId = brakeDiscMedium.PartId,
+                Quantity = 2,
+                UnitPrice = brakeDiscMedium.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+
+            // Job 4 - Emergency brake parts
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[3].JobId,
+                PartId = brakePadCheap.PartId,
+                Quantity = 2,
+                UnitPrice = brakePadCheap.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+
+            // Job 5 - Engine tune-up parts
+            new JobPart
+            {
+                JobPartId = Guid.NewGuid(),
+                JobId = jobs[4].JobId,
+                PartId = sparkPlugExpensive.PartId,
+                Quantity = 4,
+                UnitPrice = sparkPlugExpensive.Price,
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            }
+        };
+
+                _context.JobParts.AddRange(jobParts);
+                await _context.SaveChangesAsync();
+
+                // Seed JobTechnicians
+                var jobTechnicians = new List<JobTechnician>
+        {
+            // Assign technicians to jobs
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[0].JobId,
+                TechnicianId = technicianIds[0],
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[1].JobId,
+                TechnicianId = technicianIds[1],
+                CreatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[2].JobId,
+                TechnicianId = technicianIds[0],
+                CreatedAt = DateTime.UtcNow.AddDays(-2)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[3].JobId,
+                TechnicianId = technicianIds[0],
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[3].JobId,
+                TechnicianId = technicianIds[1],
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[4].JobId,
+                TechnicianId = technicianIds[1],
+                CreatedAt = DateTime.UtcNow.AddDays(-1)
+            },
+            new JobTechnician
+            {
+                JobTechnicianId = Guid.NewGuid(),
+                JobId = jobs[5].JobId,
+                TechnicianId = technicianIds[0],
+                CreatedAt = DateTime.UtcNow
+            }
+        };
+
+                _context.JobTechnicians.AddRange(jobTechnicians);
+                await _context.SaveChangesAsync();
+
+                // Seed Quotations
+                var quotations = new List<Quotation>
+        {
+            new Quotation
+            {
+                QuotationId = Guid.NewGuid(),
+                RepairOrderId = repairOrders[1].RepairOrderId,
+                UserId = userId,
+                VehicleId = vehicleId,
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                SentToCustomerAt = DateTime.UtcNow.AddDays(-1),
+                Status = QuotationStatus.Sent,
+                TotalAmount = 2500000,
+                DiscountAmount = 100000,
+                Note = "Brake system repair quotation - Please review and approve the services",
+                ExpiresAt = DateTime.UtcNow.AddDays(7)
+            }
+        };
+
+                _context.Quotations.AddRange(quotations);
+                await _context.SaveChangesAsync();
+
+                // Seed QuotationServices
+                var quotationServices = new List<QuotationService>
+        {
+            new QuotationService
+            {
+                QuotationServiceId = Guid.NewGuid(),
+                QuotationId = quotations[0].QuotationId,
+                ServiceId = brakePadReplacement.ServiceId,
+                IsSelected = true,
+                Price = brakePadReplacement.Price
+            },
+            new QuotationService
+            {
+                QuotationServiceId = Guid.NewGuid(),
+                QuotationId = quotations[0].QuotationId,
+                ServiceId = fullEngineDiagnostic.ServiceId,
+                IsSelected = false,
+                Price = fullEngineDiagnostic.Price
+            }
+        };
+
+                _context.QuotationServices.AddRange(quotationServices);
+                await _context.SaveChangesAsync();
+
+                // Seed QuotationServiceParts
+                var quotationServiceParts = new List<QuotationServicePart>
+        {
+            new QuotationServicePart
+            {
+                QuotationServicePartId = Guid.NewGuid(),
+                QuotationServiceId = quotationServices[0].QuotationServiceId,
+                PartId = brakePadCheap.PartId,
+                IsSelected = true,
+                Price = brakePadCheap.Price,
+                Quantity = 2
+            },
+            new QuotationServicePart
+            {
+                QuotationServicePartId = Guid.NewGuid(),
+                QuotationServiceId = quotationServices[0].QuotationServiceId,
+                PartId = brakeDiscMedium.PartId,
+                IsSelected = false,
+                Price = brakeDiscMedium.Price,
+                Quantity = 2
+            },
+            new QuotationServicePart
+            {
+                QuotationServicePartId = Guid.NewGuid(),
+                QuotationServiceId = quotationServices[0].QuotationServiceId,
+                PartId = shockAbsorberCheap.PartId,
+                IsSelected = false,
+                Price = shockAbsorberCheap.Price,
+                Quantity = 1
+            }
+        };
+
+                _context.QuotationServiceParts.AddRange(quotationServiceParts);
+                await _context.SaveChangesAsync();
+
+                Console.WriteLine("Repair Orders and related data seeded successfully!");
+            }
         }
+    }
 
     }

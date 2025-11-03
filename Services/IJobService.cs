@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
-using BusinessObject.Technician;
+using BusinessObject.InspectionAndRepair;
 
 namespace Services
 {
@@ -42,10 +42,7 @@ namespace Services
         Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
 
         // Business Logic Validation
-        Task<bool> CanCompleteJobAsync(Guid jobId);
-        Task<bool> CanStartJobAsync(Guid jobId);
         Task<bool> CanAssignJobToTechnicianAsync(Guid jobId);
-        Task<bool> HasActiveTechnicianAsync(Guid jobId);
 
         // Search and Filtering
         Task<IEnumerable<Job>> SearchJobsAsync(
@@ -58,9 +55,6 @@ namespace Services
             DateTime? toDate = null);
 
 
-        // Completion Tracking
-        Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null);
-        Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId);
 
 
         // Workflow Validation

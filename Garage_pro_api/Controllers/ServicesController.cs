@@ -33,8 +33,8 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving services", detail = ex.Message });
             }
         }
-        [Authorize(Policy = "SERVICE_VIEW")]
 
+        [Authorize(Policy = "SERVICE_VIEW")]
         [HttpGet("paged")]
         public async Task<ActionResult<object>> GetPaged(
             [FromQuery] int pageNumber = 1,

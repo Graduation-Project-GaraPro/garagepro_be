@@ -48,8 +48,7 @@ namespace BusinessObject.Campaigns
     public enum CampaignType
     {
         Discount,   // 'discount'
-        Seasonal,   // 'seasonal'
-        Loyalty     // 'loyalty'
+
     }
 
     public enum DiscountType

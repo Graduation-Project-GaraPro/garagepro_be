@@ -18,7 +18,7 @@ namespace Dtos.Policies
         public int SessionTimeout { get; set; } // minutes
         public int MaxLoginAttempts { get; set; }
         public int AccountLockoutTime { get; set; } // minutes
-        public bool MfaRequired { get; set; }
+        //public bool MfaRequired { get; set; }
         public int PasswordExpiryDays { get; set; }
         public bool EnableBruteForceProtection { get; set; }
 

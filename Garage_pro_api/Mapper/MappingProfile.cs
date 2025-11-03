@@ -1,3 +1,4 @@
+
 using AutoMapper;
 using BusinessObject;
 using BusinessObject.Authentication;
@@ -5,23 +6,23 @@ using BusinessObject.Branches;
 using BusinessObject.Customers;
 using BusinessObject.Manager;
 using BusinessObject.Policies;
-
 using BusinessObject.Roles;
+using BusinessObject.Vehicles;
+using Dtos.Auth;
 using Dtos.Auth;
 using BusinessObject.Enums;
 using Dtos.Branches;
 using Dtos.Customers;
 using Dtos.FeedBacks;
 using Dtos.Parts;
-using Dtos.Policies;
-using Dtos.Roles;
-using Dtos.Vehicles;
-using Dtos.Services;
 using Dtos.Parts;
-using Dtos.Auth;
+using Dtos.Policies;
 using Dtos.Quotations;
 using Dtos.Campaigns;
 using BusinessObject.Campaigns;
+using Dtos.Roles;
+using Dtos.Services;
+using Dtos.Vehicles;
 
 namespace Garage_pro_api.Mapper
 {
@@ -58,6 +59,7 @@ namespace Garage_pro_api.Mapper
                     opt => opt.MapFrom(src => src.Permissions));
 
             // Role → RoleDto
+
             CreateMap<ApplicationUser, ApplicationUserDto>().ReverseMap();
             CreateMap<ApplicationRole, RoleDto>()
                 .ForMember(dest => dest.PermissionCategories,
@@ -137,7 +139,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
                 .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note))
                 .ForMember(dest => dest.ExpiresAt, opt => opt.MapFrom(src => src.ExpiresAt))
-                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FirstName + " "+ src.User.LastName))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => $"{src.Vehicle.Brand.BrandName} {src.Vehicle.Model.ModelName}"))
                 .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
                 .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection));
@@ -239,6 +241,20 @@ namespace Garage_pro_api.Mapper
 
             // Campaign
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
+            CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+            CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+
+
+            CreateMap<VoucherUsageDto, VoucherUsage>().ReverseMap();
+
+
+
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
+
+
+
+
+
             CreateMap<Service, ServiceRelatedToCampaignDto>();
             // Part -> PartDto
             CreateMap<Part, PartDto>();
@@ -264,7 +280,7 @@ namespace Garage_pro_api.Mapper
             .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
             .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
             .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Service.Price))
-            
+
             .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
 
 
@@ -276,7 +292,7 @@ namespace Garage_pro_api.Mapper
                .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
 
             CreateMap<RepairRequest, RepairRequestDto>()
-             
+
              ;
             //Map repair request
             //CreateMap<RepairRequest, RepairRequestDto>()
@@ -299,10 +315,14 @@ namespace Garage_pro_api.Mapper
            .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model != null ? src.Model.ModelName : null))
            .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color != null ? src.Color.ColorName : null));
 
-            
-           
 
-           
+
+            //vehicleColor
+            // VehicleColor -> VehicleColorDto
+            CreateMap<VehicleColor, VehicleColorDto>().ReverseMap();
+            CreateMap<VehicleModel, VehicleModelDto>().ReverseMap();
+
+
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
      .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));

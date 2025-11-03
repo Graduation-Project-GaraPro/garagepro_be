@@ -26,7 +26,7 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual Quotation Quotation { get; set; }
-        public virtual Service Service { get; set; }
+        public virtual Service? Service { get; set; }
         // Add the new relationship with QuotationServicePart
         public virtual ICollection<QuotationServicePart> QuotationServiceParts { get; set; } = new List<QuotationServicePart>();
     }

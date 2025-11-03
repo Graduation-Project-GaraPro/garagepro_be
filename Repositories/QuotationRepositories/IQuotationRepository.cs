@@ -1,6 +1,7 @@
 
 
 using BusinessObject;
+using BusinessObject.Enums;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -19,6 +20,13 @@ namespace Repositories.QuotationRepositories
         Task<IEnumerable<Quotation>> GetByUserIdAsync(string userId);
         Task<IEnumerable<Quotation>> GetByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<Quotation>> GetAllAsync();
+
+        Task<(List<Quotation>, int)> GetQuotationsByUserIdAsync(
+        string userId,
+        int pageNumber,
+        int pageSize,
+        QuotationStatus? status);
+
         Task<Quotation> UpdateAsync(Quotation quotation);
         Task<bool> DeleteAsync(Guid quotationId);
         Task<bool> ExistsAsync(Guid quotationId);

@@ -4,6 +4,7 @@
     {
         Paypal,
         Momo,
-        Atm
+        Atm,
+        VnPay
     }
 }

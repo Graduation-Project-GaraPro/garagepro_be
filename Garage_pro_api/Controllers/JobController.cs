@@ -308,30 +308,7 @@ namespace Garage_pro_api.Controllers
             return NoContent();
         }
 
-        // PUT: api/Job/{id}/start
-        [HttpPut("{id}/start")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> MarkJobAsInProgress(Guid id)
-        {
-            // Get the current user (technician) ID - this will be used to ensure they're assigned to the job
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return BadRequest("User ID not found in token");
-            }
-
-            // For now, we'll use a placeholder technician ID
-            // In a real implementation, you'd get the actual technician ID from the user
-            var technicianId = Guid.NewGuid(); // This should be replaced with actual logic
-            
-            var result = await _jobService.MarkJobAsInProgressAsync(id, technicianId);
-            if (!result)
-            {
-                return NotFound("Job not found or could not be started");
-            }
-
-            return NoContent();
-        }
+        
 
         // GET: api/Job/{id}/parts
         [HttpGet("{id}/parts")]

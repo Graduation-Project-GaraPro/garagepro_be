@@ -170,11 +170,11 @@ namespace Services.Customer
             return dto;
         }
 
-        //public async Task<RepairRequestDto> GetByIdAsync(Guid id)
-        //{
-        //    var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
-        //    return _mapper.Map<RPDetailDto>(request);
-        //}
+        public async Task<RPDetailDto> GetByIdDetailsAsync(Guid id)
+        {
+            var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
+            return _mapper.Map<RPDetailDto>(request);
+        }
 
         public async Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId)
         {
@@ -557,6 +557,11 @@ namespace Services.Customer
         }
 
         public Task<bool> DeleteImageAsync(Guid imageId)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<RepairRequestDto> GetByIdAsync(Guid id)
         {
             throw new NotImplementedException();
         }

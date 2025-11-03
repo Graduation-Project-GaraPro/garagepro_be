@@ -12,9 +12,10 @@ namespace Services
         // Kanban Board Operations
         Task<RoBoardDto> GetKanbanBoardAsync(RoBoardFiltersDto filters = null);
         Task<RoBoardListViewDto> GetListViewAsync(RoBoardFiltersDto filters = null, string sortBy = "ReceiveDate", string sortOrder = "Desc", int page = 1, int pageSize = 50);
-        
+
         // Drag & Drop Operations
         Task<RoBoardStatusUpdateResultDto> UpdateRepairOrderStatusAsync(UpdateRoBoardStatusDto updateDto);
+
         Task<RoBoardMoveValidationDto> ValidateMoveAsync(Guid repairOrderId, int fromStatusId, int toStatusId);
         
         // CRUD Operations
@@ -23,6 +24,7 @@ namespace Services
         Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder);
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<bool> RepairOrderExistsAsync(Guid repairOrderId);
+
         Task<RepairOrder> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
 
         // NEW: Get all repair orders with OData support
@@ -38,10 +40,11 @@ namespace Services
         Task<RoBoardStatisticsDto> GetBoardStatisticsAsync(RoBoardFiltersDto filters = null);
         Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int> statusIds = null);
         
+
         // User-specific Operations
         Task<IEnumerable<RoBoardCardDto>> GetRepairOrdersByUserAsync(string userId);
         Task<IEnumerable<RoBoardCardDto>> GetRepairOrdersByBranchAsync(Guid branchId);
-        
+
         // Search and Filtering
         Task<IEnumerable<RoBoardCardDto>> SearchRepairOrdersAsync(string searchText, List<int> statusIds = null, List<Guid> branchIds = null, DateTime? fromDate = null, DateTime? toDate = null);
         

@@ -156,6 +156,29 @@ namespace Services.QuotationServices
             return _mapper.Map<QuotationDto>(completeQuotation);
         }
 
+
+        public async Task<object> GetQuotationsByUserIdAsync(
+            string userId,
+            int pageNumber,
+            int pageSize,
+            QuotationStatus? status)
+        {
+            var (quotations, totalCount) = await _quotationRepository
+                .GetQuotationsByUserIdAsync(userId, pageNumber, pageSize, status);
+
+            var quotationDtos = _mapper.Map<List<QuotationDto>>(quotations);
+
+            return new
+            {
+                TotalCount = totalCount,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize),
+                Data = quotationDtos
+            };
+        }
+
+
         public async Task<QuotationDto> GetQuotationByIdAsync(Guid quotationId)
         {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
@@ -244,49 +267,96 @@ namespace Services.QuotationServices
 
         public async Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto)
         {
-            // Get the quotation with all related data
+            // Lấy quotation cùng toàn bộ dữ liệu liên quan
             var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
             if (quotation == null)
                 throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
 
-            // Update quotation status
+            // Cập nhật trạng thái và thời gian phản hồi của khách hàng
             quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
             quotation.CustomerResponseAt = DateTime.UtcNow;
-            
-            // Handle service selections based on required/optional status
-            // First, process all services to ensure required services stay selected
-            foreach (var quotationService in quotation.QuotationServices)
+            quotation.Note = responseDto.CustomerNote;
+            // Cập nhật lựa chọn dịch vụ (QuotationServices)
+            if (responseDto.SelectedServices != null && responseDto.SelectedServices.Any())
             {
-                // Required services must always be selected
-                if (quotationService.IsRequired)
+                var selectedServiceIds = responseDto.SelectedServices
+                    .Select(s => s.QuotationServiceId)
+                    .ToHashSet();
+
+                foreach (var qs in quotation.QuotationServices)
                 {
-                    quotationService.IsSelected = true;
-                    
-                    // Automatically select all parts for required services
-                    foreach (var part in quotationService.QuotationServiceParts)
-                    {
-                        part.IsSelected = true;
-                    }
+                    qs.IsSelected = selectedServiceIds.Contains(qs.QuotationServiceId);
                 }
-                else
+            }
+            else
+            {
+                // Nếu không có dịch vụ nào được gửi lên, có thể giữ nguyên hoặc bỏ chọn tất cả
+                foreach (var qs in quotation.QuotationServices)
                 {
-                    // For optional services, check if customer selected them
-                    bool customerSelected = responseDto.SelectedServices != null && 
-                        responseDto.SelectedServices.Any(s => s.QuotationServiceId == quotationService.QuotationServiceId);
-                    
-                    quotationService.IsSelected = customerSelected;
-                    
-                    // Select/deselect parts based on service selection
-                    foreach (var part in quotationService.QuotationServiceParts)
-                    {
-                        part.IsSelected = customerSelected;
-                    }
+                    qs.IsSelected = false;
                 }
             }
 
+            // Cập nhật lựa chọn phụ tùng (QuotationServiceParts)
+            //if (responseDto.SelectedServiceParts != null && responseDto.SelectedServiceParts.Any())
+            //{
+            //    var selectedPartIds = responseDto.SelectedServiceParts
+            //        .Select(p => p.QuotationServicePartId)
+            //        .ToHashSet();
+
+            //    foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
+            //    {
+            //        part.IsSelected = selectedPartIds.Contains(part.QuotationServicePartId);
+            //    }
+            //}
+            //else
+            //{
+            //    // Nếu không có part nào được chọn, bỏ chọn tất cả
+            //    foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
+            //    {
+            //        part.IsSelected = false;
+            //    }
+            //}
+
+            // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
+            //await ValidateAndCorrectPartSelectionAsync(quotation);
+
+            // Lưu lại thay đổi
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
+
+
+
+        /// Validates and corrects part selection based on whether services are advanced or not.
+        private async Task ValidateAndCorrectPartSelectionAsync(Quotation quotation)
+        {
+            foreach (var quotationService in quotation.QuotationServices)
+            {
+                // Load the full service information to check if it's advanced
+                var service = await _serviceRepository.GetByIdAsync(quotationService.ServiceId);
+
+                if (service != null)
+                {
+                    // Get all selected parts for this service
+                    var selectedParts = quotationService.QuotationServiceParts
+                        .Where(qsp => qsp.IsSelected)
+                        .ToList();
+
+                    // If it's not an advanced service, ensure only one part is selected
+                    if (!service.IsAdvanced && selectedParts.Count > 1)
+                    {
+                        // Keep only the first selected part and deselect the rest
+                        for (int i = 1; i < selectedParts.Count; i++)
+                        {
+                            selectedParts[i].IsSelected = false;
+                        }
+                    }
+
+                }
+            }
+        }
+
 
         public async Task<bool> ApproveQuotationAsync(Guid quotationId)
         {

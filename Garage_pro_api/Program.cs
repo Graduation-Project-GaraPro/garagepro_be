@@ -47,6 +47,27 @@ using System.Text;
 using Microsoft.AspNetCore.OData;
 using Repositories.VehicleRepositories;
 using AutoMapper;
+using Repositories.InspectionAndRepair;
+using Services.InspectionAndRepair;
+using Repositories.RoleRepositories;
+using Services.RoleServices;
+using Garage_pro_api.Authorization;
+using Microsoft.AspNetCore.Authorization;
+using Garage_pro_api.Mapper;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authentication.Google;
+using Services.SmsSenders;
+using BusinessObject.Roles;
+using Microsoft.OData.ModelBuilder;
+using Microsoft.AspNetCore.OData;
+using System.Text.Json.Serialization;
+using Repositories.Statistical;
+using Services.Statistical;
+using Microsoft.EntityFrameworkCore.Migrations;
+using Services.RepairHistory;
+using Repositories.RepairHistory;
+using Services.CampaignServices;
+using Repositories.CampaignRepositories;
 using Repositories.CampaignRepositories;
 using Services.CampaignServices;
 using Repositories.LogRepositories;
@@ -55,21 +76,31 @@ using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Repositories.RepairProgressRepositories;
+using Services.RepairProgressServices;
+using Garage_pro_api.BackgroundServices;
+using Services.UserServices;
 
+using Repositories.PaymentRepositories;
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy
-                .WithOrigins("http://localhost:3000")
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
+// OData Model Configuration
+var modelBuilder = new ODataConventionModelBuilder();
+builder.Services.AddControllers()
+    .AddOData(options => options
+        .Select()
+        .Filter()
+        .OrderBy()
+        .Expand()
+        .Count()
+        .SetMaxTop(100)
+        .AddRouteComponents("odata", modelBuilder.GetEdmModel())
+    )
+    .AddJsonOptions(opt =>
+    {
+        opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    });
+
 
 // Add SignalR services
 builder.Services.AddSignalR();
@@ -84,20 +115,21 @@ builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.CustomSchemaIds(type => type.FullName); // dùng FullName để phân biệt
-    // Thêm thông tin cho Swagger UI
+
+    c.CustomSchemaIds(type => type.FullName);
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "My API",
         Version = "v1"
     });
 
-    // Thêm cấu hình cho Bearer Token
+    // Th�m c?u h�nh cho Bearer Token
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "bearer",
+
         BearerFormat = "JWT",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Description = "Enter 'Bearer' [space] and then your valid token.\n\nExample: \"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\""
@@ -119,9 +151,13 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
+
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<MappingProfile>();
+    cfg.AddProfile<RepairMappingProfile>();
+    cfg.AddProfile<InspectionTechnicianProfile>();
+    cfg.AddProfile<JobTechnicianProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -142,12 +178,14 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 .AddDefaultTokenProviders()
 .AddPasswordValidator<RealTimePasswordValidator<ApplicationUser>>();
 
+
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
 }
 else
 {
+
     // Production: Đăng ký Twilio hoặc dịch vụ SMS thật
     // builder.Services.AddTransient<ISmsSender, TwilioSmsSender>();
     builder.Services.AddSingleton<ISmsSender, FakeSmsSender>();
@@ -180,6 +218,7 @@ builder.Services.AddAuthentication(options =>
     {
         OnAuthenticationFailed = context =>
         {
+
             Console.WriteLine("JWT Authentication failed:");
             Console.WriteLine(context.Exception.ToString());
             return Task.CompletedTask;
@@ -197,6 +236,7 @@ builder.Services.AddAuthentication(options =>
         }
     };
 })
+
 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
 {
     options.LoginPath = "/Account/Login";
@@ -239,9 +279,11 @@ builder.Services.AddMemoryCache(); // Cho IMemoryCache
 builder.Services.AddScoped<IRoleService, RoleService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+//builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
+
 
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
@@ -253,16 +295,46 @@ builder.Services.AddScoped<ILabelService, LabelService>();
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
 builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 
+
+// Technician repository and service
+builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
+builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
+builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
+builder.Services.AddScoped<ISpecificationService, SpecificationService>();
+builder.Services.AddScoped<IRepairRepository, RepairRepository>();
+builder.Services.AddScoped<IRepairService, RepairService>();
+builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
+builder.Services.AddScoped<IStatisticalService, StatisticalService>();
+builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
+builder.Services.AddScoped<IRepairHistoryService, RepairHistoryService>();
+
+
+
+builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+builder.Services.AddScoped<IRoleService, RoleService>();
+builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
+
+builder.Services.AddScoped<IPermissionService, PermissionService>();
+builder.Services.Decorate<IPermissionService, CachedPermissionService>();
+
+
+builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
+builder.Services.AddScoped<IRepairProgressService, RepairProgressService>();
 // Add this line to register the SignalR hub
 builder.Services.AddSignalR();
 
+
 // Job repository and service
 builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobService>(provider =>
-{
-    var jobRepository = provider.GetRequiredService<IJobRepository>();
-    return new Services.JobService(jobRepository);
-});
+builder.Services.AddScoped<IJobService, JobService>();
+
+//builder.Services.AddScoped<IJobService>(provider =>
+//{
+//    var jobRepository = provider.GetRequiredService<IJobRepository>();
+//    return new Services.JobService(jobRepository);
+//});
 
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -349,18 +421,33 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // vehicle
+//vehicle
+
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleBrandRepository, VehicleBrandRepository>();
 builder.Services.AddScoped<IVehicleModelRepository, VehicleModelRepository>();
 builder.Services.AddScoped<IVehicleColorRepository, VehicleColorRepository>();
-builder.Services.AddScoped<VehicleBrandService, VehicleBrandService>();
+builder.Services.AddScoped<IVehicleBrandServices, VehicleBrandService>();
 builder.Services.AddScoped<IVehicleModelService, VehicleModelService>();
 builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
+
+//PAYMENT
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
+
+
+
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
+
+
+
+builder.Services.AddScoped<IRevenueService, RevenueService>();
+
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
@@ -387,15 +474,22 @@ builder.Services.Configure<CloudinarySettings>(
     builder.Configuration.GetSection("CloudinarySettings")
 );
 
+builder.Services.AddHttpClient();
+builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
+
+
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 // Database configuration - FIXED: Removed misplaced async and fixed the configuration
-builder.Services.AddDbContext<MyAppDbContext>((serviceProvider, options) =>
+builder.Services.AddScoped<AuditSaveChangesInterceptor>();
+
+builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-    // Truyền IServiceProvider thay vì ILogService
-    options.AddInterceptors(
-        new DatabaseLoggingInterceptor(serviceProvider, slowQueryThresholdMs: 2000) // 2 giây
-    );
+    options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
+
+builder.Services.AddHostedService<CampaignExpirationService>();
+
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -419,6 +513,8 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
+                "http://localhost:3001",
+                "http://localhost:3000",
                 "https://localhost:3000",       // frontend web
                 "https://10.0.2.2:7113",       // Android Emulator
                 "http://192.168.1.96:7113",   // LDPlayer / LAN
@@ -436,14 +532,15 @@ builder.Services.AddCors(options =>
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(5117);  // HTTP (tùy chọn)
+    options.ListenAnyIP(5117);
     options.ListenAnyIP(7113, listenOptions =>
     {
-        listenOptions.UseHttps(); // HTTPS trên cổng 7113
+        listenOptions.UseHttps();
     });
 });
 
 var app = builder.Build();
+app.UseCors("AllowFrontendAndAndroid");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -452,9 +549,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Use CORS with the specific policy for your frontend
-app.UseCors("AllowFrontend");
-//app.UseCors("AllowAll");
+app.UseCors("AllowFrontendAndAndroid");
+
 app.UseSession();
 
 //app.UseSecurityPolicyEnforcement();
@@ -469,17 +565,21 @@ app.Use(async (context, next) =>
 app.MapHub<LogHub>("/logHub");
 
 app.UseAuthentication();
+
 app.UseMiddleware<UserActivityMiddleware>();
 app.UseMiddleware<ExceptionMiddleware>();
-app.UseAuthorization();            // phải chạy trước để gắn User hợp lệ
+
+app.UseAuthorization();
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 
-// Initialize database
+
+//Initialize database
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -498,7 +598,6 @@ using (var scope = app.Services.CreateScope())
             SessionTimeout = 30,
             MaxLoginAttempts = 5,
             AccountLockoutTime = 15,
-            MfaRequired = false,
             PasswordExpiryDays = 90,
             EnableBruteForceProtection = true,
             CreatedAt = DateTime.UtcNow,
@@ -509,10 +608,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-//    await dbInitializer.Initialize();
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+    await dbInitializer.Initialize();
+}
 
 app.Run();

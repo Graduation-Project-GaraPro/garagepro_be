@@ -10,7 +10,8 @@
     <PackageReference Include="AutoMapper" Version="15.0.1" />
     <PackageReference Include="Google.Apis.Auth" Version="1.71.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.20" />
-    <PackageReference Include="Microsoft.AspNetCore.OData" Version="9.4.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OData" Version="9.3.2" />
+
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.9">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -36,6 +37,10 @@
     <Content Update="appsettings.Development.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Logs\" />
   </ItemGroup>
 
 
