@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251103031834_AddAiChatSessionsTable")]
-    partial class AddAiChatSessionsTable
+    [Migration("20251103072355_updatenew")]
+    partial class updatenew
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
