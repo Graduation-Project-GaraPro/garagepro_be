@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 
 namespace Dtos.Parts
 {
-    public class PartDto
+    public class PartByServiceDto
     {
         public Guid PartId { get; set; }
         public Guid PartCategoryId { get; set; }
@@ -10,7 +10,5 @@ namespace Dtos.Parts
         public string Name { get; set; }
         public decimal Price { get; set; }
         public int Stock { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
     }
 }

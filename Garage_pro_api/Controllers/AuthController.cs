@@ -229,7 +229,7 @@ namespace Garage_pro_api.Controllers
                               $"Lockout end time: {lockoutInfo.LockoutEnd?.ToLocalTime():f}.";
 
                 // Ghi log bảo mật
-                await _logService.LogSecurityAsync(message,userInfor.Id);
+                await _logService.LogSecurityAsync(message, userInfor.Id);
 
                 // Trả về thông tin khóa tài khoản
                 return BadRequest(new
@@ -259,11 +259,11 @@ namespace Garage_pro_api.Controllers
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                
+
                 ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(100).TotalSeconds), // Đồng bộ với thời gian access token
                 UserId = user.Id,
                 Email = user.Email,
-                
+
                 Roles = await _userManager.GetRolesAsync(user),
             };
 
@@ -302,12 +302,23 @@ namespace Garage_pro_api.Controllers
                 await _userManager.AddToRoleAsync(user, "Customer");
             }
 
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            // Get user roles to determine token expiration time
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var jwtSettings = _config.GetSection("Jwt");
+            int accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ExpireMinutes", 30); // Default expiry time
+            
+            // Check if user has manager role and set longer expiration time
+            if (userRoles.Contains("Manager") || userRoles.Contains("Admin"))
+            {
+                accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ManagerExpireMinutes", 120); // Manager/Admin expiry time
+            }
+
+            var accessToken = await _tokenService.GenerateJwtToken(user, accessTokenExpiryMinutes);
 
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(accessTokenExpiryMinutes).TotalSeconds),
                 UserId = user.Id,
                 Email = user.Email,
                 Roles = await _userManager.GetRolesAsync(user),

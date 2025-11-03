@@ -1596,8 +1596,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<string>("PaidStatus")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");

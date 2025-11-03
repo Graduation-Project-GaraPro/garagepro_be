@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
+using BusinessObject.Enums;
 
 namespace Dtos.RoBoard
 {
@@ -110,7 +110,7 @@ namespace Dtos.RoBoard
     {
         public List<Guid> BranchIds { get; set; } = new List<Guid>();
         
-        public List<int> StatusIds { get; set; } = new List<int>();
+        public List<int> StatusIds { get; set; } = new List<int>(); // Changed from Guid to int
         
         public List<Guid> LabelIds { get; set; } = new List<Guid>();
         
@@ -128,7 +128,7 @@ namespace Dtos.RoBoard
         
         public bool? IsOverdue { get; set; }
         
-        public List<string> PaidStatuses { get; set; } = new List<string>();
+        public List<PaidStatus> PaidStatuses { get; set; } = new List<PaidStatus>();
         
         public string RepairOrderType { get; set; }
         

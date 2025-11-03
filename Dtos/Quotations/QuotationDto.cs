@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Dtos.RepairOrder;
 
 namespace Dtos.Quotations
 {
@@ -26,7 +25,6 @@ namespace Dtos.Quotations
         public string CustomerName { get; set; }
         public string VehicleInfo { get; set; }
         public ICollection<QuotationServiceDto> QuotationServices { get; set; }
-
         // Optional inspection information
         public InspectionDto Inspection { get; set; }
     }
@@ -46,7 +44,6 @@ namespace Dtos.Quotations
         // Service details
         public string ServiceName { get; set; }
         public string ServiceDescription { get; set; }
-
         // All parts for this service - customers cannot select individual parts
         public ICollection<QuotationServicePartDto> Parts { get; set; }
     }
@@ -71,8 +68,10 @@ namespace Dtos.Quotations
         public Guid? InspectionId { get; set; }
         public Guid? RepairOrderId { get; set; }
 
+        [Required(ErrorMessage = "UserId is required")]
         public string UserId { get; set; }
 
+        [Required(ErrorMessage = "VehicleId is required")]
         public Guid VehicleId { get; set; }
 
         public string Note { get; set; }
@@ -84,6 +83,8 @@ namespace Dtos.Quotations
     {
         [Required]
         public Guid ServiceId { get; set; }
+        
+        public bool IsRequired { get; set; } // Indicates if this is a required service
 
         public bool IsSelected { get; set; } = false;
         
@@ -95,11 +96,8 @@ namespace Dtos.Quotations
         [Required]
         public Guid PartId { get; set; }
 
-        public bool IsSelected { get; set; } = false; // Customer selection
+        public bool IsSelected { get; set; } = true; // Parts are automatically selected when service is selected
         
-        public bool IsRecommended { get; set; } = false; // Manager recommendation
-        public string RecommendationNote { get; set; }
-
         public decimal Quantity { get; set; } = 1;
     }
 
@@ -127,21 +125,16 @@ namespace Dtos.Quotations
 
         public string? CustomerNote { get; set; }
         
+        // Customer selects services they agree with
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }
-        // Change to use QuotationServicePart instead of direct QuotationPart
-        // public ICollection<CustomerQuotationPartDto> SelectedParts { get; set; }
-        public ICollection<CustomerQuotationServicePartDto> SelectedServiceParts { get; set; }
     }
 
     public class CustomerQuotationServiceDto
     {
         [Required]
         public Guid QuotationServiceId { get; set; }
-    }
-
-    public class CustomerQuotationServicePartDto
-    {
-        [Required]
-        public Guid QuotationServicePartId { get; set; }
+        
+        // For required services, customer cannot deselect
+        // For optional services, customer can choose to select or deselect
     }
 }

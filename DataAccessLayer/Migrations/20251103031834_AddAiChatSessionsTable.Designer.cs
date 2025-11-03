@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251029043743_fixPromitional")]
-    partial class fixPromitional
+    [Migration("20251103031834_AddAiChatSessionsTable")]
+    partial class AddAiChatSessionsTable
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -522,7 +522,8 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("uniqueidentifier")
+                        .HasDefaultValueSql("NEWID()");
 
                     b.Property<Guid>("CampaignId")
                         .HasColumnType("uniqueidentifier");
@@ -1421,6 +1422,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CustomerNote")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("CustomerResponseAt")
                         .HasColumnType("datetime2");
 
@@ -1484,6 +1488,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("IsSelected")
                         .HasColumnType("bit");
 
@@ -1515,9 +1522,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("QuotationServicePartId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("IsRecommended")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("IsSelected")
                         .HasColumnType("bit");
@@ -1595,8 +1599,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<string>("PaidStatus")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");
@@ -2434,7 +2438,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "Campaign")
                         .WithMany("VoucherUsages")
                         .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")

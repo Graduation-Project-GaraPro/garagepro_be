@@ -95,7 +95,9 @@ namespace Garage_pro_api.DbInit
                 ("0900000005", "Default", "Customer", "Customer"),
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
-                ("0900000008", "Default", "Technician2", "Technician")
+                ("0900000008", "Default", "Technician2", "Technician"),
+                // Adding the requested manager user
+                ("0987654321", "Manager", "User", "Manager")
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";
@@ -116,7 +118,9 @@ namespace Garage_pro_api.DbInit
                         EmailConfirmed = true
                     };
 
-                    var result = await _userManager.CreateAsync(user, defaultPassword);
+                    // Use the specific password for the requested manager user
+                    string password = phone == "0987654321" ? "Admin123!" : defaultPassword;
+                    var result = await _userManager.CreateAsync(user, password);
                     if (result.Succeeded)
                         await _userManager.AddToRoleAsync(user, role);
                     else
@@ -124,6 +128,7 @@ namespace Garage_pro_api.DbInit
                 }
             }
         }
+
         private async Task SeedTechniciansAsync()
         {
             if (!_context.Technicians.Any())
@@ -1439,7 +1444,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 1450000,
                 EstimatedAmount = 1500000,
                 PaidAmount = 1450000,
-                PaidStatus = "Paid",
+                PaidStatus = PaidStatus.Paid,
                 EstimatedRepairTime = 3,
                 Note = "Regular maintenance service - Oil change and basic check",
                 BranchId = branch.BranchId,
@@ -1459,7 +1464,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 0,
                 EstimatedAmount = 2500000,
                 PaidAmount = 0,
-                PaidStatus = "Pending",
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 5,
                 Note = "Brake system repair - Waiting for customer approval",
                 BranchId = branch.BranchId,
@@ -1479,7 +1484,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 3200000,
                 EstimatedAmount = 3500000,
                 PaidAmount = 2000000,
-                PaidStatus = "Partial",
+                PaidStatus = PaidStatus.Partial,
                 EstimatedRepairTime = 6,
                 Note = "Emergency brake and engine repair - Urgent service required",
                 BranchId = branch.BranchId,
@@ -1499,7 +1504,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 0,
                 EstimatedAmount = 800000,
                 PaidAmount = 0,
-                PaidStatus = "Pending",
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 2,
                 Note = "Tire rotation and basic inspection",
                 BranchId = branch.BranchId,

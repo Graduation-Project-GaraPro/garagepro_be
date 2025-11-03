@@ -29,5 +29,7 @@ namespace Services.QuotationServices
         Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);
         Task<bool> ApproveQuotationAsync(Guid quotationId);
         Task<bool> RejectQuotationAsync(Guid quotationId);
+        // New method to copy quotation to jobs
+        Task<bool> CopyQuotationToJobsAsync(Guid quotationId);
     }
 }

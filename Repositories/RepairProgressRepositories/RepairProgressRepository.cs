@@ -47,7 +47,7 @@ namespace Repositories.RepairProgressRepositories
 
             if (!string.IsNullOrEmpty(filter.PaidStatus))
             {
-                query = query.Where(ro => ro.PaidStatus == filter.PaidStatus);
+                query = query.Where(ro => ro.PaidStatus.ToString() == filter.PaidStatus);
             }
 
             if (filter.FromDate.HasValue)
@@ -77,7 +77,7 @@ namespace Repositories.RepairProgressRepositories
                     EstimatedCompletionDate = ro.EstimatedCompletionDate,
                     CompletionDate = ro.CompletionDate,
                     Cost = ro.Cost,
-                    PaidStatus = ro.PaidStatus,
+                    PaidStatus = ro.PaidStatus.ToString(),
                     VehicleLicensePlate = ro.Vehicle.LicensePlate,
                     VehicleModel = ro.Vehicle.Model.ModelName,
                     StatusName = ro.OrderStatus.StatusName,
@@ -128,7 +128,7 @@ namespace Repositories.RepairProgressRepositories
                     Cost = ro.Cost,
                     EstimatedAmount = ro.EstimatedAmount,
                     PaidAmount = ro.PaidAmount,
-                    PaidStatus = ro.PaidStatus,
+                    PaidStatus = ro.PaidStatus.ToString(),
                     Note = ro.Note ?? string.Empty,
                     Vehicle = new Dtos.RepairProgressDto.VehicleDto
                     {

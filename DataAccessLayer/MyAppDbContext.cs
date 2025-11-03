@@ -703,6 +703,12 @@ namespace DataAccessLayer
                 .WithMany(b => b.RepairOrders)
                 .HasForeignKey(ro => ro.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
+                
+            // Configure the PaidStatus property to use the enum
+            modelBuilder.Entity<RepairOrder>()
+                .Property(e => e.PaidStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
 
             // Vehicle-User relationship
             modelBuilder.Entity<Vehicle>()

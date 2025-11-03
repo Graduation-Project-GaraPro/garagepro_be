@@ -42,9 +42,8 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal PaidAmount { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        // Changed from string to enum
+        public PaidStatus PaidStatus { get; set; }
 
         public long? EstimatedRepairTime { get; set; }
 

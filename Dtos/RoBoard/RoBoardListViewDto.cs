@@ -1,9 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+using BusinessObject.Enums;
 
 namespace Dtos.RoBoard
 {
+    public class RoBoardListResponseDto
+    {
+        public List<RoBoardListItemDto> Items { get; set; } = new List<RoBoardListItemDto>();
+        
+        public RoBoardListPaginationDto Pagination { get; set; } = new RoBoardListPaginationDto();
+        
+        public RoBoardListSortingDto Sorting { get; set; } = new RoBoardListSortingDto();
+        
+        public RoBoardListColumnDto[] Columns { get; set; } = Array.Empty<RoBoardListColumnDto>();
+        
+        public RoBoardPermissionsDto Permissions { get; set; } = new RoBoardPermissionsDto();
+    }
+    
     public class RoBoardListViewDto
     {
         public List<RoBoardListItemDto> Items { get; set; } = new List<RoBoardListItemDto>();
@@ -12,13 +25,15 @@ namespace Dtos.RoBoard
         
         public RoBoardListSortingDto Sorting { get; set; } = new RoBoardListSortingDto();
         
+        public RoBoardListColumnDto[] Columns { get; set; } = Array.Empty<RoBoardListColumnDto>();
+        
+        public RoBoardPermissionsDto Permissions { get; set; } = new RoBoardPermissionsDto();
+        
         public RoBoardFiltersDto AppliedFilters { get; set; } = new RoBoardFiltersDto();
         
         public RoBoardStatisticsDto Statistics { get; set; } = new RoBoardStatisticsDto();
         
         public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
-        
-        public RoBoardPermissionsDto Permissions { get; set; } = new RoBoardPermissionsDto();
     }
     
     public class RoBoardListItemDto
@@ -41,7 +56,7 @@ namespace Dtos.RoBoard
         
         public decimal PaidAmount { get; set; }
         
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public decimal CompletionPercentage => EstimatedAmount > 0 ? (PaidAmount / EstimatedAmount) * 100 : 0;
         

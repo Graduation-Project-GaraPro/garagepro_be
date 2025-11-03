@@ -5,11 +5,15 @@ using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
 using Dtos.RoBoard;
+using DataAccessLayer; // Add this for MyAppDbContext
 
 namespace Repositories
 {
     public interface IRepairOrderRepository
     {
+        // Add Context property
+        MyAppDbContext Context { get; }
+
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
