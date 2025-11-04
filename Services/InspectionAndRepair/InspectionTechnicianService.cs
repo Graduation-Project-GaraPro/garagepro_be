@@ -312,9 +312,9 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             inspection.Status != InspectionStatus.New)
             throw new InvalidOperationException("Chỉ có thể xóa PartCategory khi Inspection đang New, Pending hoặc InProgress.");
 
-        var hasRepairOrderServices = await _repo.HasRepairOrderServicesAsync(inspection.RepairOrderId);
-        if (hasRepairOrderServices)
-            throw new InvalidOperationException("Không thể xóa PartCategory vì RepairOrder này đã có service được chỉ định trong RepairOrderService.");
+        //var hasRepairOrderServices = await _repo.HasRepairOrderServicesAsync(inspection.RepairOrderId);
+        //if (hasRepairOrderServices)
+        //    throw new InvalidOperationException("Không thể xóa PartCategory vì RepairOrder này đã có service được chỉ định trong RepairOrderService.");
 
         var serviceInspection = inspection.ServiceInspections
             .FirstOrDefault(si => si.ServiceInspectionId == serviceInspectionId);
