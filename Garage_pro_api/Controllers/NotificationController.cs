@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.FCMServices;
 
@@ -20,7 +22,7 @@ namespace Garage_pro_api.Controllers
         {
             try
             {
-                await _fcmService.SendNotificationAsync(token, title, body);
+                //await _fcmService.SendNotificationAsync(token, title, body);
                 return Ok("Notification sent successfully!");
             }
             catch (Exception ex)
@@ -34,19 +36,17 @@ namespace Garage_pro_api.Controllers
         {
             try
             {
-                var data = new Dictionary<string, string>
-                    {
-                        { "type", "order" },
-                        { "order_id", "12345" },
-                        { "screen", "BookingActivity" }
-                    };
+                var payload = new FcmDataPayload
+                {
+                    Type = NotificationType.Order,
+                    Title = "New Order Received",
+                    Body = "Order #123 has been placed successfully!",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = Guid.Parse("361F1EAE-46FE-4C2E-A725-28CE5CBB3734"),
+                    Screen = AppScreen.QuotationDetailFragment
+                };
 
-                await _fcmService.SendDataMessageAsync(
-                    deviceToken: token,
-                    title: "Đơn hàng mới",
-                    body: "Bạn có đơn hàng mới!",
-                    data: data
-                );
+                await _fcmService.SendFcmMessageAsync(token, payload);
                 return Ok("Notification sent successfully!");
             }
             catch (Exception ex)

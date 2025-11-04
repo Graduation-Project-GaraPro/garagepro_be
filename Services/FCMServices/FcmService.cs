@@ -10,6 +10,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using BusinessObject.FcmDataModels;
 
 namespace Services.FCMServices
 {
@@ -26,34 +27,19 @@ namespace Services.FCMServices
                 ?? throw new ArgumentNullException("Firebase:CredentialsPath");
         }
 
-        /// <summary>
-        /// Gửi notification thông thường (title + body)
-        /// </summary>
-        public async Task SendNotificationAsync(string deviceToken, string title, string body)
+      
+        public async Task SendFcmMessageAsync(string deviceToken, FcmDataPayload payload)
         {
-            await SendFcmMessageAsync(deviceToken, title, body, null);
-        }
+            if (string.IsNullOrEmpty(deviceToken))
+                throw new ArgumentNullException(nameof(deviceToken));
 
-        /// <summary>
-        /// Gửi data message, có thể kèm dữ liệu tùy chỉnh
-        /// </summary>
-        public async Task SendDataMessageAsync(string deviceToken, string title, string body, Dictionary<string, string>? data = null)
-        {
-            await SendFcmMessageAsync(deviceToken, title, body, data);
-        }
-
-        /// <summary>
-        /// Hàm chính gửi FCM message
-        /// </summary>
-        private async Task SendFcmMessageAsync(string deviceToken, string title, string body, Dictionary<string, string>? data)
-        {
             // 1️⃣ Lấy Access Token từ file JSON
             var credential = GoogleCredential.FromFile(_credentialsPath)
                 .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
 
             var accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
 
-            // 2️⃣ Tạo payload JSON
+            // 2️⃣ Tạo payload JSON (notification + data)
             var message = new
             {
                 message = new
@@ -61,10 +47,10 @@ namespace Services.FCMServices
                     token = deviceToken,
                     notification = new
                     {
-                        title = title,
-                        body = body
+                        title = payload.Title ?? "Notification",
+                        body = payload.Body ?? ""
                     },
-                    data = data // null hoặc dictionary tùy chỉnh
+                    data = payload.ToDictionary() // tự động map từ FcmDataPayload
                 }
             };
 
