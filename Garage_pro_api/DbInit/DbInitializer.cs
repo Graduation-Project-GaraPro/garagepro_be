@@ -86,6 +86,7 @@ namespace Garage_pro_api.DbInit
         // 2. Seed Users
         private async Task SeedUsersAsync()
         {
+           
             var defaultUsers = new List<(string Phone, string FirstName, string LastName, string Role)>
             {
                 ("0900000001", "System", "Admin", "Admin"),

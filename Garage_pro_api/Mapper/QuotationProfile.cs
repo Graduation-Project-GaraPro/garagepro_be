@@ -37,6 +37,7 @@ namespace Garage_pro_api.Mapper
 
             // Inspection → InspectionDto
             CreateMap<Inspection, InspectionDto>();
+
         }
     }
 }

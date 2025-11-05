@@ -83,6 +83,8 @@ using Services.UserServices;
 
 using Repositories.PaymentRepositories;
 using Services.FCMServices;
+using Repositories.EmergencyRequestRepositories;
+using Services.EmergencyRequestService;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -351,6 +353,9 @@ builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
 builder.Services.AddScoped<IVehicleService, VehicleService>();
 builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService>();
 
+//emergency
+builder.Services.AddScoped<IEmergencyRequestRepository, EmergencyRequestRepository>();
+builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 // Quotation services
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
