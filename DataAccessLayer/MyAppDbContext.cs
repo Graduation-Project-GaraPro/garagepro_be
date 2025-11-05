@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Manager;
+using BusinessObject.RequestEmergency;
 
 namespace DataAccessLayer
 {
@@ -51,6 +52,8 @@ namespace DataAccessLayer
         // Removed QuotationParts DbSet as the entity was removed
         // public DbSet<QuotationPart> QuotationParts { get; set; }
         // Add the new QuotationServicePart entity
+        public DbSet<RequestEmergency> RequestEmergencies { get; set; }
+        public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
 
         // Junction tables

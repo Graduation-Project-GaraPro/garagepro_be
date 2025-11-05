@@ -31,6 +31,8 @@ namespace BusinessObject.Branches
         public string District { get; set; }
         [MaxLength(100)]
         public string City { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
 
         [MaxLength(500)]
         public string Description { get; set; }

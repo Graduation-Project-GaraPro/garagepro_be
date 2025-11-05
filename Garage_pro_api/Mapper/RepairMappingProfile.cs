@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using BusinessObject.Vehicles;
 using BusinessObject.Authentication;
+using Dtos.Emergency;
+using BusinessObject.RequestEmergency;
 
 namespace Garage_pro_api.Mapper
 {
@@ -82,7 +84,8 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.CustomerEmail, opt => opt.MapFrom(src => src.User.Email))
                 .ForMember(dest => dest.CustomerPhone, opt => opt.MapFrom(src => src.User.PhoneNumber))
                 .ForMember(dest => dest.Jobs, opt => opt.MapFrom(src => src.Jobs));
-
+            //emergency
+            CreateMap<CreateEmergencyRequestDto, RequestEmergency>();
 
         }
     }
