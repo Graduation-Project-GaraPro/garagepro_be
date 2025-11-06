@@ -85,6 +85,8 @@ using Repositories.PaymentRepositories;
 using Services.FCMServices;
 using Repositories.EmergencyRequestRepositories;
 using Services.EmergencyRequestService;
+using Services.GeocodingServices;
+using System.IdentityModel.Tokens.Jwt;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -232,11 +234,59 @@ builder.Services.AddAuthentication(options =>
             Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
             return Task.CompletedTask;
         },
-        OnTokenValidated = context =>
+        OnTokenValidated = async context =>
         {
-            Console.WriteLine("JWT validated successfully!");
-            Console.WriteLine("User: " + context.Principal?.Identity?.Name);
-            return Task.CompletedTask;
+
+            var expTicks = context.Principal?.FindFirst("pwd_exp_at")?.Value;
+            if (long.TryParse(expTicks, out var t))
+            {
+                var pwdExpireAtUtc = new DateTime(t, DateTimeKind.Utc);
+                if (DateTime.UtcNow >= pwdExpireAtUtc)
+                {
+                    var isAdmin = context.Principal?.IsInRole("Admin") ?? false;
+                    if (isAdmin)
+                        return;
+                    // Cho phép vài đường dẫn whitelisted
+                    var path = context.HttpContext.Request.Path;
+                    if (!path.StartsWithSegments("/api/auth/change-password") &&
+                        !path.StartsWithSegments("/api/auth/logout"))
+                    {
+                        context.Fail("PASSWORD_EXPIRED");
+                        return;
+                    }
+                }
+            }
+
+
+            // 1) Lấy claim policyUpdatedAt từ principal (không cast token)
+            var ticksStr = context.Principal?.FindFirst("policyUpdatedAt")?.Value;
+
+            if (long.TryParse(ticksStr, out var ticks))
+            {
+                var tokenPolicyTime = new DateTime(ticks, DateTimeKind.Utc);
+
+                // 2) Lấy policy hiện tại (đã cache 1 phút trong service của bạn)
+                var policySvc = context.HttpContext.RequestServices.GetRequiredService<ISecurityPolicyService>();
+                var policy = await policySvc.GetCurrentAsync();
+
+                // 3) So sánh: token phát trước lần cập nhật policy gần nhất -> fail
+                if (policy != null && tokenPolicyTime < policy.UpdatedAt)
+                {
+                    context.Fail("TOKEN_ISSUED_BEFORE_POLICY_UPDATE");
+                    return;
+                }
+            }
+
+            // 4) Gắn hint sắp hết hạn (< 1 phút)
+            //    Lưu ý: ValidTo theo UTC, nên so với DateTime.UtcNow
+            var remaining = context.SecurityToken.ValidTo.ToUniversalTime() - DateTime.UtcNow;
+            if (remaining.TotalMinutes < 1)
+            {
+                context.Response.Headers["X-Session-Expiring-Soon"] = "true";
+            }
+
+            // 5) Log tham khảo
+            Console.WriteLine($"✅ JWT validated. User={context.Principal?.Identity?.Name}, remaining={remaining}");
         }
     };
 })
@@ -460,6 +510,8 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 builder.Services.AddScoped<IInspectionService, InspectionService>();
 
+builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
+
 // Technician services
 builder.Services.AddScoped<ITechnicianService, TechnicianService>();
 
@@ -523,31 +575,32 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-                "http://localhost:3001",
                 "http://localhost:3000",
-                "https://localhost:3000",       // frontend web
-                "https://10.0.2.2:7113",       // Android Emulator
-                "http://192.168.1.96:7113",   // LDPlayer / LAN
-                 "http://192.168.1.96:5117",
-                 "http://192.168.1.98:5117",
-                "http://10.42.97.46:5117"
-
+                "https://localhost:3000",
+                "http://localhost:3001",
+                "http://192.168.1.96:5117",
+                "http://192.168.1.98:5117",
+                "http://10.42.97.46:5117",
+                "http://10.0.2.2:7113" // Android emulator
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
-
-
 });
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenAnyIP(5117);
+    options.ListenAnyIP(5117, listenOptions =>
+    {
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+    });
+
     options.ListenAnyIP(7113, listenOptions =>
     {
         listenOptions.UseHttps();
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; // 👈 Bắt buộc thêm dòng này
     });
 });
 
@@ -561,7 +614,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontendAndAndroid");
+
 
 app.UseSession();
 

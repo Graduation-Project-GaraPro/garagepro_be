@@ -782,65 +782,74 @@ namespace Garage_pro_api.DbInit
                 BranchName = "Central Garage - Hồ Chí Minh",
                 Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
                 Street = "123 Nguyễn Thị Minh Khai",
-                Ward = "Phường Bến Thành",
-                District = "Quận 1",
-                City = "Hồ Chí Minh",
+                Commune = "Phường Bến Thành",
+                
+                Province = "Hồ Chí Minh",
                 PhoneNumber = "02838220001",
                 Email = "central.hcm@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Hà Nội Garage",
                 Description = "Professional car repair and maintenance services in Hanoi.",
                 Street = "45 Phạm Hùng",
-                Ward = "Phường Mỹ Đình 2",
-                District = "Quận Nam Từ Liêm",
-                City = "Hà Nội",
+                Commune = "Phường Mỹ Đình 2",
+                
+                Province = "Hà Nội",
                 PhoneNumber = "02437760002",
                 Email = "hanoi@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Đà Nẵng Garage",
                 Description = "Trusted auto service center for central region customers.",
                 Street = "88 Nguyễn Văn Linh",
-                Ward = "Phường Nam Dương",
-                District = "Quận Hải Châu",
-                City = "Đà Nẵng",
+                Commune = "Phường Nam Dương",
+                
+                Province = "Đà Nẵng",
                 PhoneNumber = "02363880003",
                 Email = "danang@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Cần Thơ Garage",
                 Description = "Serving customers in the Mekong Delta with full maintenance packages.",
                 Street = "22 Trần Hưng Đạo",
-                Ward = "Phường An Cư",
-                District = "Quận Ninh Kiều",
-                City = "Cần Thơ",
+                Commune = "Phường An Cư",
+               
+                Province = "Cần Thơ",
                 PhoneNumber = "02923890004",
                 Email = "cantho@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Nha Trang Garage",
                 Description = "High-quality vehicle service center near the coast.",
                 Street = "56 Lê Thánh Tôn",
-                Ward = "Phường Lộc Thọ",
-                District = "Thành phố Nha Trang",
-                City = "Khánh Hòa",
+                Commune = "Phường Lộc Thọ",             
+                Province= "Khánh Hòa",
                 PhoneNumber = "02583560005",
                 Email = "nhatrang@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             }
         };
 

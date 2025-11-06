@@ -25,12 +25,11 @@ namespace BusinessObject.Branches
 
         [MaxLength(200)]
         public string Street { get; set; }
+       
         [MaxLength(100)]
-        public string Ward { get; set; }
+        public string Commune { get; set; }
         [MaxLength(100)]
-        public string District { get; set; }
-        [MaxLength(100)]
-        public string City { get; set; }
+        public string Province { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
 

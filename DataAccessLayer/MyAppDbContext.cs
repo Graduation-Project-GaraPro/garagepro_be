@@ -644,7 +644,7 @@ namespace DataAccessLayer
 
                 entity.Property(e => e.UpdatedAt)
                       .HasDefaultValueSql("SYSUTCDATETIME()")
-                      .ValueGeneratedOnAddOrUpdate();
+                      .ValueGeneratedNever();
 
                 entity.HasOne(e => e.UpdatedByUser)
                       .WithMany()

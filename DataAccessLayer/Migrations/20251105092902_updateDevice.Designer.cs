@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251103135710_updateDevice")]
+    [Migration("20251105092902_updateDevice")]
     partial class updateDevice
     {
         /// <inheritdoc />
@@ -353,6 +353,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -1714,6 +1720,52 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("RepairOrderServiceParts");
                 });
 
+            modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
+                {
+                    b.Property<Guid>("EmergencyRequestId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("CustomerId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("IssueDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTime>("RequestTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("EmergencyRequestId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("VehicleId");
+
+                    b.ToTable("RequestEmergencies");
+                });
+
             modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
@@ -2190,6 +2242,32 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("ModelID");
 
                     b.ToTable("VehicleModelColors");
+                });
+
+            modelBuilder.Entity("EmergencyMedia", b =>
+                {
+                    b.Property<Guid>("MediaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("EmergencyRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("RequestEmergencyEmergencyRequestId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("MediaId");
+
+                    b.HasIndex("RequestEmergencyEmergencyRequestId");
+
+                    b.ToTable("EmergencyMedias");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -2968,6 +3046,33 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderService");
                 });
 
+            modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany()
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Vehicle", "Vehicle")
+                        .WithMany()
+                        .HasForeignKey("VehicleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Vehicle");
+                });
+
             modelBuilder.Entity("BusinessObject.Roles.Permission", b =>
                 {
                     b.HasOne("BusinessObject.Roles.PermissionCategory", "Category")
@@ -3122,6 +3227,17 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Color");
 
                     b.Navigation("Model");
+                });
+
+            modelBuilder.Entity("EmergencyMedia", b =>
+                {
+                    b.HasOne("BusinessObject.RequestEmergency.RequestEmergency", "RequestEmergency")
+                        .WithMany("MediaFiles")
+                        .HasForeignKey("RequestEmergencyEmergencyRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RequestEmergency");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -3362,6 +3478,11 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.RepairOrderService", b =>
                 {
                     b.Navigation("RepairOrderServiceParts");
+                });
+
+            modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
+                {
+                    b.Navigation("MediaFiles");
                 });
 
             modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
