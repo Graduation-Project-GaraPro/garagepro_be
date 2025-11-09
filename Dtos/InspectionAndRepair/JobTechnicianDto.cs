@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Dtos.InspectionAndRepair
 {
-   public class JobTechnicianDto
+    public class JobTechnicianDto
     {
         public Guid JobId { get; set; }
         public string JobName { get; set; }
@@ -19,20 +19,24 @@ namespace Dtos.InspectionAndRepair
         public DateTime? UpdatedAt { get; set; }
         public string Level { get; set; }
         public string ServiceName { get; set; }
-
         public Guid? RepairOrderId { get; set; }
-
         public VehicleDto Vehicle { get; set; }
         public CustomerDto Customer { get; set; }
-        public List<PartDto> Parts { get; set; }
+        public List<PartCategoryGroupDto> Parts { get; set; } 
         public RepairDto Repair { get; set; }
         public List<TechnicianDto> Technicians { get; set; }
-
     }
+
+    public class PartCategoryGroupDto
+    {
+        public Guid PartCategoryId { get; set; }
+        public string CategoryName { get; set; }
+        public List<PartDto> Parts { get; set; }
+    }
+
     public class TechnicianDto
     {
         public Guid TechnicianId { get; set; }
-       // public string UserId { get; set; }
         public string FullName { get; set; }
         public string Email { get; set; }
         public string PhoneNumber { get; set; }
@@ -54,6 +58,7 @@ namespace Dtos.InspectionAndRepair
         public TimeSpan? EstimatedTime { get; set; }
         public string Notes { get; set; }
     }
+
     public class JobStatusUpdateDto
     {
         public Guid JobId { get; set; }

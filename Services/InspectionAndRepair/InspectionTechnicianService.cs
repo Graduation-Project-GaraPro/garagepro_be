@@ -20,18 +20,25 @@ public class InspectionTechnicianService : IInspectionTechnicianService
     {
         _repo = repo;
         _mapper = mapper;
-    }
-
+    }   
     public async Task<List<InspectionTechnicianDto>> GetInspectionsByTechnicianAsync(string userId)
     {
         var technician = await _repo.GetTechnicianByUserIdAsync(userId);
-        if (technician == null) return new List<InspectionTechnicianDto>();
+        if (technician == null)
+            return new List<InspectionTechnicianDto>();
 
         var inspections = await _repo.GetInspectionsByTechnicianIdAsync(technician.TechnicianId);
         var dtos = _mapper.Map<List<InspectionTechnicianDto>>(inspections);
 
         foreach (var dto in dtos)
             AttachSuggestedParts(dto, inspections.FirstOrDefault(i => i.InspectionId == dto.InspectionId));
+
+        dtos = dtos
+            .OrderBy(i => i.Status == InspectionStatus.New ? 0 :
+                          i.Status == InspectionStatus.InProgress ? 1 :
+                          i.Status == InspectionStatus.Completed ? 2 : 3)
+          .ThenBy(i => i.RepairOrder?.Vehicle?.Brand.BrandName)
+            .ToList();
 
         return dtos;
     }

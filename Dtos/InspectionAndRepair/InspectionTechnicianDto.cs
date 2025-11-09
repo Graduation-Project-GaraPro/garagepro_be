@@ -10,6 +10,7 @@ namespace Dtos.InspectionAndRepair
         public Guid InspectionId { get; set; }
         public Guid RepairOrderId { get; set; }
         public Guid TechnicianId { get; set; }
+        public InspectionStatus Status { get; set; }
         public string StatusText { get; set; } = string.Empty;
         public string? CustomerConcern { get; set; }
         public string? Finding { get; set; }

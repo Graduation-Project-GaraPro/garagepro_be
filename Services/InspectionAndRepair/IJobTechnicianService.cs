@@ -1,4 +1,5 @@
-﻿using Dtos.InspectionAndRepair;
+﻿using Dtos.Common;
+using Dtos.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
