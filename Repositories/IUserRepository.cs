@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
+using Microsoft.AspNetCore.Identity;
 namespace Repositories
 {
     public interface IUserRepository
@@ -27,5 +28,10 @@ namespace Repositories
         Task<IEnumerable<ApplicationUser>> SearchCustomersAsync(string searchTerm);
         Task<IEnumerable<ApplicationUser>> GetCustomersByVehicleLicensePlateAsync(string licensePlate);
         Task<IEnumerable<ApplicationUser>> GetAllCustomersAsync();
+
+        IQueryable<ApplicationUser> QueryUsers();
+        Task<ApplicationUser?> GetByEmailAsync(string email);
+        Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password);
+        Task AddUserToRoleAsync(ApplicationUser user, string role);
     }
 }

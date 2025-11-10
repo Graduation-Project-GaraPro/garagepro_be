@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class @new : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -628,7 +628,6 @@ namespace DataAccessLayer.Migrations
                     SessionTimeout = table.Column<int>(type: "int", nullable: false),
                     MaxLoginAttempts = table.Column<int>(type: "int", nullable: false),
                     AccountLockoutTime = table.Column<int>(type: "int", nullable: false),
-                    MfaRequired = table.Column<bool>(type: "bit", nullable: false),
                     PasswordExpiryDays = table.Column<int>(type: "int", nullable: false),
                     EnableBruteForceProtection = table.Column<bool>(type: "bit", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "SYSUTCDATETIME()"),
@@ -787,13 +786,12 @@ namespace DataAccessLayer.Migrations
                 name: "PromotionalCampaignServices",
                 columns: table => new
                 {
-                    PromotionalCampaignServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PromotionalCampaignId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_PromotionalCampaignServices", x => x.PromotionalCampaignServiceId);
+                    table.PrimaryKey("PK_PromotionalCampaignServices", x => new { x.PromotionalCampaignId, x.ServiceId });
                     table.ForeignKey(
                         name: "FK_PromotionalCampaignServices_PromotionalCampaigns_PromotionalCampaignId",
                         column: x => x.PromotionalCampaignId,
@@ -1360,7 +1358,7 @@ namespace DataAccessLayer.Migrations
                 name: "VoucherUsage",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, defaultValueSql: "NEWID()"),
                     CustomerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CampaignId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -1380,7 +1378,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.CampaignId,
                         principalTable: "PromotionalCampaigns",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_VoucherUsage_RepairOrders_RepairOrderId",
                         column: x => x.RepairOrderId,
@@ -1862,11 +1860,6 @@ namespace DataAccessLayer.Migrations
                 name: "IX_Permissions_CategoryId",
                 table: "Permissions",
                 column: "CategoryId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PromotionalCampaignServices_PromotionalCampaignId",
-                table: "PromotionalCampaignServices",
-                column: "PromotionalCampaignId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PromotionalCampaignServices_ServiceId",

@@ -244,7 +244,7 @@ namespace Garage_pro_api.Controllers
 
             // Đăng nhập thành công -> tạo token
             var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            var accessToken = await _tokenService.GenerateJwtToken(user, 10*60);
             var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60);
 
             // Thêm refresh token vào cookie (tuỳ chọn)

@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using Dtos.Customers;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.EmailSenders;
@@ -14,11 +16,13 @@ namespace Services
     {
         private readonly IUserRepository _repository;
         private readonly IEmailSender _emailSender;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public UserService(IUserRepository repository, IEmailSender emailSender)
+        public UserService(IUserRepository repository, IEmailSender emailSender, UserManager<ApplicationUser> userManager)
         {
             _repository = repository;
             _emailSender = emailSender;
+            _userManager = userManager;
         }
 
         public async Task<List<ApplicationUser>> GetAllUsersAsync()
@@ -129,6 +133,104 @@ namespace Services
             {
                 return false; // Xử lý lỗi concurrency nếu cần
             }
-        }   
+        }
+        public async Task<(List<object> Data, int Total)> GetUsersFiltered(UserFilterDto filters)
+        {
+            // 1) Lấy danh sách phù hợp Search + Status (chưa phân trang)
+            var query = _repository.QueryUsers();
+
+            if (!string.IsNullOrEmpty(filters.Search))
+            {
+                var q = filters.Search.ToLower();
+                query = query.Where(u =>
+                    u.FirstName.ToLower().Contains(q) ||
+                    u.LastName.ToLower().Contains(q) ||
+                    u.Email.ToLower().Contains(q));
+            }
+
+            if (!string.IsNullOrEmpty(filters.Status))
+            {
+                var banned = filters.Status.Equals("inactive", StringComparison.OrdinalIgnoreCase);
+                query = query.Where(u => banned ? !u.IsActive : u.IsActive);
+            }
+
+            var list = await query
+                .OrderByDescending(u => u.CreatedAt)
+                .ToListAsync(); // ✅ lấy thô trước
+
+            // 2) Lọc role trước khi phân trang
+            if (!string.IsNullOrEmpty(filters.Role))
+            {
+                var filtered = new List<ApplicationUser>();
+
+                foreach (var user in list)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    if (roles.Any(r => r.Equals(filters.Role, StringComparison.OrdinalIgnoreCase)))
+                        filtered.Add(user);
+                }
+
+                list = filtered;
+            }
+
+            // 3) Tổng sau lọc role
+            var total = list.Count;
+
+            // 4) Phân trang chuẩn
+            list = list
+                .Skip((filters.Page - 1) * filters.Limit)
+                .Take(filters.Limit)
+                .ToList();
+
+            // 5) Map ra object trả FE
+            var result = new List<object>();
+
+            foreach (var user in list)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+
+                result.Add(new
+                {
+                    user.Id,
+                    FullName = $"{user.FirstName} {user.LastName}",
+                    user.Email,
+                    user.IsActive,
+                    user.CreatedAt,
+                    user.EmailConfirmed,
+                    user.LastLogin,
+                    Roles = roles
+                });
+            }
+
+            return (result, total);
+        }
+
+
+
+        public async Task<object> CreateUserAsync(CreateUserDto dto)
+        {
+            if (await _repository.GetByEmailAsync(dto.Email) != null)
+                throw new Exception("Email already exists.");
+            
+
+            var user = new ApplicationUser
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                PhoneNumber = dto.PhoneNumber,
+                UserName = dto.Email,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            var createResult = await _repository.CreateUserAsync(user, dto.Password);
+            if (!createResult.Succeeded)
+                throw new Exception(string.Join(", ", createResult.Errors.Select(e => e.Description)));
+
+            await _repository.AddUserToRoleAsync(user, dto.Role);
+
+            return new { user.Id, user.Email };
+        }
     }
 }

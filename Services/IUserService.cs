@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using Dtos.Customers;
 
 namespace Services
 {
@@ -26,5 +27,8 @@ namespace Services
         // 👇 Thêm 2 method mới
         Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
         Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
+
+        Task<(List<object> Data, int Total)> GetUsersFiltered(UserFilterDto filters);
+        Task<object> CreateUserAsync(CreateUserDto dto);
     }
 }

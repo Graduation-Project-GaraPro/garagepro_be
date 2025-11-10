@@ -18,6 +18,7 @@ namespace Repositories
         public RepairOrderRepository(MyAppDbContext context)
         {
             _context = context;
+            _context.Database.SetCommandTimeout(180);
         }
 
         #region Basic CRUD Operations
@@ -122,6 +123,7 @@ namespace Repositories
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
                 .Include(ro => ro.Branch)
