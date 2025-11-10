@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Branches;
@@ -24,6 +25,15 @@ namespace Repositories.BranchRepositories
                 .Where(o => o.BranchId == branchId)
                 .ToListAsync();
         }
+
+        public async Task<OperatingHour> SingleOrDefaultAsync(Expression<Func<OperatingHour, bool>> predicate)
+        {
+            return await _context.OperatingHours
+                .SingleOrDefaultAsync(predicate);
+        }
+
+
+
     }
 
 }

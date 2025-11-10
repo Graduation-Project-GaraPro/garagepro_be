@@ -210,17 +210,17 @@ namespace Repositories.RepairProgressRepositories
 
         private static string GetProgressStatus(ICollection<Job> jobs)
         {
-            if (jobs == null || !jobs.Any()) return "Chưa bắt đầu";
+            if (jobs == null || !jobs.Any()) return "Not Started";
 
             var completedJobs = jobs.Count(j => j.Status == JobStatus.Completed);
             var percentage = (decimal)completedJobs / jobs.Count * 100;
 
             return percentage switch
             {
-                0 => "Chưa bắt đầu",
-                < 100 => "Đang thực hiện",
-                100 => "Hoàn thành",
-                _ => "Không xác định"
+                0 => "Not Started",
+                < 100 => "In Progress",
+                100 => "Completed",
+                _ => "Unknown"
             };
         }
 

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251106145358_updatepolicy")]
-    partial class updatepolicy
+    [Migration("20251107103803_updateRepairRequest")]
+    partial class updateRepairRequest
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -323,6 +323,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("ArrivalWindowMinutes")
+                        .HasColumnType("int");
+
                     b.Property<string>("BranchName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -354,6 +357,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
+
+                    b.Property<int>("MaxBookingsPerWindow")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxConcurrentWip")
+                        .HasColumnType("int");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -580,6 +589,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset>("ArrivalWindowStart")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
@@ -599,6 +611,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -614,11 +632,15 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("RepairRequestID");
 
-                    b.HasIndex("BranchId");
-
                     b.HasIndex("UserID");
 
                     b.HasIndex("VehicleID");
+
+                    b.HasIndex("BranchId", "Status")
+                        .HasDatabaseName("IX_Request_Branch_Status");
+
+                    b.HasIndex("BranchId", "ArrivalWindowStart", "Status")
+                        .HasDatabaseName("IX_Request_Branch_Arrival_Status");
 
                     b.ToTable("RepairRequests");
                 });

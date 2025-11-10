@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251105124709_updateBranch")]
-    partial class updateBranch
+    [Migration("20251108060638_updateRepairo")]
+    partial class updateRepairo
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -323,12 +323,15 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("ArrivalWindowMinutes")
+                        .HasColumnType("int");
+
                     b.Property<string>("BranchName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Comune")
+                    b.Property<string>("Commune")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -354,6 +357,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
+
+                    b.Property<int>("MaxBookingsPerWindow")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MaxConcurrentWip")
+                        .HasColumnType("int");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -580,6 +589,9 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<DateTimeOffset>("ArrivalWindowStart")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
@@ -596,8 +608,17 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("RepairOrdersRepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -614,11 +635,17 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("RepairRequestID");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("RepairOrdersRepairOrderId");
 
                     b.HasIndex("UserID");
 
                     b.HasIndex("VehicleID");
+
+                    b.HasIndex("BranchId", "Status")
+                        .HasDatabaseName("IX_Request_Branch_Status");
+
+                    b.HasIndex("BranchId", "ArrivalWindowStart", "Status")
+                        .HasDatabaseName("IX_Request_Branch_Arrival_Status");
 
                     b.ToTable("RepairRequests");
                 });
@@ -1364,7 +1391,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("SYSUTCDATETIME()");
 
@@ -2371,21 +2397,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("RepairOrderRepairRequest", b =>
-                {
-                    b.Property<Guid>("RepairOrdersRepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RepairRequestID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("RepairOrdersRepairOrderId", "RepairRequestID");
-
-                    b.HasIndex("RepairRequestID");
-
-                    b.ToTable("RepairOrderRepairRequest");
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
@@ -2555,6 +2566,12 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrders")
+                        .WithMany("RepairRequest")
+                        .HasForeignKey("RepairOrdersRepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")
                         .HasForeignKey("UserID")
@@ -2570,6 +2587,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("RepairOrders");
 
                     b.Navigation("Vehicle");
                 });
@@ -3286,21 +3305,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RepairOrderRepairRequest", b =>
-                {
-                    b.HasOne("BusinessObject.RepairOrder", null)
-                        .WithMany()
-                        .HasForeignKey("RepairOrdersRepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Customers.RepairRequest", null)
-                        .WithMany()
-                        .HasForeignKey("RepairRequestID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.Navigation("Keywords");
@@ -3466,6 +3470,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Quotations");
 
                     b.Navigation("RepairOrderServices");
+
+                    b.Navigation("RepairRequest");
 
                     b.Navigation("VoucherUsages");
                 });

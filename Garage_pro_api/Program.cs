@@ -87,6 +87,8 @@ using Repositories.EmergencyRequestRepositories;
 using Services.EmergencyRequestService;
 using Services.GeocodingServices;
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.Identity.Client;
+using Utils.RepairRequests;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -588,6 +590,8 @@ builder.Services.AddCors(options =>
             .AllowCredentials();
     });
 });
+
+RepairRequestAppConfig.Initialize(builder.Configuration);
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
 builder.WebHost.ConfigureKestrel(options =>

@@ -60,7 +60,7 @@ namespace Garage_pro_api.Controllers
                     s.BranchName,
                     s.Commune,
                     s.Province,
-                    
+                    s.Street,
                     s.PhoneNumber ,
                     s.Email,
                     s.Description ,

@@ -1018,6 +1018,17 @@ namespace DataAccessLayer
                 .HasForeignKey(rs => rs.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // INDEX phục vụ duyệt/quota theo range [winStart, winEnd)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.ArrivalWindowStart, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Arrival_Status");
+
+            // (tuỳ chọn) Index phụ cho WIP (Arrived/InProgress)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Status");
+
+
             // 🔹 RequestService - RequestPart (1-n)
             modelBuilder.Entity<RequestService>()
                 .HasMany(rs => rs.RequestParts)

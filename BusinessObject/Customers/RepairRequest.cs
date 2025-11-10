@@ -59,11 +59,19 @@ namespace BusinessObject.Customers
         //public virtual RepairOrder RepairOrders { get; set; }
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
 
+
+        // ... field cũ ...
+        [Required]
+        public DateTimeOffset ArrivalWindowStart { get; set; } = DateTimeOffset.UtcNow;
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; }  // optimistic concurrency
+
         // Optional: các tiến trình sửa chữa
         //public virtual ICollection<RepairTask> RepairTasks { get; set; }
     }
     public enum RepairRequestStatus
     {
-        Pending, Accept, Arrived, Cancelled
+        Pending, Accept, Arrived, Cancelled , Completed
     }
 }

@@ -10,7 +10,7 @@ namespace Dtos.RepairProgressDto
     {
         public Guid PartId { get; set; }
         public string Name { get; set; }
-        public decimal Price { get; set; }
+        public decimal Price { get; set; }      
         
     }
 }

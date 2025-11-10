@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.Customers;
 using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.RoBoard;
@@ -34,6 +35,13 @@ namespace Repositories
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+        }
+
+        public async Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate)
+        {
+            return await _context.RepairOrders
+                .Where(predicate)
+                .CountAsync();
         }
 
         public async Task<RepairOrder> CreateAsync(RepairOrder repairOrder)
