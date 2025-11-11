@@ -63,9 +63,9 @@ namespace Garage_pro_api.Controllers
                 {
                     s.BranchId,
                     s.BranchName,
-                    s.City,
-                    s.District,
-                    s.Ward,
+                    s.Commune,
+                    s.Province,
+                    s.Street,
                     s.PhoneNumber ,
                     s.Email,
                     s.Description ,

@@ -16,7 +16,7 @@ namespace Dtos.Policies
         public bool RequireNumber { get; set; }
         public bool RequireUppercase { get; set; }
 
-        [Range(5, 1440, ErrorMessage = "Session timeout must be between 5 and 1440 minutes")]
+        [Range(1, 1440, ErrorMessage = "Session timeout must be between 5 and 1440 minutes")]
         public int SessionTimeout { get; set; }
 
         [Range(1, 10, ErrorMessage = "Max login attempts must be between 1 and 10")]

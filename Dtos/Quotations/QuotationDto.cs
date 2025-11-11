@@ -20,12 +20,11 @@ namespace Dtos.Quotations
         public string? Note { get; set; }
         public string? CustomerNote { get; set; }
         public DateTime? ExpiresAt { get; set; }
-        
+
         // Navigation properties
         public string CustomerName { get; set; }
         public string VehicleInfo { get; set; }
         public ICollection<QuotationServiceDto> QuotationServices { get; set; }
-        
         // Optional inspection information
         public InspectionDto Inspection { get; set; }
     }
@@ -41,11 +40,10 @@ namespace Dtos.Quotations
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
         public DateTime CreatedAt { get; set; }
-        
+
         // Service details
         public string ServiceName { get; set; }
         public string ServiceDescription { get; set; }
-        
         // All parts for this service - customers cannot select individual parts
         public ICollection<QuotationServicePartDto> Parts { get; set; }
     }
@@ -55,11 +53,11 @@ namespace Dtos.Quotations
         public Guid QuotationServicePartId { get; set; }
         public Guid QuotationServiceId { get; set; }
         public Guid PartId { get; set; }
-        public bool IsSelected { get; set; } 
+        public bool IsSelected { get; set; }
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
-        
+
         // Part details
         public string PartName { get; set; }
         public string PartDescription { get; set; }

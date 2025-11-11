@@ -10,6 +10,7 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject;
 using BusinessObject.Authentication;
+using Services.PolicyServices;
 
 namespace Services
 {
@@ -17,57 +18,83 @@ namespace Services
     {
         private readonly IConfiguration _configuration;
         private readonly UserManager<ApplicationUser> _userManager;
-
-        public JwtTokenService(IConfiguration configuration, UserManager<ApplicationUser> userManager)
+        private readonly ISecurityPolicyService _policyService;
+        public JwtTokenService(IConfiguration configuration, UserManager<ApplicationUser> userManager, ISecurityPolicyService policyService)
         {
             _configuration = configuration;
             _userManager = userManager;
+            _policyService = policyService;
         }
 
-        public async Task<string> GenerateJwtToken(ApplicationUser user, int time)
+        public async Task<string> GenerateAccessToken(ApplicationUser user)
+        {
+            var policy = await _policyService.GetCurrentAsync();
+
+            var pwdChangedAt = user.LastPasswordChangeDate ?? user.CreatedAt; // fallback hợp lý
+            var pwdExpireAt = pwdChangedAt.AddDays(policy.PasswordExpiryDays);
+            return await GenerateJwtTokenCore(user, policy.SessionTimeout, policyUpdatedAtUtc: policy.UpdatedAt, tokenType: "access", pwdExpireAt);
+        }
+
+        public async Task<string> GenerateRefreshToken(ApplicationUser user, int refreshLifetimeMinutes)
+        {
+            var policy = await _policyService.GetCurrentAsync();
+            // vẫn gắn policyUpdatedAt để đồng bộ revoke theo policy khi cần
+
+            var pwdChangedAt = user.LastPasswordChangeDate ?? user.CreatedAt; // fallback hợp lý
+            var pwdExpireAt = pwdChangedAt.AddDays(policy.PasswordExpiryDays);
+            return await GenerateJwtTokenCore(user, refreshLifetimeMinutes, policyUpdatedAtUtc: policy.UpdatedAt, tokenType: "refresh", pwdExpireAt);
+        }
+
+        private async Task<string> GenerateJwtTokenCore(ApplicationUser user, int lifetimeMinutes, DateTime policyUpdatedAtUtc, string tokenType, DateTime pwdExpireAt)
         {
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+            var now = DateTime.UtcNow;
+
+
 
             var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName),
-                new Claim("FirstName", user.FirstName),  // PascalCase cho claim key
-                new Claim("LastName", user.LastName),
-                new Claim("LastLogin", user.LastLogin?.ToString() ?? DateTime.UtcNow.ToString())
-            };
+        {
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new Claim(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email ?? string.Empty),
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Name, user.UserName ?? user.Id),
+            new Claim("FirstName", user.FirstName ?? string.Empty),
+            new Claim("LastName",  user.LastName  ?? string.Empty),
 
-            // Add roles
-            var userRoles = await _userManager.GetRolesAsync(user);
-            foreach (var role in userRoles)
-            {
-                claims.Add(new Claim(ClaimTypes.Role, role));
-            }
+            // KHÔNG thêm thuộc tính mới vào SecurityPolicy: tận dụng UpdatedAt
+            // để biết token phát hành trước/sau lần cập nhật policy gần nhất
+            new Claim("policyUpdatedAt", policyUpdatedAtUtc.Ticks.ToString()),
+            new Claim("pwd_exp_at",pwdExpireAt.Ticks.ToString()),
+           
+            new Claim("typ", tokenType) // "access" | "refresh"
+        };
 
-            // Add permissions
+            // Roles
+            var roles = await _userManager.GetRolesAsync(user);
+            foreach (var role in roles) claims.Add(new Claim(ClaimTypes.Role, role));
+
+            // Extra user claims (permissions, ...)
             var userClaims = await _userManager.GetClaimsAsync(user);
             claims.AddRange(userClaims);
 
-            var tokenDescriptor = new SecurityTokenDescriptor
+            var creds = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256);
+
+            var descriptor = new SecurityTokenDescriptor
             {
                 Subject = new ClaimsIdentity(claims),
-                // Expires = DateTime.UtcNow.AddMinutes(Convert.ToDouble(jwtSettings["ExpireMinutes"])),
-                Expires = DateTime.UtcNow.AddMinutes(time), 
+                NotBefore = now,
+                Expires = now.AddMinutes(lifetimeMinutes),
                 Issuer = jwtSettings["Issuer"],
                 Audience = jwtSettings["Audience"],
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(key),
-                    SecurityAlgorithms.HmacSha256Signature
-                )
+                SigningCredentials = creds
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-            return tokenHandler.WriteToken(token);
+            var handler = new JwtSecurityTokenHandler();
+            var token = handler.CreateToken(descriptor);
+            return handler.WriteToken(token);
         }
 
         public ClaimsPrincipal ValidateToken(string token)
@@ -75,7 +102,7 @@ namespace Services
             var jwtSettings = _configuration.GetSection("Jwt");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
 
-            var tokenValidationParameters = new TokenValidationParameters
+            var parameters = new TokenValidationParameters
             {
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
@@ -84,11 +111,15 @@ namespace Services
                 ValidateAudience = true,
                 ValidAudience = jwtSettings["Audience"],
                 ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.FromSeconds(30)
             };
 
-            var tokenHandler = new JwtSecurityTokenHandler();
-            return tokenHandler.ValidateToken(token, tokenValidationParameters, out _);
+            var handler = new JwtSecurityTokenHandler();
+            return handler.ValidateToken(token, parameters, out _);
         }
+
+        
+
+        
     }
 }

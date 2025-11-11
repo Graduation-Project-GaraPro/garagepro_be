@@ -14,6 +14,9 @@ namespace Services.QuotationServices
         Task<IEnumerable<QuotationDto>> GetQuotationsByUserIdAsync(string userId);
         Task<IEnumerable<QuotationDto>> GetQuotationsByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<QuotationDto>> GetAllQuotationsAsync();
+
+        Task<QuotationDetailDto> GetQuotationDetailByIdAsync(Guid quotationId);
+
         Task<object> GetQuotationsByUserIdAsync(
             string userId,
             int pageNumber,

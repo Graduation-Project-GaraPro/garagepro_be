@@ -1,3 +1,4 @@
+using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class QuotationsController : ControllerBase
     {
         private readonly IQuotationService _quotationService;
@@ -37,6 +38,24 @@ namespace Garage_pro_api.Controllers
                 return NotFound();
 
             return Ok(quotation);
+        }
+
+        [HttpGet("{id}/details")]
+        public async Task<ActionResult<QuotationDetailDto>> GetQuotationDetailById(Guid id)
+        {
+            try
+            {
+                var quotation = await _quotationService.GetQuotationDetailByIdAsync(id);
+                if (quotation == null)
+                    return NotFound();
+
+                return Ok(quotation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500,ex);
+
+            }
         }
 
         [HttpGet("inspection/{inspectionId}")]

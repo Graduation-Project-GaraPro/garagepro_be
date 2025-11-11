@@ -183,7 +183,7 @@ namespace Garage_pro_api.Controllers
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
                     BranchId = user.BranchId.Value, // Get branch ID from authenticated user
-                    RepairRequestId = Guid.NewGuid(),
+                    RepairRequestId = createRoDto.RepairRequestId, // Use provided RepairRequestId or null
                     PaidStatus = PaidStatus.Unpaid, // Default paid status
                     // Other fields will use their default values
                     Cost = 0, // Auto-generated

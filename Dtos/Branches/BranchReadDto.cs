@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,9 +17,11 @@ namespace Dtos.Branches
 
         // Địa chỉ đầy đủ
         public string Street { get; set; }
-        public string Ward { get; set; }
-        public string District { get; set; }
-        public string City { get; set; }
+       
+        public string Commune { get; set; } = string.Empty;
+
+       
+        public string Province { get; set; } = string.Empty;
 
         public string Description { get; set; }
         public bool IsActive { get; set; }

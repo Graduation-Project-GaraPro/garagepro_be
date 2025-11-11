@@ -38,7 +38,7 @@ namespace BusinessObject.Authentication
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
         public DateTime? DateOfBirth { get; set; }
-
+        public string? DeviceId { get; set; }
         public DateTime? LastPasswordChangeDate { get; set; }
 
         public IEnumerable<SystemLog> SystemLogs { get; set; } = new List<SystemLog>();
@@ -50,7 +50,7 @@ namespace BusinessObject.Authentication
         //feedback 
         public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 
-
+        
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }

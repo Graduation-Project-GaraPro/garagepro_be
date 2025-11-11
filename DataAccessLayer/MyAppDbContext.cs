@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Manager;
+using BusinessObject.RequestEmergency;
 
 namespace DataAccessLayer
 {
@@ -51,6 +52,8 @@ namespace DataAccessLayer
         // Removed QuotationParts DbSet as the entity was removed
         // public DbSet<QuotationPart> QuotationParts { get; set; }
         // Add the new QuotationServicePart entity
+        public DbSet<RequestEmergency> RequestEmergencies { get; set; }
+        public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
 
         // Junction tables
@@ -646,7 +649,7 @@ namespace DataAccessLayer
 
                 entity.Property(e => e.UpdatedAt)
                       .HasDefaultValueSql("SYSUTCDATETIME()")
-                      .ValueGeneratedOnAddOrUpdate();
+                      .ValueGeneratedNever();
 
                 entity.HasOne(e => e.UpdatedByUser)
                       .WithMany()
@@ -773,7 +776,7 @@ namespace DataAccessLayer
                 entity.HasOne(f => f.RepairOrder)
                       .WithMany()
                       .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Job relationships - prevent cascade delete conflicts
@@ -866,7 +869,7 @@ namespace DataAccessLayer
                 entity.HasOne(ros => ros.RepairOrder)
                       .WithMany(ro => ro.RepairOrderServices)
                       .HasForeignKey(ros => ros.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(ros => ros.Service)
                       .WithMany(s => s.RepairOrderServices)
@@ -1020,6 +1023,17 @@ namespace DataAccessLayer
                 .HasForeignKey(rs => rs.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // INDEX phục vụ duyệt/quota theo range [winStart, winEnd)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.ArrivalWindowStart, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Arrival_Status");
+
+            // (tuỳ chọn) Index phụ cho WIP (Arrived/InProgress)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Status");
+
+
             // 🔹 RequestService - RequestPart (1-n)
             modelBuilder.Entity<RequestService>()
                 .HasMany(rs => rs.RequestParts)
@@ -1057,7 +1071,7 @@ namespace DataAccessLayer
                 entity.HasOne(v => v.RepairOrder)
                       .WithMany(ro => ro.VoucherUsages)
                       .HasForeignKey(v => v.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
 

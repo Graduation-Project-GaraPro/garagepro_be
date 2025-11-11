@@ -139,7 +139,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
                 .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note))
                 .ForMember(dest => dest.ExpiresAt, opt => opt.MapFrom(src => src.ExpiresAt))
-                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FirstName + " "+ src.User.LastName))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FirstName + " " + src.User.LastName))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => $"{src.Vehicle.Brand.BrandName} {src.Vehicle.Model.ModelName}"))
                 .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
                 .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection));

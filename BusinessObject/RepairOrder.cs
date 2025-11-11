@@ -77,8 +77,7 @@ namespace BusinessObject
         [Required]
         public string UserId { get; set; }
 
-        [Required]
-        public Guid RepairRequestId { get; set; }
+        public Guid? RepairRequestId { get; set; }
 
         public Guid? FeedBackId { get; set; }
 
