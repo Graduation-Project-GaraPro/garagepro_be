@@ -45,37 +45,25 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
-using Repositories.VehicleRepositories;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
-using Repositories.RoleRepositories;
-using Services.RoleServices;
-using Garage_pro_api.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Garage_pro_api.Mapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Google;
-using Services.SmsSenders;
-using BusinessObject.Roles;
 using Microsoft.OData.ModelBuilder;
-using Microsoft.AspNetCore.OData;
 using System.Text.Json.Serialization;
 using Repositories.Statistical;
 using Services.Statistical;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Services.RepairHistory;
 using Repositories.RepairHistory;
-using Services.CampaignServices;
-using Repositories.CampaignRepositories;
-using Repositories.CampaignRepositories;
-using Services.CampaignServices;
 using Repositories.LogRepositories;
 using Services.LogServices;
 using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Garage_pro_api.Hubs;
+using Services.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -99,7 +87,6 @@ builder.Services.AddControllers()
 
 // Add SignalR services
 builder.Services.AddSignalR();
-
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -513,6 +500,7 @@ app.Use(async (context, next) =>
     await next();
 });
 app.MapHub<LogHub>("/logHub");
+app.MapHub<RepairHub>("/hubs/repair");
 
 app.UseAuthentication();
 

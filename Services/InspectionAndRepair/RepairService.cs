@@ -3,9 +3,11 @@ using BusinessObject.Enums;
 using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
 using Repositories.InspectionAndRepair;
+using Microsoft.AspNetCore.SignalR;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Services.Hubs;
 
 namespace Services.InspectionAndRepair
 {
@@ -13,11 +15,16 @@ namespace Services.InspectionAndRepair
     {
         private readonly IRepairRepository _repairRepository;
         private readonly IMapper _mapper;
+        private readonly IHubContext<RepairHub> _hubContext;
 
-        public RepairService(IRepairRepository repairRepository, IMapper mapper)
+        public RepairService(
+            IRepairRepository repairRepository,
+            IMapper mapper,
+            IHubContext<RepairHub> hubContext)
         {
             _repairRepository = repairRepository;
             _mapper = mapper;
+            _hubContext = hubContext;
         }
 
         public async Task<RepairResponseDto> CreateRepairAsync(Guid technicianId, RepairCreateDto dto)
@@ -43,14 +50,31 @@ namespace Services.InspectionAndRepair
                 throw new ArgumentException(errorMessage);
 
             var repair = _mapper.Map<Repair>(dto);
-            repair.EstimatedTime = estimatedTime;
+            repair.EstimatedTime = estimatedTime; // Set vào NotMapped property, nó sẽ tự động set EstimatedTimeTicks
             repair.StartTime = DateTime.UtcNow;
 
             await _repairRepository.AddRepairAsync(repair);
             job.Status = JobStatus.InProgress;
             await _repairRepository.SaveChangesAsync();
 
-            return _mapper.Map<RepairResponseDto>(repair);
+            var response = _mapper.Map<RepairResponseDto>(repair);
+
+            // SignalR: Thông báo tạo repair thành công
+            await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairCreated", new
+            {
+                repair.RepairId,
+                repair.JobId,
+                job.RepairOrderId,
+                repair.Description,
+                repair.Notes,
+                EstimatedTime = repair.EstimatedTime.HasValue
+                    ? $"{(int)repair.EstimatedTime.Value.TotalHours:D2}:{repair.EstimatedTime.Value.Minutes:D2}"
+                    : null,
+                repair.StartTime,
+                JobStatus = job.Status.ToString()
+            });
+
+            return response;
         }
 
         private bool TryParseHoursMinutes(string input, out TimeSpan result, out string errorMessage)
@@ -110,6 +134,7 @@ namespace Services.InspectionAndRepair
             result = TimeSpan.FromHours(hours) + TimeSpan.FromMinutes(minutes);
             return true;
         }
+
         public async Task<Repair> UpdateRepairAsync(Guid technicianId, Guid repairId, RepairUpdateDto dto)
         {
             var repair = await _repairRepository.GetRepairByIdAsync(repairId);
@@ -127,13 +152,30 @@ namespace Services.InspectionAndRepair
             if (job.Status != JobStatus.InProgress && job.Status != JobStatus.OnHold)
                 throw new InvalidOperationException("Chỉ được cập nhật khi Job đang InProgress hoặc OnHold.");
 
+            var oldDescription = repair.Description;
+            var oldNotes = repair.Notes;
+
             _mapper.Map(dto, repair);
 
             await _repairRepository.UpdateRepairAsync(repair);
             await _repairRepository.SaveChangesAsync();
 
+            // SignalR: Thông báo cập nhật repair
+            await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairUpdated", new
+            {
+                repair.RepairId,
+                repair.JobId,
+                job.RepairOrderId,
+                repair.Description,
+                repair.Notes,
+                OldDescription = oldDescription,
+                OldNotes = oldNotes,
+                UpdatedAt = DateTime.UtcNow
+            });
+
             return repair;
         }
+
         public async Task<RepairDetailDto> GetRepairOrderDetailsAsync(Guid repairOrderId, Guid technicianId)
         {
             var repairOrder = await _repairRepository.GetRepairOrderWithJobsAsync(repairOrderId);
@@ -146,7 +188,17 @@ namespace Services.InspectionAndRepair
             if (!isAssigned)
                 throw new UnauthorizedAccessException("Bạn không được phân công bất kỳ Job nào trong Repair Order này.");
 
-            return _mapper.Map<RepairDetailDto>(repairOrder);
+            var result = _mapper.Map<RepairDetailDto>(repairOrder);
+
+            // SignalR: Thông báo đang xem (optional)
+            await _hubContext.Clients.Group($"RepairOrder_{repairOrderId}").SendAsync("RepairOrderViewed", new
+            {
+                RepairOrderId = repairOrderId,
+                TechnicianId = technicianId,
+                ViewedAt = DateTime.UtcNow
+            });
+
+            return result;
         }
     }
 }
