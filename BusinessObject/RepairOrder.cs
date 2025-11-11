@@ -83,8 +83,8 @@ namespace BusinessObject
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
-      
-        public virtual ICollection<RepairRequest> RepairRequest { get; set; } 
+        [ForeignKey("RepairRequestId")]
+        public virtual RepairRequest RepairRequest { get; set; }
 
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }

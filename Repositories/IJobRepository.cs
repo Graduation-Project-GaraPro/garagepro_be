@@ -29,7 +29,12 @@ namespace Repositories
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
         Task<IEnumerable<Job>> GetJobsReadyForAssignmentAsync(Guid? repairOrderId = null);
-
+        
+        // Technician methods
+        Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId);
+        Task<Technician?> GetTechnicianByUserIdAsync(string userId);
+        Task<bool> TechnicianExistsAsync(Guid technicianId);
+        
         // Job parts management
         Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId);
         Task<bool> AddJobPartAsync(JobPart jobPart);
@@ -55,7 +60,9 @@ namespace Repositories
         // Performance optimized queries
         Task<IEnumerable<Job>> GetJobsWithNavigationPropertiesAsync();
         Task<IEnumerable<Job>> GetRecentlyUpdatedJobsAsync(int hours = 24);
-
+        
+        // NEW: Create revision job
+        Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
 
     }
 }

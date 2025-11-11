@@ -59,8 +59,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         var inspection = await _repo.GetInspectionByIdAndTechnicianIdAsync(id, technician.TechnicianId);
         if (inspection == null) throw new InvalidOperationException("Inspection không tồn tại hoặc bạn không có quyền.");
 
-        if (inspection.Status != InspectionStatus.New)
-            throw new InvalidOperationException("Chỉ có thể bắt đầu khi Inspection ở trạng thái 'New'.");
+        if (inspection.Status != InspectionStatus.Pending)
+            throw new InvalidOperationException("Chỉ có thể bắt đầu khi Inspection ở trạng thái 'Pending'.");
 
         inspection.Status = InspectionStatus.InProgress;
         inspection.UpdatedAt = DateTime.UtcNow;
@@ -196,8 +196,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             }
         }
         if (request.IsCompleted)
-            inspection.Status = InspectionStatus.Pending;
-        else if (inspection.Status == InspectionStatus.New)
+            inspection.Status = InspectionStatus.Completed;
+        else if (inspection.Status == InspectionStatus.Pending)
             inspection.Status = InspectionStatus.InProgress;
 
         await _repo.SaveChangesAsync();
@@ -320,7 +320,7 @@ public class InspectionTechnicianService : IInspectionTechnicianService
 
         _repo.AddServiceInspection(serviceInspection);
 
-        if (inspection.Status == InspectionStatus.New)
+        if (inspection.Status == InspectionStatus.Pending)
         {
             inspection.Status = InspectionStatus.InProgress;
             inspection.UpdatedAt = DateTime.UtcNow;

@@ -311,6 +311,21 @@ namespace Garage_pro_api.Controllers
             return Ok(repairOrders);
         }
 
+        // GET: api/RepairOrder/branch/{branchId}
+        [HttpGet("branch/{branchId}")]
+        public async Task<IActionResult> GetRepairOrdersByBranch(Guid branchId)
+        {
+            // Validate the branch ID
+            if (branchId == Guid.Empty)
+            {
+                return BadRequest(new { message = "Invalid branch ID provided" });
+            }
+
+            // Get repair orders for the specified branch
+            var repairOrders = await _repairOrderService.GetRepairOrdersByBranchAsync(branchId);
+            return Ok(repairOrders);
+        }
+
         // POST: api/RepairOrder/status/update
         [AllowAnonymous]
         [HttpPost("status/update")]

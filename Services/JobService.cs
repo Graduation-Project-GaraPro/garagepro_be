@@ -119,6 +119,10 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
+            // Validate technician exists
+            if (!await _jobRepository.TechnicianExistsAsync(technicianId))
+                throw new InvalidOperationException($"Technician with ID {technicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+
             // Validate all jobs can be assigned
             foreach (var jobId in jobIds)
             {
@@ -140,18 +144,42 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
+            // Validate technician exists
+            if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
+                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+
             return await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
         }
 
+        public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
+        {
+            return await _jobRepository.GetTechniciansByBranchIdAsync(branchId);
+        }
 
+        public async Task<Technician?> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _jobRepository.GetTechnicianByUserIdAsync(userId);
+        }
+        
+        public async Task<bool> TechnicianExistsAsync(Guid technicianId)
+        {
+            return await _jobRepository.TechnicianExistsAsync(technicianId);
+        }
+        
+        // NEW: Create revision job
+        public async Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason)
+        {
+            // Validate input
+            if (originalJobId == Guid.Empty)
+                throw new ArgumentException("Original job ID is required", nameof(originalJobId));
+                
+            if (string.IsNullOrWhiteSpace(revisionReason))
+                throw new ArgumentException("Revision reason is required", nameof(revisionReason));
 
-
-
-        #endregion
-
-
-        #region Job Parts Management
-
+            return await _jobRepository.CreateRevisionJobAsync(originalJobId, revisionReason);
+        }
+        
+        // Job Parts Management
         public async Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId)
         {
             return await _jobRepository.GetJobPartsAsync(jobId);
@@ -159,31 +187,11 @@ namespace Services
 
         public async Task<bool> AddJobPartAsync(JobPart jobPart)
         {
-            // Validation
-            if (jobPart.JobId == Guid.Empty)
-                throw new ArgumentException("Job ID is required", nameof(jobPart.JobId));
-
-            if (jobPart.PartId == Guid.Empty)
-                throw new ArgumentException("Part ID is required", nameof(jobPart.PartId));
-
-            if (jobPart.Quantity <= 0)
-                throw new ArgumentException("Quantity must be greater than zero", nameof(jobPart.Quantity));
-
-            if (jobPart.UnitPrice < 0)
-                throw new ArgumentException("Unit price cannot be negative", nameof(jobPart.UnitPrice));
-
-            jobPart.CreatedAt = DateTime.UtcNow;
             return await _jobRepository.AddJobPartAsync(jobPart);
         }
 
         public async Task<bool> UpdateJobPartAsync(JobPart jobPart)
         {
-            if (jobPart.Quantity <= 0)
-                throw new ArgumentException("Quantity must be greater than zero", nameof(jobPart.Quantity));
-
-            if (jobPart.UnitPrice < 0)
-                throw new ArgumentException("Unit price cannot be negative", nameof(jobPart.UnitPrice));
-
             return await _jobRepository.UpdateJobPartAsync(jobPart);
         }
 
@@ -197,48 +205,18 @@ namespace Services
             return await _jobRepository.CalculateJobTotalAmountAsync(jobId);
         }
 
-        #endregion
-
-
-        #region Status Management
-
+        // Status Management
         public async Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null)
         {
-            // Validate workflow transition
-            if (!await ValidateJobWorkflowAsync(jobId, newStatus))
-                throw new InvalidOperationException($"Invalid status transition to {newStatus}");
-
             return await _jobRepository.UpdateJobStatusAsync(jobId, newStatus, changeNote);
         }
 
         public async Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates)
         {
-            if (updates == null || !updates.Any())
-                throw new ArgumentException("Updates cannot be null or empty", nameof(updates));
-            // Validate all transitions
-            foreach (var (jobId, newStatus, _) in updates)
-            {
-                if (!await ValidateJobWorkflowAsync(jobId, newStatus))
-                    throw new InvalidOperationException($"Invalid status transition for job {jobId} to {newStatus}");
-            }
-
             return await _jobRepository.BatchUpdateStatusAsync(updates);
         }
 
-        #endregion
-
-        #region Business Logic Validation
-
-
-        public async Task<bool> CanSendJobToCustomerAsync(Guid jobId)
-        {
-            var job = await _jobRepository.GetByIdAsync(jobId);
-            if (job == null) return false;
-
-            // Job must be in Pending status to be sent to customer
-            return job.Status == JobStatus.Pending;
-        }
-
+        // Business Logic Validation
         public async Task<bool> CanAssignJobToTechnicianAsync(Guid jobId)
         {
             var job = await _jobRepository.GetByIdAsync(jobId);
@@ -247,7 +225,24 @@ namespace Services
             // Job must be in Pending status to be assigned to technician
             return job.Status == JobStatus.Pending;
         }
+        
+        // Workflow Validation
+        public async Task<bool> ValidateJobWorkflowAsync(Guid jobId, JobStatus targetStatus)
+        {
+            var job = await _jobRepository.GetByIdAsync(jobId);
+            if (job == null) return false;
 
+            return IsValidTransition(job.Status, targetStatus);
+        }
+
+        public async Task<string> GetNextAllowedStatusesAsync(Guid jobId)
+        {
+            var job = await _jobRepository.GetByIdAsync(jobId);
+            if (job == null) return "Job not found";
+
+            var allowedStatuses = GetAllowedNextStatuses(job.Status);
+            return string.Join(", ", allowedStatuses);
+        }
         #endregion
 
         #region Search and Filtering
@@ -266,36 +261,16 @@ namespace Services
 
         #endregion
 
-        #region Workflow Validation
-
-        public async Task<bool> ValidateJobWorkflowAsync(Guid jobId, JobStatus targetStatus)
-        {
-            var job = await _jobRepository.GetByIdAsync(jobId);
-            if (job == null) return false;
-
-            return IsValidTransition(job.Status, targetStatus);
-        }
-
-        public async Task<string> GetNextAllowedStatusesAsync(Guid jobId)
-        {
-            var job = await _jobRepository.GetByIdAsync(jobId);
-            if (job == null) return "Job not found";
-
-            var allowedStatuses = GetAllowedNextStatuses(job.Status);
-            return string.Join(", ", allowedStatuses);
-        }
-
-        #endregion
-
         #region Private Helper Methods
 
         private static bool IsValidTransition(JobStatus currentStatus, JobStatus targetStatus)
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-               // [JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-               //[JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
-               // [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician }, // Can be reassigned
+                [JobStatus.Pending] = new List<JobStatus> { JobStatus.New },
+                [JobStatus.New] = new List<JobStatus> { JobStatus.InProgress, JobStatus.OnHold },
+                [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.OnHold },
+                [JobStatus.OnHold] = new List<JobStatus> { JobStatus.InProgress, JobStatus.Completed },
                 [JobStatus.Completed] = new List<JobStatus>() // Terminal status
             };
 
@@ -307,10 +282,11 @@ namespace Services
         {
             var allowedTransitions = new Dictionary<JobStatus, List<JobStatus>>
             {
-                //[JobStatus.Pending] = new List<JobStatus> { JobStatus.AssignedToTechnician },
-                //[JobStatus.AssignedToTechnician] = new List<JobStatus> { JobStatus.InProgress },
-                //[JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.AssignedToTechnician },
-                [JobStatus.Completed] = new List<JobStatus>()
+                [JobStatus.Pending] = new List<JobStatus> { JobStatus.New },
+                [JobStatus.New] = new List<JobStatus> { JobStatus.InProgress, JobStatus.OnHold },
+                [JobStatus.InProgress] = new List<JobStatus> { JobStatus.Completed, JobStatus.OnHold },
+                [JobStatus.OnHold] = new List<JobStatus> { JobStatus.InProgress, JobStatus.Completed },
+                [JobStatus.Completed] = new List<JobStatus>() // Terminal status
             };
 
             return allowedTransitions.ContainsKey(currentStatus) ?

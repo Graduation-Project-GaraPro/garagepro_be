@@ -434,6 +434,7 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+builder.Services.AddScoped<Services.PaymentServices.IPaymentService, Services.PaymentServices.PaymentService>();
 
 
 
@@ -451,14 +452,35 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
-builder.Services.AddScoped<IInspectionService, InspectionService>();
+builder.Services.AddScoped<IInspectionService>(provider =>
+{
+    var inspectionRepository = provider.GetRequiredService<IInspectionRepository>();
+    var repairOrderRepository = provider.GetRequiredService<IRepairOrderRepository>();
+    var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
+    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService);
+});
 
 // Technician services
 builder.Services.AddScoped<ITechnicianService, TechnicianService>();
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
-builder.Services.AddScoped<Services.Customer.IRepairRequestService, Services.Customer.RepairRequestService>();
+builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
+{
+    var unitOfWork = provider.GetRequiredService<IUnitOfWork>();
+    var cloudinaryService = provider.GetRequiredService<ICloudinaryService>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    var vehicleService = provider.GetRequiredService<IVehicleService>();
+    
+    return new Services.Customer.RepairRequestService(
+        unitOfWork,
+        cloudinaryService,
+        mapper,
+        repairOrderService,
+        vehicleService
+    );
+});
 
 // Adding missing RequestPart and RequestService repository registrations
 builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestPartRepository, Repositories.RepairRequestRepositories.RequestPartRepository>();

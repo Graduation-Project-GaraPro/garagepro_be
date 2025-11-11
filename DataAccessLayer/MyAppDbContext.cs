@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -393,6 +393,12 @@ namespace DataAccessLayer
                       .HasForeignKey<Repair>(r => r.JobId)
                       .IsRequired()
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                // Configure the relationship with the original job
+                entity.HasOne(j => j.OriginalJob)
+                      .WithMany()
+                      .HasForeignKey(j => j.OriginalJobId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             
             // Repair configuration
@@ -414,15 +420,14 @@ namespace DataAccessLayer
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
                 entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .IsRequired();
                 entity.Property(e => e.IssueRating)
                       .HasConversion<string>()
                       .IsRequired();
-                entity.Property(e => e.InspectionType)
-                      .HasConversion<string>()
-                      .IsRequired();
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)

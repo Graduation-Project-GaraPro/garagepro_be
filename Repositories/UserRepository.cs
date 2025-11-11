@@ -141,6 +141,24 @@ namespace Repositories
                 .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
                 .ToListAsync();
         }
+        
+        // Lấy tất cả Technician thuộc về một branch cụ thể
+        public async Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId)
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == technicianRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && u.BranchId == branchId)
+                .ToListAsync();
+        }
 
         public async Task<ApplicationUser> GetByIdAsync(string userId)
         {

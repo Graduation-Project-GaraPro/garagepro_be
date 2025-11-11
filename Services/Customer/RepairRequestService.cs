@@ -1,19 +1,21 @@
 ﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Customers;
+using BusinessObject.Enums;  // Added this import
 using Dtos.Customers;
 using Dtos.Parts;
 using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Repositories.Customers;
-using Repositories.RepairRequestRepositories;
 using Repositories.UnitOfWork;
-
 using Services.Cloudinaries;
+using Services.VehicleServices; // Add this
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Dtos.RepairOrder; // Add this
+using Services; // Add this for IRepairOrderService
 
 namespace Services.Customer
 {
@@ -24,15 +26,21 @@ namespace Services.Customer
         private readonly IMapper _mapper;
         private readonly IRepairRequestRepository _repairRequestRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IRepairOrderService _repairOrderService; // Add this
+        private readonly IVehicleService _vehicleService; // Add this
 
         public RepairRequestService(
             IUnitOfWork unitOfWork,
             ICloudinaryService cloudinaryService,
-            IMapper mapper)
+            IMapper mapper,
+            IRepairOrderService repairOrderService, // Add this
+            IVehicleService vehicleService) // Add this
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _mapper = mapper;
+            _repairOrderService = repairOrderService; // Add this
+            _vehicleService = vehicleService; // Add this
         }
 
         public async Task<IEnumerable<RepairRequestDto>> GetAllAsync()
@@ -564,6 +572,112 @@ namespace Services.Customer
         public Task<RepairRequestDto> GetByIdAsync(Guid id)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<bool> ApproveRepairRequestAsync(Guid requestId)
+        {
+            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId);
+            if (repairRequest == null)
+                return false;
+
+            // Only pending requests can be approved
+            if (repairRequest.Status != RepairRequestStatus.Pending)
+                return false;
+
+            repairRequest.Status = RepairRequestStatus.Accept;
+            repairRequest.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectRepairRequestAsync(Guid requestId)
+        {
+            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId);
+            if (repairRequest == null)
+                return false;
+
+            // Only pending requests can be rejected
+            if (repairRequest.Status != RepairRequestStatus.Pending)
+                return false;
+
+            repairRequest.Status = RepairRequestStatus.Cancelled;
+            repairRequest.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<RepairOrderDto> ConvertToRepairOrderAsync(Guid requestId, CreateRoFromRequestDto dto)
+        {
+            // Get the repair request
+            var repairRequest = await _unitOfWork.RepairRequests.GetByIdWithDetailsAsync(requestId);
+            if (repairRequest == null)
+                throw new Exception("Repair request not found");
+                
+            // Check if request is approved
+            if (repairRequest.Status != RepairRequestStatus.Accept)
+                throw new Exception("Only approved repair requests can be converted to repair orders");
+
+            // Get the customer (user) information
+            var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
+            if (customer == null)
+                throw new Exception("Customer not found");
+
+            // Get the vehicle information
+            var vehicle = await _vehicleService.GetVehicleByIdAsync(repairRequest.VehicleID);
+            if (vehicle == null)
+                throw new Exception("Vehicle not found");
+
+            // Calculate estimated time and amount based on selected services
+            decimal totalEstimatedAmount = 0;
+            long totalEstimatedTime = 0;
+
+            List<BusinessObject.Service> selectedServices = new List<BusinessObject.Service>();
+            if (dto.SelectedServiceIds != null && dto.SelectedServiceIds.Any())
+            {
+                selectedServices = await _unitOfWork.Services.Query()
+                    .Where(s => dto.SelectedServiceIds.Contains(s.ServiceId))
+                    .ToListAsync();
+
+                foreach (var service in selectedServices)
+                {
+                    totalEstimatedAmount += service.Price;
+                    totalEstimatedTime += (long)(service.EstimatedDuration * 60); // Convert hours to minutes
+                }
+            }
+
+            // Create a new repair order based on the repair request
+            var repairOrder = new BusinessObject.RepairOrder
+            {
+                VehicleId = repairRequest.VehicleID,
+                RoType = RoType.Scheduled, // Set type to scheduled for repair request conversion
+                ReceiveDate = dto.ReceiveDate,
+                EstimatedCompletionDate = dto.EstimatedCompletionDate,
+                EstimatedAmount = totalEstimatedAmount,
+                Note = dto.Note,
+                EstimatedRepairTime = totalEstimatedTime,
+                UserId = repairRequest.UserID,
+                StatusId = 1, // Default to pending status
+                BranchId = repairRequest.BranchId,
+                RepairRequestId = repairRequest.RepairRequestID, // Link to the repair request
+                PaidStatus = PaidStatus.Unpaid, // Default paid status
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Create the repair order
+            var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, dto.SelectedServiceIds);
+            
+            // Update the repair request status to indicate it has been converted
+            repairRequest.Status = RepairRequestStatus.Arrived;
+            repairRequest.UpdatedAt = DateTime.UtcNow;
+            await _unitOfWork.SaveChangesAsync();
+
+            // Return the created repair order DTO
+            var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
+            var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
+            
+            return repairOrderDto;
         }
     }
 }

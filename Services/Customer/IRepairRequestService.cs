@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Customers;
 using Dtos.Customers;
+using Dtos.RepairOrder;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +21,12 @@ namespace Services.Customer
         Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto,string userId);
         Task<bool> DeleteRepairRequestAsync(Guid id);
 
+        // Approval and rejection methods
+        Task<bool> ApproveRepairRequestAsync(Guid requestId);
+        Task<bool> RejectRepairRequestAsync(Guid requestId);
+
+        // Conversion method
+        Task<RepairOrderDto> ConvertToRepairOrderAsync(Guid requestId, CreateRoFromRequestDto dto);
 
         Task<object> GetPagedAsync(
             int pageNumber = 1,

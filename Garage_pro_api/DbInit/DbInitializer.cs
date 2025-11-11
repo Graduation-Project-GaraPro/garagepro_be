@@ -9,6 +9,7 @@ using BusinessObject.Vehicles;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 
 namespace Garage_pro_api.DbInit
 {
@@ -59,6 +60,7 @@ namespace Garage_pro_api.DbInit
             await SeedPromotionalCampaignsWithServicesAsync();
 
             await SeedRepairOrdersAsync();
+            await SeedInspectionsAsync();
         }
 
         // 1. Seed Roles
@@ -96,7 +98,6 @@ namespace Garage_pro_api.DbInit
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
                 ("0900000008", "Default", "Technician2", "Technician"),
-                // Adding the requested manager user
                 ("0987654321", "Manager", "User", "Manager")
             };
 
@@ -1994,6 +1995,147 @@ namespace Garage_pro_api.DbInit
                 await _context.SaveChangesAsync();
 
                 Console.WriteLine("Repair Orders and related data seeded successfully!");
+            }
+        }
+
+        private async Task SeedInspectionsAsync()
+        {
+            // Check if there are already inspections seeded
+            if (!_context.Inspections.Any())
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                try
+                {
+                    // Get the repair order with the specified ID
+                    var repairOrderId = Guid.Parse("6c062742-e2d5-4f11-953f-eee173fcfa79");
+                    var repairOrder = await _context.RepairOrders.FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                    
+                    // If the repair order doesn't exist, we'll create one
+                    if (repairOrder == null)
+                    {
+                        // Get required entities for creating a repair order
+                        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
+                        var vehicle = await _context.Vehicles.FirstOrDefaultAsync();
+                        var branch = await _context.Branches.FirstOrDefaultAsync();
+                        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Pending");
+                        
+                        if (customerUser != null && vehicle != null && branch != null && pendingStatus != null)
+                        {
+                            repairOrder = new RepairOrder
+                            {
+                                RepairOrderId = repairOrderId,
+                                ReceiveDate = DateTime.UtcNow,
+                                RoType = RoType.WalkIn,
+                                EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
+                                Cost = 0,
+                                EstimatedAmount = 0,
+                                PaidAmount = 0,
+                                PaidStatus = PaidStatus.Unpaid,
+                                EstimatedRepairTime = 2,
+                                Note = "Inspection repair order",
+                                BranchId = branch.BranchId,
+                                StatusId = pendingStatus.OrderStatusId,
+                                VehicleId = vehicle.VehicleId,
+                                UserId = customerUser.Id,
+                                RepairRequestId = Guid.NewGuid(),
+                                CreatedAt = DateTime.UtcNow,
+                                UpdatedAt = DateTime.UtcNow
+                            };
+                            
+                            _context.RepairOrders.Add(repairOrder);
+                            await _context.SaveChangesAsync();
+                        }
+                        else
+                        {
+                            throw new Exception("Required entities for creating repair order not found");
+                        }
+                    }
+
+                    // Get two services and two parts for the inspection
+                    var services = await _context.Services.Take(2).ToListAsync();
+                    var parts = await _context.Parts.Take(2).ToListAsync();
+                    
+                    if (services.Count < 2 || parts.Count < 2)
+                    {
+                        throw new Exception("Not enough services or parts available for seeding");
+                    }
+
+                    // Create the inspection
+                    var inspection = new Inspection
+                    {
+                        InspectionId = Guid.NewGuid(),
+                        RepairOrderId = repairOrderId,
+                        TechnicianId = null,
+                        Status = InspectionStatus.New,
+                        CustomerConcern = "Vehicle inspection for maintenance services",
+                        Finding = "Initial inspection findings",
+                        IssueRating = IssueRating.Good,
+                        Note = "Initial inspection note",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.Inspections.Add(inspection);
+                    await _context.SaveChangesAsync();
+
+                    // Create ServiceInspection entries (2 services)
+                    var serviceInspections = new List<ServiceInspection>
+                    {
+                        new ServiceInspection
+                        {
+                            ServiceInspectionId = Guid.NewGuid(),
+                            ServiceId = services[0].ServiceId,
+                            InspectionId = inspection.InspectionId,
+                            ConditionStatus = ConditionStatus.Good,
+                            CreatedAt = DateTime.UtcNow
+                        },
+                        new ServiceInspection
+                        {
+                            ServiceInspectionId = Guid.NewGuid(),
+                            ServiceId = services[1].ServiceId,
+                            InspectionId = inspection.InspectionId,
+                            ConditionStatus = ConditionStatus.Replace,
+                            CreatedAt = DateTime.UtcNow
+                        }
+                    };
+
+                    _context.ServiceInspections.AddRange(serviceInspections);
+                    await _context.SaveChangesAsync();
+
+                    // Create PartInspection entries (1 part for each service)
+                    var partInspections = new List<PartInspection>
+                    {
+                        new PartInspection
+                        {
+                            PartInspectionId = Guid.NewGuid(),
+                            PartId = parts[0].PartId,
+                            InspectionId = inspection.InspectionId,
+                            Status = "Good condition",
+                            CreatedAt = DateTime.UtcNow
+                        },
+                        new PartInspection
+                        {
+                            PartInspectionId = Guid.NewGuid(),
+                            PartId = parts[1].PartId,
+                            InspectionId = inspection.InspectionId,
+                            Status = "Fair condition",
+                            CreatedAt = DateTime.UtcNow
+                        }
+                    };
+
+                    _context.PartInspections.AddRange(partInspections);
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+                    Console.WriteLine("Inspection data seeded successfully!");
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    Console.WriteLine($"Error seeding inspection data: {ex.Message}");
+                    throw;
+                }
             }
         }
     }

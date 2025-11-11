@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums; // Add this using statement
 using Dtos.Quotations;
@@ -484,6 +484,28 @@ namespace Services.QuotationServices
                 throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
             
             // Generate jobs from the quotation
+            await GenerateJobsFromQuotationAsync(quotation);
+            
+            return true;
+        }
+        
+        /// <summary>
+        /// Creates revision jobs for an updated quotation
+        /// </summary>
+        /// <param name="quotationId">The ID of the quotation</param>
+        /// <param name="revisionReason">The reason for the revision</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> CreateRevisionJobsAsync(Guid quotationId, string revisionReason)
+        {
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (quotation == null)
+                throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+                
+            // Check if quotation is approved
+            if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
+                throw new InvalidOperationException("Only approved quotations can be used to create revision jobs.");
+            
+            // Generate jobs from the quotation (these will be the revision jobs)
             await GenerateJobsFromQuotationAsync(quotation);
             
             return true;
