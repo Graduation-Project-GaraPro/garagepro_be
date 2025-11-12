@@ -180,5 +180,18 @@ namespace Garage_pro_api.Controllers
 
             return Ok(new { message = "User unbanned successfully" });
         }
+
+        [HttpPut("{id}/verify")]
+        public async Task<IActionResult> VerifyUser(string id)
+        {
+            var user = await _userService.GetByIdAsync(id);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+            user.EmailConfirmed = true;
+            var updated = await _userService.UpdateUserAsync(user);
+            if (!updated)
+                return BadRequest(new { message = "Failed to verify email" });
+            return Ok(new { message = "Email verified successfully" });
+        }
     }
 }

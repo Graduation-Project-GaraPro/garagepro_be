@@ -194,6 +194,8 @@ namespace Services
                     user.Id,
                     FullName = $"{user.FirstName} {user.LastName}",
                     user.Email,
+                    user.PhoneNumber,
+                    Verified = user.EmailConfirmed,
                     user.IsActive,
                     user.CreatedAt,
                     user.EmailConfirmed,
