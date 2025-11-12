@@ -20,6 +20,7 @@ namespace Repositories
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);
+        Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate);
 
         // Kanban Board specific queries
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);

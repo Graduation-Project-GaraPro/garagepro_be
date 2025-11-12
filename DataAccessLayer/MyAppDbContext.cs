@@ -24,6 +24,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Manager;
 using BusinessObject.RequestEmergency;
+using BusinessObject.PayOsModels;
 
 namespace DataAccessLayer
 {
@@ -52,6 +53,9 @@ namespace DataAccessLayer
         // Removed QuotationParts DbSet as the entity was removed
         // public DbSet<QuotationPart> QuotationParts { get; set; }
         // Add the new QuotationServicePart entity
+
+        public DbSet<WebhookInbox> WebhookInboxes { get; set; }
+
         public DbSet<RequestEmergency> RequestEmergencies { get; set; }
         public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
@@ -184,10 +188,10 @@ namespace DataAccessLayer
             
             //chặn casadate
             modelBuilder.Entity<Vehicle>()
-      .HasOne(v => v.Brand)
-      .WithMany(b => b.Vehicles)
-      .HasForeignKey(v => v.BrandId)
-      .OnDelete(DeleteBehavior.Restrict);
+              .HasOne(v => v.Brand)
+              .WithMany(b => b.Vehicles)
+              .HasForeignKey(v => v.BrandId)
+              .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Vehicle>()
                 .HasOne(v => v.Model)
@@ -302,6 +306,18 @@ namespace DataAccessLayer
             //          .HasForeignKey(n => n.CategoryID)
             //          .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
             //});
+
+            modelBuilder.Entity<WebhookInbox>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.OrderCode);
+                entity.HasIndex(e => new { e.Status, e.Attempts, e.ReceivedAt });
+
+                //  Enum -> string mapping
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .HasMaxLength(20);
+            });
 
 
             // Notifications configuration
@@ -644,7 +660,7 @@ namespace DataAccessLayer
 
                 entity.Property(e => e.UpdatedAt)
                       .HasDefaultValueSql("SYSUTCDATETIME()")
-                      .ValueGeneratedOnAddOrUpdate();
+                      .ValueGeneratedNever();
 
                 entity.HasOne(e => e.UpdatedByUser)
                       .WithMany()
@@ -1017,6 +1033,17 @@ namespace DataAccessLayer
                 .WithOne(rs => rs.RepairRequest)
                 .HasForeignKey(rs => rs.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // INDEX phục vụ duyệt/quota theo range [winStart, winEnd)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.ArrivalWindowStart, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Arrival_Status");
+
+            // (tuỳ chọn) Index phụ cho WIP (Arrived/InProgress)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Status");
+
 
             // 🔹 RequestService - RequestPart (1-n)
             modelBuilder.Entity<RequestService>()

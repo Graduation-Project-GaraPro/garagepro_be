@@ -24,6 +24,7 @@ namespace Repositories.PolicyRepositories
         public async Task UpdateAsync(SecurityPolicy policy)
         {
             _db.SecurityPolicies.Update(policy);
+            _db.Entry(policy).Property(x => x.UpdatedAt).IsModified = true;
             await Task.CompletedTask;
         }
 

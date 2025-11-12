@@ -60,11 +60,19 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
+                var inner = ex.InnerException;
+                while (inner != null)
+                {
+                    Console.WriteLine($"Inner: {inner.Message}");
+                    inner = inner.InnerException;
+                }
+
                 Console.WriteLine($"Error: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
-                return StatusCode(500, $"An error occurred: {ex.Message}");
 
+                return StatusCode(500, $"An error occurred: {ex.InnerException?.Message ?? ex.Message}");
             }
+
         }
 
         [HttpGet("getAll")]

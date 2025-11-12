@@ -21,6 +21,11 @@ namespace Services
             _emailSender = emailSender;
         }
 
+        public async Task<bool> UpdateDeviceIdAsync(string userId, string deviceId)
+        {
+            return await _repository.UpdateDeviceIdAsync(userId, deviceId);
+        }
+
         public async Task<List<ApplicationUser>> GetAllUsersAsync()
         {
             return await _repository.GetAllAsync();

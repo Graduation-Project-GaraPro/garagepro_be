@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,7 +20,7 @@ namespace Repositories.PaymentRepositories
         }
 
       
-        public async Task<Payment> GetByIdAsync(Guid paymentId)
+        public async Task<Payment> GetByIdAsync(long paymentId)
         {
             return await _context.Payments
                 .Include(p => p.RepairOrder)
@@ -27,7 +28,23 @@ namespace Repositories.PaymentRepositories
                 .FirstOrDefaultAsync(p => p.PaymentId == paymentId);
         }
 
-      
+        public async Task<Payment> GetByConditionAsync(Expression<Func<Payment, bool>> predicate)
+        {
+            return await _context.Payments
+                .Include(p => p.RepairOrder)
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(predicate);
+        }
+        public async Task<Payment> GetByConditionAsync(
+        Expression<Func<Payment, bool>> predicate,
+        CancellationToken ct = default)
+        {
+            return await _context.Payments
+                .Include(p => p.RepairOrder)
+                .Include(p => p.User)
+                .FirstOrDefaultAsync(predicate, ct);
+        }
+
         public async Task<IEnumerable<Payment>> GetAllAsync()
         {
             return await _context.Payments
@@ -44,13 +61,18 @@ namespace Repositories.PaymentRepositories
         }
 
        
-        public async Task UpdateAsync(Payment payment)
+        public async Task UpdateAsync(Payment payment, CancellationToken ct)
         {
             _context.Payments.Update(payment);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync(ct);
         }
 
-        
+        public async Task SaveChangesAsync( CancellationToken ct)
+        {
+            await _context.SaveChangesAsync( ct);
+        }
+
+
         public async Task DeleteAsync(Guid paymentId)
         {
             var payment = await _context.Payments.FindAsync(paymentId);

@@ -77,7 +77,7 @@ namespace Repositories.EmergencyRequestRepositories
                 {
                     BranchId = branch.BranchId,
                     BranchName = branch.BranchName,
-                    Address = branch.District + branch.Ward,
+                    Address = branch.Province + branch.Commune,
                     DistanceKm = GetDistance(userLat, userLon, branch.Latitude, branch.Longitude)
                 })
                 .OrderBy(x => x.DistanceKm)

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace Repositories.Customers
@@ -16,6 +17,28 @@ namespace Repositories.Customers
         {
             _context = context;
         }
+
+
+        public async Task<IEnumerable<RepairRequest>> ListByConditionAsync(Expression<Func<RepairRequest, bool>> predicate)
+        {
+            return await _context.RepairRequests
+                .Where(predicate)
+                .ToListAsync();
+        }
+
+        public async Task<int> CountAsync(Expression<Func<RepairRequest, bool>> predicate)
+        {
+            return await _context.RepairRequests
+                .Where(predicate)
+                .CountAsync();
+        }
+        public async Task<bool> AnyAsync(Expression<Func<RepairRequest, bool>> predicate)
+        {
+            return await _context.RepairRequests
+                .AnyAsync(predicate);
+               
+        }
+
 
         public async Task<IEnumerable<RepairRequest>> GetAllAsync()
         {
@@ -61,7 +84,7 @@ namespace Repositories.Customers
         public async Task<RepairRequest> GetByIdAsync(Guid id)
         {
             return await _context.RepairRequests
-                .Include(r => r.Vehicle)
+                .Include(r => r.Vehicle).ThenInclude(v=>v.Brand)
                 .Include(r=>r.Branch)
                 .Include(r => r.RepairImages)
                 .Include(r => r.RequestServices)

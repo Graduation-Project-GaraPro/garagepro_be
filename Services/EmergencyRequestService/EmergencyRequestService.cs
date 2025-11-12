@@ -29,7 +29,7 @@ namespace Services.EmergencyRequestService
             _requestRepository = repairRequestRepository;
         }
 
-        public async Task<EmergencyResponeDto> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto)
+        public async Task<RequestEmergency> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto)
         {
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
@@ -37,11 +37,7 @@ namespace Services.EmergencyRequestService
             // Mapping từ DTO sang entity
             var emergencyRequest = _mapper.Map<RequestEmergency>(dto);
 
-            // Kiểm tra xe có thuộc user không
-            if (emergencyRequest.Vehicle.UserId != userId)
-                throw new UnauthorizedAccessException("Vehicle does not belong to the user.");
-
-            // Gán CustomerId
+            // Gán UserId từ tham số
             emergencyRequest.CustomerId = userId;
 
             // Thêm thời gian hiện tại và trạng thái mặc định
@@ -51,30 +47,9 @@ namespace Services.EmergencyRequestService
             // Lưu vào repository
             var createdRequest = await _repository.CreateAsync(emergencyRequest);
 
-            // Lấy full entity (include Customer và Vehicle nếu cần)
             var fullRequest = await _repository.GetByIdAsync(createdRequest.EmergencyRequestId);
 
-            if (fullRequest == null)
-                throw new Exception("Failed to retrieve the created Emergency");
-
-            // Mapping sang DTO trả về, chỉ những trường cần thiết
-            var responseDto = new EmergencyResponeDto
-            {
-                EmergencyRequestId = fullRequest.EmergencyRequestId,
-                VehicleName = fullRequest.Vehicle?.Model.ModelName + fullRequest.Vehicle?.Brand.BrandName + fullRequest.Vehicle?.LicensePlate ?? "",
-                IssueDescription = fullRequest.IssueDescription,
-                //EmergencyType = fullRequest.EmergencyType.ToString(),
-                RequestTime = fullRequest.RequestTime,
-                Status = fullRequest.Status.ToString(),
-                Latitude = fullRequest.Latitude,
-                Longitude = fullRequest.Longitude,
-                CustomerName = fullRequest.Customer?.UserName ?? "",
-                CustomerPhone = fullRequest.Customer?.PhoneNumber ?? "",
-               // AssignedTechnicianName = fullRequest.AssignedTechnician?.Name, // Nếu có
-                //EmergencyFee = fullRequest.EmergencyFee // Nếu muốn hiển thị ngay
-            };
-
-            return responseDto;
+            return fullRequest!;
         }
 
         public async Task<IEnumerable<EmergencyResponeDto>> GetByCustomerAsync(string customerId)

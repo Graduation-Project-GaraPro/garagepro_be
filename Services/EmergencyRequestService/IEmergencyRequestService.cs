@@ -10,7 +10,7 @@ namespace Services.EmergencyRequestService
 {
     public interface IEmergencyRequestService
     {
-        Task<EmergencyResponeDto> CreateEmergencyAsync(string UserId, CreateEmergencyRequestDto dto);
+        Task<RequestEmergency> CreateEmergencyAsync(string UserId, CreateEmergencyRequestDto dto);
         Task<IEnumerable<EmergencyResponeDto>> GetByCustomerAsync(string customerId);
         Task<RequestEmergency?> GetByIdAsync(Guid id);
         Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double latitude,double longitude, int count = 5);

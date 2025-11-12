@@ -11,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Repositories.BranchRepositories;
 using Repositories.ServiceRepositories;
+using Services.GeocodingServices;
 
 namespace Services.BranchServices
 {
@@ -20,7 +21,7 @@ namespace Services.BranchServices
         private readonly IServiceRepository _serviceRepo;
         private readonly IOperatingHourRepository _operatingHourRepo;
         private readonly IUserRepository _userRepository;
-
+        private readonly IGeocodingService _geocodingService;
         private readonly MyAppDbContext _context;
         private readonly IMapper _mapper;
 
@@ -29,6 +30,7 @@ namespace Services.BranchServices
             IMapper mapper,
             IServiceRepository serviceRepo,
             IUserRepository userRepository,
+            IGeocodingService geocodingService,
             IOperatingHourRepository operatingHourRepo,
             MyAppDbContext context)
         {
@@ -36,6 +38,7 @@ namespace Services.BranchServices
             _serviceRepo = serviceRepo;
             _userRepository = userRepository;
             _operatingHourRepo = operatingHourRepo;
+            _geocodingService = geocodingService;
             _context = context;
             _mapper = mapper;
         }
@@ -54,16 +57,21 @@ namespace Services.BranchServices
 
                 bool isAddressDuplicate = await _branchRepo.ExistsAsync(
                     b => b.Street.ToLower().Trim() == dto.Street.ToLower().Trim()
-                      && b.Ward.ToLower().Trim() == dto.Ward.ToLower().Trim()
-                      && b.District.ToLower().Trim() == dto.District.ToLower().Trim()
-                      && b.City.ToLower().Trim() == dto.City.ToLower().Trim()
+                      && b.Commune.ToLower().Trim() == dto.Commune.ToLower().Trim()
+                      && b.Province.ToLower().Trim() == dto.Province.ToLower().Trim()
+                     
                 );
+
+
 
                 if (isNameDuplicate)
                     throw new ApplicationException("A branch with the same name already exists.");
 
                 if (isAddressDuplicate)
                     throw new ApplicationException("A branch with the same address already exists.");
+
+                var fullAddress = $"{dto.Street}, {dto.Commune}, {dto.Province}";
+                var (lat, lng, formattedAddress) = await _geocodingService.GetCoordinatesAsync(fullAddress);
 
                 // === Validate operating hours ===
                 var days = dto.OperatingHours
@@ -141,11 +149,12 @@ namespace Services.BranchServices
                     PhoneNumber = dto.PhoneNumber,
                     Email = dto.Email,
                     Street = dto.Street,
-                    Ward = dto.Ward,
-                    District = dto.District,
-                    City = dto.City,
+                    Commune = dto.Commune,
+                    Province = dto.Province,
                     Description = dto.Description,
                     IsActive = true,
+                    Latitude = lat,
+                    Longitude = lng,
                     CreatedAt = DateTime.UtcNow,
                     BranchServices = existingServiceIds
                         .Select(sid => new BusinessObject.Branches.BranchService
@@ -204,13 +213,16 @@ namespace Services.BranchServices
                 bool isAddressDuplicate = await _branchRepo.ExistsAsync(
                     b => b.BranchId != dto.BranchId &&
                          b.Street.ToLower().Trim() == dto.Street.ToLower().Trim() &&
-                         b.Ward.ToLower().Trim() == dto.Ward.ToLower().Trim() &&
-                         b.District.ToLower().Trim() == dto.District.ToLower().Trim() &&
-                         b.City.ToLower().Trim() == dto.City.ToLower().Trim()
+                         b.Commune.ToLower().Trim() == dto.Commune.ToLower().Trim() &&
+                         b.Province.ToLower().Trim() == dto.Province.ToLower().Trim() 
+                        
                 );
 
                 if (isNameDuplicate) throw new ApplicationException("Branch name already exists.");
                 if (isAddressDuplicate) throw new ApplicationException("Branch address already exists.");
+
+                var fullAddress = $"{dto.Street}, {dto.Commune}, {dto.Province}";
+                var (lat, lng, formattedAddress) = await _geocodingService.GetCoordinatesAsync(fullAddress);
 
                 // === Validate operating hours ===
                 // === Validate operating hours ===
@@ -275,12 +287,14 @@ namespace Services.BranchServices
                 branch.PhoneNumber = dto.PhoneNumber;
                 branch.Email = dto.Email;
                 branch.Street = dto.Street;
-                branch.Ward = dto.Ward;
-                branch.District = dto.District;
-                branch.City = dto.City;
+                branch.Commune = dto.Commune;
+                branch.Province= dto.Province;
+               
                 branch.Description = dto.Description;
                 branch.IsActive = dto.IsActive;
                 branch.UpdatedAt = DateTime.UtcNow;
+                branch.Latitude = lat;
+                branch.Longitude = lng;
 
                 // === Update Services (diff) ===
                 var currentServiceIds = branch.BranchServices.Select(bs => bs.ServiceId).ToList();
@@ -469,7 +483,7 @@ namespace Services.BranchServices
 
 
         public async Task<(IEnumerable<BranchReadDto> Branches, int TotalCount)>
-        GetAllBranchesAsync(int page, int pageSize, string? search, string? city, bool? isActive)
+        GetAllBranchesAsync(int page, int pageSize, string? search, string? Province, bool? isActive)
         {
             var query = _branchRepo.Query(); // trả về IQueryable<Branch>
 
@@ -478,9 +492,9 @@ namespace Services.BranchServices
                 query = query.Where(b => b.BranchName.Contains(search));
             }
 
-            if (!string.IsNullOrEmpty(city))
+            if (!string.IsNullOrEmpty(Province))
             {
-                query = query.Where(b => b.City == city);
+                query = query.Where(b => b.Province == Province);
             }
 
             if (isActive.HasValue)
