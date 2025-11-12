@@ -56,8 +56,8 @@ namespace BusinessObject.Customers
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // Một yêu cầu sửa chữa có thể dẫn đến một đơn sửa chữa
-        //public virtual RepairOrder RepairOrders { get; set; }
-        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
+        public virtual RepairOrder RepairOrder { get; set; }
+        //public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
 
 
         // ... field cũ ...

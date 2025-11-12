@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251108060638_updateRepairo")]
-    partial class updateRepairo
+    [Migration("20251111144956_addWebhook")]
+    partial class addWebhook
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -608,7 +608,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("RepairOrdersRepairOrderId")
+                    b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RequestDate")
@@ -635,7 +635,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("RepairRequestID");
 
-                    b.HasIndex("RepairOrdersRepairOrderId");
+                    b.HasIndex("RepairOrderId");
 
                     b.HasIndex("UserID");
 
@@ -1315,11 +1315,61 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("PartSpecifications");
                 });
 
+            modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("OrderCode")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Signature")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderCode");
+
+                    b.HasIndex("Status", "Attempts", "ReceivedAt");
+
+                    b.ToTable("WebhookInboxes");
+                });
+
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
-                    b.Property<Guid>("PaymentId")
+                    b.Property<long>("PaymentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PaymentId"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -1329,6 +1379,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderDesc")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
@@ -2566,9 +2622,9 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.RepairOrder", "RepairOrders")
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
                         .WithMany("RepairRequest")
-                        .HasForeignKey("RepairOrdersRepairOrderId")
+                        .HasForeignKey("RepairOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -2588,7 +2644,7 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("Customer");
 
-                    b.Navigation("RepairOrders");
+                    b.Navigation("RepairOrder");
 
                     b.Navigation("Vehicle");
                 });

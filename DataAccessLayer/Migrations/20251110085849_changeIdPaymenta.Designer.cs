@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251110085849_changeIdPaymenta")]
+    partial class changeIdPaymenta
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1312,54 +1315,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("PartSpecifications");
                 });
 
-            modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("Attempts")
-                        .HasColumnType("int");
-
-                    b.Property<string>("LastError")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("OrderCode")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("Payload")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("ProcessedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Signature")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrderCode");
-
-                    b.HasIndex("Status", "Attempts", "ReceivedAt");
-
-                    b.ToTable("WebhookInboxes");
-                });
-
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
                     b.Property<long>("PaymentId")
@@ -1376,12 +1331,6 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("ProviderCode")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProviderDesc")
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");

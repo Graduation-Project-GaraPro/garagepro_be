@@ -13,7 +13,7 @@ namespace BusinessObject
     public class Payment
     {
         [Key]
-        public Guid PaymentId { get; set; }= Guid.NewGuid();
+        public long PaymentId { get; set; }
         public Guid RepairOrderId { get; set; }
 
         [Required]
@@ -22,7 +22,9 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
-        public PaymentMethod Method { get; set; } // Enum: CreditCard, Paypal, Momo, etc.
+        public string? ProviderDesc { get; set; }
+        public string? ProviderCode { get; set; }
+        public PaymentMethod Method { get; set; } // Enum: PayOs, Cash
         public PaymentStatus Status { get; set; } // Paid, Unpaid, Refunded
         public DateTime PaymentDate { get; set; }
         public DateTime? UpdatedAt { get; set; }

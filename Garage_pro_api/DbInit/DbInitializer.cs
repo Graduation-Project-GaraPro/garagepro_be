@@ -1494,7 +1494,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 3200000,
                 EstimatedAmount = 3500000,
                 PaidAmount = 2000000,
-                PaidStatus = PaidStatus.Partial,
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 6,
                 Note = "Emergency brake and engine repair - Urgent service required",
                 BranchId = branch.BranchId,

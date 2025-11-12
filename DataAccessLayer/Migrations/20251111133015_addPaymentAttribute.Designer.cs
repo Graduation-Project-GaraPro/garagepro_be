@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251107103803_updateRepairRequest")]
-    partial class updateRepairRequest
+    [Migration("20251111133015_addPaymentAttribute")]
+    partial class addPaymentAttribute
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -608,6 +608,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<Guid>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
@@ -631,6 +634,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("RepairRequestID");
+
+                    b.HasIndex("RepairOrderId");
 
                     b.HasIndex("UserID");
 
@@ -1312,9 +1317,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
-                    b.Property<Guid>("PaymentId")
+                    b.Property<long>("PaymentId")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PaymentId"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -1324,6 +1331,12 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime>("PaymentDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("ProviderCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderDesc")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
@@ -2392,21 +2405,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("RepairOrderRepairRequest", b =>
-                {
-                    b.Property<Guid>("RepairOrdersRepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("RepairRequestID")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("RepairOrdersRepairOrderId", "RepairRequestID");
-
-                    b.HasIndex("RepairRequestID");
-
-                    b.ToTable("RepairOrderRepairRequest");
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
@@ -2576,6 +2574,12 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
+                        .WithMany("RepairRequest")
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")
                         .HasForeignKey("UserID")
@@ -2591,6 +2595,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("RepairOrder");
 
                     b.Navigation("Vehicle");
                 });
@@ -3307,21 +3313,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RepairOrderRepairRequest", b =>
-                {
-                    b.HasOne("BusinessObject.RepairOrder", null)
-                        .WithMany()
-                        .HasForeignKey("RepairOrdersRepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Customers.RepairRequest", null)
-                        .WithMany()
-                        .HasForeignKey("RepairRequestID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.Navigation("Keywords");
@@ -3487,6 +3478,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Quotations");
 
                     b.Navigation("RepairOrderServices");
+
+                    b.Navigation("RepairRequest");
 
                     b.Navigation("VoucherUsages");
                 });

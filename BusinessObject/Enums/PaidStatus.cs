@@ -6,10 +6,7 @@ namespace BusinessObject.Enums
     {
         [Display(Name = "Unpaid")]
         Unpaid,
-        
-        [Display(Name = "Partial")]
-        Partial,
-        
+            
         [Display(Name = "Paid")]
         Paid
     }

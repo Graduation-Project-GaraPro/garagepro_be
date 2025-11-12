@@ -89,6 +89,10 @@ using Services.GeocodingServices;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Identity.Client;
 using Utils.RepairRequests;
+using BusinessObject.PayOsModels;
+using Services.PayOsClients;
+using Services.PaymentServices;
+using Repositories.WebhookInboxRepositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -340,6 +344,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 
+// Trong Program.cs
+builder.Services.AddScoped<IWebhookInboxRepository, WebhookInboxRepository>();
 
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
@@ -493,7 +499,7 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 
 
@@ -506,7 +512,7 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
@@ -549,8 +555,11 @@ builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
 
-builder.Services.AddHostedService<CampaignExpirationService>();
+builder.Services.Configure<PayOsOptions>(builder.Configuration.GetSection("PayOs"));
+builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 
+builder.Services.AddHostedService<CampaignExpirationService>();
+builder.Services.AddHostedService<PayOsWebhookProcessor>();
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -583,6 +592,7 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://10.224.41.46:5117",
                 "http://10.0.2.2:7113" // Android emulator
             )
             .AllowAnyHeader()
