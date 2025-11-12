@@ -21,7 +21,7 @@ namespace Garage_pro_api.Controllers
         }
 
         /// <summary>
-        /// 🧭 Tìm các gara gần nhất theo tọa độ.
+        ///  Tìm các gara gần nhất theo tọa độ.
         /// </summary>
         [HttpGet("nearby-branches")]
         public async Task<IActionResult> GetNearestBranches([FromBody] NearbyBranchRequestDto location)
@@ -35,10 +35,10 @@ namespace Garage_pro_api.Controllers
         }
 
         /// <summary>
-        /// 🚗 Tạo yêu cầu cứu hộ mới.
+        /// Tạo yêu cầu cứu hộ mới.
         /// </summary>
         [HttpPost("create")]
-       // [Authorize(Roles = "Customer")] // Chỉ khách hàng đã đăng nhập mới gửi được
+        [Authorize(Roles = "Customer")] // Chỉ khách hàng đã đăng nhập mới gửi được
         public async Task<IActionResult> CreateEmergency([FromBody] CreateEmergencyRequestDto dto)
         {
             if (!ModelState.IsValid)
@@ -63,13 +63,19 @@ namespace Garage_pro_api.Controllers
                 Console.WriteLine($"Error: {ex.Message}");
                 Console.WriteLine($"StackTrace: {ex.StackTrace}");
                 return StatusCode(500, $"An error occurred: {ex.Message}");
-                
+
             }
         }
 
+        [HttpGet("getAll")]
+        public async Task<IActionResult> GetAllRequestEmergencies()
+        {
+            var request = await _service.GetAllRequestEmergencyAsync();
+            return Ok(request);
+        }
 
         /// <summary>
-        /// 👤 Lấy danh sách yêu cầu cứu hộ của khách hàng.
+        /// Lấy danh sách yêu cầu cứu hộ của khách hàng.
         /// </summary>
         [HttpGet("customer/{customerId}")]
         public async Task<IActionResult> GetByCustomer(string customerId)
@@ -82,7 +88,7 @@ namespace Garage_pro_api.Controllers
         }
 
         /// <summary>
-        /// 🔍 Lấy chi tiết yêu cầu cứu hộ theo ID.
+        ///  Lấy chi tiết yêu cầu cứu hộ theo ID.
         /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
@@ -93,5 +99,47 @@ namespace Garage_pro_api.Controllers
 
             return Ok(request);
         }
+        // approve emergency
+        [HttpPost("approve/{emergenciesId}")]
+        public async Task<IActionResult> ApproveEmergency(Guid emergenciesId)
+        {
+            try
+            {
+                var result = await _service.ApproveEmergency(emergenciesId);
+                return Ok(new { Success = result });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+        // reject emergency
+        [HttpPut("reject/{emergencyId}")]
+        public async Task<IActionResult> RejectEmergency(Guid emergencyId, [FromBody] string? reason)
+        {
+            try
+            {
+                var result = await _service.RejectEmergency(emergencyId, reason);
+                return Ok(new { Success = result });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
+
     }
 }

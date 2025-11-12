@@ -1,6 +1,7 @@
 ﻿using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Vehicles;
+using BusinessObject.RequestEmergency;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -61,6 +62,8 @@ namespace BusinessObject.Customers
 
         // Optional: các tiến trình sửa chữa
         //public virtual ICollection<RepairTask> RepairTasks { get; set; }
+        public Guid? EmergencyRequestId { get; set; }  // Thêm field này
+        public RequestEmergency.RequestEmergency RequestEmergency { get; set; }
     }
     public enum RepairRequestStatus
     {

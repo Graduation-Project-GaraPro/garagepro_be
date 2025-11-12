@@ -325,7 +325,7 @@ namespace Garage_pro_api.Mapper
 
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
-     .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
+     .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName));
 
             //CreateMap<PartSpecification, PartSpecificationDto>();
 

@@ -26,13 +26,33 @@ namespace Repositories.EmergencyRequestRepositories
                 await _context.SaveChangesAsync();
                 return request;
             }
+        public async Task<RequestEmergency> UpdateAsync(RequestEmergency emergency)
+        {
+            _context.RequestEmergencies.Update(emergency);
+            await _context.SaveChangesAsync();
+            return emergency;
+        }
+
+
+        public async Task<List<RequestEmergency>> GetAllEmergencyAsync()
+        {
+            return await _context.RequestEmergencies
+                 .Include(r => r.Branch)
+                 .Include(r => r.Customer)
+                 .Include(r => r.Vehicle)
+                 .Include(r => r.MediaFiles)
+                 .Include(r=> r.RepairRequest)
+                 .ToListAsync();
+        }
 
         public async Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId)
         {
             return await _context.RequestEmergencies
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
+                .Include(r=>r.Vehicle)
                 .Include(r => r.MediaFiles)
+                .Include(r=> r.RepairRequest)
                 .Where(r => r.CustomerId == customerId)
                 .ToListAsync();
         }
@@ -42,9 +62,11 @@ namespace Repositories.EmergencyRequestRepositories
             return await _context.RequestEmergencies
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
+                .Include(r=> r.Vehicle)
                 .Include(r => r.MediaFiles)
                 .FirstOrDefaultAsync(r => r.EmergencyRequestId == id);
         }
+
 
         public async Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5)
         {

@@ -31,6 +31,7 @@ namespace Repositories.Customers
             .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .Include(r => r.Customer)
+                .Include(r=>r.RequestEmergency)
                 .ToListAsync();
         }
 
@@ -44,6 +45,7 @@ namespace Repositories.Customers
         .ThenInclude(rs => rs.RequestParts)
             .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
+                .Include(r=> r.RequestEmergency)      
                 .Where(r => r.UserID == userId)
                 .ToListAsync();
         }
@@ -152,5 +154,15 @@ namespace Repositories.Customers
         {
             return _context.RepairRequests.AsQueryable();
         }
+        //get về giá trị một repairRequest theo emergencyId
+        public async Task<RepairRequest?> GetByEmergencyIdAsync(Guid emergencyId)
+        {
+            return await _context.RepairRequests
+                .Include(r => r.Vehicle)
+                .Include(r => r.Customer)
+                .Include(r => r.Branch)
+                .FirstOrDefaultAsync(r => r.EmergencyRequestId == emergencyId);
+        }
+
     }
 }

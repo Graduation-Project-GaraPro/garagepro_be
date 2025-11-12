@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Customers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -27,6 +28,8 @@ namespace BusinessObject.RequestEmergency
 
         [Required]
         public double Longitude { get; set; }
+        public string? RejectReason { get; set; }
+
 
         public DateTime RequestTime { get; set; } = DateTime.UtcNow;
 
@@ -50,6 +53,8 @@ namespace BusinessObject.RequestEmergency
         [Required]
         public EmergencyStatus Status { get; set; } = EmergencyStatus.Pending;
 
+        public Guid? RepairRequestId { get; set; }
+        public RepairRequest? RepairRequest { get; set; }
         //  Ảnh 
         public virtual ICollection<EmergencyMedia>? MediaFiles { get; set; } = new List<EmergencyMedia>();
 

@@ -15,6 +15,9 @@ namespace Repositories.EmergencyRequestRepositories
             Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId);
             Task<RequestEmergency?> GetByIdAsync(Guid id);
             Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5);
+            Task<List<RequestEmergency>> GetAllEmergencyAsync();
+           
+            Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
     }
     }
 
