@@ -253,6 +253,19 @@ namespace Repositories
 
             _context.JobTechnicians.Add(jobTechnician);
 
+            // Update the job status to New when assigned
+            var job = await _context.Jobs.FindAsync(jobId);
+            if (job != null)
+            {
+                job.Status = JobStatus.New;
+                job.UpdatedAt = DateTime.UtcNow;
+                
+                // Add note about assignment
+                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                var noteText = $"[{timestamp}] Job assigned to technician, status changed to New";
+                job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
+            }
+
             try
             {
                 await _context.SaveChangesAsync();
@@ -512,85 +525,6 @@ namespace Repositories
         }
 
         #endregion
-        #region Statistics and Reporting
-
-        public async Task<Dictionary<JobStatus, int>> GetJobCountsByStatusAsync(List<Guid>? repairOrderIds = null)
-        {
-            var query = _context.Jobs.AsQueryable();
-
-            if (repairOrderIds != null && repairOrderIds.Any())
-            {
-                query = query.Where(j => repairOrderIds.Contains(j.RepairOrderId));
-            }
-
-            return await query
-                .GroupBy(j => j.Status)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
-        }
-
-        public async Task<Dictionary<string, object>> GetJobStatisticsAsync(Guid? repairOrderId = null)
-        {
-            var query = _context.Jobs.AsQueryable();
-
-            if (repairOrderId.HasValue)
-            {
-                query = query.Where(j => j.RepairOrderId == repairOrderId.Value);
-            }
-
-            var totalJobs = await query.CountAsync();
-            var completedJobs = await query.CountAsync(j => j.Status == JobStatus.Completed);
-            var inProgressJobs = await query.CountAsync(j => j.Status == JobStatus.InProgress);
-            var pendingJobs = await query.CountAsync(j => j.Status == JobStatus.Pending);
-            var overdueJobs = await query.CountAsync(j => j.Deadline.HasValue && j.Deadline.Value < DateTime.UtcNow && j.Status != JobStatus.Completed);
-
-            var totalValue = await query.SumAsync(j => (decimal?)j.TotalAmount) ?? 0;
-            var avgJobValue = totalJobs > 0 ? totalValue / totalJobs : 0;
-
-            return new Dictionary<string, object>
-            {
-                ["TotalJobs"] = totalJobs,
-                ["CompletedJobs"] = completedJobs,
-                ["InProgressJobs"] = inProgressJobs,
-                ["PendingJobs"] = pendingJobs,
-                ["OverdueJobs"] = overdueJobs,
-                ["TotalValue"] = totalValue,
-                ["AverageJobValue"] = avgJobValue,
-                ["CompletionRate"] = totalJobs > 0 ? (double)completedJobs / totalJobs * 100 : 0
-            };
-        }
-
-        public async Task<IEnumerable<Job>> GetOverdueJobsAsync()
-        {
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.RepairOrder)
-                .Include(j => j.JobTechnicians)
-                    .ThenInclude(jt => jt.Technician)
-                .Where(j => j.Deadline.HasValue &&
-                           j.Deadline.Value < DateTime.UtcNow &&
-                           j.Status != JobStatus.Completed)
-                .OrderBy(j => j.Deadline)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Job>> GetJobsDueWithinDaysAsync(int days)
-        {
-            var cutoffDate = DateTime.UtcNow.AddDays(days);
-
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.RepairOrder)
-                .Include(j => j.JobTechnicians)
-                    .ThenInclude(jt => jt.Technician)
-                .Where(j => j.Deadline.HasValue &&
-                           j.Deadline.Value <= cutoffDate &&
-                           j.Deadline.Value >= DateTime.UtcNow &&
-                           j.Status != JobStatus.Completed)
-                .OrderBy(j => j.Deadline)
-                .ToListAsync();
-        }
-
-        #endregion
 
         #region Business Logic Validation
 
@@ -625,54 +559,6 @@ namespace Repositories
 
         #endregion
 
-        #region Level and Priority Management
-
-        public async Task<IEnumerable<Job>> GetJobsByLevelAsync(int level)
-        {
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.RepairOrder)
-                .Include(j => j.JobTechnicians)
-                    .ThenInclude(jt => jt.Technician)
-                .Where(j => j.Level == level)
-                .OrderBy(j => j.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<IEnumerable<Job>> GetHighPriorityJobsAsync(int minLevel = 5)
-        {
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.RepairOrder)
-                .Include(j => j.JobTechnicians)
-                    .ThenInclude(jt => jt.Technician)
-                .Where(j => j.Level >= minLevel)
-                .OrderByDescending(j => j.Level)
-                .ThenBy(j => j.Deadline ?? DateTime.MaxValue)
-                .ToListAsync();
-        }
-
-        public async Task<bool> UpdateJobLevelAsync(Guid jobId, int newLevel)
-        {
-            var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null) return false;
-
-            job.Level = newLevel;
-            job.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        #endregion
-
         #region Completion Tracking
 
        
@@ -681,13 +567,6 @@ namespace Repositories
 
         
         
-        #endregion
-
-        #region Customer Approval Workflow
-
-        // Removed customer approval methods as they are no longer needed
-        // Jobs are now directly assigned to technicians after creation
-
         #endregion
 
         #region Manager Assignment Workflow
@@ -709,11 +588,27 @@ namespace Repositories
             return await query
                 .OrderBy(j => j.CustomerResponseAt)
                 .ToListAsync();
-              }
+        }
 
+        public async Task<bool> TechnicianExistsAsync(Guid technicianId)
+        {
+            return await _context.Technicians.AnyAsync(t => t.TechnicianId == technicianId);
+        }
 
-        
+        public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .Where(t => t.User.BranchId == branchId)
+                .ToListAsync();
+        }
 
+        public async Task<Technician?> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
 
         public async Task<IEnumerable<Job>> GetJobsAssignedByManagerAsync(string managerId)
         {
@@ -741,7 +636,8 @@ namespace Repositories
 
             foreach (var job in jobs)
             {
-                
+                // Update job status from Pending to New when assigned
+                job.Status = JobStatus.New;
                 job.AssignedByManagerId = managerId;
                 job.AssignedAt = timestamp;
                 job.UpdatedAt = timestamp;
@@ -761,9 +657,60 @@ namespace Repositories
                 }
 
                 // Add note about assignment
-                var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}";
+                var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}, status changed to New";
                 job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
+        {
+            var job = await _context.Jobs
+                .Include(j => j.JobTechnicians)
+                .FirstOrDefaultAsync(j => j.JobId == jobId);
+
+            if (job == null) return false;
+
+            var timestamp = DateTime.UtcNow;
+
+            // Remove all current technician assignments
+            var currentAssignments = await _context.JobTechnicians
+                .Where(jt => jt.JobId == jobId)
+                .ToListAsync();
+
+            if (currentAssignments.Any())
+            {
+                _context.JobTechnicians.RemoveRange(currentAssignments);
+            }
+
+            // Add new technician assignment
+            var jobTechnician = new JobTechnician
+            {
+                JobId = jobId,
+                TechnicianId = newTechnicianId
+            };
+            _context.JobTechnicians.Add(jobTechnician);
+
+            // Update job assignment metadata
+            job.AssignedByManagerId = managerId;
+            job.AssignedAt = timestamp;
+            job.UpdatedAt = timestamp;
+            
+            // Update job status to New when reassigned
+            job.Status = JobStatus.New;
+
+            // Add note about reassignment
+            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}, status changed to New";
+            job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
 
             try
             {
@@ -782,231 +729,66 @@ namespace Repositories
             // Return empty collection
             return new List<Job>();
         }
-
-        #endregion
-
-        //        #region Bulk Operations for RepairOrder Workflow
-
-        public async Task<Job> CreateJobFromServiceAsync(Guid serviceId, Guid repairOrderId, string managerId)
+        
+        // NEW: Create revision job
+        public async Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason)
         {
-            // This method would typically create a job based on a service template
-            // For now, we'll create a basic job with default values
-            var job = new Job
-            {
-                ServiceId = serviceId,
-                RepairOrderId = repairOrderId,
-                JobName = "New Job",
-                Status = JobStatus.Pending,
-                TotalAmount = 0,
-                Note = "Job created from service template",
-                Level = 1,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.Jobs.Add(job);
-            await _context.SaveChangesAsync();
-            
-            return job;
-        }
-
-        public async Task<Dictionary<JobStatus, int>> GetJobStatusCountsByRepairOrderAsync(Guid repairOrderId)
-        {
-            return await _context.Jobs
-                .Where(j => j.RepairOrderId == repairOrderId)
-                .GroupBy(j => j.Status)
-                .ToDictionaryAsync(g => g.Key, g => g.Count());
-        }
-
-
-
-        #region Estimate Expiration and Revision Management
-
-        public async Task<bool> SetJobEstimateExpirationAsync(Guid jobId, int expirationDays)
-        {
-            var job = await _context.Jobs.FindAsync(jobId);
-            if (job == null) return false;
-
-            // Only set expiration when sending to customer
-            if (job.SentToCustomerAt.HasValue)
-            {
-                job.EstimateExpiresAt = job.SentToCustomerAt.Value.AddDays(expirationDays);
-                job.UpdatedAt = DateTime.UtcNow;
-
-                try
-                {
-                    await _context.SaveChangesAsync();
-                    return true;
-                }
-                catch
-                {
-                    return false;
-                }
-            }
-
-            return false;
-        }
-
-        public async Task<IEnumerable<Job>> GetExpiredEstimatesAsync()
-        {
-            var now = DateTime.UtcNow;
-
-            // Return empty collection as customer approval is handled at quotation level
-            return new List<Job>();
-        }
-
-        public async Task<bool> IsEstimateExpiredAsync(Guid jobId)
-        {
-            // Return false as customer approval is handled at quotation level
-            return false;
-        }
-        public async Task<Job> ReviseJobEstimateAsync(Guid originalJobId, string managerId, string revisionReason)
-        {
-            var originalJob = await _context.Jobs
-                .Include(j => j.JobParts)
-                    .ThenInclude(jp => jp.Part)
-                .FirstOrDefaultAsync(j => j.JobId == originalJobId);
-
+            // Get the original job
+            var originalJob = await GetByIdAsync(originalJobId);
             if (originalJob == null)
                 throw new ArgumentException("Original job not found", nameof(originalJobId));
 
-
-            // Can only revise jobs that are in Pending status
-            if (originalJob.Status != JobStatus.Pending)
-            {
-                throw new InvalidOperationException("Job cannot be revised in current status");
-            }
-
-            // Create revised job
-            var revisedJob = new Job
+            // Create a new job based on the original job
+            var revisionJob = new Job
             {
                 ServiceId = originalJob.ServiceId,
                 RepairOrderId = originalJob.RepairOrderId,
-                JobName = originalJob.JobName,
+                JobName = $"{originalJob.JobName} (Revision {originalJob.RevisionCount + 1})",
                 Status = JobStatus.Pending,
                 Deadline = originalJob.Deadline,
                 TotalAmount = originalJob.TotalAmount,
-                Note = originalJob.Note,
+                Note = $"Revision of job {originalJob.JobId}. Reason: {revisionReason}",
                 Level = originalJob.Level,
-                OriginalJobId = originalJob.OriginalJobId ?? originalJobId, // Link to original or keep existing link
+                SentToCustomerAt = originalJob.SentToCustomerAt,
+                CustomerResponseAt = originalJob.CustomerResponseAt,
+                CustomerApprovalNote = originalJob.CustomerApprovalNote,
+                AssignedByManagerId = null, // Reset assignment
+                AssignedAt = null, // Reset assignment
+                EstimateExpiresAt = originalJob.EstimateExpiresAt,
                 RevisionCount = originalJob.RevisionCount + 1,
+                OriginalJobId = originalJob.OriginalJobId ?? originalJobId, // Point to the very first job
                 RevisionReason = revisionReason,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = null
             };
 
-            _context.Jobs.Add(revisedJob);
-            await _context.SaveChangesAsync();
+            // Save the revision job
+            var createdJob = await CreateAsync(revisionJob);
 
-            // Copy job parts from original
-            foreach (var originalPart in originalJob.JobParts)
+            // Copy job parts from the original job
+            if (originalJob.JobParts != null && originalJob.JobParts.Any())
             {
-                var revisedPart = new JobPart
+                foreach (var originalPart in originalJob.JobParts)
                 {
-                    JobId = revisedJob.JobId,
-                    PartId = originalPart.PartId,
-                    Quantity = originalPart.Quantity,
-                    UnitPrice = originalPart.UnitPrice,
-                    CreatedAt = DateTime.UtcNow
-                };
-                _context.JobParts.Add(revisedPart);
+                    var jobPart = new JobPart
+                    {
+                        JobId = createdJob.JobId,
+                        PartId = originalPart.PartId,
+                        Quantity = originalPart.Quantity,
+                        UnitPrice = originalPart.UnitPrice,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    
+                    _context.JobParts.Add(jobPart);
+                }
+                
+                await _context.SaveChangesAsync();
             }
 
-
-            // Mark original job as superseded
-            originalJob.Status = JobStatus.Completed; // Changed from CustomerRejected to Completed
-            originalJob.UpdatedAt = DateTime.UtcNow;
-
-            var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-            var revisionNote = $"[{timestamp}] Job revised by manager {managerId}. Reason: {revisionReason}";
-            originalJob.Note = string.IsNullOrEmpty(originalJob.Note)
-                ? revisionNote
-                : $"{originalJob.Note}\n{revisionNote}";
-
-            await _context.SaveChangesAsync();
-
-            return revisedJob;
-        }
-
-        public async Task<IEnumerable<Job>> GetJobRevisionsAsync(Guid originalJobId)
-        {
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.JobParts)
-                    .ThenInclude(jp => jp.Part)
-                .Where(j => j.OriginalJobId == originalJobId || j.JobId == originalJobId)
-                .OrderBy(j => j.RevisionCount)
-                .ThenBy(j => j.CreatedAt)
-                .ToListAsync();
-        }
-
-        public async Task<Job?> GetLatestJobRevisionAsync(Guid originalJobId)
-        {
-            return await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.JobParts)
-                    .ThenInclude(jp => jp.Part)
-                .Where(j => j.OriginalJobId == originalJobId || j.JobId == originalJobId)
-                .OrderByDescending(j => j.RevisionCount)
-                .ThenByDescending(j => j.CreatedAt)
-                .FirstOrDefaultAsync();
-        }
-
-
-        public async Task<bool> ExpireOldEstimatesAsync()
-        {
-            // Return true as customer approval is handled at quotation level
-            return true;
-        }
-
-        public Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> StartRepairForJobAsync(Guid jobId, Repair repair)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> CompleteRepairForJobAsync(Guid repairId, string? notes = null)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> CanCompleteJobAsync(Guid jobId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> CanStartJobAsync(Guid jobId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> HasActiveTechnicianAsync(Guid jobId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<TimeSpan?> GetJobDurationAsync(Guid jobId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<decimal> GetJobProgressPercentageAsync(Guid jobId)
-        {
-            throw new NotImplementedException();
-        }
-
-        public Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null)
-        {
-            throw new NotImplementedException();
+            return createdJob;
         }
 
         #endregion
+
     }
 }

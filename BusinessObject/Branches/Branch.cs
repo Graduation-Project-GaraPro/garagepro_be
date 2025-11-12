@@ -25,12 +25,13 @@ namespace BusinessObject.Branches
 
         [MaxLength(200)]
         public string Street { get; set; }
+       
         [MaxLength(100)]
-        public string Ward { get; set; }
+        public string Commune { get; set; }
         [MaxLength(100)]
-        public string District { get; set; }
-        [MaxLength(100)]
-        public string City { get; set; }
+        public string Province { get; set; }
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
 
         [MaxLength(500)]
         public string Description { get; set; }
@@ -41,6 +42,11 @@ namespace BusinessObject.Branches
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
+
+       
+        public int ArrivalWindowMinutes { get; set; } = 30; // ?? dài c?a s? ??n
+        public int MaxBookingsPerWindow { get; set; } = 6;  // quota duy?t/1 c?a s?
+        public int MaxConcurrentWip { get; set; } = 8;      // WIP limit trong x??ng
 
         public virtual ICollection<OperatingHour> OperatingHours { get; set; } = new List<OperatingHour>();
 

@@ -5,25 +5,29 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject.Roles;
+using DataAccessLayer;
 using Dtos.Auth;
 using Dtos.Roles;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Repositories.RoleRepositories;
 
 namespace Services.RoleServices
 {
     public class RoleService : IRoleService
     {
+        private readonly MyAppDbContext _context;
         private readonly IRoleRepository _roleRepo;
         private readonly IRolePermissionRepository _rolePermissionRepo;
         private readonly IPermissionService _permissionService;
         private readonly IMapper _mapper;
-        public RoleService(IRoleRepository roleRepo, IRolePermissionRepository rolePermissionRepo, IPermissionService permissionService, IMapper mapper)
+        public RoleService(MyAppDbContext context,IRoleRepository roleRepo, IRolePermissionRepository rolePermissionRepo, IPermissionService permissionService, IMapper mapper)
         {
             _roleRepo = roleRepo;
             _rolePermissionRepo = rolePermissionRepo;
             _permissionService = permissionService;
             _mapper = mapper;
+            _context = context;
         }
 
 
@@ -85,55 +89,125 @@ namespace Services.RoleServices
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw new ArgumentException("Role name cannot be empty", nameof(dto.Name));
 
-            var role = new ApplicationRole
+            using var tx = await _context.Database.BeginTransactionAsync();
+            try
             {
-                Name = dto.Name,
-                NormalizedName = dto.Name.ToUpperInvariant(),
-                Description = dto.Description,
-                IsDefault = false,
-                CreatedAt = DateTime.UtcNow,
-                Users = 0
-            };
+                var role = new ApplicationRole
+                {
+                    Name = dto.Name,
+                    NormalizedName = dto.Name.ToUpperInvariant(),
+                    Description = dto.Description,
+                    IsDefault = false,
+                    CreatedAt = DateTime.UtcNow,
+                    Users = 0
+                };
 
-            var createdRole = await _roleRepo.CreateRoleAsync(role);
-            if (createdRole == null)
-                throw new InvalidOperationException($"Failed to create role {dto.Name}");
+                var createdRole = await _roleRepo.CreateRoleAsync(role);
+                if (createdRole == null)
+                    throw new InvalidOperationException($"Failed to create role {dto.Name}");
 
-            foreach (var permissionId in dto.PermissionIds)
-                await _rolePermissionRepo.AssignPermissionAsync(createdRole.Id, permissionId, dto.GrantedBy,dto.GrantedUserId);
+                // Lấy danh sách permission hợp lệ
+                var existingPermissions = await _permissionService.Query()
+                    .Where(p => dto.PermissionIds.Contains(p.Id))
+                    .Select(p => p.Id)
+                    .ToListAsync();
 
-            _permissionService.InvalidateRolePermissions(createdRole.Id);
+                var invalidPermissions = dto.PermissionIds.Except(existingPermissions).ToList();
+                if (invalidPermissions.Any())
+                {
+                    throw new ApplicationException($"The following permissions do not exist: {string.Join(", ", invalidPermissions)}");
+                }
 
-            return await MapRoleWithPermissions(createdRole);
+                // Gán permission hợp lệ
+                foreach (var permissionId in existingPermissions)
+                {
+                    await _rolePermissionRepo.AssignPermissionAsync(createdRole.Id, permissionId, dto.GrantedBy, dto.GrantedUserId);
+                }
+
+                _permissionService.InvalidateRolePermissions(createdRole.Id);
+
+                await tx.CommitAsync();
+
+                return await MapRoleWithPermissions(createdRole);
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<RoleDto> UpdateRoleAsync(UpdateRoleDto dto)
         {
-            var role = await _roleRepo.GetRoleByIdAsync(dto.RoleId);
+            using var tx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var role = await _roleRepo.GetRoleByIdAsync(dto.RoleId);
+                if (role == null)
+                    throw new KeyNotFoundException("Role not found.");
+                if(!role.IsDefault)
+                {
+                    role.Name = dto.Name;
+                    role.NormalizedName = dto.Name.ToUpperInvariant();
+                }    
+                
+                if (dto.Description != null)
+                    role.Description = dto.Description;
+
+                role.UpdatedAt = DateTime.UtcNow;
+                await _roleRepo.UpdateRoleAsync(role);
+
+                // Lấy danh sách permission hợp lệ
+                var existingPermissions = await _permissionService.Query()
+                    .Where(p => dto.PermissionIds.Contains(p.Id))
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var invalidPermissions = dto.PermissionIds.Except(existingPermissions).ToList();
+                if (invalidPermissions.Any())
+                {
+                    throw new ApplicationException($"The following permissions do not exist: {string.Join(", ", invalidPermissions)}");
+                }
+
+                // Xóa tất cả permission cũ
+                await _rolePermissionRepo.RemoveAllPermissionsAsync(role.Id);
+
+                // Gán permission hợp lệ
+                foreach (var permissionId in existingPermissions)
+                {
+                    await _rolePermissionRepo.AssignPermissionAsync(role.Id, permissionId, dto.GrantedBy, dto.GrantedUserId);
+                }
+
+                _permissionService.InvalidateRolePermissions(role.Id);
+
+                await tx.CommitAsync();
+
+                return await MapRoleWithPermissions(role);
+            }
+            catch
+            {
+                await tx.RollbackAsync();
+                throw;
+            }
+        }
+
+
+        public async Task DeleteRoleAsync(string roleId)
+        {
+            var role = await _roleRepo.GetRoleByIdAsync(roleId);
+            var userInRole = await _roleRepo.GetUsersByRoleIdAsync(roleId);
+
             if (role == null)
                 throw new KeyNotFoundException("Role not found.");
 
-            if (!string.IsNullOrWhiteSpace(dto.NewName))
-            {
-                role.Name = dto.NewName;
-                role.NormalizedName = dto.NewName.ToUpperInvariant();
-            }
-            if (dto.Description != null)
-                role.Description = dto.Description;
+            if (role.IsDefault)
+                throw new ApplicationException("Cannot delete default role.");
 
-            role.UpdatedAt = DateTime.UtcNow;
-            await _roleRepo.UpdateRoleAsync(role);
+            if (userInRole.Count > 0 )
+                throw new ApplicationException("Cannot delete role because it has assigned users.");
 
-            await _rolePermissionRepo.RemoveAllPermissionsAsync(role.Id);
-            foreach (var permissionId in dto.PermissionIds)
-                await _rolePermissionRepo.AssignPermissionAsync(role.Id, permissionId, dto.GrantedBy, dto.GrantedUserId);
-
-            _permissionService.InvalidateRolePermissions(role.Id);
-
-            return await MapRoleWithPermissions(role);
+            await _roleRepo.DeleteRoleAsync(roleId);
         }
-
-        public Task DeleteRoleAsync(string roleId) => _roleRepo.DeleteRoleAsync(roleId);
 
 
 

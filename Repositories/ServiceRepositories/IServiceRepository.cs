@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Repositories.ServiceRepositories
 {
@@ -11,6 +12,7 @@ namespace Repositories.ServiceRepositories
     {
         Task<IEnumerable<Service>> GetAllAsync();
         Task<Service> GetByIdAsync(Guid id);
+        Task<IDbContextTransaction> BeginTransactionAsync();
         Task<Service?> GetByIdWithRelationsAsync(Guid id);
         IQueryable<Service> Query();
         Task AddAsync(Service service);

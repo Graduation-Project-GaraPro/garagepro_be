@@ -26,7 +26,6 @@ namespace Dtos.InspectionAndRepair
         public RepairDto Repair { get; set; }
         public List<TechnicianDto> Technicians { get; set; }
     }
-
     public class PartCategoryGroupDto
     {
         public Guid PartCategoryId { get; set; }

@@ -19,11 +19,9 @@ namespace Dtos.Job
         [MaxLength(100)]
         public string? JobName { get; set; }
         
-        public JobStatus Status { get; set; }
+        public JobStatus Status { get; set; } = JobStatus.Pending;
         
         public DateTime? Deadline { get; set; }
-        
-        public decimal TotalAmount { get; set; }
         
         [MaxLength(500)]
         public string? Note { get; set; }
@@ -35,18 +33,12 @@ namespace Dtos.Job
         
         public int Level { get; set; }
         
-        // Customer approval workflow properties
-        public DateTime? SentToCustomerAt { get; set; }
-        public DateTime? CustomerResponseAt { get; set; }
-        public string? CustomerApprovalNote { get; set; }
+        // Manager-Technician communication properties
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
         
-        // Estimate expiration and revision properties
-        public DateTime? EstimateExpiresAt { get; set; }
-        public int RevisionCount { get; set; }
-        public Guid? OriginalJobId { get; set; }
-        public string? RevisionReason { get; set; }
+        // Parts associated with this job
+        public ICollection<JobPartDto> Parts { get; set; } = new List<JobPartDto>();
     }
     
     public class CreateJobDto
@@ -72,10 +64,7 @@ namespace Dtos.Job
         
         public int Level { get; set; } = 1;
         
-        // Customer approval workflow properties
-        public DateTime? SentToCustomerAt { get; set; }
-        public DateTime? CustomerResponseAt { get; set; }
-        public string? CustomerApprovalNote { get; set; }
+        // Manager-Technician communication properties
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
     }
@@ -105,18 +94,9 @@ namespace Dtos.Job
         
         public int Level { get; set; }
         
-        // Customer approval workflow properties
-        public DateTime? SentToCustomerAt { get; set; }
-        public DateTime? CustomerResponseAt { get; set; }
-        public string? CustomerApprovalNote { get; set; }
+        // Manager-Technician communication properties
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
-        
-        // Estimate expiration and revision properties
-        public DateTime? EstimateExpiresAt { get; set; }
-        public int RevisionCount { get; set; }
-        public Guid? OriginalJobId { get; set; }
-        public string? RevisionReason { get; set; }
     }
     
     // Technician Schedule DTOs

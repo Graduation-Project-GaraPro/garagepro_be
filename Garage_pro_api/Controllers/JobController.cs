@@ -5,6 +5,7 @@ using Services;
 using BusinessObject;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using System.Linq;
 
 namespace Garage_pro_api.Controllers
 {
@@ -27,7 +28,45 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
-            return Ok(jobs);
+            
+            var jobDtos = new List<JobDto>();
+            foreach (var job in jobs)
+            {
+                // Get job parts
+                var jobParts = await _jobService.GetJobPartsAsync(job.JobId);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+
+                var jobDto = new JobDto
+                {
+                    JobId = job.JobId,
+                    ServiceId = job.ServiceId,
+                    RepairOrderId = job.RepairOrderId,
+                    JobName = job.JobName,
+                    Status = job.Status,
+                    Deadline = job.Deadline,
+                    Note = job.Note,
+                    CreatedAt = job.CreatedAt,
+                    UpdatedAt = job.UpdatedAt,
+                    Level = job.Level,
+                    AssignedByManagerId = job.AssignedByManagerId,
+                    AssignedAt = job.AssignedAt,
+                    Parts = jobPartDtos.ToList()
+                };
+                
+                jobDtos.Add(jobDto);
+            }
+
+            return Ok(jobDtos);
         }
 
         // GET: api/Job/5
@@ -41,6 +80,20 @@ namespace Garage_pro_api.Controllers
                 return NotFound();
             }
 
+            // Get job parts
+            var jobParts = await _jobService.GetJobPartsAsync(id);
+            var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+            {
+                JobPartId = jobPart.JobPartId,
+                JobId = jobPart.JobId,
+                PartId = jobPart.PartId,
+                Quantity = jobPart.Quantity,
+                UnitPrice = jobPart.UnitPrice,
+                CreatedAt = jobPart.CreatedAt,
+                UpdatedAt = jobPart.UpdatedAt,
+                PartName = jobPart.Part?.Name ?? ""
+            });
+
             var jobDto = new JobDto
             {
                 JobId = job.JobId,
@@ -49,20 +102,13 @@ namespace Garage_pro_api.Controllers
                 JobName = job.JobName,
                 Status = job.Status,
                 Deadline = job.Deadline,
-                TotalAmount = job.TotalAmount,
                 Note = job.Note,
                 CreatedAt = job.CreatedAt,
                 UpdatedAt = job.UpdatedAt,
                 Level = job.Level,
-                SentToCustomerAt = job.SentToCustomerAt,
-                CustomerResponseAt = job.CustomerResponseAt,
-                CustomerApprovalNote = job.CustomerApprovalNote,
                 AssignedByManagerId = job.AssignedByManagerId,
                 AssignedAt = job.AssignedAt,
-                EstimateExpiresAt = job.EstimateExpiresAt,
-                RevisionCount = job.RevisionCount,
-                OriginalJobId = job.OriginalJobId,
-                RevisionReason = job.RevisionReason
+                Parts = jobPartDtos.ToList()
             };
 
             return Ok(jobDto);
@@ -75,29 +121,43 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetJobsByRepairOrder(Guid repairOrderId)
         {
             var jobs = await _jobService.GetJobsByRepairOrderIdAsync(repairOrderId);
-            var jobDtos = jobs.Select(job => new JobDto
+            
+            var jobDtos = new List<JobDto>();
+            foreach (var job in jobs)
             {
-                JobId = job.JobId,
-                ServiceId = job.ServiceId,
-                RepairOrderId = job.RepairOrderId,
-                JobName = job.JobName,
-                Status = job.Status,
-                Deadline = job.Deadline,
-                TotalAmount = job.TotalAmount,
-                Note = job.Note,
-                CreatedAt = job.CreatedAt,
-                UpdatedAt = job.UpdatedAt,
-                Level = job.Level,
-                SentToCustomerAt = job.SentToCustomerAt,
-                CustomerResponseAt = job.CustomerResponseAt,
-                CustomerApprovalNote = job.CustomerApprovalNote,
-                AssignedByManagerId = job.AssignedByManagerId,
-                AssignedAt = job.AssignedAt,
-                EstimateExpiresAt = job.EstimateExpiresAt,
-                RevisionCount = job.RevisionCount,
-                OriginalJobId = job.OriginalJobId,
-                RevisionReason = job.RevisionReason
-            });
+                // Get job parts
+                var jobParts = await _jobService.GetJobPartsAsync(job.JobId);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+
+                var jobDto = new JobDto
+                {
+                    JobId = job.JobId,
+                    ServiceId = job.ServiceId,
+                    RepairOrderId = job.RepairOrderId,
+                    JobName = job.JobName,
+                    Status = job.Status,
+                    Deadline = job.Deadline,
+                    Note = job.Note,
+                    CreatedAt = job.CreatedAt,
+                    UpdatedAt = job.UpdatedAt,
+                    Level = job.Level,
+                    AssignedByManagerId = job.AssignedByManagerId,
+                    AssignedAt = job.AssignedAt,
+                    Parts = jobPartDtos.ToList()
+                };
+                
+                jobDtos.Add(jobDto);
+            }
 
             return Ok(jobDtos);
         }
@@ -192,13 +252,24 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("Manager ID not found in token");
             }
 
-            var result = await _jobService.AssignJobsToTechnicianAsync(new List<Guid> { id }, technicianId, managerId);
-            if (!result)
+            try
             {
-                return NotFound("Job not found or could not be assigned");
-            }
+                var result = await _jobService.AssignJobsToTechnicianAsync(new List<Guid> { id }, technicianId, managerId);
+                if (!result)
+                {
+                    return NotFound("Job not found or could not be assigned");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while assigning the job: {ex.Message}");
+            }
         }
 
         // POST: api/Job/assign
@@ -218,13 +289,24 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("At least one job ID must be provided");
             }
 
-            var result = await _jobService.AssignJobsToTechnicianAsync(assignDto.JobIds, assignDto.TechnicianId, managerId);
-            if (!result)
+            try
             {
-                return BadRequest("Failed to assign jobs to technician");
-            }
+                var result = await _jobService.AssignJobsToTechnicianAsync(assignDto.JobIds, assignDto.TechnicianId, managerId);
+                if (!result)
+                {
+                    return BadRequest("Failed to assign jobs to technician");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while assigning jobs: {ex.Message}");
+            }
         }
 
         // PUT: api/Job/{id}/reassign/{technicianId}
@@ -239,38 +321,53 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("Manager ID not found in token");
             }
 
-            var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
-            if (!result)
+            try
             {
-                return NotFound("Job not found or could not be reassigned");
-            }
+                var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
+                if (!result)
+                {
+                    return NotFound("Job not found or could not be reassigned");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while reassigning the job: {ex.Message}");
+            }
         }
 
-        // PUT: api/Job/{id}/start
-        [HttpPut("{id}/start")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> MarkJobAsInProgress(Guid id)
+        
+
+        // GET: api/Job/{id}/parts
+        [HttpGet("{id}/parts")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<ActionResult> GetJobParts(Guid id)
         {
-            // Get the current user (technician) ID - this will be used to ensure they're assigned to the job
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                return BadRequest("User ID not found in token");
+                var jobParts = await _jobService.GetJobPartsAsync(id);
+                var jobPartDtos = jobParts.Select(jobPart => new JobPartDto
+                {
+                    JobPartId = jobPart.JobPartId,
+                    JobId = jobPart.JobId,
+                    PartId = jobPart.PartId,
+                    Quantity = jobPart.Quantity,
+                    UnitPrice = jobPart.UnitPrice,
+                    CreatedAt = jobPart.CreatedAt,
+                    UpdatedAt = jobPart.UpdatedAt,
+                    PartName = jobPart.Part?.Name ?? ""
+                });
+                return Ok(jobPartDtos);
             }
-
-            // For now, we'll use a placeholder technician ID
-            // In a real implementation, you'd get the actual technician ID from the user
-            var technicianId = Guid.NewGuid(); // This should be replaced with actual logic
-            
-            var result = await _jobService.MarkJobAsInProgressAsync(id, technicianId);
-            if (!result)
+            catch (Exception ex)
             {
-                return NotFound("Job not found or could not be started");
+                return StatusCode(500, $"An error occurred while fetching job parts: {ex.Message}");
             }
-
-            return NoContent();
         }
     }
 }

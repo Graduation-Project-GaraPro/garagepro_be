@@ -7,17 +7,24 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Remove="C:\Users\Zanis\.nuget\packages\vnpay.net\8.5.0\contentFiles\any\net8.0\Icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AutoMapper" Version="15.0.1" />
     <PackageReference Include="CloudinaryDotNet" Version="1.27.8" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.71.0" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.20" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+    <PackageReference Include="VNPAY.NET" Version="8.5.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DataAccessLayer\DataAccessLayer.csproj" />
     <ProjectReference Include="..\Dtos\Dtos.csproj" />
     <ProjectReference Include="..\Repositories\Repositories.csproj" />
+    <ProjectReference Include="..\Utils\Utils.csproj" />
   </ItemGroup>
 
 </Project>

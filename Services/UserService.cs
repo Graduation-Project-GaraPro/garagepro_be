@@ -21,6 +21,11 @@ namespace Services
             _emailSender = emailSender;
         }
 
+        public async Task<bool> UpdateDeviceIdAsync(string userId, string deviceId)
+        {
+            return await _repository.UpdateDeviceIdAsync(userId, deviceId);
+        }
+
         public async Task<List<ApplicationUser>> GetAllUsersAsync()
         {
             return await _repository.GetAllAsync();
@@ -111,6 +116,12 @@ namespace Services
         {
             return await _repository.GetTechniciansWithoutBranchAsync();
 
+        }
+
+        // New method to get technicians by branch
+        public async Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId)
+        {
+            return await _repository.GetTechniciansByBranchAsync(branchId);
         }
 
         public async Task<bool> UpdateUserAsync(ApplicationUser user)

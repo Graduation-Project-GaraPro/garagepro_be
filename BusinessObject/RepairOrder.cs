@@ -42,9 +42,8 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal PaidAmount { get; set; }
 
-        [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        // Changed from string to enum
+        public PaidStatus PaidStatus { get; set; }
 
         public long? EstimatedRepairTime { get; set; }
 
@@ -78,14 +77,13 @@ namespace BusinessObject
         [Required]
         public string UserId { get; set; }
 
-        [Required]
-        public Guid RepairRequestId { get; set; }
+        public Guid? RepairRequestId { get; set; }
 
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
-      
-        public virtual ICollection<RepairRequest> RepairRequest { get; set; } 
+        [ForeignKey("RepairRequestId")]
+        public virtual RepairRequest RepairRequest { get; set; }
 
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }
@@ -100,7 +98,7 @@ namespace BusinessObject
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
-        public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
+        public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();
     }
 }

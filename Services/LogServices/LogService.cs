@@ -37,10 +37,10 @@ namespace Services.LogServices
                 [LogSource.System] = Path.Combine(env.ContentRootPath, "Logs", "system.log"),
                 [LogSource.Security] = Path.Combine(env.ContentRootPath, "Logs", "security.log"),
                 [LogSource.UserActivity] = Path.Combine(env.ContentRootPath, "Logs", "user-activity.log"),
-                [LogSource.Middleware] = Path.Combine(env.ContentRootPath, "Logs", "middleware.log"),
-                [LogSource.Authentication] = Path.Combine(env.ContentRootPath, "Logs", "authentication.log"),
-                [LogSource.ApiController] = Path.Combine(env.ContentRootPath, "Logs", "api.log"),
-                [LogSource.Database] = Path.Combine(env.ContentRootPath, "Logs", "database.log")
+                //[LogSource.Middleware] = Path.Combine(env.ContentRootPath, "Logs", "middleware.log"),
+                //[LogSource.Authentication] = Path.Combine(env.ContentRootPath, "Logs", "authentication.log"),
+                //[LogSource.ApiController] = Path.Combine(env.ContentRootPath, "Logs", "api.log"),
+                //[LogSource.Database] = Path.Combine(env.ContentRootPath, "Logs", "database.log")
             };
 
             Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "Logs"));
@@ -56,11 +56,11 @@ namespace Services.LogServices
         public async Task LogUserActivityAsync(string action, string userId, string userName)
             => await WriteLogAsync(LogSource.UserActivity, LogLevel.Information, action, userId);
 
-        public async Task LogApiAsync(string controller, string action, string? userId = null)
-            => await WriteLogAsync(LogSource.ApiController, LogLevel.Information, $"{controller}.{action}", userId);
+        //public async Task LogApiAsync(string controller, string action, string? userId = null)
+        //    => await WriteLogAsync(LogSource.ApiController, LogLevel.Information, $"{controller}.{action}", userId);
 
-        public async Task LogDatabaseAsync(string operation, string? table = null, LogLevel level = LogLevel.Information, string? details = null)
-            => await WriteLogAsync(LogSource.Database, level, table != null ? $"{operation} on {table}" : operation, details: details);
+        //public async Task LogDatabaseAsync(string operation, string? table = null, LogLevel level = LogLevel.Information, string? details = null)
+        //    => await WriteLogAsync(LogSource.Database, level, table != null ? $"{operation} on {table}" : operation, details: details);
 
         public async Task LogErrorAsync(Exception ex, string? message = null)
             => await WriteLogAsync(LogSource.System, LogLevel.Error, message ?? ex.Message, details: ex.StackTrace);
@@ -86,7 +86,7 @@ namespace Services.LogServices
             // Ghi file
 
             // Ghi database nếu quan trọng
-            if (level >= LogLevel.Warning || source == LogSource.Database)
+            if (level >= LogLevel.Warning )
             {
                 await _logRepository.AddAsync(logEntry);
             }else

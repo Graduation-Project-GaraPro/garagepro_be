@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Dtos.Auth;
+using Dtos.Customers;
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Http;
@@ -28,7 +29,7 @@ namespace Garage_pro_api.Controllers
         [Authorize(Policy = "USER_VIEW")]
         // GET: api/users
         [HttpGet]
-        public async Task<IActionResult> GetUsers()
+        public async Task<IActionResult> GetUsers([FromQuery] UserFilterDto filters)
         {
             var users = await _userService.GetAllUsersAsync();
             var result = new List<object>();
@@ -36,12 +37,37 @@ namespace Garage_pro_api.Controllers
             foreach (var user in users)
             {
                 var roles = await _userService.GetUserRolesAsync(user);
+
+                // 🔍 Lọc theo role (nếu có)
+                if (!string.IsNullOrEmpty(filters.Role) &&
+                    !roles.Any(r => r.Equals(filters.Role, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                // 🔍 Lọc theo status (nếu có)
+                if (!string.IsNullOrEmpty(filters.Status))
+                {
+                    var isBanned = filters.Status.Equals("banned", StringComparison.OrdinalIgnoreCase);
+                    if (isBanned && user.IsActive) continue;   // chỉ lấy user bị banned
+                    if (!isBanned && !user.IsActive) continue; // chỉ lấy user active
+                }
+
+                // 🔍 Lọc theo search (optional)
+                if (!string.IsNullOrEmpty(filters.Search))
+                {
+                    var q = filters.Search.ToLower();
+                    if (!(user.FirstName.ToLower().Contains(q) ||
+                          user.LastName.ToLower().Contains(q) ||
+                          user.Email.ToLower().Contains(q)))
+                        continue;
+                }
+
                 result.Add(new
                 {
                     user.Id,
                     FullName = $"{user.FirstName} {user.LastName}",
                     user.Email,
                     user.IsActive,
+                    user.Status,
                     user.CreatedAt,
                     user.EmailConfirmed,
                     user.LastLogin,
@@ -52,7 +78,8 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
-  
+
+
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {
@@ -82,6 +109,22 @@ namespace Garage_pro_api.Controllers
             {
                 return BadRequest(new { message = "Update failed" });
             }
+        }
+        [Authorize]
+        [HttpPut("device")]
+        public async Task<IActionResult> UpdateDeviceId([FromBody] UpdateDeviceIdRequest request)
+        {
+
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found" });
+
+            var success = await _userService.UpdateDeviceIdAsync(user.Id, request.DeviceId);
+
+            if (!success)
+                return NotFound(new { message = "User not found or update failed." });
+
+            return Ok(new { message = "DeviceId updated successfully." });
         }
 
 
@@ -161,25 +204,54 @@ namespace Garage_pro_api.Controllers
                 u.LastLogin
             }));
         }
+        
+        // GET: api/users/technicians/by-branch/{branchId}
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("technicians/by-branch/{branchId}")]
+        public async Task<IActionResult> GetTechniciansByBranch(Guid branchId)
+        {
+            var users = await _userService.GetTechniciansByBranchAsync(branchId);
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin,
+                u.BranchId
+            }));
+        }
 
         // PUT: api/users/{id}/ban
         [HttpPut("{id}/ban")]
-        public async Task<IActionResult> BanUser(string id ,string message)
+        public async Task<IActionResult> BanUser(string id, [FromBody] BanUserRequest request)
         {
-            var success = await _userService.BanUserAsync(id, message);
-            if (!success) return NotFound(new { message = "User not found" });
+            if (string.IsNullOrWhiteSpace(request.Message))
+                return BadRequest(new { message = "Ban reason is required" });
+
+            var success = await _userService.BanUserAsync(id, request.Message);
+            if (!success)
+                return NotFound(new { message = "User not found" });
 
             return Ok(new { message = "User banned successfully" });
         }
 
+
         // PUT: api/users/{id}/unban
         [HttpPut("{id}/unban")]
-        public async Task<IActionResult> UnbanUser(string id, string message)
+        public async Task<IActionResult> UnbanUser(string id)
         {
+            var message = "User unbanned by admin";
             var success = await _userService.UnbanUserAsync(id, message);
             if (!success) return NotFound(new { message = "User not found" });
 
             return Ok(new { message = "User unbanned successfully" });
         }
+
+        
+    }
+    public class UpdateDeviceIdRequest
+    {
+        public string DeviceId { get; set; } = string.Empty;
     }
 }

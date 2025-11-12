@@ -10,12 +10,12 @@ namespace Dtos.Services
     public class CreateServiceCategoryDto
     {
         [Required]
-        [MaxLength(100)]
+        [MaxLength(100),MinLength(3)]
         public string CategoryName { get; set; }
        
         public Guid? ParentServiceCategoryId { get; set; }
 
-        [MaxLength(500)]
+        [MaxLength(500),MinLength(10)]
         public string Description { get; set; }
 
         public bool IsActive { get; set; } = true;

@@ -63,7 +63,7 @@ namespace Services.VehicleServices
                     CustomerName = ro.User?.FullName ?? "Unknown",
                     EstimatedAmount = ro.EstimatedAmount,
                     PaidAmount = ro.PaidAmount,
-                    PaidStatus = ro.PaidStatus
+                    PaidStatus = ro.PaidStatus.ToString()
                 }).ToList()
             };
 

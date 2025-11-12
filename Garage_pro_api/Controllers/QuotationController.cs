@@ -1,3 +1,4 @@
+using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.Authorization;
@@ -12,7 +13,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    //[Authorize]
     public class QuotationsController : ControllerBase
     {
         private readonly IQuotationService _quotationService;
@@ -39,6 +40,24 @@ namespace Garage_pro_api.Controllers
             return Ok(quotation);
         }
 
+        [HttpGet("{id}/details")]
+        public async Task<ActionResult<QuotationDetailDto>> GetQuotationDetailById(Guid id)
+        {
+            try
+            {
+                var quotation = await _quotationService.GetQuotationDetailByIdAsync(id);
+                if (quotation == null)
+                    return NotFound();
+
+                return Ok(quotation);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500,ex);
+
+            }
+        }
+
         [HttpGet("inspection/{inspectionId}")]
         public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByInspectionId(Guid inspectionId)
         {
@@ -49,8 +68,18 @@ namespace Garage_pro_api.Controllers
         [HttpGet("repair-order/{repairOrderId}")]
         public async Task<ActionResult<IEnumerable<QuotationDto>>> GetQuotationsByRepairOrderId(Guid repairOrderId)
         {
-            var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
-            return Ok(quotations);
+            try
+            {
+                var quotations = await _quotationService.GetQuotationsByRepairOrderIdAsync(repairOrderId);
+                return Ok(quotations);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging
+                Console.WriteLine($"Error in GetQuotationsByRepairOrderId: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"An error occurred while fetching quotations: {ex.Message}");
+            }
         }
 
             [HttpGet("user")]
@@ -121,8 +150,56 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        // Copy approved quotation to jobs - Manager only
+        [HttpPost("{id}/copy-to-jobs")]
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult<bool>> CopyQuotationToJobs(Guid id)
+        {
+            try
+            {
+                var result = await _quotationService.CopyQuotationToJobsAsync(id);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+        
+        // Create revision jobs for an updated quotation - Manager only
+        [HttpPost("{id}/create-revision-jobs")]
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult<bool>> CreateRevisionJobs(Guid id, [FromBody] CreateRevisionJobsDto createRevisionJobsDto)
+        {
+            try
+            {
+                var result = await _quotationService.CreateRevisionJobsAsync(id, createRevisionJobsDto.RevisionReason);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+
         [HttpPut("customer-response")]
-        public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse(CustomerQuotationResponseDto responseDto)
+        public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse([FromBody] CustomerQuotationResponseDto responseDto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);

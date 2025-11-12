@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -23,6 +23,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Manager;
+using BusinessObject.RequestEmergency;
 
 namespace DataAccessLayer
 {
@@ -51,6 +52,8 @@ namespace DataAccessLayer
         // Removed QuotationParts DbSet as the entity was removed
         // public DbSet<QuotationPart> QuotationParts { get; set; }
         // Add the new QuotationServicePart entity
+        public DbSet<RequestEmergency> RequestEmergencies { get; set; }
+        public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
 
         // Junction tables
@@ -393,6 +396,12 @@ namespace DataAccessLayer
                       .HasForeignKey<Repair>(r => r.JobId)
                       .IsRequired()
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                // Configure the relationship with the original job
+                entity.HasOne(j => j.OriginalJob)
+                      .WithMany()
+                      .HasForeignKey(j => j.OriginalJobId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             
             // Repair configuration
@@ -414,15 +423,14 @@ namespace DataAccessLayer
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
                 entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .IsRequired();
                 entity.Property(e => e.IssueRating)
                       .HasConversion<string>()
                       .IsRequired();
-                entity.Property(e => e.InspectionType)
-                      .HasConversion<string>()
-                      .IsRequired();
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)
@@ -631,7 +639,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.SessionTimeout).IsRequired();
                 entity.Property(e => e.MaxLoginAttempts).IsRequired();
                 entity.Property(e => e.AccountLockoutTime).IsRequired();
-                entity.Property(e => e.MfaRequired).IsRequired();
+                
                 entity.Property(e => e.PasswordExpiryDays).IsRequired();
                 entity.Property(e => e.EnableBruteForceProtection).IsRequired();
 
@@ -641,7 +649,7 @@ namespace DataAccessLayer
 
                 entity.Property(e => e.UpdatedAt)
                       .HasDefaultValueSql("SYSUTCDATETIME()")
-                      .ValueGeneratedOnAddOrUpdate();
+                      .ValueGeneratedNever();
 
                 entity.HasOne(e => e.UpdatedByUser)
                       .WithMany()
@@ -703,6 +711,12 @@ namespace DataAccessLayer
                 .WithMany(b => b.RepairOrders)
                 .HasForeignKey(ro => ro.BranchId)
                 .OnDelete(DeleteBehavior.Restrict);
+                
+            // Configure the PaidStatus property to use the enum
+            modelBuilder.Entity<RepairOrder>()
+                .Property(e => e.PaidStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
 
             // Vehicle-User relationship
             modelBuilder.Entity<Vehicle>()
@@ -762,7 +776,7 @@ namespace DataAccessLayer
                 entity.HasOne(f => f.RepairOrder)
                       .WithMany()
                       .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Job relationships - prevent cascade delete conflicts
@@ -855,7 +869,7 @@ namespace DataAccessLayer
                 entity.HasOne(ros => ros.RepairOrder)
                       .WithMany(ro => ro.RepairOrderServices)
                       .HasForeignKey(ros => ros.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(ros => ros.Service)
                       .WithMany(s => s.RepairOrderServices)
@@ -988,7 +1002,7 @@ namespace DataAccessLayer
             // PromotionalCampaignService n-n Branch
 
             modelBuilder.Entity<PromotionalCampaignService>()
-                .HasKey(e => e.PromotionalCampaignServiceId);
+            .HasKey(pcs => new { pcs.PromotionalCampaignId, pcs.ServiceId });
 
             modelBuilder.Entity<PromotionalCampaignService>()
                 .HasOne(pcs => pcs.PromotionalCampaign)
@@ -999,12 +1013,25 @@ namespace DataAccessLayer
                 .HasOne(pcs => pcs.Service)
                 .WithMany(s => s.PromotionalCampaignServices)
                 .HasForeignKey(pcs => pcs.ServiceId);
+
+
             // 🔹 RepairRequest - RequestService (1-n)
             modelBuilder.Entity<RepairRequest>()
                 .HasMany(r => r.RequestServices)
                 .WithOne(rs => rs.RepairRequest)
                 .HasForeignKey(rs => rs.RepairRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // INDEX phục vụ duyệt/quota theo range [winStart, winEnd)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.ArrivalWindowStart, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Arrival_Status");
+
+            // (tuỳ chọn) Index phụ cho WIP (Arrived/InProgress)
+            modelBuilder.Entity<RepairRequest>()
+                .HasIndex(r => new { r.BranchId, r.Status })
+                .HasDatabaseName("IX_Request_Branch_Status");
+
 
             // 🔹 RequestService - RequestPart (1-n)
             modelBuilder.Entity<RequestService>()
@@ -1023,7 +1050,8 @@ namespace DataAccessLayer
             modelBuilder.Entity<VoucherUsage>(entity =>
             {
                 entity.ToTable("VoucherUsage");
-
+                entity.Property(v => v.Id)
+                .HasDefaultValueSql("NEWID()");
                 entity.HasKey(v => v.Id);
 
                 entity.Property(v => v.UsedAt)
@@ -1032,7 +1060,7 @@ namespace DataAccessLayer
                 entity.HasOne(v => v.Campaign)
                       .WithMany(c => c.VoucherUsages)
                       .HasForeignKey(v => v.CampaignId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(v => v.Customer)
                       .WithMany()
@@ -1042,7 +1070,7 @@ namespace DataAccessLayer
                 entity.HasOne(v => v.RepairOrder)
                       .WithMany(ro => ro.VoucherUsages)
                       .HasForeignKey(v => v.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
 

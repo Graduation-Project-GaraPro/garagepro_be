@@ -29,6 +29,8 @@ namespace Services
         // Manager Assignment Workflow
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
+        // NEW: Create revision jobs from existing jobs
+        Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
 
         // Job Parts Management
         Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId);
@@ -37,21 +39,12 @@ namespace Services
         Task<bool> RemoveJobPartAsync(Guid jobPartId);
         Task<decimal> CalculateJobTotalAmountAsync(Guid jobId);
 
-        // Repair Activities Management
-        Task<IEnumerable<Repair>> GetJobRepairsAsync(Guid jobId);
-        Task<Repair?> GetActiveRepairForJobAsync(Guid jobId);
-        Task<bool> StartRepairForJobAsync(Guid jobId, Repair repair);
-        Task<bool> CompleteRepairForJobAsync(Guid repairId, string? notes = null);
-
         // Status Management
         Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null);
         Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
 
         // Business Logic Validation
-        Task<bool> CanCompleteJobAsync(Guid jobId);
-        Task<bool> CanStartJobAsync(Guid jobId);
         Task<bool> CanAssignJobToTechnicianAsync(Guid jobId);
-        Task<bool> HasActiveTechnicianAsync(Guid jobId);
 
         // Search and Filtering
         Task<IEnumerable<Job>> SearchJobsAsync(
@@ -63,40 +56,13 @@ namespace Services
             DateTime? fromDate = null,
             DateTime? toDate = null);
 
-        // Statistics and Reporting
-        Task<Dictionary<JobStatus, int>> GetJobCountsByStatusAsync(List<Guid>? repairOrderIds = null);
-        Task<Dictionary<JobStatus, int>> GetJobStatusCountsByRepairOrderAsync(Guid repairOrderId);
-        Task<Dictionary<string, object>> GetJobStatisticsAsync(Guid? repairOrderId = null);
-        Task<IEnumerable<Job>> GetOverdueJobsAsync();
-        Task<IEnumerable<Job>> GetJobsDueWithinDaysAsync(int days);
-        Task<IEnumerable<Job>> GetHighPriorityJobsAsync(int minLevel = 5);
-
-        // Level and Priority Management
-        Task<IEnumerable<Job>> GetJobsByLevelAsync(int level);
-        Task<bool> UpdateJobLevelAsync(Guid jobId, int newLevel);
-
-        // Completion Tracking
-        Task<bool> MarkJobAsCompletedAsync(Guid jobId, string? completionNotes = null);
-        Task<bool> MarkJobAsInProgressAsync(Guid jobId, Guid technicianId);
-        Task<TimeSpan?> GetJobDurationAsync(Guid jobId);
-        Task<decimal> GetJobProgressPercentageAsync(Guid jobId);
-
-        // Audit and History
-        Task<IEnumerable<Job>> GetRecentlyUpdatedJobsAsync(int hours = 24);
-        Task<DateTime?> GetLastStatusChangeAsync(Guid jobId);
+        // Technician methods
+        Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId);
+        Task<Technician?> GetTechnicianByUserIdAsync(string userId);
 
         // Workflow Validation
         Task<bool> ValidateJobWorkflowAsync(Guid jobId, JobStatus targetStatus);
         Task<string> GetNextAllowedStatusesAsync(Guid jobId);
         
-        // Estimate Expiration and Revision Management
-        Task<bool> SetJobEstimateExpirationAsync(Guid jobId, int expirationDays);
-        Task<IEnumerable<Job>> GetExpiredEstimatesAsync();
-        Task<bool> IsEstimateExpiredAsync(Guid jobId);
-        Task<Job> ReviseJobEstimateAsync(Guid originalJobId, string managerId, string revisionReason);
-        Task<IEnumerable<Job>> GetJobRevisionsAsync(Guid originalJobId);
-        Task<Job?> GetLatestJobRevisionAsync(Guid originalJobId);
-        Task<bool> ExpireOldEstimatesAsync();
-        Task<Job> CreateJobFromServiceAsync(Guid serviceId, Guid repairOrderId, string managerId);
     }
 }

@@ -20,6 +20,8 @@ using Services.SmsSenders;
 
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Services.LogServices;
+using Services.PolicyServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -33,13 +35,15 @@ namespace Garage_pro_api.Controllers
         private readonly IEmailSender _emailSender;
         private readonly DynamicAuthenticationService _authService;
         private readonly IConfiguration _config;
+        private readonly ISecurityPolicyService _securityPolicyService;
         private readonly ISmsSender _smsSender;
+        private readonly ILogService _logService;
         // Lưu OTP tạm thời (dev/test)
         private static readonly Dictionary<string, string> _otpTempStore = new();
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService, IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender)
+            ITokenService tokenService, IEmailSender emailSender, ISecurityPolicyService iSecurityPolicyService, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender, ILogService logService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -48,6 +52,8 @@ namespace Garage_pro_api.Controllers
             _authService = dynamicAuthenticationService;
             _config = config;
             _smsSender = smsSender;
+            _logService = logService;
+            _securityPolicyService= iSecurityPolicyService;
         }
 
         //  Gửi OTP
@@ -204,81 +210,72 @@ namespace Garage_pro_api.Controllers
             });
         }
 
-        [HttpPost("login")]
+       
         [AllowAnonymous]
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            // Lấy user theo số điện thoại
-            var user = await _userManager.Users
-                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+            var signInResult = await _authService.PasswordSignInAsync(model.PhoneNumber, model.Password);
 
-            if (user == null)
-                return BadRequest(new { error = "User not found" });
-
-            // Kiểm tra mật khẩu
-            var passwordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-            if (!passwordValid)
+            if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.LockedOut)
             {
-                // Tăng số lần đăng nhập thất bại nếu cần
-                await _userManager.AccessFailedAsync(user);
-                return BadRequest(new { error = "Invalid login attempt" });
-            }
+                var userInfor = await _userManager.Users
+                    .FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
 
-            // Reset failed count nếu login thành công
-            await _userManager.ResetAccessFailedCountAsync(user);
+                var lockoutInfo = await _authService.GetLockoutInfoAsync(userInfor);
 
-            // Kiểm tra lockout
-            if (await _userManager.IsLockedOutAsync(user))
-            {
-                var lockoutEnd = await _userManager.GetLockoutEndDateAsync(user);
-                var remainingMinutes = lockoutEnd.HasValue
-                    ? (lockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes
-                    : 0;
+                var message = $"User '{userInfor.UserName}' (Email: {userInfor.Email}, Phone: {userInfor.PhoneNumber}) " +
+                              $"has been locked out due to multiple failed login attempts. " +
+                              $"Lockout end time: {lockoutInfo.LockoutEnd?.ToLocalTime():f}.";
+
+                await _logService.LogSecurityAsync(message, userInfor.Id);
 
                 return BadRequest(new
                 {
-                    error = "Account is temporarily locked due to failed login attempts",
-                    lockoutEnd,
-                    remainingMinutes
+                    error = "Account locked out",
+                    details = lockoutInfo
                 });
             }
 
-            // Cập nhật LastLogin
-            user.LastLogin = DateTime.UtcNow;
-            await _userManager.UpdateAsync(user);
+            if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.Failed)
+                return BadRequest(new { error = "Invalid phone number or password." });
 
-            // Tạo JWT token
-            var accessToken = await _tokenService.GenerateJwtToken(user, 30); 
-            var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
 
+            //// Tạo JWT token
+            //var accessToken = await _tokenService.GenerateJwtToken(user, 30); 
+            //var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
+
+            // Đăng nhập thành công
+            var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
+
+            // Lấy policy hiện tại
+            var policy = await _securityPolicyService.GetCurrentAsync();
+            if (policy == null)
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Security policy not found." });
+
+            // Phát hành token theo policy
+            var accessToken = await _tokenService.GenerateAccessToken(user);
+
+            // Refresh token: ví dụ 7 ngày (tuỳ bạn)
+            var refreshLifetimeMinutes = 7 * 24 * 60;
+            var refreshToken = await _tokenService.GenerateRefreshToken(user, refreshLifetimeMinutes);
+
+            // Cookie refresh (tùy chọn)
             Response.Cookies.Append("X-Refresh-Token", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
+                Expires = DateTimeOffset.UtcNow.AddMinutes(refreshLifetimeMinutes)
             });
-
-            // Tạo ClaimsPrincipal cho Cookie
-            var claimsPrincipal = _tokenService.ValidateToken(accessToken);
-
-            await HttpContext.SignInAsync(
-                CookieAuthenticationDefaults.AuthenticationScheme,
-                claimsPrincipal,
-                new AuthenticationProperties
-                {
-                    IsPersistent = true,
-                    ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(30)
-                });
-
 
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                ExpiresIn = policy.SessionTimeout * 60, // giây, khớp với access token
                 UserId = user.Id,
                 Email = user.Email,
                 Roles = await _userManager.GetRolesAsync(user),
@@ -286,6 +283,7 @@ namespace Garage_pro_api.Controllers
 
             return Ok(response);
         }
+
 
         [HttpPost("google-login")]
         [AllowAnonymous]
@@ -319,12 +317,23 @@ namespace Garage_pro_api.Controllers
                 await _userManager.AddToRoleAsync(user, "Customer");
             }
 
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            // Get user roles to determine token expiration time
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var jwtSettings = _config.GetSection("Jwt");
+            int accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ExpireMinutes", 30); // Default expiry time
+            
+            // Check if user has manager role and set longer expiration time
+            if (userRoles.Contains("Manager") || userRoles.Contains("Admin"))
+            {
+                accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ManagerExpireMinutes", 120); // Manager/Admin expiry time
+            }
+
+            var accessToken = await _tokenService.GenerateAccessToken(user);
 
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(accessTokenExpiryMinutes).TotalSeconds),
                 UserId = user.Id,
                 Email = user.Email,
                 Roles = await _userManager.GetRolesAsync(user),
@@ -443,7 +452,9 @@ namespace Garage_pro_api.Controllers
                 if (user == null)
                     return Unauthorized();
 
-                var newToken = await _tokenService.GenerateJwtToken(user, 10);
+                var refreshLifetimeMinutes = 7 * 24 * 60;
+                var newToken = await _tokenService.GenerateRefreshToken(user, refreshLifetimeMinutes);
+               
 
                 return Ok(new AuthResponseDto
                 {

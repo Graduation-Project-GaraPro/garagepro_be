@@ -30,7 +30,7 @@ namespace Repositories.QuotationRepositories
                 .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
                 .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
                 .Where(i => i.RepairOrder.UserId == userId)
-                .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// dùng projectto ?? map k c?n load h?t ch? c?n nhhuwnxg entities c?n thi?t
+                .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// dï¿½ng projectto ?? map k c?n load h?t ch? c?n nhhuwnxg entities c?n thi?t
                 .ToListAsync();
         }
 
@@ -43,7 +43,8 @@ namespace Repositories.QuotationRepositories
         {
             var query = _context.Quotations
                 .Include(q => q.User)
-                .Include(q => q.Vehicle)
+                .Include(q => q.Vehicle).ThenInclude(v=>v.Brand)
+                .Include(q => q.Vehicle).ThenInclude(v=>v.Model)
                 .Include(q => q.RepairOrder)
                 .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)
@@ -79,7 +80,7 @@ namespace Repositories.QuotationRepositories
                 .ToListAsync();
         }
 
-        //update báo giá cho phép thay ??i pârt
+        //update bï¿½o giï¿½ cho phï¿½p thay ??i pï¿½rt
         //public async Task<QuotationDto> UpdateQuotationPartsAsync(String userId, UpdateQuotationPartsDto dto)
         //{
         //    var inspection = await _context.Inspections
@@ -121,12 +122,15 @@ namespace Repositories.QuotationRepositories
         {
             return await _context.Quotations
                 .Include(q => q.User)
-                .Include(q => q.Vehicle)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Brand)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Model)
+                .Include(q => q.RepairOrder)
+                .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)
-                .ThenInclude(qs => qs.Service)
+                    .ThenInclude(qs => qs.Service)
                 .Include(q => q.QuotationServices)
-                .ThenInclude(qs => qs.QuotationServiceParts)
-                .ThenInclude(qsp => qsp.Part)
+                    .ThenInclude(qs => qs.QuotationServiceParts)
+                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory)
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 

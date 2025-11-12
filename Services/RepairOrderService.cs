@@ -11,6 +11,8 @@ using Dtos.RoBoard;
 using Microsoft.AspNetCore.SignalR;
 using Services.Hubs; // Update namespace
 using Repositories;
+using Repositories.ServiceRepositories; // Add this for service repository
+using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
 
 namespace Services
 {
@@ -20,6 +22,7 @@ namespace Services
         private readonly IOrderStatusRepository _orderStatusRepository;
         private readonly ILabelRepository _labelRepository;
         private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
+        private readonly IServiceRepository _serviceRepository; // Add service repository
 
         // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
@@ -33,12 +36,14 @@ namespace Services
             IRepairOrderRepository repairOrderRepository,
             IOrderStatusRepository orderStatusRepository,
             ILabelRepository labelRepository,
-            IHubContext<RepairOrderHub> hubContext) // Update namespace
+            IHubContext<RepairOrderHub> hubContext,
+            IServiceRepository serviceRepository) // Add service repository parameter
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
             _hubContext = hubContext;
+            _serviceRepository = serviceRepository; // Initialize service repository
         }
 
         #region Kanban Board Operations
@@ -250,7 +255,7 @@ namespace Services
             return repairOrder != null ? MapToRoBoardCardDto(repairOrder) : null;
         }
 
-        public async Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder)
+        public async Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder, List<Guid> selectedServiceIds = null)
         {
             // Set default status to "Pending" if not specified
             if (repairOrder.StatusId == 0) // Changed from Guid.Empty to 0 for int
@@ -274,6 +279,31 @@ namespace Services
             }
 
             var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
+
+            // Create RepairOrderService entries for selected services
+            if (selectedServiceIds != null && selectedServiceIds.Any())
+            {
+                var services = await _serviceRepository.Query()
+                    .Where(s => selectedServiceIds.Contains(s.ServiceId))
+                    .ToListAsync();
+
+                foreach (var service in services)
+                {
+                    var repairOrderService = new BusinessObject.RepairOrderService
+                    {
+                        RepairOrderId = createdRepairOrder.RepairOrderId,
+                        ServiceId = service.ServiceId,
+                        ActualDuration = service.EstimatedDuration,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    // Add to context but don't save yet
+                    _repairOrderRepository.Context.RepairOrderServices.Add(repairOrderService);
+                }
+
+                // Save all RepairOrderService entries
+                await _repairOrderRepository.Context.SaveChangesAsync();
+            }
 
             // Send real-time update via SignalR
             if (_hubContext != null)

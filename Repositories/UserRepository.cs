@@ -23,6 +23,18 @@ namespace Repositories
             _context = context;
         }
 
+        public async Task<bool> UpdateDeviceIdAsync(string userId, string deviceId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return false;
+
+            user.DeviceId = deviceId;
+
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded;
+        }
+
         public async Task<List<ApplicationUser>> GetAllAsync()
         {
             // Lấy role Admin
@@ -139,6 +151,24 @@ namespace Repositories
 
             return await _context.Users
                 .Where(u => userIds.Contains(u.Id) && (u.BranchId == null))
+                .ToListAsync();
+        }
+        
+        // Lấy tất cả Technician thuộc về một branch cụ thể
+        public async Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId)
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return new List<ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == technicianRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && u.BranchId == branchId)
                 .ToListAsync();
         }
 

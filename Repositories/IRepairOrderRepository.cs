@@ -5,17 +5,22 @@ using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
 using Dtos.RoBoard;
+using DataAccessLayer; // Add this for MyAppDbContext
 
 namespace Repositories
 {
     public interface IRepairOrderRepository
     {
+        // Add Context property
+        MyAppDbContext Context { get; }
+
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);
+        Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate);
 
         // Kanban Board specific queries
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);

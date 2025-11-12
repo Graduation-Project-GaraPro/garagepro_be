@@ -20,20 +20,21 @@ namespace Services.PolicyServices
     {
         private readonly ISecurityPolicyRepository _repo;
         private readonly IMemoryCache _cache;
-        private readonly IPasswordHasher<ApplicationUser> _passwordHasher;
-
+        
+       
         private readonly IMapper _mapper;
         private readonly ILogger<SecurityPolicyService> _logger;
         private const string CacheKey = "CurrentSecurityPolicy";
 
         public SecurityPolicyService(ISecurityPolicyRepository repo, IMemoryCache cache,
-            IPasswordHasher<ApplicationUser> passwordHasher, ILogger<SecurityPolicyService> logger, IMapper mapper)
+             ILogger<SecurityPolicyService> logger, IMapper mapper)
         {
             _repo = repo;
             _cache = cache;
-            _passwordHasher = passwordHasher;
+           
             _logger = logger;
             _mapper = mapper;
+            
         }
 
         public async Task<SecurityPolicy?> GetCurrentAsync()
@@ -68,7 +69,7 @@ namespace Services.PolicyServices
             existing.SessionTimeout = updatedPolicy.SessionTimeout;
             existing.MaxLoginAttempts = updatedPolicy.MaxLoginAttempts;
             existing.AccountLockoutTime = updatedPolicy.AccountLockoutTime;
-            existing.MfaRequired = updatedPolicy.MfaRequired;
+
             existing.PasswordExpiryDays = updatedPolicy.PasswordExpiryDays;
             existing.EnableBruteForceProtection = updatedPolicy.EnableBruteForceProtection;
             existing.UpdatedBy = adminId;
@@ -204,11 +205,14 @@ namespace Services.PolicyServices
             };
         }
 
-        public async Task<SecurityPolicyDto> RevertToSnapshotAsync(Guid historyId)
+        public async Task<SecurityPolicyDto> RevertToSnapshotAsync(Guid historyId, string userId)
         {
-            await using var transaction = await _repo.BeginTransactionAsync(); // giả sử repo có wrapper
+            await using var transaction = await _repo.BeginTransactionAsync();
             try
             {
+                // Lấy thông tin user
+              
+
                 var history = await _repo.GetHistoryAsync(historyId);
                 if (history == null)
                     throw new KeyNotFoundException("Audit history not found");
@@ -232,10 +236,10 @@ namespace Services.PolicyServices
                 policy.SessionTimeout = snapshot.SessionTimeout;
                 policy.MaxLoginAttempts = snapshot.MaxLoginAttempts;
                 policy.AccountLockoutTime = snapshot.AccountLockoutTime;
-                policy.MfaRequired = snapshot.MfaRequired;
+                //policy.MfaRequired = snapshot.MfaRequired;
                 policy.PasswordExpiryDays = snapshot.PasswordExpiryDays;
                 policy.EnableBruteForceProtection = snapshot.EnableBruteForceProtection;
-                policy.UpdatedBy = null;
+                policy.UpdatedBy = userId; // Thêm user name
                 policy.UpdatedAt = DateTime.Now;
 
                 await _repo.UpdateAsync(policy);
@@ -244,15 +248,13 @@ namespace Services.PolicyServices
                 {
                     HistoryId = Guid.NewGuid(),
                     PolicyId = policy.Id,
-                    ChangedBy = null,
+                    ChangedBy = userId, // Thêm user name
                     ChangedAt = DateTime.Now,
-                    ChangeSummary = $"Reverted to snapshot at {history.ChangedAt}",
+                    ChangeSummary = $"Reverted to snapshot at {history.ChangedAt} ",
                     PreviousValues = oldValuesJson,
                     NewValues = history.NewValues
                 };
                 await _repo.AddHistoryAsync(newHistory);
-
-
 
                 await _repo.SaveChangesAsync();
 
@@ -268,11 +270,15 @@ namespace Services.PolicyServices
                 throw;
             }
         }
-        public async Task<SecurityPolicyDto> UndoChangeAsync(Guid historyId)
+
+        public async Task<SecurityPolicyDto> UndoChangeAsync(Guid historyId, string userId)
         {
             await using var transaction = await _repo.BeginTransactionAsync();
             try
             {
+                // Lấy thông tin user
+              
+
                 var history = await _repo.GetHistoryAsync(historyId);
                 if (history == null)
                     throw new KeyNotFoundException("Audit history not found");
@@ -297,10 +303,10 @@ namespace Services.PolicyServices
                 policy.SessionTimeout = prevValues.SessionTimeout;
                 policy.MaxLoginAttempts = prevValues.MaxLoginAttempts;
                 policy.AccountLockoutTime = prevValues.AccountLockoutTime;
-                policy.MfaRequired = prevValues.MfaRequired;
+                //policy.MfaRequired = prevValues.MfaRequired;
                 policy.PasswordExpiryDays = prevValues.PasswordExpiryDays;
                 policy.EnableBruteForceProtection = prevValues.EnableBruteForceProtection;
-                policy.UpdatedBy = null;
+                policy.UpdatedBy = userId; // Thêm user name
                 policy.UpdatedAt = DateTime.Now;
 
                 await _repo.UpdateAsync(policy);
@@ -309,9 +315,9 @@ namespace Services.PolicyServices
                 {
                     HistoryId = Guid.NewGuid(),
                     PolicyId = policy.Id,
-                    ChangedBy = null,
+                    ChangedBy = userId, // Thêm user name
                     ChangedAt = DateTime.Now,
-                    ChangeSummary = $"Undid change made at {history.ChangedAt}",
+                    ChangeSummary = $"Undid change made at {history.ChangedAt} ",
                     PreviousValues = oldValuesJson,
                     NewValues = history.PreviousValues
                 };
@@ -332,9 +338,9 @@ namespace Services.PolicyServices
                 throw;
             }
         }
-      }
+    }
 
-    public class PasswordValidationResult
+        public class PasswordValidationResult
     {
         public bool IsValid { get; set; }
         public Dictionary<string, List<string>> Errors { get; set; } = new();

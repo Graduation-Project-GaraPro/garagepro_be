@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using BusinessObject.Vehicles;
 using BusinessObject.Authentication;
+using Dtos.Emergency;
+using BusinessObject.RequestEmergency;
 
 namespace Garage_pro_api.Mapper
 {
@@ -173,6 +175,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note ?? string.Empty))
                 .ForMember(dest => dest.Jobs, opt => opt.MapFrom(src =>
                     src.Jobs != null ? src.Jobs.ToList() : new List<Job>()));
+
         }
     }
 }

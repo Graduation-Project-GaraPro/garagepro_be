@@ -28,6 +28,8 @@ namespace BusinessObject
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime? UpdatedAt { get; set; }
+
         public DateTime? SentToCustomerAt { get; set; }
 
         public DateTime? CustomerResponseAt { get; set; }
@@ -43,6 +45,7 @@ namespace BusinessObject
 
         [MaxLength(500)]
         public string? Note { get; set; }
+        public string? CustomerNote { get; set; }
 
         public DateTime? ExpiresAt { get; set; }
 

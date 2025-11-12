@@ -19,12 +19,14 @@ namespace BusinessObject
         [Required]
         public bool IsSelected { get; set; } = false; // Customer approval
 
+        public bool IsRequired { get; set; } = false; // Indicates if this is a required service
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
 
         // Navigation properties
         public virtual Quotation Quotation { get; set; }
-        public virtual Service Service { get; set; }
+        public virtual Service? Service { get; set; }
         // Add the new relationship with QuotationServicePart
         public virtual ICollection<QuotationServicePart> QuotationServiceParts { get; set; } = new List<QuotationServicePart>();
     }

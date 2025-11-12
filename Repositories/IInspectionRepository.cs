@@ -20,10 +20,7 @@ namespace Repositories
         // Additional operations
         Task<IEnumerable<Inspection>> GetPendingInspectionsAsync();
         Task<IEnumerable<Inspection>> GetCompletedInspectionsAsync();
+        Task<IEnumerable<Inspection>> GetCompletedInspectionsWithDetailsAsync();
         Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId);
-        Task<bool> UpdateInspectionFindingAsync(Guid inspectionId, string finding, string note, BusinessObject.Enums.IssueRating rating);
-        Task<bool> UpdateCustomerConcernAsync(Guid inspectionId, string concern);
-        Task<bool> UpdateInspectionPriceAsync(Guid inspectionId, decimal price);
-        Task<bool> UpdateInspectionTypeAsync(Guid inspectionId, BusinessObject.Enums.InspectionType type);
     }
 }

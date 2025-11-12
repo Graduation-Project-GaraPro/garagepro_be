@@ -45,6 +45,21 @@ namespace Garage_pro_api.Controllers.Customer
             }
         }
 
+        [HttpGet("arrival-availability/{branchId:guid}")]
+        [AllowAnonymous]
+        public async Task<IActionResult> GetArrivalAvailability(Guid branchId, [FromQuery] DateOnly date)
+        {
+            try
+            {
+                var result = await _repairRequestService.GetArrivalAvailabilityAsync(branchId, date);
+                return Ok(result);
+            }
+            catch(Exception ex)
+            {
+                throw new Exception(ex.Message);
+            }
+        }
+
         [HttpPost("withImage")]
         public async Task<IActionResult> CreateRepairRequestWithImage([FromForm] string dtoJson, [FromForm] List<IFormFile> images)
         {
@@ -102,16 +117,16 @@ namespace Garage_pro_api.Controllers.Customer
             }
         }
 
-        //// GET: api/RepairRequests/{id}
-        //[HttpGet("{id}")]
-        //public async Task<IActionResult> GetRepairRequestById(Guid id)
-        //{
-        //    var request = await _repairRequestService.GetByIdAsync(id);
-        //    if (request == null)
-        //        return NotFound();
+        // GET: api/RepairRequests/{id}
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetRepairRequestById(Guid id)
+        {
+            var request = await _repairRequestService.GetByIdDetailsAsync(id);
+            if (request == null)
+                return NotFound();
 
-        //    return Ok(request);
-        //}
+            return Ok(request);
+        }
 
         [HttpGet("paged")]
         public async Task<IActionResult> GetPaged(

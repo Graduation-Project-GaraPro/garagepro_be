@@ -24,6 +24,11 @@ namespace Services
             _orderStatusRepository = orderStatusRepository;
         }
 
+        public async Task<IEnumerable<OrderStatus?>> GetAllOrderStatusAsync() // Changed from Guid to int
+        {
+            return await _orderStatusRepository.GetAllAsync();
+        }
+
         public async Task<RoBoardColumnsDto> GetOrderStatusesByColumnsAsync()
         {
             var allStatuses = await _orderStatusRepository.GetAllAsync();

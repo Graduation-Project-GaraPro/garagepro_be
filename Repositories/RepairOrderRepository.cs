@@ -5,6 +5,8 @@ using System.Linq.Expressions;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
+using BusinessObject.Customers;
+using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.RoBoard;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +22,9 @@ namespace Repositories
             _context = context;
         }
 
+        // Add public property to access the context
+        public MyAppDbContext Context => _context;
+
         #region Basic CRUD Operations
 
         public async Task<RepairOrder?> GetByIdAsync(Guid repairOrderId)
@@ -30,6 +35,13 @@ namespace Repositories
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+        }
+
+        public async Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate)
+        {
+            return await _context.RepairOrders
+                .Where(predicate)
+                .CountAsync();
         }
 
         public async Task<RepairOrder> CreateAsync(RepairOrder repairOrder)
@@ -134,6 +146,8 @@ namespace Repositories
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                 .Include(ro => ro.Jobs)
+                    .ThenInclude(jo => jo.Service)
                 .Include(ro => ro.Payments)
                 .ToListAsync();
         }
@@ -750,7 +764,7 @@ namespace Repositories
 
             if (isFullyPaid && fullPaymentDate.HasValue)
             {
-                repairOrder.PaidStatus = "Paid";
+                repairOrder.PaidStatus = PaidStatus.Paid;
                 // Update payment amount to estimated amount if fully paid
                 repairOrder.PaidAmount = repairOrder.EstimatedAmount;
             }
@@ -776,5 +790,9 @@ namespace Repositories
         }
 
         #endregion
+
+
+
+
     }
 }

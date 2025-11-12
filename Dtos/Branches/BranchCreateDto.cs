@@ -10,6 +10,7 @@ namespace Dtos.Branches
     public class BranchCreateDto
     {
         [Required(ErrorMessage = "Branch name is required")]
+        [MinLength(2)]
         [MaxLength(200, ErrorMessage = "Branch name cannot exceed 200 characters")]
         public string BranchName { get; set; } = string.Empty;
 
@@ -27,17 +28,15 @@ namespace Dtos.Branches
         [MaxLength(200, ErrorMessage = "Street cannot exceed 200 characters")]
         public string Street { get; set; } = string.Empty;
 
-        [Required(ErrorMessage = "Ward is required")]
-        [MaxLength(100, ErrorMessage = "Ward cannot exceed 100 characters")]
-        public string Ward { get; set; } = string.Empty;
+        
 
         [Required(ErrorMessage = "District is required")]
         [MaxLength(100, ErrorMessage = "District cannot exceed 100 characters")]
-        public string District { get; set; } = string.Empty;
+        public string Commune { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "City is required")]
         [MaxLength(100, ErrorMessage = "City cannot exceed 100 characters")]
-        public string City { get; set; } = string.Empty;
+        public string Province { get; set; } = string.Empty;
 
         [MaxLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
         public string? Description { get; set; }

@@ -6,23 +6,23 @@ using BusinessObject.Branches;
 using BusinessObject.Customers;
 using BusinessObject.Manager;
 using BusinessObject.Policies;
-
 using BusinessObject.Roles;
+using BusinessObject.Vehicles;
+using Dtos.Auth;
 using Dtos.Auth;
 using BusinessObject.Enums;
 using Dtos.Branches;
 using Dtos.Customers;
 using Dtos.FeedBacks;
 using Dtos.Parts;
-using Dtos.Policies;
-using Dtos.Roles;
-using Dtos.Vehicles;
-using Dtos.Services;
 using Dtos.Parts;
-using Dtos.Auth;
+using Dtos.Policies;
 using Dtos.Quotations;
 using Dtos.Campaigns;
 using BusinessObject.Campaigns;
+using Dtos.Roles;
+using Dtos.Services;
+using Dtos.Vehicles;
 
 namespace Garage_pro_api.Mapper
 {
@@ -135,14 +135,14 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.SentToCustomerAt, opt => opt.MapFrom(src => src.SentToCustomerAt))
                 .ForMember(dest => dest.CustomerResponseAt, opt => opt.MapFrom(src => src.CustomerResponseAt))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status))
-                // Removed TotalAmount and DiscountAmount mappings as they're no longer in the entity
+                .ForMember(dest => dest.TotalAmount, opt => opt.MapFrom(src => src.TotalAmount))
+                .ForMember(dest => dest.DiscountAmount, opt => opt.MapFrom(src => src.DiscountAmount))
                 .ForMember(dest => dest.Note, opt => opt.MapFrom(src => src.Note))
                 .ForMember(dest => dest.ExpiresAt, opt => opt.MapFrom(src => src.ExpiresAt))
-                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FirstName + " " + src.User.LastName))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => $"{src.Vehicle.Brand.BrandName} {src.Vehicle.Model.ModelName}"))
-                .ForMember(dest => dest.QuotationServiceParts, opt => opt.Ignore())
-                .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection))
-                .ForMember(dest => dest.RepairOrder, opt => opt.Ignore()); // Will be mapped manually if needed
+                .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
+                .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection));
 
             CreateMap<CreateQuotationDto, Quotation>()
                 .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => Guid.NewGuid()))
@@ -164,17 +164,31 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationServices, opt => opt.Ignore());
 
+            CreateMap<UpdateQuotationDto, Quotation>()
+                .ForMember(dest => dest.QuotationId, opt => opt.Ignore())
+                .ForMember(dest => dest.InspectionId, opt => opt.Ignore())
+                .ForMember(dest => dest.RepairOrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.UserId, opt => opt.Ignore())
+                .ForMember(dest => dest.VehicleId, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.SentToCustomerAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CustomerResponseAt, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+                .ForMember(dest => dest.DiscountAmount, opt => opt.Ignore());
+
             CreateMap<QuotationService, QuotationServiceDto>()
                 .ForMember(dest => dest.QuotationServiceId, opt => opt.MapFrom(src => src.QuotationServiceId))
                 .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => src.QuotationId))
                 .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
                 .ForMember(dest => dest.IsSelected, opt => opt.MapFrom(src => src.IsSelected))
+                .ForMember(dest => dest.IsRequired, opt => opt.MapFrom(src => src.IsRequired))
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => 1)) // Default quantity for display
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
                 .ForMember(dest => dest.ServiceDescription, opt => opt.MapFrom(src => src.Service.Description))
-                .ForMember(dest => dest.QuotationServiceParts, opt => opt.MapFrom(src => src.QuotationServiceParts));
+                .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.QuotationServiceParts));
 
             // Add mapping for QuotationServicePart
             CreateMap<QuotationServicePart, QuotationServicePartDto>()
@@ -182,8 +196,6 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.QuotationServiceId, opt => opt.MapFrom(src => src.QuotationServiceId))
                 .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId))
                 .ForMember(dest => dest.IsSelected, opt => opt.MapFrom(src => src.IsSelected))
-                .ForMember(dest => dest.IsRecommended, opt => opt.MapFrom(src => src.IsRecommended))
-                .ForMember(dest => dest.RecommendationNote, opt => opt.Ignore()) // Not in entity
                 .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Price))
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src => src.Quantity))
                 .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src => src.Price * src.Quantity))
@@ -242,6 +254,20 @@ namespace Garage_pro_api.Mapper
 
             // Campaign
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
+            CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+            CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
+
+
+            CreateMap<VoucherUsageDto, VoucherUsage>().ReverseMap();
+
+
+
+            CreateMap<Service, ServiceRelatedToCampaignDto>();
+
+
+
+
+
             CreateMap<Service, ServiceRelatedToCampaignDto>();
             // Part -> PartDto
             CreateMap<Part, PartDto>();
@@ -267,7 +293,7 @@ namespace Garage_pro_api.Mapper
             .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
             .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
             .ForMember(dest => dest.Price, opt => opt.MapFrom(src => src.Service.Price))
-            
+
             .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
 
 
@@ -279,7 +305,7 @@ namespace Garage_pro_api.Mapper
                .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
 
             CreateMap<RepairRequest, RepairRequestDto>()
-             
+
              ;
             //Map repair request
             //CreateMap<RepairRequest, RepairRequestDto>()
@@ -302,10 +328,14 @@ namespace Garage_pro_api.Mapper
            .ForMember(dest => dest.ModelName, opt => opt.MapFrom(src => src.Model != null ? src.Model.ModelName : null))
            .ForMember(dest => dest.ColorName, opt => opt.MapFrom(src => src.Color != null ? src.Color.ColorName : null));
 
-            
-           
 
-           
+
+            //vehicleColor
+            // VehicleColor -> VehicleColorDto
+            CreateMap<VehicleColor, VehicleColorDto>().ReverseMap();
+            CreateMap<VehicleModel, VehicleModelDto>().ReverseMap();
+
+
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
      .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));

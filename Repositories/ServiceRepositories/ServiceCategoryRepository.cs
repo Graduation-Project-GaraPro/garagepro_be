@@ -72,6 +72,46 @@ namespace Repositories.ServiceRepositories
             return (categories, totalCount);
         }
 
+        public async Task<IEnumerable<ServiceCategory>> GetAllCategoriesWithFilterAsync(
+            Guid? parentServiceCategoryId = null,
+            string? searchTerm = null,
+            bool? isActive = null)
+        {
+            var query = _context.ServiceCategories
+                .Include(c => c.ParentServiceCategory)
+                .Include(c => c.ChildServiceCategories)
+                .Include(c => c.Services)
+                .AsQueryable();
+
+            // 🔹 Nếu có parentServiceCategoryId → chỉ lấy theo parent đó
+            if (parentServiceCategoryId.HasValue)
+            {
+                query = query.Where(c => c.ParentServiceCategoryId == parentServiceCategoryId.Value);
+            }
+
+            // 🔹 Lọc theo trạng thái IsActive
+            if (isActive.HasValue)
+            {
+                query = query.Where(c => c.IsActive == isActive.Value);
+            }
+
+            // 🔹 Tìm kiếm theo tên (trong category, parent hoặc child)
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(c =>
+                    c.CategoryName.Contains(searchTerm) ||
+                    (c.ParentServiceCategory != null && c.ParentServiceCategory.CategoryName.Contains(searchTerm)) ||
+                    c.ChildServiceCategories.Any(child => child.CategoryName.Contains(searchTerm))
+                );
+            }
+
+            // 🔹 Trả về toàn bộ danh sách (không phân trang)
+            return await query
+                .OrderBy(c => c.CategoryName)
+                .ToListAsync();
+        }
+
+
         public async Task<IEnumerable<ServiceCategory>> GetParentCategoriesAsync()
         {
             return await _context.ServiceCategories           
@@ -154,7 +194,6 @@ namespace Repositories.ServiceRepositories
                 .Include(sc => sc.ChildServiceCategories)
                     .ThenInclude(c => c.Services)
                 .Include(sc => sc.ChildServiceCategories)
-                    .ThenInclude(c => c.ChildServiceCategories)
                 .AsQueryable();
         }
         public async Task<int> SaveChangesAsync()

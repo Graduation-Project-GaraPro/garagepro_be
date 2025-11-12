@@ -119,11 +119,11 @@ namespace Garage_pro_api.DbInterceptor
             try
             {
                 var logService = scope.ServiceProvider.GetRequiredService<ILogService>();
-                await logService.LogDatabaseAsync(
-                    operation,
-                    tableName,
-                    details: $"⚠️ Slow query detected ({elapsedMs} ms)\nCommand: {commandText}"
-                );
+                //await logService.LogDatabaseAsync(
+                //    operation,
+                //    tableName,
+                //    details: $"⚠️ Slow query detected ({elapsedMs} ms)\nCommand: {commandText}"
+                //);
             }
             catch
             {

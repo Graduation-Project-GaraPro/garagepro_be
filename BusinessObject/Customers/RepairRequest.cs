@@ -24,9 +24,9 @@ namespace BusinessObject.Customers
 
 
         [StringLength(500)]
-        public string? Description { get; set; } // Mô tả lỗi / yêu cầu
+        public string? Description { get; set; } 
         [Required]
-        public Guid BranchId { get; set; }// Chi nhánh xử lý yêu cầu
+        public Guid BranchId { get; set; }
 
         [Required]
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;// ngày yêu cầu đem xe đến để sửa chữa 
@@ -56,14 +56,21 @@ namespace BusinessObject.Customers
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // Một yêu cầu sửa chữa có thể dẫn đến một đơn sửa chữa
-        //public virtual RepairOrder RepairOrders { get; set; }
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
+
+
+        // ... field cũ ...
+        [Required]
+        public DateTimeOffset ArrivalWindowStart { get; set; } = DateTimeOffset.UtcNow;
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; }  // optimistic concurrency
 
         // Optional: các tiến trình sửa chữa
         //public virtual ICollection<RepairTask> RepairTasks { get; set; }
     }
     public enum RepairRequestStatus
     {
-        Pending, Accept, Arrived, Cancelled
+        Pending, Accept, Arrived, Cancelled , Completed
     }
 }

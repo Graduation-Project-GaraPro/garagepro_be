@@ -82,7 +82,7 @@ namespace Services.InspectionAndRepair
                 throw new Exception("Không thể thay đổi trạng thái vì công việc này đã hoàn thành.");
 
             //Nếu trạng thái hiện tại không thuộc nhóm cho phép
-            if (!validStatuses.Contains(job.Status))
+            if (!validStatuses.Contains(dto.JobStatus))
                 throw new Exception("Không thể cập nhật công việc vì trạng thái hiện tại không hợp lệ để chuyển đổi.");
 
             //Cập nhật trạng thái
@@ -98,7 +98,12 @@ namespace Services.InspectionAndRepair
 
                 if (repair.StartTime.HasValue)
                 {
-                    repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
+                    var duration = repair.EndTime.Value - repair.StartTime.Value;
+                    if (duration.TotalHours >= 24)
+                        duration = TimeSpan.FromHours(duration.TotalHours % 24);
+
+                    repair.ActualTime = duration;
+                    //repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
                 }
             }
             await _jobTechnicianRepository.UpdateJobAsync(job);

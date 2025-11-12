@@ -10,25 +10,15 @@ namespace Dtos.Quotations
         [Required]
         public Guid RepairOrderId { get; set; }
 
-        public Guid? TechnicianId { get; set; }
-
         [Required]
         [MaxLength(500)]
         public string CustomerConcern { get; set; }
-
-        // Price for the inspection (to be added to RO total)
-        public decimal InspectionPrice { get; set; } = 0;
-
-        // Type of inspection (full or partial)
-        public InspectionType InspectionType { get; set; } = InspectionType.Full;
     }
 
     public class UpdateInspectionDto
     {
-        [Required]
-        public Guid TechnicianId { get; set; }
+        public Guid? TechnicianId { get; set; }
 
-        [Required]
         [MaxLength(500)]
         public string CustomerConcern { get; set; }
 
@@ -37,12 +27,9 @@ namespace Dtos.Quotations
 
         public IssueRating IssueRating { get; set; } = IssueRating.Fair;
 
-        public string Note { get; set; }
-
-        // Price for the inspection (to be added to RO total)
-        public decimal InspectionPrice { get; set; } = 0;
+        public string? Note { get; set; }
         
-        public InspectionType InspectionType { get; set; } = InspectionType.Full;
+        public string? ImageUrl { get; set; }
     }
 
     public class InspectionConcernDto
@@ -56,7 +43,7 @@ namespace Dtos.Quotations
     public class UpdateInspectionFindingDto
     {
         public string Finding { get; set; }
-        public string Note { get; set; }
+        public string? Note { get; set; }
         public IssueRating IssueRating { get; set; }
     }
 
@@ -64,9 +51,9 @@ namespace Dtos.Quotations
     {
         public string CustomerConcern { get; set; }
     }
-
-    public class UpdateInspectionPriceDto
+    
+    public class UpdateInspectionImageDto
     {
-        public decimal InspectionPrice { get; set; }
+        public string ImageUrl { get; set; }
     }
 }

@@ -21,6 +21,10 @@ namespace Repositories.ServiceRepositories
             Guid? childServiceCategoryId = null,
             string? searchTerm = null);
 
+        Task<IEnumerable<ServiceCategory>> GetAllCategoriesWithFilterAsync(
+            Guid? parentServiceCategoryId = null,
+            string? searchTerm = null,
+            bool? isActive = null);
         Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesForBookingAsync(
         int pageNumber,
         int pageSize,

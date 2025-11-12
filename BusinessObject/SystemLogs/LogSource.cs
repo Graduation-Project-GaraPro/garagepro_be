@@ -11,9 +11,9 @@ namespace BusinessObject.SystemLogs
         System = 0,
         Security = 1,
         UserActivity = 2,
-        Middleware = 3,
-        Authentication = 4,
-        ApiController = 5,
-        Database = 6
+        //Middleware = 3,
+        //Authentication = 4,
+        //ApiController = 5,
+        //Database = 6
     }
 }
