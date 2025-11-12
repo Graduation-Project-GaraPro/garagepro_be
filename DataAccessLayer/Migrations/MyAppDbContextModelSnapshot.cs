@@ -605,9 +605,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("RepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
@@ -631,8 +628,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("RepairRequestID");
-
-                    b.HasIndex("RepairOrderId");
 
                     b.HasIndex("UserID");
 
@@ -1691,7 +1686,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("RepairRequestId")
+                    b.Property<Guid?>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("RoType")
@@ -1715,6 +1710,10 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("FeedBackId1");
+
+                    b.HasIndex("RepairRequestId")
+                        .IsUnique()
+                        .HasFilter("[RepairRequestId] IS NOT NULL");
 
                     b.HasIndex("StatusId");
 
@@ -2622,12 +2621,6 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-                        .WithMany("RepairRequest")
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")
                         .HasForeignKey("UserID")
@@ -2643,8 +2636,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
-
-                    b.Navigation("RepairOrder");
 
                     b.Navigation("Vehicle");
                 });
@@ -3049,6 +3040,11 @@ namespace DataAccessLayer.Migrations
                         .WithMany()
                         .HasForeignKey("FeedBackId1");
 
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithOne("RepairOrder")
+                        .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")
@@ -3072,6 +3068,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
+
+                    b.Navigation("RepairRequest");
 
                     b.Navigation("User");
 
@@ -3424,6 +3422,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairImages");
 
+                    b.Navigation("RepairOrder");
+
                     b.Navigation("RequestServices");
                 });
 
@@ -3526,8 +3526,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Quotations");
 
                     b.Navigation("RepairOrderServices");
-
-                    b.Navigation("RepairRequest");
 
                     b.Navigation("VoucherUsages");
                 });

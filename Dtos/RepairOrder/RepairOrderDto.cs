@@ -61,7 +61,7 @@ namespace Dtos.RepairOrder
 
         public string UserId { get; set; }
         
-        public Guid RepairRequestId { get; set; }
+        public Guid? RepairRequestId { get; set; }
         
         // Enhanced properties for better display
 

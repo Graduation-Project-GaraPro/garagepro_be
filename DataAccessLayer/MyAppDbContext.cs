@@ -699,6 +699,15 @@ namespace DataAccessLayer
             // Configure relationships to prevent cascade delete cycles
 
             // RepairOrder relationships - prevent cascade delete conflicts
+
+            modelBuilder.Entity<RepairOrder>()
+             .HasOne(ro => ro.RepairRequest)
+             .WithOne(rr => rr.RepairOrder)
+             .HasForeignKey<RepairOrder>(ro => ro.RepairRequestId) 
+             .IsRequired(false)                                    
+             .OnDelete(DeleteBehavior.Restrict);                   
+
+
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
                 .WithMany()

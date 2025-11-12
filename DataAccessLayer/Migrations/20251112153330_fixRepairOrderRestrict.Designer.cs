@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251111133015_addPaymentAttribute")]
-    partial class addPaymentAttribute
+    [Migration("20251112153330_fixRepairOrderRestrict")]
+    partial class fixRepairOrderRestrict
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -608,9 +608,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid>("RepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
@@ -634,8 +631,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("RepairRequestID");
-
-                    b.HasIndex("RepairOrderId");
 
                     b.HasIndex("UserID");
 
@@ -1315,6 +1310,54 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("PartSpecifications");
                 });
 
+            modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("int");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("OrderCode")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Signature")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderCode");
+
+                    b.HasIndex("Status", "Attempts", "ReceivedAt");
+
+                    b.ToTable("WebhookInboxes");
+                });
+
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
                     b.Property<long>("PaymentId")
@@ -1325,6 +1368,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CheckoutUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Method")
                         .HasColumnType("int");
@@ -1643,7 +1689,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("ReceiveDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("RepairRequestId")
+                    b.Property<Guid?>("RepairRequestId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("RoType")
@@ -1667,6 +1713,10 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("FeedBackId1");
+
+                    b.HasIndex("RepairRequestId")
+                        .IsUnique()
+                        .HasFilter("[RepairRequestId] IS NOT NULL");
 
                     b.HasIndex("StatusId");
 
@@ -2574,12 +2624,6 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-                        .WithMany("RepairRequest")
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")
                         .HasForeignKey("UserID")
@@ -2595,8 +2639,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
-
-                    b.Navigation("RepairOrder");
 
                     b.Navigation("Vehicle");
                 });
@@ -3001,6 +3043,11 @@ namespace DataAccessLayer.Migrations
                         .WithMany()
                         .HasForeignKey("FeedBackId1");
 
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithOne("RepairOrder")
+                        .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")
@@ -3024,6 +3071,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
+
+                    b.Navigation("RepairRequest");
 
                     b.Navigation("User");
 
@@ -3376,6 +3425,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairImages");
 
+                    b.Navigation("RepairOrder");
+
                     b.Navigation("RequestServices");
                 });
 
@@ -3478,8 +3529,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Quotations");
 
                     b.Navigation("RepairOrderServices");
-
-                    b.Navigation("RepairRequest");
 
                     b.Navigation("VoucherUsages");
                 });

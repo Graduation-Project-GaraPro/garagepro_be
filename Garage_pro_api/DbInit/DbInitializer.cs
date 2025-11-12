@@ -1461,7 +1461,7 @@ namespace Garage_pro_api.DbInit
                 StatusId = completedStatus.OrderStatusId,
                 VehicleId = vehicleId,
                 UserId = userId,
-                RepairRequestId = Guid.NewGuid(),
+                RepairRequestId = null,
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1)
             },
@@ -1481,7 +1481,7 @@ namespace Garage_pro_api.DbInit
                 StatusId = pendingStatus.OrderStatusId,
                 VehicleId = vehicleId,
                 UserId = userId,
-                RepairRequestId = Guid.NewGuid(),
+                RepairRequestId = null,
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow
             },
@@ -1501,7 +1501,7 @@ namespace Garage_pro_api.DbInit
                 StatusId = inProgressStatus.OrderStatusId,
                 VehicleId = vehicleId,
                 UserId = userId,
-                RepairRequestId = Guid.NewGuid(),
+                RepairRequestId = null,
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow
             },
@@ -1521,7 +1521,7 @@ namespace Garage_pro_api.DbInit
                 StatusId = completedStatus.OrderStatusId,
                 VehicleId = vehicleId,
                 UserId = userId,
-                RepairRequestId = Guid.NewGuid(),
+                RepairRequestId = null,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             }
