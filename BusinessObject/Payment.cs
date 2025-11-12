@@ -24,6 +24,7 @@ namespace BusinessObject
 
         public string? ProviderDesc { get; set; }
         public string? ProviderCode { get; set; }
+        public string? CheckoutUrl { get; set; }
         public PaymentMethod Method { get; set; } // Enum: PayOs, Cash
         public PaymentStatus Status { get; set; } // Paid, Unpaid, Refunded
         public DateTime PaymentDate { get; set; }
