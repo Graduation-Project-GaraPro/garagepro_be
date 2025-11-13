@@ -99,6 +99,9 @@ namespace Dtos.RepairOrder
         [MaxLength(500)]
         public string Note { get; set; }
         
+        // Optional RepairRequestId
+        public Guid? RepairRequestId { get; set; }
+        
         // Removed LabelId as labels should be accessed through OrderStatus
         // public int? LabelId { get; set; }
         

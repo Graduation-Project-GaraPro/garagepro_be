@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
 using Repositories.InspectionAndRepair;
 using System;
@@ -23,10 +24,8 @@ namespace Services.InspectionAndRepair
 
         public async Task<List<JobTechnicianDto>> GetJobsByTechnicianAsync(string userId)
         {
-
             var jobs = await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
 
-            // Lọc các trạng thái cần thiết
             var filteredJobs = jobs
                 .Where(j => j.Status == JobStatus.New ||
                             j.Status == JobStatus.InProgress ||
@@ -34,8 +33,25 @@ namespace Services.InspectionAndRepair
                             j.Status == JobStatus.Completed)
                 .ToList();
 
+
+            var now = DateTime.UtcNow.Date;
+            filteredJobs = filteredJobs
+                .Where(j =>
+                    j.Status != JobStatus.Completed ||
+                    (j.Deadline == null || j.Deadline.Value.Date >= now)
+                )
+                .ToList();
+            filteredJobs = filteredJobs
+                .OrderBy(j => j.Status == JobStatus.New ? 1 :
+                              j.Status == JobStatus.InProgress ? 2 :
+                              j.Status == JobStatus.OnHold ? 3 :
+                              j.Status == JobStatus.Completed ? 4 : 5)
+                .ThenBy(j => j.JobName)
+                .ToList();
+
             return _mapper.Map<List<JobTechnicianDto>>(filteredJobs);
         }
+
 
         public async Task<JobTechnicianDto?> GetJobByIdAsync(string userId, Guid jobId)
         {
@@ -90,13 +106,8 @@ namespace Services.InspectionAndRepair
                     //repair.ActualTime = repair.EndTime.Value - repair.StartTime.Value;
                 }
             }
-
             await _jobTechnicianRepository.UpdateJobAsync(job);
             return true;
         }
-
-
-
-
     }
 }

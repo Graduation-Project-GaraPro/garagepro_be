@@ -28,6 +28,8 @@ namespace BusinessObject
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        public DateTime? UpdatedAt { get; set; }
+
         public DateTime? SentToCustomerAt { get; set; }
 
         public DateTime? CustomerResponseAt { get; set; }

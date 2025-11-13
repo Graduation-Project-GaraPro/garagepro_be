@@ -183,7 +183,7 @@ namespace Garage_pro_api.Controllers
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
                     BranchId = user.BranchId.Value, // Get branch ID from authenticated user
-                    RepairRequestId = Guid.NewGuid(),
+                    RepairRequestId = createRoDto.RepairRequestId, // Use provided RepairRequestId or null
                     PaidStatus = PaidStatus.Unpaid, // Default paid status
                     // Other fields will use their default values
                     Cost = 0, // Auto-generated
@@ -308,6 +308,21 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetRepairOrdersByStatus(int statusId) // Changed from Guid to int
         {
             var repairOrders = await _repairOrderService.GetRepairOrdersByStatusAsync(statusId);
+            return Ok(repairOrders);
+        }
+
+        // GET: api/RepairOrder/branch/{branchId}
+        [HttpGet("branch/{branchId}")]
+        public async Task<IActionResult> GetRepairOrdersByBranch(Guid branchId)
+        {
+            // Validate the branch ID
+            if (branchId == Guid.Empty)
+            {
+                return BadRequest(new { message = "Invalid branch ID provided" });
+            }
+
+            // Get repair orders for the specified branch
+            var repairOrders = await _repairOrderService.GetRepairOrdersByBranchAsync(branchId);
             return Ok(repairOrders);
         }
 

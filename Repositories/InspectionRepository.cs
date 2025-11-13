@@ -24,6 +24,11 @@ namespace Repositories
                 .Include(i => i.RepairOrder)
                 .Include(i => i.Technician)
                     .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                        .ThenInclude(s => s.ServiceParts)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
                 .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
         }
 
@@ -42,6 +47,10 @@ namespace Repositories
                 .Include(i => i.RepairOrder)
                 .Include(i => i.Technician)
                     .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
                 .Where(i => i.RepairOrderId == repairOrderId)
                 .ToListAsync();
         }
@@ -108,92 +117,31 @@ namespace Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Inspection>> GetCompletedInspectionsWithDetailsAsync()
+        {
+            return await _context.Inspections
+                .Include(i => i.RepairOrder)
+                .Include(i => i.Technician)
+                    .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
+                .Where(i => i.Status == InspectionStatus.Completed)
+                .ToListAsync();
+        }
+
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
             var inspection = await _context.Inspections.FindAsync(inspectionId);
             if (inspection == null) return false;
 
             inspection.TechnicianId = technicianId;
-            inspection.Status = InspectionStatus.InProgress;
-            inspection.UpdatedAt = DateTime.UtcNow;
 
-            try
+            if (inspection.Status == InspectionStatus.Pending)
             {
-                await _context.SaveChangesAsync();
-                return true;
+                inspection.Status = InspectionStatus.New;
             }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateInspectionFindingAsync(Guid inspectionId, string finding, string note, IssueRating rating)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.Finding = finding;
-            inspection.Note = note;
-            inspection.IssueRating = rating;
-            inspection.Status = InspectionStatus.Completed;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateCustomerConcernAsync(Guid inspectionId, string concern)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.CustomerConcern = concern;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateInspectionPriceAsync(Guid inspectionId, decimal price)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.InspectionPrice = price;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        
-        public async Task<bool> UpdateInspectionTypeAsync(Guid inspectionId, InspectionType type)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.InspectionType = type;
             inspection.UpdatedAt = DateTime.UtcNow;
 
             try

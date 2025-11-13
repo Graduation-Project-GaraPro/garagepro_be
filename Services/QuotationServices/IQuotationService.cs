@@ -31,5 +31,7 @@ namespace Services.QuotationServices
         Task<bool> RejectQuotationAsync(Guid quotationId);
         // New method to copy quotation to jobs
         Task<bool> CopyQuotationToJobsAsync(Guid quotationId);
+        // New method to create revision jobs
+        Task<bool> CreateRevisionJobsAsync(Guid quotationId, string revisionReason);
     }
 }

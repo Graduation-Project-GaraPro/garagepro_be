@@ -21,10 +21,8 @@ namespace Services
         // Additional operations
         Task<IEnumerable<InspectionDto>> GetPendingInspectionsAsync();
         Task<IEnumerable<InspectionDto>> GetCompletedInspectionsAsync();
+        Task<IEnumerable<CompletedInspectionDto>> GetCompletedInspectionsWithDetailsAsync();
         Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId);
-        Task<bool> UpdateInspectionFindingAsync(Guid inspectionId, string finding, string note, BusinessObject.Enums.IssueRating rating);
-        Task<bool> UpdateCustomerConcernAsync(Guid inspectionId, string concern);
-        Task<bool> UpdateInspectionPriceAsync(Guid inspectionId, decimal price);
-        Task<bool> UpdateInspectionTypeAsync(Guid inspectionId, BusinessObject.Enums.InspectionType type);
+        Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto);
     }
 }

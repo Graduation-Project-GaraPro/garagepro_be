@@ -100,7 +100,47 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        // Thêm vào InspectionsTechnicianController
 
+        [HttpDelete("{inspectionId}/services/{serviceInspectionId}/part-categories/{partCategoryId}")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> RemovePartCategoryFromService(
+            Guid inspectionId,
+            Guid serviceInspectionId,
+            Guid partCategoryId)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+
+            try
+            {
+                var dto = await _inspectionService.RemovePartCategoryFromServiceAsync(
+                    inspectionId,
+                    serviceInspectionId,
+                    partCategoryId,
+                    user.Id
+                );
+
+                return Ok(new
+                {
+                    Message = "Đã xóa PartCategory và các parts liên quan thành công.",
+                    Inspection = dto
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "Đã xảy ra lỗi khi xóa PartCategory.",
+                    Error = ex.Message
+                });
+            }
+        }
 
         [HttpPost("{id}/start")]
         [Authorize(Roles = "Technician")]

@@ -243,6 +243,11 @@ namespace Garage_pro_api.Controllers
             if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.Failed)
                 return BadRequest(new { error = "Invalid phone number or password." });
 
+
+            //// Tạo JWT token
+            //var accessToken = await _tokenService.GenerateJwtToken(user, 30); 
+            //var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60); 
+
             // Đăng nhập thành công
             var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
 

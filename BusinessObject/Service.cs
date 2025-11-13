@@ -64,6 +64,8 @@ namespace BusinessObject
         public virtual ICollection<QuotationService>? QuotationServices { get; set; } = new List<QuotationService>();
         //request relationship
         public virtual ICollection<RequestService>? RequestServices { get; set; } = new List<RequestService>();
+        //Service Part Category Inspection
+        public virtual ICollection<ServicePartCategory>? ServicePartCategories { get; set; }
 
     }
 }

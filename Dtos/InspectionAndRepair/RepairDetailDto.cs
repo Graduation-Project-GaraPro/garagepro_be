@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Dtos.InspectionAndRepair
@@ -18,7 +19,7 @@ namespace Dtos.InspectionAndRepair
         public string Note { get; set; }
 
         public List<JobDetailDto> Jobs { get; set; }
-       
+
     }
     public class RepairDto
     {
@@ -27,9 +28,28 @@ namespace Dtos.InspectionAndRepair
         public string Notes { get; set; }
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
+
+        [JsonIgnore]
         public TimeSpan? ActualTime { get; set; }
+
+        [JsonIgnore]
         public TimeSpan? EstimatedTime { get; set; }
+
+        public string ActualTimeShort => FormatShort(ActualTime);
+        public string EstimatedTimeShort => FormatShort(EstimatedTime);
+
+        private static string FormatShort(TimeSpan? timeSpan)
+        {
+            if (!timeSpan.HasValue)
+                return null;
+
+            var ts = timeSpan.Value;
+            int totalHours = (int)ts.TotalHours;
+            int minutes = ts.Minutes;
+            return $"{totalHours:D2}h {minutes:D2}m";
+        }
     }
+
     public class JobDetailDto
     {
         public Guid JobId { get; set; }
@@ -38,13 +58,19 @@ namespace Dtos.InspectionAndRepair
         public string Status { get; set; }
         public string Note { get; set; }
 
-        public List<JobPartDto> Parts { get; set; }
+        public List<PartCategoryRepairDto> Parts { get; set; }
         public RepairDto Repairs { get; set; }
         public List<TechnicianDto> Technicians { get; set; }
     }
-
+    public class PartCategoryRepairDto
+    {
+        public Guid PartCategoryId { get; set; }
+        public string CategoryName { get; set; }
+        public List<JobPartDto> Parts { get; set; }
+    }
     public class JobPartDto
     {
+        public Guid PartId { get; set; }
         public string PartName { get; set; }
         public decimal UnitPrice { get; set; }
     }

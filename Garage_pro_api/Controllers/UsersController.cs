@@ -204,6 +204,23 @@ namespace Garage_pro_api.Controllers
                 u.LastLogin
             }));
         }
+        
+        // GET: api/users/technicians/by-branch/{branchId}
+        //[Authorize(Policy = "USER_VIEW")]
+        [HttpGet("technicians/by-branch/{branchId}")]
+        public async Task<IActionResult> GetTechniciansByBranch(Guid branchId)
+        {
+            var users = await _userService.GetTechniciansByBranchAsync(branchId);
+            return Ok(users.Select(u => new {
+                u.Id,
+                FullName = $"{u.FirstName} {u.LastName}",
+                u.Email,
+                u.IsActive,
+                u.CreatedAt,
+                u.LastLogin,
+                u.BranchId
+            }));
+        }
 
         // PUT: api/users/{id}/ban
         [HttpPut("{id}/ban")]

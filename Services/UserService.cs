@@ -118,6 +118,12 @@ namespace Services
 
         }
 
+        // New method to get technicians by branch
+        public async Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId)
+        {
+            return await _repository.GetTechniciansByBranchAsync(branchId);
+        }
+
         public async Task<bool> UpdateUserAsync(ApplicationUser user)
         {
             try

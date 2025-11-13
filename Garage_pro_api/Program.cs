@@ -45,37 +45,25 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
-using Repositories.VehicleRepositories;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
-using Repositories.RoleRepositories;
-using Services.RoleServices;
-using Garage_pro_api.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Garage_pro_api.Mapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Google;
-using Services.SmsSenders;
-using BusinessObject.Roles;
 using Microsoft.OData.ModelBuilder;
-using Microsoft.AspNetCore.OData;
 using System.Text.Json.Serialization;
 using Repositories.Statistical;
 using Services.Statistical;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Services.RepairHistory;
 using Repositories.RepairHistory;
-using Services.CampaignServices;
-using Repositories.CampaignRepositories;
-using Repositories.CampaignRepositories;
-using Services.CampaignServices;
 using Repositories.LogRepositories;
 using Services.LogServices;
 using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Garage_pro_api.Hubs;
+using Services.Hubs;
 using Repositories.RepairProgressRepositories;
 using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
@@ -115,7 +103,6 @@ builder.Services.AddControllers()
 
 // Add SignalR services
 builder.Services.AddSignalR();
-
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -516,7 +503,13 @@ builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
-builder.Services.AddScoped<IInspectionService, InspectionService>();
+builder.Services.AddScoped<IInspectionService>(provider =>
+{
+    var inspectionRepository = provider.GetRequiredService<IInspectionRepository>();
+    var repairOrderRepository = provider.GetRequiredService<IRepairOrderRepository>();
+    var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
+    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService);
+});
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
@@ -525,7 +518,22 @@ builder.Services.AddScoped<ITechnicianService, TechnicianService>();
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
-builder.Services.AddScoped<Services.Customer.IRepairRequestService, Services.Customer.RepairRequestService>();
+builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
+{
+    var unitOfWork = provider.GetRequiredService<IUnitOfWork>();
+    var cloudinaryService = provider.GetRequiredService<ICloudinaryService>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    var vehicleService = provider.GetRequiredService<IVehicleService>();
+    
+    return new Services.Customer.RepairRequestService(
+        unitOfWork,
+        cloudinaryService,
+        mapper,
+        repairOrderService,
+        vehicleService
+    );
+});
 
 // Adding missing RequestPart and RequestService repository registrations
 builder.Services.AddScoped<Repositories.RepairRequestRepositories.IRequestPartRepository, Repositories.RepairRequestRepositories.RequestPartRepository>();
@@ -642,6 +650,7 @@ app.Use(async (context, next) =>
     await next();
 });
 app.MapHub<LogHub>("/logHub");
+app.MapHub<RepairHub>("/hubs/repair");
 
 app.UseAuthentication();
 
