@@ -10,6 +10,7 @@ using Dtos.Services;
 
 using Microsoft.EntityFrameworkCore;
 using Repositories.BranchRepositories;
+using Repositories.PartCategoryRepositories;
 using Repositories.PartRepositories;
 using Repositories.ServiceRepositories;
 
@@ -22,15 +23,17 @@ namespace Services.ServiceServices
         private readonly IServiceCategoryRepository _serviceCategoryRepository;
         private readonly IBranchRepository _branchRepository;
         private readonly IPartRepository _partRepository;
+        private readonly IPartCategoryRepository _partCategoryRepository;
 
         private readonly IMapper _mapper;
 
-        public ServiceService(IServiceRepository repository, IMapper mapper, IServiceCategoryRepository serviceCategoryRepository, IBranchRepository branchRepository, IPartRepository partRepository)
+        public ServiceService(IServiceRepository repository, IMapper mapper, IServiceCategoryRepository serviceCategoryRepository, IBranchRepository branchRepository, IPartRepository partRepository, IPartCategoryRepository partCategoryRepository)
         {
             _repository = repository;
             _serviceCategoryRepository = serviceCategoryRepository;
             _branchRepository = branchRepository;
             _partRepository = partRepository;
+            _partCategoryRepository = partCategoryRepository;
             _mapper = mapper;
         }
 
@@ -144,16 +147,21 @@ namespace Services.ServiceServices
                         throw new ApplicationException($"The following BranchIds do not exist: {string.Join(", ", invalidBranchIds)}");
                 }
 
-                if (dto.PartIds?.Any() == true)
+                if (dto.PartCategoryIds?.Any() == true)
                 {
-                    var validPartIds = await _partRepository.Query()
-                        .Where(p => dto.PartIds.Contains(p.PartId))
-                        .Select(p => p.PartId)
+                    var validPartIds = await _partCategoryRepository.Query()
+                        .Where(p => dto.PartCategoryIds.Contains(p.LaborCategoryId))
+                        .Select(p => p.LaborCategoryId)
                         .ToListAsync();
 
-                    var invalidPartIds = dto.PartIds.Except(validPartIds).ToList();
+                    var invalidPartIds = dto.PartCategoryIds.Except(validPartIds).ToList();
                     if (invalidPartIds.Any())
                         throw new ApplicationException($"The following PartIds do not exist: {string.Join(", ", invalidPartIds)}");
+                }
+                if(dto?.PartCategoryIds?.Count> 1 && dto.IsAdvanced != true)
+                {
+                    throw new ApplicationException($"The following Basic Service should contains 1 Part Category ");
+
                 }
 
                 // 5️⃣ Map sang entity và thêm quan hệ
@@ -167,9 +175,9 @@ namespace Services.ServiceServices
                     ServiceId = entity.ServiceId
                 }).ToList();
 
-                entity.ServiceParts = dto.PartIds.Select(partId => new ServicePart
+                entity.ServicePartCategories = dto?.PartCategoryIds.Select(partCategoryId => new ServicePartCategory
                 {
-                    PartId = partId,
+                    PartCategoryId = partCategoryId,
                     ServiceId = entity.ServiceId
                 }).ToList();
 
@@ -229,16 +237,21 @@ namespace Services.ServiceServices
                         throw new ApplicationException($"The following BranchIds do not exist: {string.Join(", ", invalidBranchIds)}");
                 }
 
-                if (dto.PartIds?.Any() == true)
+                if (dto.PartCategoryIds?.Any() == true)
                 {
-                    var validPartIds = await _partRepository.Query()
-                        .Where(p => dto.PartIds.Contains(p.PartId))
-                        .Select(p => p.PartId)
+                    var validPartIds = await _partCategoryRepository.Query()
+                        .Where(p => dto.PartCategoryIds.Contains(p.LaborCategoryId))
+                        .Select(p => p.LaborCategoryId)
                         .ToListAsync();
 
-                    var invalidPartIds = dto.PartIds.Except(validPartIds).ToList();
+                    var invalidPartIds = dto.PartCategoryIds.Except(validPartIds).ToList();
                     if (invalidPartIds.Any())
                         throw new ApplicationException($"The following PartIds do not exist: {string.Join(", ", invalidPartIds)}");
+                }
+                if (dto?.PartCategoryIds?.Count > 1 && dto.IsAdvanced != true)
+                {
+                    throw new ApplicationException($"The following Basic Service should contains 1 Part Category ");
+
                 }
 
                 //  Update thông tin
@@ -260,11 +273,11 @@ namespace Services.ServiceServices
                     existing.BranchServices.Add(new BranchService { BranchId = branchId, ServiceId = existing.ServiceId });
 
                 // 🔁 Đồng bộ ServiceParts
-                var currentPartIds = existing.ServiceParts.Select(sp => sp.PartId).ToList();
-                foreach (var sp in existing.ServiceParts.Where(sp => !dto.PartIds.Contains(sp.PartId)).ToList())
-                    existing.ServiceParts.Remove(sp);
+                var currentPartIds = existing.ServicePartCategories.Select(sp => sp.PartCategoryId).ToList();
+                foreach (var sp in existing.ServicePartCategories.Where(sp => !dto.PartCategoryIds.Contains(sp.PartCategoryId)).ToList())
+                    existing.ServicePartCategories.Remove(sp);
 
-                foreach (var partId in dto.PartIds.Except(currentPartIds))
+                foreach (var partId in dto.PartCategoryIds.Except(currentPartIds))
                     existing.ServiceParts.Add(new ServicePart
                     {
                         ServiceId = existing.ServiceId,
