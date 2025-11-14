@@ -110,6 +110,8 @@ namespace Garage_pro_api.Controllers
                     PasswordExpiryDays = request.PasswordExpiryDays,
                     EnableBruteForceProtection = request.EnableBruteForceProtection,
                     UpdatedBy = userId,
+                    UpdatedAt = DateTime.Now
+
                 };
 
                 await _securityPolicyService.UpdatePolicyAsync(

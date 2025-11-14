@@ -21,6 +21,7 @@ using Services.SmsSenders;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Services.LogServices;
+using Services.PolicyServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -34,6 +35,7 @@ namespace Garage_pro_api.Controllers
         private readonly IEmailSender _emailSender;
         private readonly DynamicAuthenticationService _authService;
         private readonly IConfiguration _config;
+        private readonly ISecurityPolicyService _securityPolicyService;
         private readonly ISmsSender _smsSender;
         private readonly ILogService _logService;
         // Lưu OTP tạm thời (dev/test)
@@ -41,7 +43,7 @@ namespace Garage_pro_api.Controllers
         public AuthController(
             UserManager<ApplicationUser> userManager,
             SignInManager<ApplicationUser> signInManager,
-            ITokenService tokenService, IEmailSender emailSender, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender, ILogService logService)
+            ITokenService tokenService, IEmailSender emailSender, ISecurityPolicyService iSecurityPolicyService, DynamicAuthenticationService dynamicAuthenticationService, IConfiguration config, ISmsSender smsSender, ILogService logService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -51,6 +53,7 @@ namespace Garage_pro_api.Controllers
             _config = config;
             _smsSender = smsSender;
             _logService = logService;
+            _securityPolicyService = iSecurityPolicyService;
         }
 
         //  Gửi OTP
@@ -67,7 +70,7 @@ namespace Garage_pro_api.Controllers
             if (existingUser != null)
             {
                 // Nếu đã có thì trả lỗi theo format model validation
-                
+
                 return BadRequest(new { error = "Phone number already existing!" });
             }
 
@@ -132,7 +135,7 @@ namespace Garage_pro_api.Controllers
 
             await _userManager.AddToRoleAsync(user, "Customer");
 
-          
+
 
             return Ok(new
             {
@@ -207,8 +210,9 @@ namespace Garage_pro_api.Controllers
             });
         }
 
-        [HttpPost("login")]
+
         [AllowAnonymous]
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
         {
             if (!ModelState.IsValid)
@@ -223,15 +227,12 @@ namespace Garage_pro_api.Controllers
 
                 var lockoutInfo = await _authService.GetLockoutInfoAsync(userInfor);
 
-                // Tạo thông điệp chi tiết
                 var message = $"User '{userInfor.UserName}' (Email: {userInfor.Email}, Phone: {userInfor.PhoneNumber}) " +
                               $"has been locked out due to multiple failed login attempts. " +
                               $"Lockout end time: {lockoutInfo.LockoutEnd?.ToLocalTime():f}.";
 
-                // Ghi log bảo mật
-                await _logService.LogSecurityAsync(message,userInfor.Id);
+                await _logService.LogSecurityAsync(message, userInfor.Id);
 
-                // Trả về thông tin khóa tài khoản
                 return BadRequest(new
                 {
                     error = "Account locked out",
@@ -242,33 +243,42 @@ namespace Garage_pro_api.Controllers
             if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.Failed)
                 return BadRequest(new { error = "Invalid phone number or password." });
 
-            // Đăng nhập thành công -> tạo token
+            // Đăng nhập thành công
             var user = await _userManager.Users.FirstAsync(u => u.PhoneNumber == model.PhoneNumber);
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10*60);
-            var refreshToken = await _tokenService.GenerateJwtToken(user, 7 * 24 * 60);
 
-            // Thêm refresh token vào cookie (tuỳ chọn)
+            // Lấy policy hiện tại
+            var policy = await _securityPolicyService.GetCurrentAsync();
+            if (policy == null)
+                return StatusCode(StatusCodes.Status500InternalServerError, new { error = "Security policy not found." });
+
+            // Phát hành token theo policy
+            var accessToken = await _tokenService.GenerateAccessToken(user);
+
+            // Refresh token: ví dụ 7 ngày (tuỳ bạn)
+            var refreshLifetimeMinutes = 7 * 24 * 60;
+            var refreshToken = await _tokenService.GenerateRefreshToken(user, refreshLifetimeMinutes);
+
+            // Cookie refresh (tùy chọn)
             Response.Cookies.Append("X-Refresh-Token", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 Secure = true,
                 SameSite = SameSiteMode.None,
-                Expires = DateTimeOffset.UtcNow.AddDays(7)
+                Expires = DateTimeOffset.UtcNow.AddMinutes(refreshLifetimeMinutes)
             });
 
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(10).TotalSeconds), // Đồng bộ với thời gian access token
+                ExpiresIn = policy.SessionTimeout * 60, // giây, khớp với access token
                 UserId = user.Id,
                 Email = user.Email,
-                
                 Roles = await _userManager.GetRolesAsync(user),
             };
 
             return Ok(response);
         }
+
 
         [HttpPost("google-login")]
         [AllowAnonymous]
@@ -302,12 +312,23 @@ namespace Garage_pro_api.Controllers
                 await _userManager.AddToRoleAsync(user, "Customer");
             }
 
-            var accessToken = await _tokenService.GenerateJwtToken(user, 10);
+            // Get user roles to determine token expiration time
+            var userRoles = await _userManager.GetRolesAsync(user);
+            var jwtSettings = _config.GetSection("Jwt");
+            int accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ExpireMinutes", 30); // Default expiry time
+
+            // Check if user has manager role and set longer expiration time
+            if (userRoles.Contains("Manager") || userRoles.Contains("Admin"))
+            {
+                accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ManagerExpireMinutes", 120); // Manager/Admin expiry time
+            }
+
+            var accessToken = await _tokenService.GenerateAccessToken(user);
 
             var response = new AuthResponseDto
             {
                 Token = accessToken,
-                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(30).TotalSeconds),
+                ExpiresIn = Convert.ToInt32(TimeSpan.FromMinutes(accessTokenExpiryMinutes).TotalSeconds),
                 UserId = user.Id,
                 Email = user.Email,
                 Roles = await _userManager.GetRolesAsync(user),
@@ -341,7 +362,7 @@ namespace Garage_pro_api.Controllers
             // SỬ DỤNG PHƯƠNG THỨC GetUserAsync MỚI
             var user = await _authService.GetUserAsync(User);
             if (user == null) return Unauthorized();
-           
+
             var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
             if (!passwordValid)
                 return BadRequest(new { error = "Current password is incorrect" });
@@ -374,14 +395,14 @@ namespace Garage_pro_api.Controllers
             var user = await _authService.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-          
+
             // Reset password mà không cần mật khẩu cũ
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
 
             if (result.Succeeded)
             {
-                
+
                 await _authService.UpdateLastPasswordChangeAsync(user);
                 await _userManager.UpdateSecurityStampAsync(user);
 
@@ -426,7 +447,9 @@ namespace Garage_pro_api.Controllers
                 if (user == null)
                     return Unauthorized();
 
-                var newToken = await _tokenService.GenerateJwtToken(user, 10);
+                var refreshLifetimeMinutes = 7 * 24 * 60;
+                var newToken = await _tokenService.GenerateRefreshToken(user, refreshLifetimeMinutes);
+
 
                 return Ok(new AuthResponseDto
                 {
@@ -467,5 +490,5 @@ namespace Garage_pro_api.Controllers
 
     }
 
-             
+
 }

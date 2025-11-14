@@ -83,28 +83,29 @@ namespace Services.CampaignServices
             return true;
         }
 
-            public async Task<bool> ActivateAsync(Guid id)
-            {
-                var campaign = await _repository.Query()
-                    .FirstOrDefaultAsync(c => c.Id == id);
+        public async Task<bool> ActivateAsync(Guid id)
+        {
+            var campaign = await _repository.Query()
+                .FirstOrDefaultAsync(c => c.Id == id);
 
-                if (campaign == null)
-                    throw new KeyNotFoundException("Campaign not found.");
+            if (campaign == null)
+                throw new KeyNotFoundException("Campaign not found.");
 
-                // 🔹 Validate: không được kích hoạt nếu đã hết hạn
-                if (campaign.EndDate.Date < DateTime.Today)
-                    throw new InvalidOperationException("Cannot activate a campaign that has already expired.");
+            // 🔹 Validate: không được kích hoạt nếu đã hết hạn
+            // SỬA: Đổi điều kiện từ > thành <
+            if (campaign.EndDate.Date < DateTime.Today)
+                throw new InvalidOperationException("Cannot activate a campaign that has already expired.");
 
-                // 🔹 Validate: không được kích hoạt nếu đã hết lượt sử dụng
-                if (campaign.UsageLimit.HasValue && campaign.VoucherUsages.Count >= campaign.UsageLimit)
-                    throw new InvalidOperationException("Cannot activate a campaign that has reached its usage limit.");
+            // 🔹 Validate: không được kích hoạt nếu đã hết lượt sử dụng
+            if (campaign.UsageLimit.HasValue && campaign.VoucherUsages.Count >= campaign.UsageLimit)
+                throw new InvalidOperationException("Cannot activate a campaign that has reached its usage limit.");
 
-                // ✅ Hợp lệ → gọi repo để cập nhật
-                await _repository.UpdateStatusAsync(id, true);
-                await _repository.SaveChangesAsync();
+            // ✅ Hợp lệ → gọi repo để cập nhật
+            await _repository.UpdateStatusAsync(id, true);
+            await _repository.SaveChangesAsync();
 
-                return true;
-            }
+            return true;
+        }
 
         public async Task<bool> DeactivateAsync(Guid id)
             {
@@ -177,7 +178,10 @@ namespace Services.CampaignServices
             campaign.Id = Guid.NewGuid();
             campaign.CreatedAt = DateTime.UtcNow;
             campaign.UpdatedAt = DateTime.UtcNow;
-
+            if(campaign.UsageLimit ==0)
+            {
+                campaign.UsageLimit = int.MaxValue;
+            }    
             foreach (var sid in dto.ServiceIds)
             {
                 campaign.PromotionalCampaignServices.Add(new BusinessObject.Campaigns.PromotionalCampaignService
@@ -209,6 +213,11 @@ namespace Services.CampaignServices
             // Map changes
             _mapper.Map(dto, campaign);
             campaign.UpdatedAt = DateTime.UtcNow;
+
+            if (campaign.UsageLimit == 0)
+            {
+                campaign.UsageLimit = int.MaxValue;
+            }
 
             // Update related services
             campaign.PromotionalCampaignServices.Clear();
@@ -307,7 +316,7 @@ namespace Services.CampaignServices
                 if (dto.DiscountValue < 1000)
                     throw new ArgumentException("Fixed amount discount must be at least 1000 VND.");
             }
-            if (dto.UsageLimit <=0)
+            if (dto.UsageLimit <0)
                 throw new ArgumentException("UsageLimit must be greater than 0.");
             // 🔹 2. Kiểm tra ngày bắt đầu và kết thúc
             if (dto.StartDate >= dto.EndDate)
@@ -359,7 +368,7 @@ namespace Services.CampaignServices
                 if (dto.DiscountValue < 1000)
                     throw new ArgumentException("Fixed amount discount must be at least 1000 VND.");
             }
-            if (dto.UsageLimit <= 0)
+            if (dto.UsageLimit < 0)
                 throw new ArgumentException("UsageLimit must be greater than 0.");
             // 🔹 3. Không cho chỉnh sửa nếu campaign đã được sử dụng
             bool hasUsage = campaign.VoucherUsages != null && campaign.VoucherUsages.Count > 0;

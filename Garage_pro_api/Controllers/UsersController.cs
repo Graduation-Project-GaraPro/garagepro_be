@@ -76,6 +76,22 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = "Update failed" });
             }
         }
+        [Authorize]
+        [HttpPut("device")]
+        public async Task<IActionResult> UpdateDeviceId([FromBody] UpdateDeviceIdRequest request)
+        {
+
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found" });
+
+            var success = await _userService.UpdateDeviceIdAsync(user.Id, request.DeviceId);
+
+            if (!success)
+                return NotFound(new { message = "User not found or update failed." });
+
+            return Ok(new { message = "DeviceId updated successfully." });
+        }
 
 
         //[Authorize(Policy = "USER_VIEW")]
@@ -193,5 +209,10 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { message = "Failed to verify email" });
             return Ok(new { message = "Email verified successfully" });
         }
+        
+    }
+    public class UpdateDeviceIdRequest
+    {
+        public string DeviceId { get; set; } = string.Empty;
     }
 }

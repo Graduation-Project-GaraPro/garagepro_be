@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusinessObject.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace Dtos.RepairOrder
@@ -27,7 +28,7 @@ namespace Dtos.RepairOrder
         public decimal EstimatedAmount { get; set; }
         public decimal Cost { get; set; }
         public decimal PaidAmount { get; set; }
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
 
         // Aggregates
         public int JobCount { get; set; }

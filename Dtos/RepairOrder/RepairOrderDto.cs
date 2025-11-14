@@ -32,8 +32,7 @@ namespace Dtos.RepairOrder
         public decimal PaidAmount { get; set; }
         
         [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
         
@@ -77,33 +76,6 @@ namespace Dtos.RepairOrder
     }
     
     
-    // DTO for frontend create repair order functionality
-    //public class CreateRepairOrderRequestDto
-    //{
-    //    [Required]
-    //    public string CustomerId { get; set; }
-
-    //    [Required]
-    //    public Guid VehicleId { get; set; }
-
-    //    [Required]
-    //    public RoType RepairOrderType { get; set; }
-
-    //    [MaxLength(500)]
-    //    public string VehicleConcern { get; set; }
-
-    //    public bool OdometerNotWorking { get; set; }
-
-    //    // Removed LabelId as labels should be accessed through OrderStatus
-    //    // public int? LabelId { get; set; }
-
-    //    [Required]
-    //    public string Status { get; set; }
-
-    //    [Required]
-    //    public int Progress { get; set; }
-    //}
-    
     public class CreateRoDto
     {
         [Required]
@@ -120,8 +92,9 @@ namespace Dtos.RepairOrder
         
         public DateTime? EstimatedCompletionDate { get; set; }
         
-        [Required]
-        public decimal EstimatedAmount { get; set; }
+        // These fields will now be calculated based on selected services
+        // public decimal EstimatedAmount { get; set; }
+        // public long? EstimatedRepairTime { get; set; }
         
         [MaxLength(500)]
         public string Note { get; set; }
@@ -129,7 +102,8 @@ namespace Dtos.RepairOrder
         // Removed LabelId as labels should be accessed through OrderStatus
         // public int? LabelId { get; set; }
         
-        public long? EstimatedRepairTime { get; set; }
+        // Add service selection
+        public List<Guid> SelectedServiceIds { get; set; } = new List<Guid>();
     }
 
     public class UpdateRepairOrderDto
@@ -151,8 +125,7 @@ namespace Dtos.RepairOrder
         public decimal PaidAmount { get; set; }
         
         [Required]
-        [MaxLength(50)]
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
         
         public long? EstimatedRepairTime { get; set; }
         

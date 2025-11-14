@@ -88,6 +88,7 @@ namespace Garage_pro_api.DbInit
         // 2. Seed Users
         private async Task SeedUsersAsync()
         {
+           
             var defaultUsers = new List<(string Phone, string FirstName, string LastName, string Role)>
             {
                 ("0900000001", "System", "Admin", "Admin"),
@@ -97,7 +98,9 @@ namespace Garage_pro_api.DbInit
                 ("0900000005", "Default", "Customer", "Customer"),
                 ("0900000006", "Default", "Technician", "Technician"),
                 ("0900000007", "Default", "Technician1", "Technician"),
-                ("0900000008", "Default", "Technician2", "Technician")
+                ("0900000008", "Default", "Technician2", "Technician"),
+                // Adding the requested manager user
+                ("0987654321", "Manager", "User", "Manager")
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";
@@ -118,7 +121,9 @@ namespace Garage_pro_api.DbInit
                         EmailConfirmed = true
                     };
 
-                    var result = await _userManager.CreateAsync(user, defaultPassword);
+                    // Use the specific password for the requested manager user
+                    string password = phone == "0987654321" ? "Admin123!" : defaultPassword;
+                    var result = await _userManager.CreateAsync(user, password);
                     if (result.Succeeded)
                         await _userManager.AddToRoleAsync(user, role);
                     else
@@ -126,6 +131,7 @@ namespace Garage_pro_api.DbInit
                 }
             }
         }
+
         private async Task SeedTechniciansAsync()
         {
             if (!_context.Technicians.Any())
@@ -778,65 +784,74 @@ namespace Garage_pro_api.DbInit
                 BranchName = "Central Garage - Hồ Chí Minh",
                 Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
                 Street = "123 Nguyễn Thị Minh Khai",
-                Ward = "Phường Bến Thành",
-                District = "Quận 1",
-                City = "Hồ Chí Minh",
+                Commune = "Phường Bến Thành",
+                
+                Province = "Hồ Chí Minh",
                 PhoneNumber = "02838220001",
                 Email = "central.hcm@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Hà Nội Garage",
                 Description = "Professional car repair and maintenance services in Hanoi.",
                 Street = "45 Phạm Hùng",
-                Ward = "Phường Mỹ Đình 2",
-                District = "Quận Nam Từ Liêm",
-                City = "Hà Nội",
+                Commune = "Phường Mỹ Đình 2",
+                
+                Province = "Hà Nội",
                 PhoneNumber = "02437760002",
                 Email = "hanoi@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Đà Nẵng Garage",
                 Description = "Trusted auto service center for central region customers.",
                 Street = "88 Nguyễn Văn Linh",
-                Ward = "Phường Nam Dương",
-                District = "Quận Hải Châu",
-                City = "Đà Nẵng",
+                Commune = "Phường Nam Dương",
+                
+                Province = "Đà Nẵng",
                 PhoneNumber = "02363880003",
                 Email = "danang@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Cần Thơ Garage",
                 Description = "Serving customers in the Mekong Delta with full maintenance packages.",
                 Street = "22 Trần Hưng Đạo",
-                Ward = "Phường An Cư",
-                District = "Quận Ninh Kiều",
-                City = "Cần Thơ",
+                Commune = "Phường An Cư",
+               
+                Province = "Cần Thơ",
                 PhoneNumber = "02923890004",
                 Email = "cantho@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             },
             new Branch
             {
                 BranchName = "Nha Trang Garage",
                 Description = "High-quality vehicle service center near the coast.",
                 Street = "56 Lê Thánh Tôn",
-                Ward = "Phường Lộc Thọ",
-                District = "Thành phố Nha Trang",
-                City = "Khánh Hòa",
+                Commune = "Phường Lộc Thọ",             
+                Province= "Khánh Hòa",
                 PhoneNumber = "02583560005",
                 Email = "nhatrang@garage.com",
                 CreatedAt = DateTime.UtcNow,
-                IsActive = true
+                IsActive = true,
+                 Latitude=1,
+                Longitude=2
             }
         };
 
@@ -1441,7 +1456,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 1450000,
                 EstimatedAmount = 1500000,
                 PaidAmount = 1450000,
-                PaidStatus = "Paid",
+                PaidStatus = PaidStatus.Paid,
                 EstimatedRepairTime = 3,
                 Note = "Regular maintenance service - Oil change and basic check",
                 BranchId = branch.BranchId,
@@ -1461,7 +1476,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 0,
                 EstimatedAmount = 2500000,
                 PaidAmount = 0,
-                PaidStatus = "Pending",
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 5,
                 Note = "Brake system repair - Waiting for customer approval",
                 BranchId = branch.BranchId,
@@ -1481,7 +1496,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 3200000,
                 EstimatedAmount = 3500000,
                 PaidAmount = 2000000,
-                PaidStatus = "Partial",
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 6,
                 Note = "Emergency brake and engine repair - Urgent service required",
                 BranchId = branch.BranchId,
@@ -1501,7 +1516,7 @@ namespace Garage_pro_api.DbInit
                 Cost = 0,
                 EstimatedAmount = 800000,
                 PaidAmount = 0,
-                PaidStatus = "Pending",
+                PaidStatus = PaidStatus.Unpaid,
                 EstimatedRepairTime = 2,
                 Note = "Tire rotation and basic inspection",
                 BranchId = branch.BranchId,
@@ -1940,6 +1955,7 @@ namespace Garage_pro_api.DbInit
                 QuotationId = quotations[0].QuotationId,
                 ServiceId = brakePadReplacement.ServiceId,
                 IsSelected = true,
+                IsRequired = true,
                 Price = brakePadReplacement.Price
             },
             new QuotationService
@@ -1947,6 +1963,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = Guid.NewGuid(),
                 QuotationId = quotations[0].QuotationId,
                 ServiceId = fullEngineDiagnostic.ServiceId,
+                IsRequired = true,
                 IsSelected = false,
                 Price = fullEngineDiagnostic.Price
             }
@@ -1964,7 +1981,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakePadCheap.PartId,
                 IsSelected = true,
-                IsRecommended = true,
+                
                 Price = brakePadCheap.Price,
                 Quantity = 2
             },
@@ -1974,7 +1991,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakeDiscMedium.PartId,
                 IsSelected = false,
-                IsRecommended = true,
+                
                 Price = brakeDiscMedium.Price,
                 Quantity = 2
             },
@@ -1984,7 +2001,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = shockAbsorberCheap.PartId,
                 IsSelected = false,
-                IsRecommended = false,
+                
                 Price = shockAbsorberCheap.Price,
                 Quantity = 1
             }
@@ -2129,7 +2146,16 @@ namespace Garage_pro_api.DbInit
 
                 var estimatedRepairTime = rand.Next(1, 8);
                 var estAmount = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).Sum(s => s.Price);
-                var paid = rand.Next(0, 3); // 0 unpaid,1 partial,2 paid
+
+                // Create per-order temporary lists so we can decide paid/completed after jobs are created
+                var currentJobs = new List<Job>();
+                var currentRepairs = new List<Repair>();
+                var currentJobParts = new List<JobPart>();
+                var currentJobTechnicians = new List<JobTechnician>();
+                var currentRepairOrderServices = new List<RepairOrderService>();
+                var currentQuotations = new List<Quotation>();
+                var currentQuotationServices = new List<QuotationService>();
+                var currentQuotationServiceParts = new List<QuotationServicePart>();
 
                 var ro = new RepairOrder
                 {
@@ -2137,11 +2163,11 @@ namespace Garage_pro_api.DbInit
                     ReceiveDate = receiveDate,
                     RoType = roType,
                     EstimatedCompletionDate = receiveDate.AddDays(rand.Next(1, 10)),
-                    CompletionDate = paid == 2 ? (DateTime?)receiveDate.AddDays(rand.Next(1, 10)) : null,
-                    Cost = paid == 2 ? estAmount : 0,
+                    // CompletionDate will be set later if all jobs completed
+                    Cost = 0, // set later if paid
                     EstimatedAmount = estAmount,
-                    PaidAmount = paid == 2 ? estAmount : (paid == 1 ? estAmount / 2 : 0),
-                    PaidStatus = paid == 2 ? "Paid" : (paid == 1 ? "Partial" : "Pending"),
+                    PaidAmount = 0, // set later if paid
+                    PaidStatus = PaidStatus.Pending, // default, may change after job creation
                     EstimatedRepairTime = estimatedRepairTime,
                     Note = $"Auto-generated order for stats ({receiveDate.ToString("yyyy-MM-dd")})",
                     BranchId = branch.BranchId,
@@ -2159,16 +2185,18 @@ namespace Garage_pro_api.DbInit
                 var chosenServices = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).ToList();
                 foreach (var s in chosenServices)
                 {
-                    repairOrderServicesList.Add(new RepairOrderService
+                    var ros = new RepairOrderService
                     {
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = ro.RepairOrderId,
                         ServiceId = s.ServiceId,
                         CreatedAt = receiveDate
-                    });
+                    };
+                    repairOrderServicesList.Add(ros);
+                    currentRepairOrderServices.Add(ros);
                 }
 
-                // create 1-3 jobs corresponding to services
+                // create 1-3 jobs corresponding to services (and also related repairs, parts, technicians)
                 foreach (var s in chosenServices)
                 {
                     var job = new Job
@@ -2188,13 +2216,14 @@ namespace Garage_pro_api.DbInit
                         AssignedByManagerId = customer.Id
                     };
 
+                    currentJobs.Add(job);
                     jobList.Add(job);
 
                     // attach parts 0-3 per job
                     var partsForJob = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 3)).ToList();
                     foreach (var p in partsForJob)
                     {
-                        jobPartsList.Add(new JobPart
+                        var jp = new JobPart
                         {
                             JobPartId = Guid.NewGuid(),
                             JobId = job.JobId,
@@ -2202,20 +2231,24 @@ namespace Garage_pro_api.DbInit
                             Quantity = rand.Next(1, 4),
                             UnitPrice = p.Price,
                             CreatedAt = receiveDate
-                        });
+                        };
+                        jobPartsList.Add(jp);
+                        currentJobParts.Add(jp);
                     }
 
                     // assign 1-2 technicians
                     var techsForJob = technicians.OrderBy(t => rand.Next()).Take(rand.Next(1, Math.Min(3, technicians.Count))).ToList();
                     foreach (var t in techsForJob)
                     {
-                        jobTechniciansList.Add(new JobTechnician
+                        var jt = new JobTechnician
                         {
                             JobTechnicianId = Guid.NewGuid(),
                             JobId = job.JobId,
                             TechnicianId = t.TechnicianId,
                             CreatedAt = receiveDate
-                        });
+                        };
+                        jobTechniciansList.Add(jt);
+                        currentJobTechnicians.Add(jt);
                     }
 
                     // some jobs create Repairs entries (completed/in-progress)
@@ -2231,6 +2264,7 @@ namespace Garage_pro_api.DbInit
                         Notes = "Auto-generated repair note"
                     };
                     repairList.Add(repair);
+                    currentRepairs.Add(repair);
                 }
 
                 // occasional quotation for pending orders
@@ -2251,6 +2285,7 @@ namespace Garage_pro_api.DbInit
                         ExpiresAt = receiveDate.AddDays(7)
                     };
                     quotationsList.Add(q);
+                    currentQuotations.Add(q);
 
                     // add 1-2 services
                     var qServices = chosenServices.Take(rand.Next(1, chosenServices.Count + 1)).ToList();
@@ -2265,23 +2300,61 @@ namespace Garage_pro_api.DbInit
                             Price = s.Price
                         };
                         quotationServicesList.Add(qs);
+                        currentQuotationServices.Add(qs);
 
                         // maybe add parts
                         var qParts = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 2)).ToList();
                         foreach (var p in qParts)
                         {
-                            quotationServicePartsList.Add(new QuotationServicePart
+                            var qsp = new QuotationServicePart
                             {
                                 QuotationServicePartId = Guid.NewGuid(),
                                 QuotationServiceId = qs.QuotationServiceId,
                                 PartId = p.PartId,
                                 IsSelected = true,
-                                IsRecommended = rand.Next(0, 2) == 0,
                                 Price = p.Price,
                                 Quantity = rand.Next(1, 3)
-                            });
+                            };
+                            quotationServicePartsList.Add(qsp);
+                            currentQuotationServiceParts.Add(qsp);
                         }
                     }
+                }
+
+                // --- NEW: decide payment/completion AFTER jobs/repairs created for this RO ---
+                bool allJobsCompleted = currentJobs.Count > 0 && currentJobs.All(j => j.Status == JobStatus.Completed);
+                bool allRepairsHaveEnd = currentRepairs.Count == currentJobs.Count && currentRepairs.All(r => r.EndTime.HasValue);
+
+                if (allJobsCompleted && allRepairsHaveEnd)
+                {
+                    // completed: set completion date to latest repair end
+                    var latestEnd = currentRepairs.Max(r => r.EndTime.Value);
+                    ro.CompletionDate = latestEnd;
+                    ro.Cost = estAmount;
+                    ro.PaidAmount = estAmount;
+                    ro.PaidStatus = PaidStatus.Paid;
+                    // make sure UpdatedAt reflects completion
+                    ro.UpdatedAt = latestEnd;
+                }
+                else
+                {
+                    // NOT fully completed => NEVER set Paid.
+                    // Decide Pending or Partial (partial = customer paid some deposit, but job(s) still not finished)
+                    var paidDecision = rand.Next(0, 3); // 0 unpaid,1 partial,2 unpaid (treated same as 0)
+                    if (paidDecision == 1)
+                    {
+                        // Partial payment allowed but order is not marked Paid and CompletionDate stays null
+                        ro.PaidAmount = estAmount / 2;
+                        ro.Cost = 0; // final cost not set until completion
+                        ro.PaidStatus = PaidStatus.Partial;
+                    }
+                    else
+                    {
+                        ro.PaidAmount = 0;
+                        ro.Cost = 0;
+                        ro.PaidStatus = PaidStatus.Pending;
+                    }
+                    ro.CompletionDate = null;
                 }
 
                 createdOrders++;

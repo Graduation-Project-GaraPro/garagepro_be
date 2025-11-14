@@ -1,19 +1,23 @@
 ﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Customers;
+using BusinessObject.Enums;
 using Dtos.Customers;
 using Dtos.Parts;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Repositories;
 using Repositories.Customers;
 using Repositories.RepairRequestRepositories;
 using Repositories.UnitOfWork;
-
 using Services.Cloudinaries;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Utils.RepairRequests;
+
+
 
 namespace Services.Customer
 {
@@ -25,6 +29,10 @@ namespace Services.Customer
         private readonly IRepairRequestRepository _repairRequestRepository;
         private readonly IUserRepository _userRepository;
 
+
+        private static readonly RepairRequestStatus[] ActiveStatuses =
+            { RepairRequestStatus.Pending, RepairRequestStatus.Accept };
+        private static readonly int[] ActiveOrderStatusIds = { 1, 2 };
         public RepairRequestService(
             IUnitOfWork unitOfWork,
             ICloudinaryService cloudinaryService,
@@ -172,7 +180,7 @@ namespace Services.Customer
 
         public async Task<RPDetailDto> GetByIdDetailsAsync(Guid id)
         {
-            var request = await _unitOfWork.RepairRequests.GetByIdAsync(id);
+            var request = await _unitOfWork.RepairRequests.GetByIdWithDetailsAsync(id);
             return _mapper.Map<RPDetailDto>(request);
         }
 
@@ -417,6 +425,61 @@ namespace Services.Customer
             if (vehicle == null || vehicle.UserId != userId)
                 throw new Exception("This vehicle does not belong to the current user");
 
+
+            var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
+                ?? throw new Exception("Branch not found");
+            if (!branch.IsActive) throw new Exception("Branch inactive");
+
+            var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+            var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
+
+            await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
+
+            // (A) Cooldown theo user
+            var now = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+            var cooldownCutoff = now - RepairRequestAppConfig.CreateCooldown;
+
+            var recentCount = await _unitOfWork.RepairRequests.CountAsync(x =>
+                x.UserID == userId && x.CreatedAt >= cooldownCutoff.UtcDateTime); // CreatedAt lưu UTC → so theo UTC
+
+            if (recentCount > 0)
+                throw new Exception($"Bạn vừa tạo yêu cầu trước đó. Vui lòng thử lại sau {(int)RepairRequestAppConfig.CreateCooldown.TotalMinutes} phút.");
+
+            // (B) Giới hạn số request đang hoạt động của user
+            var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
+                x.UserID == userId && ActiveStatuses.Contains(x.Status));
+
+            if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
+                throw new Exception("Bạn đã đạt giới hạn số yêu cầu đang hoạt động. Hãy hoàn tất/hủy bớt yêu cầu trước.");
+
+            // (C) Giới hạn theo vehicle trong 1 ngày (VN)
+            var dayStart = new DateTimeOffset(winStart.Year, winStart.Month, winStart.Day, 0, 0, 0, VietnamTime.VN_OFFSET);
+            var dayEnd = dayStart.AddDays(1);
+
+            var vehicleDaily = await _unitOfWork.RepairRequests.CountAsync(x =>
+                x.VehicleID == dto.VehicleID
+                && x.ArrivalWindowStart >= dayStart
+                && x.ArrivalWindowStart < dayEnd);
+
+            if (vehicleDaily >= RepairRequestAppConfig.MaxRequestsPerVehiclePerDay)
+                throw new Exception("Xe này đã đạt giới hạn số yêu cầu trong ngày. Vui lòng chọn ngày khác.");
+
+            // (D) Chặn trùng slot: User + Vehicle + Branch + Slot + Status in (Pending,Accept)
+            var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
+                x.UserID == userId
+                && x.VehicleID == dto.VehicleID
+                && x.BranchId == dto.BranchId
+                && ActiveStatuses.Contains(x.Status)
+                && x.ArrivalWindowStart == winStart);
+
+            if (dup)
+                throw new Exception("Bạn đã có một yêu cầu cho khung giờ này. Vui lòng chọn khung khác.");
+
+
+
+
+
+
             // 🔹 Khởi tạo đối tượng RepairRequest
             var repairRequest = new RepairRequest
             {
@@ -425,7 +488,9 @@ namespace Services.Customer
                 BranchId = dto.BranchId,
                 Description = dto.Description,
                 RequestDate = dto.RequestDate,
+                ArrivalWindowStart = winStart,
                 EstimatedCost = 0,
+                Status = RepairRequestStatus.Accept,
                 RequestServices = new List<RequestService>(),
                 RepairImages = new List<RepairImage>()
             };
@@ -495,6 +560,141 @@ namespace Services.Customer
             // 🔹 Map sang DTO trả về
             return _mapper.Map<RepairRequestDto>(repairRequest);
         }
+
+        public async Task CheckInAsync(Guid repairRequestId)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var rr = await _unitOfWork.RepairRequests.GetByIdAsync(repairRequestId)
+                         ?? throw new Exception("RepairRequest not found");
+
+                // Idempotent: nếu đã Arrived thì coi như xong
+                if (rr.Status == RepairRequestStatus.Arrived)
+                {
+                    await _unitOfWork.CommitAsync();
+                    return;
+                }
+
+                if (rr.Status != RepairRequestStatus.Accept)
+                    throw new Exception("Chỉ check-in các yêu cầu đã được duyệt (Accept).");
+
+                var branch = await _unitOfWork.Branches.GetByIdAsync(rr.BranchId)
+                             ?? throw new Exception("Branch not found");
+
+                // Đếm WIP đang trong xưởng
+                var activeWip = await GetActiveWipCountAsync(rr.BranchId);
+                if (activeWip >= branch.MaxConcurrentWip)
+                    throw new Exception("Xưởng đang đầy, vui lòng chờ gọi theo thứ tự.");
+
+                // Cho vào xưởng
+                rr.Status = RepairRequestStatus.Arrived;
+                rr.UpdatedAt = DateTime.UtcNow;
+
+                // (tuỳ chọn) tạo RepairOrder skeleton
+                // var ro = new RepairOrder { RepairRequestId = rr.RepairRequestID, BranchId = rr.BranchId, ... };
+                // await _unitOfWork.RepairOrders.AddAsync(ro);
+
+                await _unitOfWork.RepairRequests.UpdateAsync(rr);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task AcceptAsync(Guid repairRequestId)
+        {
+            await _unitOfWork.BeginTransactionAsync();
+            try
+            {
+                var rr = await _unitOfWork.RepairRequests.GetByIdAsync(repairRequestId)
+                         ?? throw new Exception("RepairRequest not found");
+
+                if (rr.Status == RepairRequestStatus.Accept)
+                {
+                    await _unitOfWork.CommitAsync(); // idempotent
+                    return;
+                }
+                if (rr.Status == RepairRequestStatus.Cancelled)
+                    throw new Exception("Request was cancelled.");
+
+                var branch = await _unitOfWork.Branches.GetByIdAsync(rr.BranchId)
+                             ?? throw new Exception("Branch not found");
+                if (!branch.IsActive) throw new Exception("Branch inactive.");
+
+                var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+
+                // Chuẩn hoá mốc slot (VN-only, rr.ArrivalWindowStart luôn +07:00)
+                var slotStart = VietnamTime.NormalizeWindow(rr.ArrivalWindowStart, windowMin);
+                var slotEnd = slotStart.AddMinutes(windowMin);
+
+                // Bảo đảm nằm trong giờ làm việc của chi nhánh cho NGÀY đó
+                await EnsureWithinOperatingHoursAsync(rr.BranchId, slotStart, windowMin);
+
+                // Đếm số Accept trong cùng slot và chi nhánh
+                var approvedCount = await _unitOfWork.RepairRequests.CountAsync(x =>
+                    x.BranchId == rr.BranchId
+                    && x.Status == RepairRequestStatus.Accept
+                    && x.ArrivalWindowStart >= slotStart
+                    && x.ArrivalWindowStart < slotEnd);
+
+                if (approvedCount >= branch.MaxBookingsPerWindow)
+                    throw new Exception("Cửa sổ đến đã đủ lượt duyệt.");
+
+                // Cập nhật trạng thái & chuẩn hoá lại ArrivalWindowStart về đầu slot
+                rr.Status = RepairRequestStatus.Accept;
+                rr.ArrivalWindowStart = slotStart;
+                rr.UpdatedAt = DateTime.UtcNow;
+
+                await _unitOfWork.RepairRequests.UpdateAsync(rr);
+                await _unitOfWork.SaveChangesAsync();
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date)
+        {
+            var branch = await _unitOfWork.Branches.GetByIdAsync(branchId)
+                         ?? throw new Exception("Branch not found");
+            if (!branch.IsActive) return Array.Empty<SlotAvailabilityDto>();
+
+            var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+
+            var dow = DowUtil.ToCustomDow((DayOfWeek)date.DayOfWeek);
+            var oh = await _unitOfWork.OperatingHours.SingleOrDefaultAsync(o =>
+                o.BranchId == branchId && o.DayOfWeek == dow);
+
+            if (oh == null || !oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
+                return Array.Empty<SlotAvailabilityDto>();
+
+            var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(date, oh.OpenTime.Value, oh.CloseTime.Value);
+            var windows = SlotWindowUtil.GenerateWindows(openLocal, closeLocal, windowMin);
+            if (windows.Count == 0) return Array.Empty<SlotAvailabilityDto>();
+
+            // Query trực tiếp vì ArrivalWindowStart luôn lưu +07:00
+            var accepts = await _unitOfWork.RepairRequests.ListByConditionAsync(x =>
+                x.BranchId == branchId
+                && x.Status == RepairRequestStatus.Accept
+                && x.ArrivalWindowStart >= openLocal
+                && x.ArrivalWindowStart < closeLocal);
+
+            var usedMap = AvailabilityUtil.GroupAcceptsBySlot(
+                accepts.Select(a => a.ArrivalWindowStart), windowMin);
+
+            return AvailabilityUtil.Build(windows, usedMap, branch.MaxBookingsPerWindow);
+        }
+
+
+
         public async Task<bool> DeleteRepairRequestAsync(Guid id)
         {
             var result = await _unitOfWork.RepairRequests.DeleteAsync(id);
@@ -502,27 +702,7 @@ namespace Services.Customer
             return result;
         }
 
-        //public async Task<IEnumerable<RequestImagesDto>> GetImagesAsync(Guid repairRequestId)
-        //{
-        //    var images = await _unitOfWork.RepairRequests.GetImagesAsync(repairRequestId);
-        //    return _mapper.Map<IEnumerable<RequestImagesDto>>(images);
-        //}
-
-        //public async Task<RequestImagesDto> AddImageAsync(RequestImagesDto dto)
-        //{
-        //    var image = _mapper.Map<RepairImage>(dto);
-        //    image.ImageId = Guid.NewGuid();
-        //    await _unitOfWork.RepairRequests.AddImageAsync(image);
-        //    await _unitOfWork.SaveChangesAsync();
-        //    return _mapper.Map<RequestImagesDto>(image);
-        //}
-
-        //public async Task<bool> DeleteImageAsync(Guid imageId)
-        //{
-        //    var result = await _unitOfWork.RepairRequests.DeleteImageAsync(imageId);
-        //    await _unitOfWork.SaveChangesAsync();
-        //    return result;
-        //}
+       
 
         public async Task<IEnumerable<RequestServiceDto>> GetServicesAsync(Guid repairRequestId)
         {
@@ -546,24 +726,49 @@ namespace Services.Customer
             return result;
         }
 
-        public Task<IEnumerable<RequestImagesDto>> GetImagesAsync(Guid repairRequestId)
+
+
+        private static DateTimeOffset NormalizeWindow(DateTimeOffset t, int windowMinutes)
         {
-            throw new NotImplementedException();
+            if (windowMinutes <= 0) windowMinutes = 30;
+            var epoch = new DateTimeOffset(2000, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            var mins = (long)(t.ToUniversalTime() - epoch).TotalMinutes;
+            var baseM = mins / windowMinutes * windowMinutes;
+            return epoch.AddMinutes(baseM).ToOffset(t.Offset); // trả về cùng offset để hiển thị
         }
 
-        public Task<RequestImagesDto> AddImageAsync(RequestImagesDto dto)
+        private static (DateTimeOffset start, DateTimeOffset end) WindowRange(DateTimeOffset t, int windowMinutes)
         {
-            throw new NotImplementedException();
+            var start = NormalizeWindow(t, windowMinutes);
+            var end = start.AddMinutes(windowMinutes);
+            return (start, end);
+        }
+        private async Task<int> GetActiveWipCountAsync(Guid branchId)
+        {
+            // Đếm số RO của chi nhánh có trạng thái chiếm WIP
+            return await _unitOfWork.RepairOrders.CountAsync(ro =>
+                ro.BranchId == branchId &&
+                ActiveOrderStatusIds.Contains(ro.StatusId));
+        }
+        private async Task EnsureWithinOperatingHoursAsync(Guid branchId, DateTimeOffset windowStartLocal, int windowMinutes)
+        {
+            if (windowMinutes <= 0) throw new ArgumentOutOfRangeException(nameof(windowMinutes));
+
+            var dow = DowUtil.ToCustomDow(windowStartLocal.DayOfWeek);
+
+            var oh = await _unitOfWork.OperatingHours.SingleOrDefaultAsync(o =>
+                o.BranchId == branchId && o.DayOfWeek == dow)
+                ?? throw new Exception("Chi nhánh chưa cấu hình giờ làm việc.");
+
+            if (!oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
+                throw new Exception("Chi nhánh nghỉ vào ngày đã chọn.");
+
+            var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(
+                DateOnly.FromDateTime(windowStartLocal.Date), oh.OpenTime.Value, oh.CloseTime.Value);
+
+            SlotWindowUtil.EnsureInsideOpenHours(windowStartLocal, windowMinutes, openLocal, closeLocal);
         }
 
-        public Task<bool> DeleteImageAsync(Guid imageId)
-        {
-            throw new NotImplementedException();
-        }
 
-        public Task<RepairRequestDto> GetByIdAsync(Guid id)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

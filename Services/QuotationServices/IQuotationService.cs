@@ -14,6 +14,9 @@ namespace Services.QuotationServices
         Task<IEnumerable<QuotationDto>> GetQuotationsByUserIdAsync(string userId);
         Task<IEnumerable<QuotationDto>> GetQuotationsByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<QuotationDto>> GetAllQuotationsAsync();
+
+        Task<QuotationDetailDto> GetQuotationDetailByIdAsync(Guid quotationId);
+
         Task<object> GetQuotationsByUserIdAsync(
             string userId,
             int pageNumber,
@@ -26,5 +29,7 @@ namespace Services.QuotationServices
         Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);
         Task<bool> ApproveQuotationAsync(Guid quotationId);
         Task<bool> RejectQuotationAsync(Guid quotationId);
+        // New method to copy quotation to jobs
+        Task<bool> CopyQuotationToJobsAsync(Guid quotationId);
     }
 }

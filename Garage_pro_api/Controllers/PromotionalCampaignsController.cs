@@ -20,7 +20,7 @@ namespace Garage_pro_api.Controllers
 
 
 
-        //[Authorize(Policy = "PROMO_VIEW")]
+        [Authorize(Policy = "PROMO_VIEW")]
 
         [HttpGet("paged")]
         public async Task<ActionResult> GetPaged(

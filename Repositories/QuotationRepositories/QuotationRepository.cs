@@ -122,12 +122,15 @@ namespace Repositories.QuotationRepositories
         {
             return await _context.Quotations
                 .Include(q => q.User)
-                .Include(q => q.Vehicle)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Brand)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Model)
+                .Include(q => q.RepairOrder)
+                .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)
-                .ThenInclude(qs => qs.Service)
+                    .ThenInclude(qs => qs.Service)
                 .Include(q => q.QuotationServices)
-                .ThenInclude(qs => qs.QuotationServiceParts)
-                .ThenInclude(qsp => qsp.Part)
+                    .ThenInclude(qs => qs.QuotationServiceParts)
+                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory)
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 

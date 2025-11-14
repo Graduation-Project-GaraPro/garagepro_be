@@ -18,6 +18,8 @@ namespace Services
         Task<ApplicationUser?> GetUserByIdAsync(string userId);
         Task<bool> UpdateUserAsync(ApplicationUser user);
 
+        Task<bool> UpdateDeviceIdAsync(string userId, string deviceId);
+
 
         // 👇 Thêm 3 method mới
         Task<List<ApplicationUser>> GetManagersAndTechniciansAsync();

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusinessObject.Enums;
+using System;
 
 namespace Dtos.Revenue
 {
@@ -10,6 +11,6 @@ namespace Dtos.Revenue
         public decimal EstimatedAmount { get; set; }
         public int StatusId { get; set; }
         public Guid BranchId { get; set; }
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
     }
 }

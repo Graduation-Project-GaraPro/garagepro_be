@@ -18,9 +18,6 @@ namespace BusinessObject
         [Required]
         public bool IsSelected { get; set; } = false; // Customer selection
 
-        // Add a property to indicate manager recommendation
-        public bool IsRecommended { get; set; } = false; // Manager recommendation
-
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
 

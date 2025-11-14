@@ -31,6 +31,7 @@ namespace Repositories.RepairProgressRepositories
                 .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
                 .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
                 .Include(rp => rp.User)
+                .Include(rp => rp.FeedBack)
                 .Where(ro => ro.UserId == userId && !ro.IsArchived)
                 .AsQueryable();
 
@@ -47,7 +48,7 @@ namespace Repositories.RepairProgressRepositories
 
             if (!string.IsNullOrEmpty(filter.PaidStatus))
             {
-                query = query.Where(ro => ro.PaidStatus == filter.PaidStatus);
+                query = query.Where(ro => ro.PaidStatus.ToString() == filter.PaidStatus);
             }
 
             if (filter.FromDate.HasValue)
@@ -65,6 +66,7 @@ namespace Repositories.RepairProgressRepositories
             var totalCount = await query.CountAsync();
 
             // Apply pagination
+#pragma warning disable CS8601 // Possible null reference assignment.
             var items = await query
                 .OrderByDescending(ro => ro.CreatedAt)
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
@@ -77,7 +79,7 @@ namespace Repositories.RepairProgressRepositories
                     EstimatedCompletionDate = ro.EstimatedCompletionDate,
                     CompletionDate = ro.CompletionDate,
                     Cost = ro.Cost,
-                    PaidStatus = ro.PaidStatus,
+                    PaidStatus = ro.PaidStatus.ToString(),
                     VehicleLicensePlate = ro.Vehicle.LicensePlate,
                     VehicleModel = ro.Vehicle.Model.ModelName,
                     StatusName = ro.OrderStatus.StatusName,
@@ -90,7 +92,13 @@ namespace Repositories.RepairProgressRepositories
                         HexCode = l.HexCode
                     }).ToList(),
                     ProgressPercentage = CalculateProgressPercentage(ro.Jobs),
-                    ProgressStatus = GetProgressStatus(ro.Jobs)
+                    ProgressStatus = GetProgressStatus(ro.Jobs),
+                    FeedBacks = ro.FeedBack != null ? new FeedbackDto
+                    {
+                        Rating = ro.FeedBack.Rating,
+                        Description = ro.FeedBack.Description ?? string.Empty,
+                        CreatedAt = ro.FeedBack.CreatedAt
+                    } : null
                 })
                 .ToListAsync();
 
@@ -106,14 +114,15 @@ namespace Repositories.RepairProgressRepositories
         public async Task<RepairOrderProgressDto?> GetRepairOrderProgressAsync(Guid repairOrderId, string userId)
         {
             var repairOrder = await _context.RepairOrders
-                .Include(rp=>rp.OrderStatus).ThenInclude(os=>os.Labels)
-                .Include(rp=>rp.Vehicle).ThenInclude(v=>v.Brand)
+                .Include(rp => rp.OrderStatus).ThenInclude(os => os.Labels)
+                .Include(rp => rp.Vehicle).ThenInclude(v => v.Brand)
                 .Include(rp => rp.Vehicle).ThenInclude(v => v.Model)
-                .Include(rp=>rp.Jobs).ThenInclude(j=>j.JobParts).ThenInclude(jp=>jp.Part)
-                .Include(rp => rp.Jobs).ThenInclude(j=>j.JobTechnicians).ThenInclude(jt=>jt.Technician).ThenInclude(t=>t.User)
-                .Include(rp => rp.Jobs).ThenInclude(j=>j.Repair)
-                .Include(rp=>rp.User)
-                
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobParts).ThenInclude(jp => jp.Part)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
+                .Include(rp => rp.User)
+                .Include(rp => rp.FeedBack)
+
 
                 .Where(ro => ro.RepairOrderId == repairOrderId &&
                             ro.UserId == userId &&
@@ -128,16 +137,22 @@ namespace Repositories.RepairProgressRepositories
                     Cost = ro.Cost,
                     EstimatedAmount = ro.EstimatedAmount,
                     PaidAmount = ro.PaidAmount,
-                    PaidStatus = ro.PaidStatus,
+                    PaidStatus = ro.PaidStatus.ToString(),
                     Note = ro.Note ?? string.Empty,
                     Vehicle = new Dtos.RepairProgressDto.VehicleDto
                     {
                         VehicleId = ro.Vehicle.VehicleId,
                         LicensePlate = ro.Vehicle.LicensePlate,
-                        Model = ro.Vehicle.Model.ModelName ,
+                        Model = ro.Vehicle.Model.ModelName,
                         Brand = ro.Vehicle.Brand.BrandName,
                         Year = ro.Vehicle.Year
                     },
+                    FeedBacks = ro.FeedBack != null ? new FeedbackDto
+                    {
+                        Rating = ro.FeedBack.Rating,
+                        Description = ro.FeedBack.Description ?? string.Empty,
+                        CreatedAt = ro.FeedBack.CreatedAt
+                    } : null,
                     OrderStatus = new OrderStatusDto
                     {
                         OrderStatusId = ro.OrderStatus.OrderStatusId,
@@ -175,16 +190,18 @@ namespace Repositories.RepairProgressRepositories
                             PartId = jp.Part.PartId,
                             Name = jp.Part.Name,
                             Price = jp.Part.Price
-                                                 
+
                         }).ToList(),
                         Technicians = j.JobTechnicians.Select(jt => new Dtos.RepairProgressDto.TechnicianDto
                         {
                             TechnicianId = jt.Technician.TechnicianId,
-                            FullName = jt.Technician.User.LastName + " "+ jt.Technician.User.FirstName,
+                            FullName = jt.Technician.User.LastName + " " + jt.Technician.User.FirstName,
                             Email = jt.Technician.User.Email,
                             PhoneNumber = jt.Technician.User.PhoneNumber
                         }).ToList()
+
                     }).ToList()
+                    
                 })
                 .FirstOrDefaultAsync();
 
@@ -210,17 +227,17 @@ namespace Repositories.RepairProgressRepositories
 
         private static string GetProgressStatus(ICollection<Job> jobs)
         {
-            if (jobs == null || !jobs.Any()) return "Chưa bắt đầu";
+            if (jobs == null || !jobs.Any()) return "Not Started";
 
             var completedJobs = jobs.Count(j => j.Status == JobStatus.Completed);
             var percentage = (decimal)completedJobs / jobs.Count * 100;
 
             return percentage switch
             {
-                0 => "Chưa bắt đầu",
-                < 100 => "Đang thực hiện",
-                100 => "Hoàn thành",
-                _ => "Không xác định"
+                0 => "Not Started",
+                < 100 => "In Progress",
+                100 => "Completed",
+                _ => "Unknown"
             };
         }
 

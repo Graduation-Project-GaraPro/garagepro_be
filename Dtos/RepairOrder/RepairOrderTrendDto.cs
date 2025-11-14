@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BusinessObject.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace Dtos.RepairOrder
@@ -18,7 +19,7 @@ namespace Dtos.RepairOrder
         public decimal Amount { get; set; }
         public string BranchName { get; set; }
         public string CustomerName { get; set; }
-        public string PaidStatus { get; set; }
+        public PaidStatus PaidStatus { get; set; }
     }
 
     public class RepairOrdersTrendsResponse

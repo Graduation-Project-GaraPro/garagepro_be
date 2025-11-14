@@ -1,4 +1,5 @@
-﻿using DataAccessLayer;
+﻿using BusinessObject.Enums;
+using DataAccessLayer;
 using Dtos.Job;
 using Dtos.RepairOrder;
 using Dtos.Revenue;

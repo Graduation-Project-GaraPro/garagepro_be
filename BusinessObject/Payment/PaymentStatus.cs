@@ -2,8 +2,9 @@
 {
     public enum PaymentStatus
     {
-        payed,
-        unpayed,
-        refund
+        Paid,
+        Unpaid,
+        Cancelled,
+        Failed
     }
 }

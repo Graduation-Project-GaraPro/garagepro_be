@@ -23,6 +23,18 @@ namespace Repositories
             _context = context;
         }
 
+        public async Task<bool> UpdateDeviceIdAsync(string userId, string deviceId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                return false;
+
+            user.DeviceId = deviceId;
+
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded;
+        }
+
         public async Task<List<ApplicationUser>> GetAllAsync()
         {
             // Lấy role Admin
