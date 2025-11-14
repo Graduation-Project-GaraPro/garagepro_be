@@ -18,9 +18,9 @@ namespace BusinessObject.InspectionAndRepair {
 
         public int DisplayOrder { get; set; }
 
-        // FK -> SpecificationTemplate
+   
         [ForeignKey(nameof(SpecificationCategory))]
-        public Guid TemplateID { get; set; }
+        public Guid CategoryID { get; set; }
         public virtual SpecificationCategory  SpecificationCategory{ get; set; }
 
         // Navigation

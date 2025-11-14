@@ -23,6 +23,16 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
+        [HttpGet("paged")]
+        public async Task<ActionResult<IEnumerable<PartCategoryWithPartsDto>>> GetPaged(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? categoryName = null)
+        {
+            var result = await _service.GetPagedAsync(pageNumber, pageSize, categoryName);
+            return Ok(result);
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<PartCategoryWithPartsDto>> GetById(Guid id)
         {

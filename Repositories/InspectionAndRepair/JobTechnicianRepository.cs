@@ -6,18 +6,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-
 namespace Repositories.InspectionAndRepair
 {
     public class JobTechnicianRepository : IJobTechnicianRepository
     {
         private readonly MyAppDbContext _context;
-
         public JobTechnicianRepository(MyAppDbContext context)
         {
             _context = context;
         }
-
         public async Task<List<Job>> GetJobsByTechnicianAsync(string userId)
         {
             return await _context.JobTechnicians
@@ -27,19 +24,19 @@ namespace Repositories.InspectionAndRepair
                 .Include(jt => jt.Job)
                     .ThenInclude(j => j.RepairOrder)  // Để lấy RepairOrderId
                         .ThenInclude(ro => ro.User)  // Thêm: Lấy Vehicle từ RepairOrder
-                            //.ThenInclude(v => v.User)  // Thêm: Lấy Customer (User) từ Vehicle
+                                                     //.ThenInclude(v => v.User)  // Thêm: Lấy Customer (User) từ Vehicle
                  .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder) 
-                        .ThenInclude(ro => ro.Vehicle)  
+                    .ThenInclude(j => j.RepairOrder)
+                        .ThenInclude(ro => ro.Vehicle)
                             .ThenInclude(v => v.Brand)
                  .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder)  
-                        .ThenInclude(ro => ro.Vehicle)  
-                            .ThenInclude(v => v.Color)
-                 .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder)  
-                        .ThenInclude(ro => ro.Vehicle)  
+                    .ThenInclude(j => j.RepairOrder)
+                        .ThenInclude(ro => ro.Vehicle)
                             .ThenInclude(v => v.Model)
+                 .Include(jt => jt.Job)
+                   .ThenInclude(j => j.JobParts)
+                        .ThenInclude(jp => jp.Part)
+                            .ThenInclude(p => p.PartCategory)
                 .Include(jt => jt.Job)
                     .ThenInclude(j => j.JobParts)
                         .ThenInclude(jp => jp.Part)  // Để lấy Parts
@@ -57,6 +54,5 @@ namespace Repositories.InspectionAndRepair
             _context.Jobs.Update(job);
             await _context.SaveChangesAsync();
         }
-
     }
 }

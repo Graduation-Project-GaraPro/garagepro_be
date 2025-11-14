@@ -1,23 +1,19 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
-using Services;
 using Dtos.Quotations;
-using System.Security.Claims;
+using Garage_pro_api.DbInit;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Services;
+using System;
 
 namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
-    public class InspectionsController : ControllerBase
+    public class InspectionController : ControllerBase
     {
         private readonly IInspectionService _inspectionService;
 
-        public InspectionsController(IInspectionService inspectionService)
+        public InspectionController(IInspectionService inspectionService)
         {
             _inspectionService = inspectionService;
         }
@@ -81,6 +77,15 @@ namespace Garage_pro_api.Controllers
             return Ok(inspections);
         }
 
+        // GET: api/Inspections/completed-with-details
+        [HttpGet("completed-with-details")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<ActionResult<IEnumerable<CompletedInspectionDto>>> GetCompletedInspectionsWithDetails()
+        {
+            var inspections = await _inspectionService.GetCompletedInspectionsWithDetailsAsync();
+            return Ok(inspections);
+        }
+
         // POST: api/Inspections
         [HttpPost]
         [Authorize(Policy = "BOOKING_MANAGE")]
@@ -99,6 +104,35 @@ namespace Garage_pro_api.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // POST: api/Inspections/convert-to-quotation
+        [HttpPost("convert-to-quotation")]
+        //[Authorize(Policy = "BOOKING_MANAGE")]
+        public async Task<ActionResult<QuotationDto>> ConvertInspectionToQuotation([FromBody] ConvertInspectionToQuotationDto convertDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var quotation = await _inspectionService.ConvertInspectionToQuotationAsync(convertDto);
+                return Ok(quotation);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while converting inspection to quotation", error = ex.Message });
             }
         }
 
@@ -137,62 +171,6 @@ namespace Garage_pro_api.Controllers
             return NoContent();
         }
 
-        // PUT: api/Inspections/{id}/finding
-        [HttpPut("{id}/finding")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> UpdateInspectionFinding(Guid id, [FromBody] UpdateInspectionFindingDto findingDto)
-        {
-            var result = await _inspectionService.UpdateInspectionFindingAsync(id, findingDto.Finding, findingDto.Note, findingDto.IssueRating);
-            if (!result)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
-        }
-
-        // PUT: api/Inspections/{id}/concern
-        [HttpPut("{id}/concern")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> UpdateCustomerConcern(Guid id, [FromBody] UpdateCustomerConcernDto concernDto)
-        {
-            var result = await _inspectionService.UpdateCustomerConcernAsync(id, concernDto.CustomerConcern);
-            if (!result)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
-        }
-
-        // PUT: api/Inspections/{id}/price
-        [HttpPut("{id}/price")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> UpdateInspectionPrice(Guid id, [FromBody] UpdateInspectionPriceDto priceDto)
-        {
-            var result = await _inspectionService.UpdateInspectionPriceAsync(id, priceDto.InspectionPrice);
-            if (!result)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
-        }
-
-        // PUT: api/Inspections/{id}/type
-        [HttpPut("{id}/type")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> UpdateInspectionType(Guid id, [FromBody] UpdateInspectionTypeDto typeDto)
-        {
-            var result = await _inspectionService.UpdateInspectionTypeAsync(id, typeDto.InspectionType);
-            if (!result)
-            {
-                return NotFound();
-            }
-
-            return NoContent();
-        }
-
         // DELETE: api/Inspections/{id}
         [HttpDelete("{id}")]
         [Authorize(Policy = "BOOKING_MANAGE")]
@@ -206,28 +184,39 @@ namespace Garage_pro_api.Controllers
 
             return NoContent();
         }
-    }
 
-    // Additional DTOs for specific operations
-    public class UpdateInspectionFindingDto
-    {
-        public string Finding { get; set; }
-        public string Note { get; set; }
-        public BusinessObject.Enums.IssueRating IssueRating { get; set; }
-    }
+        // POST: api/Inspection/seed-database
+        [HttpPost("seed-database")]
+        [Authorize(Policy = "BOOKING_MANAGE")]
+        public async Task<ActionResult> SeedDatabase([FromServices] IServiceProvider serviceProvider)
+        {
+            try
+            {
+                var dbInitializer = serviceProvider.GetRequiredService<DbInitializer>();
+                await dbInitializer.Initialize();
+                return Ok(new { message = "Database seeding completed successfully" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while seeding the database", error = ex.Message });
+            }
+        }
 
-    public class UpdateCustomerConcernDto
-    {
-        public string CustomerConcern { get; set; }
-    }
-
-    public class UpdateInspectionPriceDto
-    {
-        public decimal InspectionPrice { get; set; }
-    }
-    
-    public class UpdateInspectionTypeDto
-    {
-        public BusinessObject.Enums.InspectionType InspectionType { get; set; }
+        // GET: api/Inspection/check-seeding
+        [HttpGet("check-seeding")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<ActionResult> CheckSeeding([FromServices] IInspectionService inspectionService)
+        {
+            try
+            {
+                var inspections = await inspectionService.GetAllInspectionsAsync();
+                var count = inspections.Count();
+                return Ok(new { message = $"Database has {count} inspections seeded", inspectionCount = count });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while checking seeding status", error = ex.Message });
+            }
+        }
     }
 }

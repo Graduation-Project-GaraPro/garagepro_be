@@ -79,46 +79,51 @@ namespace Services.PaymentServices
         #region Luồng PayOS
         public async Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(CreatePaymentRequest input, string userId, CancellationToken ct = default)
         {
-            // 1. Validate input
-            if (input == null)
-            {
-                throw new ArgumentNullException(nameof(input));
-            }
+            
+                // 1. Validate input
+                if (input == null)
+                {
+                    throw new ArgumentNullException(nameof(input));
+                }
+                if (input.Amount <= 0) throw new ArgumentOutOfRangeException(nameof(input.Amount), "Amount must be > 0");
+                // 2. Get repair order and validate ownership
+                var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(input.RepairOrderId);
 
-            // 2. Get repair order and validate ownership
-            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(input.RepairOrderId);
+                if (repairOrder == null)
+                {
+                    throw new Exception($"Repair order with ID {input.RepairOrderId} not found");
+                }
 
-            if (repairOrder == null)
-            {
-                throw new Exception($"Repair order with ID {input.RepairOrderId} not found");
-            }
+                if (repairOrder.UserId != userId)
+                {
+                    throw new UnauthorizedAccessException("User does not have permission to access this repair order");
+                }
+                if (!repairOrder.OrderStatus.StatusName.Equals("Completed"))
+                {
+                    throw new Exception($"Repair order with ID {input.RepairOrderId} is not Complete");
+                }
 
-            if (repairOrder.UserId != userId)
-            {
-                throw new UnauthorizedAccessException("User does not have permission to access this repair order");
-            }
+                if (repairOrder.PaidAmount != input.Amount)
+                    throw new Exception("Amount does not match order total");
 
-            // 3. Find or create payment record
-            var existingPayment = await _repo.GetByConditionAsync(
-                p => p.UserId == userId &&
-                     p.RepairOrderId == input.RepairOrderId &&
-                     p.Status == PaymentStatus.Paid,
-                ct);
 
-            Payment payment;
+                var paidPayment = await _repo.GetByConditionAsync(
+                 p => p.UserId == userId && p.RepairOrderId == input.RepairOrderId && p.Status == PaymentStatus.Paid, ct);
+                if (paidPayment != null) throw new Exception($"Payment {paidPayment.PaymentId} already paid");
 
-            if (existingPayment != null)
-            {
-                throw new Exception($"Payment with ID {existingPayment.PaymentId} is paid");
+                var existingOpen = await _repo.GetByConditionAsync(
+                    p => p.UserId == userId && p.RepairOrderId == input.RepairOrderId &&
+                         (p.Status == PaymentStatus.Unpaid ), ct);
+                if (existingOpen != null)
+                    return new CreatePaymentLinkResult { PaymentId = existingOpen.PaymentId, OrderCode = existingOpen.PaymentId, CheckoutUrl = existingOpen.CheckoutUrl };
 
-            }
-            else
-            {
-                payment = new Payment
+
+
+                var payment = new Payment
                 {
                     RepairOrderId = input.RepairOrderId,
                     UserId = userId,
-                    Amount = input.Amount,
+                    Amount = input.Amount,               
                     Method = PaymentMethod.PayOs,
                     Status = PaymentStatus.Unpaid,
                     PaymentDate = DateTime.UtcNow,
@@ -126,110 +131,89 @@ namespace Services.PaymentServices
                 };
 
                 await _repo.AddAsync(payment);
-            }
+                await _repo.SaveChangesAsync(ct); 
 
-            // 4. Ensure payment is saved and has ID
-            if (payment.PaymentId <= 0)
-            {
-                throw new InvalidOperationException("Payment ID is not generated properly");
-            }
 
-            // 5. Prepare URLs for PayOS - FIXED: swapped returnUrl and cancelUrl
-            var returnUrl = BuildMyAppUrl(
-                hostPath: "success",
-                orderCode: payment.PaymentId,
-                extra: new Dictionary<string, string>
+                // 4. Ensure payment is saved and has ID
+                if (payment.PaymentId <= 0)
                 {
-                    ["amount"] = ((int)Math.Round(input.Amount, MidpointRounding.AwayFromZero)).ToString(),
-                    ["transactionId"] = "TX_BE_123"
-                });
+                    throw new InvalidOperationException("Payment ID is not generated properly");
+                }
 
-            //var cancelUrl = BuildMyAppUrl(
-            //    hostPath: "cancel",
-            //    orderCode: payment.PaymentId,
-            //    extra: new Dictionary<string, string>
-            //    {
-            //        ["reason"] = "user_cancel"
-            //    });
+                // 5. Prepare URLs for PayOS - FIXED: swapped returnUrl and cancelUrl
+                var returnUrl = BuildMyAppUrl(
+                    hostPath: "success",
+                    orderCode: payment.PaymentId,
+                    extra: new Dictionary<string, string>
+                    {
+                        ["amount"] = ((int)Math.Round(input.Amount, MidpointRounding.AwayFromZero)).ToString(),
+                        ["transactionId"] = "TX_BE_123"
+                    });
 
-            var cancelUrl = $"{_baseUrl}/api/payments/cancel?orderCode={payment.PaymentId}&reason=user_cancel";
+                //var cancelUrl = BuildMyAppUrl(
+                //    hostPath: "cancel",
+                //    orderCode: payment.PaymentId,
+                //    extra: new Dictionary<string, string>
+                //    {
+                //        ["reason"] = "user_cancel"
+                //    });
 
-            // 6. Create PayOS payment link
-            var payOsRequest = new CreatePaymentLinkRequest(
-                orderCode: payment.PaymentId,
-                amount: (int)Math.Round(input.Amount, MidpointRounding.AwayFromZero),
-                description: input.Description ?? $"Payment for repair order {input.RepairOrderId}",
-                cancelUrl: cancelUrl,    // Fixed: user cancels -> go to cancelUrl
-                returnUrl: returnUrl     // Fixed: payment success -> go to returnUrl
-            );
+                var cancelUrl = $"{_baseUrl}/api/payments/cancel?orderCode={payment.PaymentId}&reason=user_cancel";
 
-            var payOsResponse = await _payos.CreatePaymentLinkAsync(payOsRequest, ct);
+                // 6. Create PayOS payment link
+                var payOsRequest = new CreatePaymentLinkRequest(
+                    orderCode: payment.PaymentId,
+                    amount: (int)Math.Round(input.Amount, MidpointRounding.AwayFromZero),
+                    description: input.Description ?? $"Payment for repair order {input.RepairOrderId}",
+                    cancelUrl: cancelUrl,    // Fixed: user cancels -> go to cancelUrl
+                    returnUrl: returnUrl     // Fixed: payment success -> go to returnUrl
+                );
 
-            // 7. Validate PayOS response
-            if (payOsResponse?.data == null || string.IsNullOrEmpty(payOsResponse.data.checkoutUrl))
-            {
-                // Optionally update payment status to failed
-                payment.Status = PaymentStatus.Failed;
+
+                PayOsResponse<CreatePaymentLinkResponse> payOsResponse;
+                try
+                {
+                    payOsResponse = await _payos.CreatePaymentLinkAsync(payOsRequest, ct);
+                }
+                catch (Exception ex)
+                {
+                    // log
+                    throw new Exception("PayOS error when creating link", ex);
+                }
+
+                // 7. Validate PayOS response
+                if (payOsResponse?.data == null || string.IsNullOrEmpty(payOsResponse.data.checkoutUrl))
+                {
+                    // Optionally update payment status to failed
+                    payment.Status = PaymentStatus.Failed;
+                    payment.UpdatedAt = DateTime.UtcNow;
+                    await _repo.UpdateAsync(payment, ct);
+                    await _repo.SaveChangesAsync(ct);
+
+                    throw new InvalidOperationException($"PayOS returned invalid response: code={payOsResponse?.code}, desc={payOsResponse?.desc}");
+                }
+
+
+                payment.Status = PaymentStatus.Unpaid;
+                payment.CheckoutUrl = payOsResponse.data.checkoutUrl;
+                //payment.ExternalOrderCode = payOsResponse.data.orderCode?.ToString();
                 payment.UpdatedAt = DateTime.UtcNow;
-                await _repo.UpdateAsync(payment,ct);
+                await _repo.UpdateAsync(payment, ct);
+                await _repo.SaveChangesAsync(ct);
 
-                throw new InvalidOperationException($"PayOS returned invalid response: code={payOsResponse?.code}, desc={payOsResponse?.desc}");
-            }
-            await _repo.SaveChangesAsync(ct);
+                // 8. Return result
+                return new CreatePaymentLinkResult
+                {
+                    PaymentId = payment.PaymentId,
+                    OrderCode = payOsResponse.data.orderCode,
+                    CheckoutUrl = payOsResponse.data.checkoutUrl
 
-            // 8. Return result
-            return new CreatePaymentLinkResult
-            {
-                PaymentId = payment.PaymentId,
-                OrderCode = payOsResponse.data.orderCode,
-                CheckoutUrl = payOsResponse.data.checkoutUrl
-               
-            };
+                };
+           
+
         }
 
-        //public async Task HandlePayOsWebhookAsync(PayOsWebhookData data, CancellationToken ct = default)
-        //{
-        //    try {
-
-                
-        //        var amount = Convert.ToDecimal(data.Amount);
-        //        // ✅ Cách chuẩn: lưu bảng tạm map OrderCode -> PaymentId khi tạo link và tra thẳng ở đây.
-        //        var payment = await _repo.GetByConditionAsync(
-        //             p => 
-        //                  p.Status != PaymentStatus.Paid &&
-        //                  p.PaymentId == data.OrderCode
-        //             );
-
-
-        //        if (payment == null)
-        //        {
-        //            // Không tìm thấy payment khớp — log lại để đối soát, hoặc tạo bản ghi reconciliation.
-        //            // Có thể bạn đang dùng orderCode = RepairOrderId (Guid). Nếu đúng, hãy thay logic tra cứu ở đây.
-        //            return;
-        //        }
-
-        //        if (payment.Status is PaymentStatus.Paid or PaymentStatus.Cancelled)
-        //            return; // idempotent
-
-        //        if (data.Code == "00")
-        //        {
-        //            payment.Status = PaymentStatus.Paid;
-        //        }
-        //        else
-        //        {
-        //            payment.Status = PaymentStatus.Cancelled;
-        //        }
-        //        payment.PaymentDate = data.TransactionDateTime;
-        //        payment.ProviderCode = data.Code;
-        //        payment.ProviderDesc = data.Desc;
-        //        payment.UpdatedAt = DateTime.UtcNow;
-        //        await _repo.UpdateAsync(payment);
-        //    }
-        //    catch(Exception ex)
-        //    {
-        //        throw new Exception(ex.Message);
-        //    }
-        //}
+       
 
 
         private static string BuildMyAppUrl(

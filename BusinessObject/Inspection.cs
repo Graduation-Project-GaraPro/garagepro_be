@@ -32,9 +32,7 @@ namespace BusinessObject
         [MaxLength(500)]
         public string? Note { get; set; }
 
-        public decimal InspectionPrice { get; set; } = 0;
-        
-        public InspectionType InspectionType { get; set; } = InspectionType.Full;
+        public string? ImageUrl { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

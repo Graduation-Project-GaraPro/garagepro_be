@@ -13,13 +13,15 @@ namespace Dtos.Quotations
         public string CustomerConcern { get; set; }
         public string Finding { get; set; }
         public IssueRating IssueRating { get; set; }
-        public string Note { get; set; }
-        public decimal InspectionPrice { get; set; }
-        public InspectionType InspectionType { get; set; }
+        public string? Note { get; set; }
+        public string? ImageUrl { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
         
         // Navigation properties
         public string TechnicianName { get; set; }
+        
+        // Services and parts information
+        public List<InspectionServiceDto> Services { get; set; } = new List<InspectionServiceDto>();
     }
 }

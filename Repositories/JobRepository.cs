@@ -253,6 +253,19 @@ namespace Repositories
 
             _context.JobTechnicians.Add(jobTechnician);
 
+            // Update the job status to New when assigned
+            var job = await _context.Jobs.FindAsync(jobId);
+            if (job != null)
+            {
+                job.Status = JobStatus.New;
+                job.UpdatedAt = DateTime.UtcNow;
+                
+                // Add note about assignment
+                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                var noteText = $"[{timestamp}] Job assigned to technician, status changed to New";
+                job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
+            }
+
             try
             {
                 await _context.SaveChangesAsync();
@@ -575,11 +588,27 @@ namespace Repositories
             return await query
                 .OrderBy(j => j.CustomerResponseAt)
                 .ToListAsync();
-              }
+        }
 
+        public async Task<bool> TechnicianExistsAsync(Guid technicianId)
+        {
+            return await _context.Technicians.AnyAsync(t => t.TechnicianId == technicianId);
+        }
 
-        
+        public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .Where(t => t.User.BranchId == branchId)
+                .ToListAsync();
+        }
 
+        public async Task<Technician?> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
 
         public async Task<IEnumerable<Job>> GetJobsAssignedByManagerAsync(string managerId)
         {
@@ -607,7 +636,8 @@ namespace Repositories
 
             foreach (var job in jobs)
             {
-                
+                // Update job status from Pending to New when assigned
+                job.Status = JobStatus.New;
                 job.AssignedByManagerId = managerId;
                 job.AssignedAt = timestamp;
                 job.UpdatedAt = timestamp;
@@ -627,7 +657,7 @@ namespace Repositories
                 }
 
                 // Add note about assignment
-                var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}";
+                var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}, status changed to New";
                 job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
 
@@ -674,9 +704,12 @@ namespace Repositories
             job.AssignedByManagerId = managerId;
             job.AssignedAt = timestamp;
             job.UpdatedAt = timestamp;
+            
+            // Update job status to New when reassigned
+            job.Status = JobStatus.New;
 
             // Add note about reassignment
-            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}";
+            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}, status changed to New";
             job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
 
             try
@@ -695,6 +728,64 @@ namespace Repositories
             // This method is no longer relevant as customer approval is handled at the quotation level
             // Return empty collection
             return new List<Job>();
+        }
+        
+        // NEW: Create revision job
+        public async Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason)
+        {
+            // Get the original job
+            var originalJob = await GetByIdAsync(originalJobId);
+            if (originalJob == null)
+                throw new ArgumentException("Original job not found", nameof(originalJobId));
+
+            // Create a new job based on the original job
+            var revisionJob = new Job
+            {
+                ServiceId = originalJob.ServiceId,
+                RepairOrderId = originalJob.RepairOrderId,
+                JobName = $"{originalJob.JobName} (Revision {originalJob.RevisionCount + 1})",
+                Status = JobStatus.Pending,
+                Deadline = originalJob.Deadline,
+                TotalAmount = originalJob.TotalAmount,
+                Note = $"Revision of job {originalJob.JobId}. Reason: {revisionReason}",
+                Level = originalJob.Level,
+                SentToCustomerAt = originalJob.SentToCustomerAt,
+                CustomerResponseAt = originalJob.CustomerResponseAt,
+                CustomerApprovalNote = originalJob.CustomerApprovalNote,
+                AssignedByManagerId = null, // Reset assignment
+                AssignedAt = null, // Reset assignment
+                EstimateExpiresAt = originalJob.EstimateExpiresAt,
+                RevisionCount = originalJob.RevisionCount + 1,
+                OriginalJobId = originalJob.OriginalJobId ?? originalJobId, // Point to the very first job
+                RevisionReason = revisionReason,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = null
+            };
+
+            // Save the revision job
+            var createdJob = await CreateAsync(revisionJob);
+
+            // Copy job parts from the original job
+            if (originalJob.JobParts != null && originalJob.JobParts.Any())
+            {
+                foreach (var originalPart in originalJob.JobParts)
+                {
+                    var jobPart = new JobPart
+                    {
+                        JobId = createdJob.JobId,
+                        PartId = originalPart.PartId,
+                        Quantity = originalPart.Quantity,
+                        UnitPrice = originalPart.UnitPrice,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    
+                    _context.JobParts.Add(jobPart);
+                }
+                
+                await _context.SaveChangesAsync();
+            }
+
+            return createdJob;
         }
 
         #endregion

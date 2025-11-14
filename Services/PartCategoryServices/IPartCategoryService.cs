@@ -11,6 +11,10 @@ namespace Services.PartCategoryServices
     {
         Task<IEnumerable<PartCategoryWithPartsDto>> GetAllWithPartsAsync();
         Task<PartCategoryWithPartsDto?> GetByIdWithPartsAsync(Guid id);
+        Task<IEnumerable<PartCategoryWithPartsDto>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string? categoryName);
     }
 
 }

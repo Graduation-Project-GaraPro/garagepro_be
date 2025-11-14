@@ -173,6 +173,30 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+        
+        // Create revision jobs for an updated quotation - Manager only
+        [HttpPost("{id}/create-revision-jobs")]
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult<bool>> CreateRevisionJobs(Guid id, [FromBody] CreateRevisionJobsDto createRevisionJobsDto)
+        {
+            try
+            {
+                var result = await _quotationService.CreateRevisionJobsAsync(id, createRevisionJobsDto.RevisionReason);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
 
         [HttpPut("customer-response")]
         public async Task<ActionResult<QuotationDto>> ProcessCustomerResponse([FromBody] CustomerQuotationResponseDto responseDto)

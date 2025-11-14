@@ -31,6 +31,7 @@ namespace Repositories.ServiceRepositories
             return await _context.Services
                 .Include(s => s.ServiceCategory).Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
                 .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
                 .FirstOrDefaultAsync(s => s.ServiceId == id);
         }
 
@@ -40,6 +41,8 @@ namespace Repositories.ServiceRepositories
                  .Include(s => s.ServiceCategory)
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
                 .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
+
 
                 .FirstOrDefaultAsync(s => s.ServiceId == id);
         }
@@ -49,6 +52,7 @@ namespace Repositories.ServiceRepositories
                 .Include(s => s.ServiceCategory)
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
                 .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p=>p.Parts)
                 .Include(s => s.RepairOrderServices)
                 .Include(s => s.ServiceInspections)
                 .Include(s => s.Jobs)

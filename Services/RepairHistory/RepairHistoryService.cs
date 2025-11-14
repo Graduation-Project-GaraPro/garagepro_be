@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using BusinessObject;
 using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.InspectionAndRepair;
@@ -45,13 +46,13 @@ namespace Services.RepairHistory
             if (!completedJobs.Any())
                 return new List<RepairHistoryDto>();
 
-            // Nhóm theo Vehicle (vì 1 xe có thể sửa nhiều lần)
             var grouped = completedJobs.GroupBy(j => j.RepairOrder.Vehicle.VehicleId);
 
             var result = grouped.Select(g =>
             {
                 var vehicle = g.First().RepairOrder.Vehicle;
                 var owner = vehicle.User;
+                var firstJob = g.First(); 
 
                 return new RepairHistoryDto
                 {
@@ -70,11 +71,6 @@ namespace Services.RepairHistory
                             ModelId = vehicle.Model.ModelID,
                             ModelName = vehicle.Model.ModelName,
                             ManufacturingYear = vehicle.Model.ManufacturingYear
-                        },
-                        Color = vehicle.Color == null ? null : new VehicleColorDto
-                        {
-                            ColorId = vehicle.Color.ColorID,
-                            ColorName = vehicle.Color.ColorName
                         }
                     },
                     Owner = new CustomerDto
@@ -85,27 +81,32 @@ namespace Services.RepairHistory
                         PhoneNumber = owner.PhoneNumber
                     },
                     RepairCount = vehicle.RepairOrders?.Count() ?? 1,
+                    TotalVehicleAmount = g.Sum(job => job.TotalAmount),
+                   
+                    CustomerIssue = firstJob.RepairOrder.Note, 
                     CompletedJobs = g.Select(job => new JobHistoryDto
                     {
                         JobName = job.JobName,
-                        Note = job.Note,
+                        RepairDescription = job.Repair?.Description,
                         TotalAmount = job.TotalAmount,
                         Deadline = job.Deadline,
+                        Note = job.Note,
                         Level = job.Level,
-                        CustomerIssue = job.RepairOrder.Note,
                         JobParts = job.JobParts.Select(p => new Dtos.RepairHistory.JobPartDto
                         {
                             PartName = p.Part.Name,
                             Quantity = p.Quantity,
                             UnitPrice = p.UnitPrice
                         }).ToList(),
-                        Services = job.RepairOrder.RepairOrderServices?.Select(s => new ServiceDto
-                        {
-                            ServiceName = s.Service.ServiceName,
-                            //ServicePrice = s.ServicePrice,
-                            ActualDuration = s.ActualDuration,
-                            Notes = s.Notes
-                        }).ToList() ?? new List<ServiceDto>()
+                        // Lọc services theo ServiceId của Job này
+                        Services = job.RepairOrder.RepairOrderServices?
+                            .Where(s => s.ServiceId == job.ServiceId)
+                            .Select(s => new ServiceDto
+                            {
+                                ServiceName = s.Service.ServiceName,
+                                ActualDuration = s.ActualDuration,
+                                Notes = s.Notes
+                            }).ToList() ?? new List<ServiceDto>()
                     }).ToList()
                 };
             }).ToList();

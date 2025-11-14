@@ -34,7 +34,7 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        [Authorize(Policy = "SERVICE_VIEW")]
+        //[Authorize(Policy = "SERVICE_VIEW")]
         [HttpGet("paged")]
         public async Task<ActionResult<object>> GetPaged(
             [FromQuery] int pageNumber = 1,
@@ -81,7 +81,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { message = "Error retrieving service", detail = ex.Message });
             }
         }
-        [Authorize(Policy = "SERVICE_CREATE")]
+        //[Authorize(Policy = "SERVICE_CREATE")]
 
         // POST: api/service
         [HttpPost]

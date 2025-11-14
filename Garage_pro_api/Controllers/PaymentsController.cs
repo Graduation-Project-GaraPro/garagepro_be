@@ -32,13 +32,19 @@ namespace Garage_pro_api.Controllers
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreatePaymentRequest req, CancellationToken ct)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
-            if (string.IsNullOrEmpty(userId))
-                return Unauthorized();
-            
-            var link = await _service.CreatePaymentAndLinkAsync(req,userId, ct);
-            return Ok(link);
+            try
+            {
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                var link = await _service.CreatePaymentAndLinkAsync(req, userId, ct);
+                return Ok(link);
+            }catch(Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
         }
 
         [HttpPost("webhook")]
