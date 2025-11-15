@@ -87,7 +87,7 @@ namespace Services
             {
                 RepairOrderId = createManagerInspectionDto.RepairOrderId,
                 CustomerConcern = createManagerInspectionDto.CustomerConcern,
-                Status = InspectionStatus.New,
+                Status = InspectionStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
             
@@ -284,7 +284,6 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
-                            Status = pi.Status,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()
@@ -321,7 +320,6 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
-                            Status = pi.Status,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()

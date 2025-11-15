@@ -31,5 +31,14 @@ namespace Services.PartCategoryServices
             var category = await _repository.GetByIdWithPartsAsync(id);
             return _mapper.Map<PartCategoryWithPartsDto?>(category);
         }
+
+        public async Task<IEnumerable<PartCategoryWithPartsDto>> GetPagedAsync(
+        int pageNumber,
+        int pageSize,
+        string? categoryName)
+        {
+            var categories = await _repository.GetPagedAsync(pageNumber, pageSize, categoryName);
+            return _mapper.Map<IEnumerable<PartCategoryWithPartsDto>>(categories);
+        }
     }
 }

@@ -77,13 +77,13 @@ namespace BusinessObject
         [Required]
         public string UserId { get; set; }
 
-        public Guid? RepairRequestId { get; set; }
+        public Guid? RepairRequestId { get; set; } = null;
 
         public Guid? FeedBackId { get; set; }
 
         // Navigation property
-        [ForeignKey("RepairRequestId")]
-        public virtual RepairRequest? RepairRequest { get; set; }
+        [ForeignKey(nameof(RepairRequestId))]
+        public virtual RepairRequest? RepairRequest { get; set; } 
 
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }

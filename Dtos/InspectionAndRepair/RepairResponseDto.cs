@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace Dtos.InspectionAndRepair
 {
@@ -17,7 +15,24 @@ namespace Dtos.InspectionAndRepair
         public string Notes { get; set; }
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
+        [JsonIgnore]
         public TimeSpan? ActualTime { get; set; }
+
+        [JsonIgnore]
         public TimeSpan? EstimatedTime { get; set; }
+
+        public string ActualTimeShort => FormatShort(ActualTime);
+        public string EstimatedTimeShort => FormatShort(EstimatedTime);
+        private static string FormatShort(TimeSpan? timeSpan)
+        {
+            if (!timeSpan.HasValue)
+                return null;
+
+            var ts = timeSpan.Value;
+            int totalHours = (int)ts.TotalHours;
+            int minutes = ts.Minutes;
+
+            return $"{totalHours:D2}h {minutes:D2}m";
+        }
     }
 }

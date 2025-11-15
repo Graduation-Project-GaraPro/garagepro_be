@@ -45,37 +45,25 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
-using Repositories.VehicleRepositories;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
-using Repositories.RoleRepositories;
-using Services.RoleServices;
-using Garage_pro_api.Authorization;
-using Microsoft.AspNetCore.Authorization;
-using Garage_pro_api.Mapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Authentication.Google;
-using Services.SmsSenders;
-using BusinessObject.Roles;
 using Microsoft.OData.ModelBuilder;
-using Microsoft.AspNetCore.OData;
 using System.Text.Json.Serialization;
 using Repositories.Statistical;
 using Services.Statistical;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Services.RepairHistory;
 using Repositories.RepairHistory;
-using Services.CampaignServices;
-using Repositories.CampaignRepositories;
-using Repositories.CampaignRepositories;
-using Services.CampaignServices;
 using Repositories.LogRepositories;
 using Services.LogServices;
 using Serilog;
 using Garage_pro_api.DbInterceptor;
 using Microsoft.Extensions.Options;
 using VNPAY.NET;
+using Garage_pro_api.Hubs;
+using Services.Hubs;
 using Repositories.RepairProgressRepositories;
 using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
@@ -89,7 +77,12 @@ using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Identity.Client;
 using Utils.RepairRequests;
 using Microsoft.AspNetCore.SignalR; // Add this line for SignalR
-using Services.Hubs; // Add this line for TechnicianAssignmentHub
+
+using Repositories.WebhookInboxRepositories;
+using Services.PaymentServices;
+using BusinessObject.PayOsModels;
+using Services.PayOsClients; // Add this line for TechnicianAssignmentHub
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -113,7 +106,6 @@ builder.Services.AddControllers()
 
 // Add SignalR services
 builder.Services.AddSignalR();
-
 // Add services to the container.
 
 builder.Services.AddControllers()
@@ -342,6 +334,8 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IFeedBackRepository, FeedBackRepository>();
 builder.Services.AddScoped<IFeedBackService, FeedBackService>();
 
+// Trong Program.cs
+builder.Services.AddScoped<IWebhookInboxRepository, WebhookInboxRepository>();
 
 // OrderStatus and Label repositories and services
 builder.Services.AddScoped<IOrderStatusRepository, OrderStatusRepository>();
@@ -494,8 +488,7 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
-builder.Services.AddScoped<Services.PaymentServices.IPaymentService, Services.PaymentServices.PaymentService>();
-
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 
 
@@ -508,7 +501,7 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 
-builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
+
 
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
@@ -577,8 +570,11 @@ builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
 
-builder.Services.AddHostedService<CampaignExpirationService>();
+builder.Services.Configure<PayOsOptions>(builder.Configuration.GetSection("PayOs"));
+builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 
+builder.Services.AddHostedService<CampaignExpirationService>();
+builder.Services.AddHostedService<PayOsWebhookProcessor>();
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -611,6 +607,7 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://10.224.41.46:5117",
                 "http://10.0.2.2:7113" // Android emulator
             )
             .AllowAnyHeader()
@@ -660,6 +657,7 @@ app.Use(async (context, next) =>
     await next();
 });
 app.MapHub<LogHub>("/logHub");
+app.MapHub<RepairHub>("/hubs/repair");
 
 app.UseAuthentication();
 

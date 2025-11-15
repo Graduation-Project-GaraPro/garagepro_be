@@ -17,6 +17,7 @@ namespace Repositories.RepairHistory
         {
             _context = context;
         }
+
         public async Task<Technician> GetTechnicianByUserIdAsync(string userId)
         {
             return await _context.Technicians
@@ -26,6 +27,9 @@ namespace Repositories.RepairHistory
         public async Task<Technician> GetTechnicianWithCompletedJobsAsync(Guid technicianId)
         {
             return await _context.Technicians
+                .Include(t => t.JobTechnicians)
+                    .ThenInclude(jt => jt.Job)
+                        .ThenInclude(j => j.Repair)
                 .Include(t => t.JobTechnicians)
                     .ThenInclude(jt => jt.Job)
                         .ThenInclude(j => j.JobParts)
@@ -39,17 +43,12 @@ namespace Repositories.RepairHistory
                     .ThenInclude(jt => jt.Job)
                         .ThenInclude(j => j.RepairOrder)
                             .ThenInclude(ro => ro.Vehicle)
-                                .ThenInclude(v => v.Brand) 
+                                .ThenInclude(v => v.Brand)
                 .Include(t => t.JobTechnicians)
                     .ThenInclude(jt => jt.Job)
                         .ThenInclude(j => j.RepairOrder)
                             .ThenInclude(ro => ro.Vehicle)
-                                .ThenInclude(v => v.Model) 
-                .Include(t => t.JobTechnicians)
-                    .ThenInclude(jt => jt.Job)
-                        .ThenInclude(j => j.RepairOrder)
-                            .ThenInclude(ro => ro.Vehicle)
-                                .ThenInclude(v => v.Color) 
+                                .ThenInclude(v => v.Model)
                 .Include(t => t.JobTechnicians)
                     .ThenInclude(jt => jt.Job)
                         .ThenInclude(j => j.RepairOrder)

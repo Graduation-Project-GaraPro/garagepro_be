@@ -24,6 +24,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Manager;
 using BusinessObject.RequestEmergency;
+using BusinessObject.PayOsModels;
 
 namespace DataAccessLayer
 {
@@ -52,6 +53,9 @@ namespace DataAccessLayer
         // Removed QuotationParts DbSet as the entity was removed
         // public DbSet<QuotationPart> QuotationParts { get; set; }
         // Add the new QuotationServicePart entity
+
+        public DbSet<WebhookInbox> WebhookInboxes { get; set; }
+
         public DbSet<RequestEmergency> RequestEmergencies { get; set; }
         public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
@@ -184,10 +188,10 @@ namespace DataAccessLayer
             
             //chặn casadate
             modelBuilder.Entity<Vehicle>()
-      .HasOne(v => v.Brand)
-      .WithMany(b => b.Vehicles)
-      .HasForeignKey(v => v.BrandId)
-      .OnDelete(DeleteBehavior.Restrict);
+              .HasOne(v => v.Brand)
+              .WithMany(b => b.Vehicles)
+              .HasForeignKey(v => v.BrandId)
+              .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Vehicle>()
                 .HasOne(v => v.Model)
@@ -302,6 +306,18 @@ namespace DataAccessLayer
             //          .HasForeignKey(n => n.CategoryID)
             //          .OnDelete(DeleteBehavior.Restrict); // Tránh xóa liên quan
             //});
+
+            modelBuilder.Entity<WebhookInbox>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasIndex(e => e.OrderCode);
+                entity.HasIndex(e => new { e.Status, e.Attempts, e.ReceivedAt });
+
+                //  Enum -> string mapping
+                entity.Property(e => e.Status)
+                      .HasConversion<string>()
+                      .HasMaxLength(20);
+            });
 
 
             // Notifications configuration
@@ -457,7 +473,7 @@ namespace DataAccessLayer
                 // Relationship với Specification
                 entity.HasMany(e => e.Specifications)
                       .WithOne(s => s.SpecificationCategory)
-                      .HasForeignKey(s => s.TemplateID)
+                      .HasForeignKey(s => s.CategoryID)
                       .OnDelete(DeleteBehavior.Restrict); // Không cho xóa category nếu có specifications
             });
 
@@ -476,17 +492,17 @@ namespace DataAccessLayer
                 // Relationship với SpecificationCategory
                 entity.HasOne(s => s.SpecificationCategory)
                       .WithMany(c => c.Specifications)
-                      .HasForeignKey(s => s.TemplateID)
+                      .HasForeignKey(s => s.CategoryID)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 // Relationship với SpecificationsData
                 entity.HasMany(s => s.SpecificationsDatas)
                       .WithOne(d => d.Specification)
-                      .HasForeignKey(d => d.FieldTemplateID)
+                      .HasForeignKey(d => d.SpecificationID)
                       .OnDelete(DeleteBehavior.Restrict); // Không cho xóa specification nếu có data
 
                 // Composite Index để tăng performance khi query theo category và sort
-                entity.HasIndex(e => new { e.TemplateID, e.DisplayOrder });
+                entity.HasIndex(e => new { e.CategoryID, e.DisplayOrder });
 
                 // Index để search theo Label
                 entity.HasIndex(e => e.Label);
@@ -533,15 +549,15 @@ namespace DataAccessLayer
                 // Relationship với Specification
                 entity.HasOne(d => d.Specification)
                       .WithMany(s => s.SpecificationsDatas)
-                      .HasForeignKey(d => d.FieldTemplateID)
+                      .HasForeignKey(d => d.SpecificationID)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 // Composite Index để tăng performance khi query theo xe và specification
-                entity.HasIndex(e => new { e.LookupID, e.FieldTemplateID })
+                entity.HasIndex(e => new { e.LookupID, e.SpecificationID})
                       .IsUnique(); // Đảm bảo mỗi xe chỉ có 1 giá trị cho mỗi specification
 
                 // Index để query theo FieldTemplateID (khi muốn xem tất cả xe có specification này)
-                entity.HasIndex(e => e.FieldTemplateID);
+                entity.HasIndex(e => e.SpecificationID);
             });
 
             //Log System
@@ -687,6 +703,15 @@ namespace DataAccessLayer
             // Configure relationships to prevent cascade delete cycles
 
             // RepairOrder relationships - prevent cascade delete conflicts
+
+            modelBuilder.Entity<RepairOrder>()
+             .HasOne(ro => ro.RepairRequest)
+             .WithOne(rr => rr.RepairOrder)
+             .HasForeignKey<RepairOrder>(ro => ro.RepairRequestId) 
+             .IsRequired(false)                                    
+             .OnDelete(DeleteBehavior.Restrict);                   
+
+
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
                 .WithMany()
@@ -924,8 +949,7 @@ namespace DataAccessLayer
             // PartInspection configuration (Junction table)
             modelBuilder.Entity<PartInspection>(entity =>
             {
-                entity.HasKey(e => e.PartInspectionId);
-                entity.Property(e => e.Status).HasMaxLength(100);
+                entity.HasKey(e => e.PartInspectionId);              
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(pi => pi.Part)

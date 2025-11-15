@@ -24,7 +24,7 @@ namespace BusinessObject.InspectionAndRepair
 
         // FK -> Specification
         [ForeignKey(nameof(Specification))]
-        public Guid FieldTemplateID { get; set; }
+        public Guid SpecificationID { get; set; }
         public virtual Specification Specification { get; set; }
     }
 }

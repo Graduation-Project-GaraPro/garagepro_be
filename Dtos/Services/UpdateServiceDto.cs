@@ -35,6 +35,6 @@ namespace Dtos.Services
         public List<Guid> BranchIds { get; set; } = new();
 
         [MaxLength(50, ErrorMessage = "A service cannot have more than 50 parts")]
-        public List<Guid> PartIds { get; set; } = new();
+        public List<Guid> PartCategoryIds { get; set; } = new();
     }
 }

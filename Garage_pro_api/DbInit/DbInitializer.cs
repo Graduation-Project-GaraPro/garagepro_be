@@ -1516,89 +1516,89 @@ namespace Garage_pro_api.DbInit
 
                 // Tạo Repair Orders
                 var repairOrders = new List<RepairOrder>
-                {
-                    new RepairOrder
-                    {
-                        RepairOrderId = Guid.NewGuid(),
-                        ReceiveDate = DateTime.UtcNow.AddDays(-5),
-                        RoType = RoType.Scheduled,
-                        EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
-                        CompletionDate = DateTime.UtcNow.AddDays(1),
-                        Cost = 1450000,
-                        EstimatedAmount = 1500000,
-                        PaidAmount = 1450000,
-                        PaidStatus = PaidStatus.Paid,
-                        EstimatedRepairTime = 3,
-                        Note = "Regular maintenance service - Oil change and basic check",
-                        BranchId = branch.BranchId,
-                        StatusId = completedStatus.OrderStatusId,
-                        VehicleId = vehicleId,
-                        UserId = userId,
-                        RepairRequestId = repairRequests[0].RepairRequestID, // Use actual RepairRequest ID
-                        CreatedAt = DateTime.UtcNow.AddDays(-5),
-                        UpdatedAt = DateTime.UtcNow.AddDays(1)
-                    },
-                    new RepairOrder
-                    {
-                        RepairOrderId = Guid.NewGuid(),
-                        ReceiveDate = DateTime.UtcNow.AddDays(-2),
-                        RoType = RoType.WalkIn,
-                        EstimatedCompletionDate = DateTime.UtcNow.AddDays(5),
-                        Cost = 0,
-                        EstimatedAmount = 2500000,
-                        PaidAmount = 0,
-                        PaidStatus = PaidStatus.Unpaid,
-                        EstimatedRepairTime = 5,
-                        Note = "Brake system repair - Waiting for customer approval",
-                        BranchId = branch.BranchId,
-                        StatusId = pendingStatus.OrderStatusId,
-                        VehicleId = vehicleId,
-                        UserId = userId,
-                        RepairRequestId = repairRequests[1].RepairRequestID, // Use actual RepairRequest ID
-                        CreatedAt = DateTime.UtcNow.AddDays(-2),
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new RepairOrder
-                    {
-                        RepairOrderId = Guid.NewGuid(),
-                        ReceiveDate = DateTime.UtcNow.AddDays(-1),
-                        RoType = RoType.Breakdown,
-                        EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
-                        Cost = 3200000,
-                        EstimatedAmount = 3500000,
-                        PaidAmount = 2000000,
-                        PaidStatus = PaidStatus.Partial,
-                        EstimatedRepairTime = 6,
-                        Note = "Emergency brake and engine repair - Urgent service required",
-                        BranchId = branch.BranchId,
-                        StatusId = inProgressStatus.OrderStatusId,
-                        VehicleId = vehicleId,
-                        UserId = userId,
-                        RepairRequestId = repairRequests[2].RepairRequestID, // Use actual RepairRequest ID
-                        CreatedAt = DateTime.UtcNow.AddDays(-1),
-                        UpdatedAt = DateTime.UtcNow
-                    },
-                    new RepairOrder
-                    {
-                        RepairOrderId = Guid.NewGuid(),
-                        ReceiveDate = DateTime.UtcNow,
-                        RoType = RoType.Scheduled,
-                        EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
-                        Cost = 0,
-                        EstimatedAmount = 800000,
-                        PaidAmount = 0,
-                        PaidStatus = PaidStatus.Unpaid,
-                        EstimatedRepairTime = 2,
-                        Note = "Tire rotation and basic inspection",
-                        BranchId = branch.BranchId,
-                        StatusId = completedStatus.OrderStatusId,
-                        VehicleId = vehicleId,
-                        UserId = userId,
-                        RepairRequestId = repairRequests[3].RepairRequestID, // Use actual RepairRequest ID
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    }
-                };
+        {
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-5),
+                RoType = RoType.Scheduled,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(2),
+                CompletionDate = DateTime.UtcNow.AddDays(1),
+                Cost = 1450000,
+                EstimatedAmount = 1500000,
+                PaidAmount = 1450000,
+                PaidStatus = PaidStatus.Paid,
+                EstimatedRepairTime = 3,
+                Note = "Regular maintenance service - Oil change and basic check",
+                BranchId = branch.BranchId,
+                StatusId = completedStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = null,
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(1)
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-2),
+                RoType = RoType.WalkIn,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(5),
+                Cost = 0,
+                EstimatedAmount = 2500000,
+                PaidAmount = 0,
+                PaidStatus = PaidStatus.Unpaid,
+                EstimatedRepairTime = 5,
+                Note = "Brake system repair - Waiting for customer approval",
+                BranchId = branch.BranchId,
+                StatusId = pendingStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = null,
+                CreatedAt = DateTime.UtcNow.AddDays(-2),
+                UpdatedAt = DateTime.UtcNow
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow.AddDays(-1),
+                RoType = RoType.Breakdown,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(1),
+                Cost = 3200000,
+                EstimatedAmount = 3500000,
+                PaidAmount = 2000000,
+                PaidStatus = PaidStatus.Unpaid,
+                EstimatedRepairTime = 6,
+                Note = "Emergency brake and engine repair - Urgent service required",
+                BranchId = branch.BranchId,
+                StatusId = inProgressStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = null,
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow
+            },
+            new RepairOrder
+            {
+                RepairOrderId = Guid.NewGuid(),
+                ReceiveDate = DateTime.UtcNow,
+                RoType = RoType.Scheduled,
+                EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
+                Cost = 0,
+                EstimatedAmount = 800000,
+                PaidAmount = 0,
+                PaidStatus = PaidStatus.Unpaid,
+                EstimatedRepairTime = 2,
+                Note = "Tire rotation and basic inspection",
+                BranchId = branch.BranchId,
+                StatusId = completedStatus.OrderStatusId,
+                VehicleId = vehicleId,
+                UserId = userId,
+                RepairRequestId = null,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            }
+        };
 
                 _context.RepairOrders.AddRange(repairOrders);
                 await _context.SaveChangesAsync();
@@ -2208,7 +2208,6 @@ namespace Garage_pro_api.DbInit
                             PartInspectionId = Guid.NewGuid(),
                             PartId = parts[0].PartId,
                             InspectionId = inspection.InspectionId,
-                            Status = "Good condition",
                             CreatedAt = DateTime.UtcNow
                         },
                         new PartInspection
@@ -2216,7 +2215,6 @@ namespace Garage_pro_api.DbInit
                             PartInspectionId = Guid.NewGuid(),
                             PartId = parts[1].PartId,
                             InspectionId = inspection.InspectionId,
-                            Status = "Fair condition",
                             CreatedAt = DateTime.UtcNow
                         }
                     };

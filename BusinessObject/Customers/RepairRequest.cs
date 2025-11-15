@@ -24,9 +24,9 @@ namespace BusinessObject.Customers
 
 
         [StringLength(500)]
-        public string? Description { get; set; } // Mô tả lỗi / yêu cầu
+        public string? Description { get; set; } 
         [Required]
-        public Guid BranchId { get; set; }// Chi nhánh xử lý yêu cầu
+        public Guid BranchId { get; set; }
 
         [Required]
         public DateTime RequestDate { get; set; } = DateTime.UtcNow;// ngày yêu cầu đem xe đến để sửa chữa 

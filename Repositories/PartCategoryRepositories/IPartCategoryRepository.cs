@@ -11,5 +11,7 @@ namespace Repositories.PartCategoryRepositories
     {
         Task<IEnumerable<PartCategory>> GetAllWithPartsAsync();
         Task<PartCategory?> GetByIdWithPartsAsync(Guid id);
+        Task<IEnumerable<PartCategory>> GetPagedAsync(int pageNumber, int pageSize, string? categoryName);
+        IQueryable<PartCategory> Query();
     }
 }

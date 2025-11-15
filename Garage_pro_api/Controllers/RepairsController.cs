@@ -43,9 +43,7 @@ namespace Garage_pro_api.Controllers
             return technician?.TechnicianId ?? Guid.Empty;
         }
 
-        // ==========================
         // GET: odata/Repairs/{repairOrderId}
-        // ========================== 
 
         [EnableQuery]
         [HttpGet("{repairOrderId}")]
@@ -74,9 +72,6 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // ==========================
-        // POST: odata/Repairs/Create
-        // ==========================
         [HttpPost("Create")]
         public async Task<IActionResult> CreateRepair([FromBody] RepairCreateDto dto)
         {
@@ -97,19 +92,29 @@ namespace Garage_pro_api.Controllers
             }
             catch (UnauthorizedAccessException ex)
             {
-                return Forbid(ex.Message);
+                return StatusCode(403, new { message = ex.Message });
             }
-            catch (Exception ex)
+            catch (ArgumentException ex)  
             {
                 return BadRequest(new { message = ex.Message });
             }
+            catch (InvalidOperationException ex)  
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+               
+                return BadRequest(new
+                {
+                    message = ex.Message,
+                    stackTrace = ex.StackTrace, 
+                    innerException = ex.InnerException?.Message
+                });
+            }
         }
 
-
-
-        // ==========================
         // PUT: odata/Repairs/{repairId}/Update
-        // ==========================
         [HttpPut("{repairId}/Update")]
         public async Task<IActionResult> UpdateRepair(Guid repairId, [FromBody] RepairUpdateDto dto)
         {
