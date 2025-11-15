@@ -43,10 +43,6 @@ namespace BusinessObject
 
         public int Level { get; set; }
 
-        // Customer approval workflow properties
-        public DateTime? SentToCustomerAt { get; set; }
-        public DateTime? CustomerResponseAt { get; set; }
-        public string? CustomerApprovalNote { get; set; }
         public string? AssignedByManagerId { get; set; }  // UserId of manager who assigned
         public DateTime? AssignedAt { get; set; }
 

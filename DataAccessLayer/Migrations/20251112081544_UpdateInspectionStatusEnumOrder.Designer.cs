@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251112081544_UpdateInspectionStatusEnumOrder")]
+    partial class UpdateInspectionStatusEnumOrder
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -951,6 +954,13 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CustomerApprovalNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("CustomerResponseAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("Deadline")
                         .HasColumnType("datetime2");
 
@@ -982,6 +992,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("RevisionReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("SentToCustomerAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uniqueidentifier");
@@ -1644,9 +1657,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("FeedBackId1");
 
-                    b.HasIndex("RepairRequestId")
-                        .IsUnique()
-                        .HasFilter("[RepairRequestId] IS NOT NULL");
+                    b.HasIndex("RepairRequestId");
 
                     b.HasIndex("StatusId");
 
@@ -2981,8 +2992,8 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("FeedBackId1");
 
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
-                        .WithOne("RepairOrder")
-                        .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId");
+                        .WithMany("RepairOrders")
+                        .HasForeignKey("RepairRequestId");
 
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
@@ -3361,7 +3372,7 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairImages");
 
-                    b.Navigation("RepairOrder");
+                    b.Navigation("RepairOrders");
 
                     b.Navigation("RequestServices");
                 });

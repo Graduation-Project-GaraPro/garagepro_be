@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject;
+using BusinessObject.InspectionAndRepair;
 
 namespace Repositories
 {
@@ -22,5 +23,6 @@ namespace Repositories
         Task<IEnumerable<Inspection>> GetCompletedInspectionsAsync();
         Task<IEnumerable<Inspection>> GetCompletedInspectionsWithDetailsAsync();
         Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId);
+        Task<Technician?> GetTechnicianByIdAsync(Guid technicianId);
     }
 }

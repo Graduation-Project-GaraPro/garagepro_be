@@ -83,7 +83,7 @@ namespace BusinessObject
 
         // Navigation property
         [ForeignKey("RepairRequestId")]
-        public virtual RepairRequest RepairRequest { get; set; }
+        public virtual RepairRequest? RepairRequest { get; set; }
 
         public virtual OrderStatus OrderStatus { get; set; }
         public virtual Branch Branch { get; set; }

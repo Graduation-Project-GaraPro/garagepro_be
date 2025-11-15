@@ -1717,7 +1717,6 @@ namespace Garage_pro_api.DbInit
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
                 Level = 2,
-                SentToCustomerAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
 

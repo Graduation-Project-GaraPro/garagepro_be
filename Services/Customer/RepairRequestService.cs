@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Customers;
 using BusinessObject.Enums;
@@ -41,14 +41,18 @@ namespace Services.Customer
             IUnitOfWork unitOfWork,
             ICloudinaryService cloudinaryService,
             IMapper mapper,
-            IRepairOrderService repairOrderService, // Add this
-            IVehicleService vehicleService) // Add this
+            IRepairRequestRepository repairRequestRepository, 
+            IUserRepository userRepository, 
+            IRepairOrderService repairOrderService,
+            IVehicleService vehicleService) 
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
             _mapper = mapper;
-            _repairOrderService = repairOrderService; // Add this
-            _vehicleService = vehicleService; // Add this
+            _repairRequestRepository = repairRequestRepository;
+            _userRepository = userRepository; 
+            _repairOrderService = repairOrderService; 
+            _vehicleService = vehicleService;
         }
 
         public async Task<IEnumerable<RepairRequestDto>> GetAllAsync()
@@ -124,7 +128,6 @@ namespace Services.Customer
             return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
         }
 
-        // New method for managers
         public async Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync()
         {
             var requests = await _repairRequestRepository.GetAllAsync();
@@ -144,11 +147,13 @@ namespace Services.Customer
                     VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
                     Description = request.Description,
                     RequestDate = request.RequestDate,
+                    ArrivalWindowStart = request.ArrivalWindowStart,
                     CompletedDate = request.CompletedDate,
                     ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
                     Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
                     CreatedAt = request.CreatedAt,
-                    UpdatedAt = request.UpdatedAt
+                    UpdatedAt = request.UpdatedAt,
+                    Status = request.Status.ToString()
                 };
 
                 managerDtos.Add(dto);
@@ -157,7 +162,42 @@ namespace Services.Customer
             return managerDtos;
         }
 
-        // New method for getting a single request for managers
+        // method for managers by branch
+        public async Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId)
+        {
+            var requests = await _repairRequestRepository.GetByBranchIdAsync(branchId);
+            var managerDtos = new List<ManagerRepairRequestDto>();
+
+            foreach (var request in requests)
+            {
+                var customer = await _userRepository.GetByIdAsync(request.UserID);
+                var vehicle = request.Vehicle;
+                
+                var dto = new ManagerRepairRequestDto
+                {
+                    RequestID = request.RepairRequestID,
+                    VehicleID = request.VehicleID,
+                    CustomerID = request.UserID,
+                    CustomerName = customer?.FullName ?? "Unknown Customer",
+                    VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                    Description = request.Description,
+                    RequestDate = request.RequestDate,
+                    ArrivalWindowStart = request.ArrivalWindowStart,
+                    CompletedDate = request.CompletedDate,
+                    ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                    Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                    CreatedAt = request.CreatedAt,
+                    UpdatedAt = request.UpdatedAt,
+                    Status = request.Status.ToString()
+                };
+
+                managerDtos.Add(dto);
+            }
+
+            return managerDtos;
+        }
+
+        // method for getting a single request for managers
         public async Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id)
         {
             var request = await _repairRequestRepository.GetByIdWithDetailsAsync(id);
@@ -176,11 +216,13 @@ namespace Services.Customer
                 VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
                 Description = request.Description,
                 RequestDate = request.RequestDate,
+                ArrivalWindowStart = request.ArrivalWindowStart,
                 CompletedDate = request.CompletedDate,
                 ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
                 Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
                 CreatedAt = request.CreatedAt,
-                UpdatedAt = request.UpdatedAt
+                UpdatedAt = request.UpdatedAt,
+                Status = request.Status.ToString()
             };
 
             return dto;
@@ -198,6 +240,13 @@ namespace Services.Customer
             if (vehicle == null || vehicle.UserId != userId)
                 throw new Exception("This vehicle does not belong to the current user");
 
+            // Get branch to determine window minutes
+            var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
+                ?? throw new Exception("Branch not found");
+            
+            var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+            var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
+
             var repairRequest = new RepairRequest
             {
                 VehicleID = dto.VehicleID,
@@ -205,6 +254,7 @@ namespace Services.Customer
                 BranchId = dto.BranchId,
                 Description = dto.Description,
                 RequestDate = dto.RequestDate,
+                ArrivalWindowStart = winStart, // Set the proper arrival window start
                 EstimatedCost = 0,
                 RequestServices = new List<RequestService>()
             };
@@ -822,6 +872,10 @@ namespace Services.Customer
             if (repairRequest.Status != RepairRequestStatus.Accept)
                 throw new Exception("Only approved repair requests can be converted to repair orders");
 
+            // Check if repair request has already been converted to a repair order
+            if (repairRequest.RepairOrder != null)
+                throw new Exception("This repair request has already been converted to a repair order");
+
             // Get the customer (user) information
             var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
             if (customer == null)
@@ -855,13 +909,13 @@ namespace Services.Customer
             {
                 VehicleId = repairRequest.VehicleID,
                 RoType = RoType.Scheduled, // Set type to scheduled for repair request conversion
-                ReceiveDate = dto.ReceiveDate,
+                ReceiveDate = repairRequest.RequestDate, // Map RequestDate from repair request to ReceiveDate in repair order
                 EstimatedCompletionDate = dto.EstimatedCompletionDate,
                 EstimatedAmount = totalEstimatedAmount,
                 Note = dto.Note,
                 EstimatedRepairTime = totalEstimatedTime,
                 UserId = repairRequest.UserID,
-                StatusId = 1, // Default to pending status
+                StatusId = 1,
                 BranchId = repairRequest.BranchId,
                 RepairRequestId = repairRequest.RepairRequestID, // Link to the repair request
                 PaidStatus = PaidStatus.Unpaid, // Default paid status
@@ -871,8 +925,11 @@ namespace Services.Customer
             // Create the repair order
             var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, dto.SelectedServiceIds);
             
+            // Set the navigation property relationship
+            repairRequest.RepairOrder = createdRepairOrder;
+            
             // Update the repair request status to indicate it has been converted
-            repairRequest.Status = RepairRequestStatus.Arrived;
+            repairRequest.Status = RepairRequestStatus.Completed;
             repairRequest.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync();
 

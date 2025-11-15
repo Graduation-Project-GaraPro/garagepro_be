@@ -50,16 +50,36 @@ namespace Repositories
         public async Task<Job> CreateAsync(Job job)
         {
             _context.Jobs.Add(job);
-            await _context.SaveChangesAsync();
-            return job;
+            try
+            {
+                await _context.SaveChangesAsync();
+                return job;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error creating job: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to create job: {ex.Message}", ex);
+            }
         }
 
         public async Task<Job> UpdateAsync(Job job)
         {
             job.UpdatedAt = DateTime.UtcNow;
             _context.Jobs.Update(job);
-            await _context.SaveChangesAsync();
-            return job;
+            try
+            {
+                await _context.SaveChangesAsync();
+                return job;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error updating job: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to update job: {ex.Message}", ex);
+            }
         }
 
         public async Task<bool> DeleteAsync(Guid jobId)
@@ -335,9 +355,12 @@ namespace Repositories
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error adding job part: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to add job part {jobPart.PartId} to job {jobPart.JobId}: {ex.Message}", ex);
             }
         }
 
@@ -355,9 +378,12 @@ namespace Repositories
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error updating job part: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to update job part {jobPart.JobPartId}: {ex.Message}", ex);
             }
         }
 
@@ -378,25 +404,45 @@ namespace Repositories
 
                 return true;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error removing job part: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to remove job part {jobPartId}: {ex.Message}", ex);
             }
         }
 
         public async Task<decimal> CalculateJobTotalAmountAsync(Guid jobId)
         {
-            var job = await _context.Jobs
-                .Include(j => j.Service)
-                .Include(j => j.JobParts)
-                .FirstOrDefaultAsync(j => j.JobId == jobId);
+            try
+            {
+                Console.WriteLine($"Calculating total amount for job ID: {jobId}");
+                var job = await _context.Jobs
+                    .Include(j => j.Service)
+                    .Include(j => j.JobParts)
+                    .FirstOrDefaultAsync(j => j.JobId == jobId);
 
-            if (job == null) return 0;
+                if (job == null) 
+                {
+                    Console.WriteLine($"Job not found for ID: {jobId}");
+                    return 0;
+                }
 
-            var serviceAmount = job.Service?.Price ?? 0;
-            var partsAmount = job.JobParts?.Sum(jp => jp.Quantity * jp.UnitPrice) ?? 0;
+                var serviceAmount = job.Service?.Price ?? 0;
+                var partsAmount = job.JobParts?.Sum(jp => jp.Quantity * jp.UnitPrice) ?? 0;
+                
+                Console.WriteLine($"Job service amount: {serviceAmount}, parts amount: {partsAmount}");
 
-            return serviceAmount + partsAmount;
+                return serviceAmount + partsAmount;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error calculating job total amount: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to calculate job total amount for job {jobId}: {ex.Message}", ex);
+            }
         }
 
         private async Task UpdateJobTotalAmountAsync(Guid jobId)
@@ -406,7 +452,17 @@ namespace Repositories
             {
                 job.TotalAmount = await CalculateJobTotalAmountAsync(jobId);
                 job.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (Exception ex)
+                {
+                    // Log the exception for debugging purposes
+                    Console.WriteLine($"Error updating job total amount: {ex.Message}");
+                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                    throw new InvalidOperationException($"Failed to update job total amount for job {jobId}: {ex.Message}", ex);
+                }
             }
         }
 
@@ -586,7 +642,7 @@ namespace Repositories
             }
 
             return await query
-                .OrderBy(j => j.CustomerResponseAt)
+                .OrderBy(j => j.AssignedAt) // Changed from CustomerResponseAt to AssignedAt
                 .ToListAsync();
         }
 
@@ -608,6 +664,13 @@ namespace Repositories
             return await _context.Technicians
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
+
+        public async Task<Technician?> GetTechnicianByIdAsync(Guid technicianId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.TechnicianId == technicianId);
         }
 
         public async Task<IEnumerable<Job>> GetJobsAssignedByManagerAsync(string managerId)
@@ -749,9 +812,6 @@ namespace Repositories
                 TotalAmount = originalJob.TotalAmount,
                 Note = $"Revision of job {originalJob.JobId}. Reason: {revisionReason}",
                 Level = originalJob.Level,
-                SentToCustomerAt = originalJob.SentToCustomerAt,
-                CustomerResponseAt = originalJob.CustomerResponseAt,
-                CustomerApprovalNote = originalJob.CustomerApprovalNote,
                 AssignedByManagerId = null, // Reset assignment
                 AssignedAt = null, // Reset assignment
                 EstimateExpiresAt = originalJob.EstimateExpiresAt,
@@ -786,6 +846,53 @@ namespace Repositories
             }
 
             return createdJob;
+        }
+        
+        // Create job with parts in a transaction
+        public async Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                Console.WriteLine($"Creating job with ServiceId: {job.ServiceId}, RepairOrderId: {job.RepairOrderId}");
+                
+                // Add the job
+                _context.Jobs.Add(job);
+                await _context.SaveChangesAsync();
+                
+                Console.WriteLine($"Created job with ID: {job.JobId}");
+                
+                // Add all job parts
+                if (jobParts != null && jobParts.Any())
+                {
+                    Console.WriteLine($"Adding {jobParts.Count} parts to job");
+                    foreach (var jobPart in jobParts)
+                    {
+                        jobPart.JobId = job.JobId; // Ensure job ID is set
+                        _context.JobParts.Add(jobPart);
+                        Console.WriteLine($"Added part with PartId: {jobPart.PartId}, Quantity: {jobPart.Quantity}, UnitPrice: {jobPart.UnitPrice}");
+                    }
+                    await _context.SaveChangesAsync();
+                }
+                
+                // Calculate total amount
+                var totalAmount = await CalculateJobTotalAmountAsync(job.JobId);
+                job.TotalAmount = totalAmount;
+                _context.Jobs.Update(job);
+                await _context.SaveChangesAsync();
+                
+                Console.WriteLine($"Job total amount calculated: {totalAmount}");
+                
+                await transaction.CommitAsync();
+                return job;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error creating job with parts: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         #endregion

@@ -5,7 +5,9 @@ using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
+using Microsoft.AspNetCore.SignalR;
 using Repositories;
+using Services.Hubs;
 using Services.QuotationServices;
 
 namespace Services
@@ -15,15 +17,18 @@ namespace Services
         private readonly IInspectionRepository _inspectionRepository;
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
+        private readonly IHubContext<TechnicianAssignmentHub> _hubContext;
 
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
-            IQuotationService quotationService)
+            IQuotationService quotationService,
+            IHubContext<TechnicianAssignmentHub> hubContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
+            _hubContext = hubContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -63,7 +68,7 @@ namespace Services
             {
                 RepairOrderId = createInspectionDto.RepairOrderId,
                 CustomerConcern = createInspectionDto.CustomerConcern,
-                Status = InspectionStatus.New,
+                Status = InspectionStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -159,7 +164,26 @@ namespace Services
 
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
-            return await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
+            // Get inspection details for notification
+            var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
+            if (inspection == null)
+                throw new ArgumentException("Inspection not found", nameof(inspectionId));
+
+            // We need to get the technician from the database context directly since it's not in IInspectionRepository
+            // Get technician details for notification
+            var technician = await _inspectionRepository.GetTechnicianByIdAsync(technicianId);
+            var technicianName = technician?.User?.FullName ?? "Unknown Technician";
+
+            // Perform the assignment
+            var result = await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
+
+            // Send real-time notification if assignment was successful
+            if (result)
+            {
+                await _hubContext.Clients.All.SendAsync("InspectionAssigned", technicianId, technicianName, 1, new[] { inspection.CustomerConcern ?? "Unnamed Inspection" });
+            }
+
+            return result;
         }
 
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
