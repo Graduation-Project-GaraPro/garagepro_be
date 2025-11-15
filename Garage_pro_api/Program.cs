@@ -77,6 +77,9 @@ using Services.GeocodingServices;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Identity.Client;
 using Utils.RepairRequests;
+using Microsoft.AspNetCore.SignalR;
+using Repositories.Notifiactions;
+using Services.Notifications;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -466,7 +469,6 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// vehicle
 //vehicle
 
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
@@ -482,8 +484,9 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<Services.PaymentServices.IPaymentService, Services.PaymentServices.PaymentService>();
 
-
-
+//Notifiaction 
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 
 // Repositories & Services
@@ -503,7 +506,8 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var inspectionRepository = provider.GetRequiredService<IInspectionRepository>();
     var repairOrderRepository = provider.GetRequiredService<IRepairOrderRepository>();
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
-    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService);
+    var hubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
+    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService,hubContext);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
@@ -642,6 +646,9 @@ app.Use(async (context, next) =>
 });
 app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
+app.MapHub<InspectionHub>("/hubs/inspection");
+app.MapHub<JobHub>("/hubs/job");
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.UseAuthentication();
 
