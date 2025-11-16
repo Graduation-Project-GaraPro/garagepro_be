@@ -81,6 +81,7 @@ using BusinessObject.PayOsModels;
 using Services.PayOsClients;
 using Services.PaymentServices;
 using Repositories.WebhookInboxRepositories;
+using Services.ExcelImportSerivces;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -385,6 +386,10 @@ builder.Services.AddScoped<IJobService, JobService>();
 //    return new Services.JobService(jobRepository);
 //});
 
+
+builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
+
+
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>();
@@ -651,7 +656,7 @@ app.Use(async (context, next) =>
 });
 app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
-
+app.MapHub<PermissionHub>("/hubs/permissions");
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();

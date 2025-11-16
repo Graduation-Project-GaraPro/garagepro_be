@@ -78,6 +78,7 @@ namespace DataAccessLayer
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
+        public DbSet<ServicePartCategory> ServicePartCategories { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
 
         public DbSet<ServicePart> ServiceParts { get; set; }
@@ -757,12 +758,7 @@ namespace DataAccessLayer
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Part-Branch relationship
-            modelBuilder.Entity<Part>()
-                .HasOne(p => p.Branch)
-                .WithMany(b => b.Parts)
-                .HasForeignKey(p => p.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
+           
 
             // ServiceCategory self-referencing relationship
             modelBuilder.Entity<ServiceCategory>()

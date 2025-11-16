@@ -22,7 +22,12 @@ namespace Dtos.Branches
 
        
         public string Province { get; set; } = string.Empty;
+        
+        public int ArrivalWindowMinutes { get; set; } = 30;
 
+        public int MaxBookingsPerWindow { get; set; } = 6;
+
+        public int MaxConcurrentWip { get; set; } = 8;
         public string Description { get; set; }
         public bool IsActive { get; set; }
 
