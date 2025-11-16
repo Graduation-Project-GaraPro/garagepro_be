@@ -82,6 +82,9 @@ using Services.PayOsClients;
 using Services.PaymentServices;
 using Repositories.WebhookInboxRepositories;
 using Services.ExcelImportSerivces;
+using Microsoft.AspNetCore.SignalR;
+using Repositories.Notifiactions;
+using Services.Notifications;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -477,7 +480,6 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// vehicle
 //vehicle
 
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
@@ -492,7 +494,9 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-
+//Notifiaction 
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 
 
@@ -513,7 +517,8 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var inspectionRepository = provider.GetRequiredService<IInspectionRepository>();
     var repairOrderRepository = provider.GetRequiredService<IRepairOrderRepository>();
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
-    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService);
+    var hubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
+    return new InspectionService(inspectionRepository, repairOrderRepository, quotationService,hubContext);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
@@ -657,6 +662,10 @@ app.Use(async (context, next) =>
 app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
 app.MapHub<PermissionHub>("/hubs/permissions");
+app.MapHub<InspectionHub>("/hubs/inspection");
+app.MapHub<JobHub>("/hubs/job");
+app.MapHub<NotificationHub>("/notificationHub");
+
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();

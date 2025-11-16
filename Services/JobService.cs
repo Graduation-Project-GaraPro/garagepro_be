@@ -1,21 +1,27 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
 using BusinessObject.InspectionAndRepair;
+using Microsoft.AspNetCore.SignalR;
 using Repositories;
+using Services.Hubs;
+using Services.Notifications;
 
 namespace Services
 {
     public class JobService : IJobService
     {
         private readonly IJobRepository _jobRepository;
-
-        public JobService(IJobRepository jobRepository)
+        private readonly IHubContext<JobHub> _hubContext;
+        private readonly INotificationService _notificationService;
+        public JobService(IJobRepository jobRepository, IHubContext<JobHub> hubContext, INotificationService notificationService)
         {
             _jobRepository = jobRepository;
+            _hubContext = hubContext;
+            _notificationService = notificationService;
         }
 
         #region Basic CRUD Operations
@@ -108,6 +114,48 @@ namespace Services
 
         #region Manager Assignment Workflow
 
+        //public async Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId)
+        //{
+        //    if (jobIds == null || !jobIds.Any())
+        //        throw new ArgumentException("Job IDs cannot be null or empty", nameof(jobIds));
+
+        //    if (technicianId == Guid.Empty)
+        //        throw new ArgumentException("Technician ID is required", nameof(technicianId));
+
+        //    if (string.IsNullOrWhiteSpace(managerId))
+        //        throw new ArgumentException("Manager ID is required", nameof(managerId));
+
+        //    // Validate technician exists
+        //    if (!await _jobRepository.TechnicianExistsAsync(technicianId))
+        //        throw new InvalidOperationException($"Technician with ID {technicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+
+        //    // Validate all jobs can be assigned
+        //    foreach (var jobId in jobIds)
+        //    {
+        //        if (!await CanAssignJobToTechnicianAsync(jobId))
+        //            throw new InvalidOperationException($"Job {jobId} cannot be assigned to technician");
+        //    }
+
+        //    return await _jobRepository.AssignJobsToTechnicianAsync(jobIds, technicianId, managerId);
+        //}
+
+        //public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
+        //{
+        //    if (jobId == Guid.Empty)
+        //        throw new ArgumentException("Job ID is required", nameof(jobId));
+
+        //    if (newTechnicianId == Guid.Empty)
+        //        throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
+
+        //    if (string.IsNullOrWhiteSpace(managerId))
+        //        throw new ArgumentException("Manager ID is required", nameof(managerId));
+
+        //    // Validate technician exists
+        //    if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
+        //        throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+
+        //    return await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+        //}
         public async Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId)
         {
             if (jobIds == null || !jobIds.Any())
@@ -119,18 +167,60 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            // Validate technician exists
             if (!await _jobRepository.TechnicianExistsAsync(technicianId))
-                throw new InvalidOperationException($"Technician with ID {technicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+                throw new InvalidOperationException($"Technician with ID {technicianId} not found.");
 
-            // Validate all jobs can be assigned
             foreach (var jobId in jobIds)
             {
                 if (!await CanAssignJobToTechnicianAsync(jobId))
-                    throw new InvalidOperationException($"Job {jobId} cannot be assigned to technician");
+                    throw new InvalidOperationException($"Job {jobId} cannot be assigned");
             }
 
-            return await _jobRepository.AssignJobsToTechnicianAsync(jobIds, technicianId, managerId);
+            var result = await _jobRepository.AssignJobsToTechnicianAsync(jobIds, technicianId, managerId);
+
+            if (result)
+            {
+                // LẤY USERID TỪ TECHNICIANID
+                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(technicianId);
+
+                foreach (var jobId in jobIds)
+                {
+                    var job = await _jobRepository.GetJobByIdAsync(jobId);
+
+                    if (job != null)
+                    {
+                        // Gửi SignalR JobHub (real-time job update)
+                        await _hubContext.Clients
+                            .Group($"Technician_{technicianId}")
+                            .SendAsync("JobAssigned", new
+                            {
+                                JobId = jobId,
+                                TechnicianId = technicianId,
+                                JobName = job.JobName,
+                                ServiceName = job.Service?.ServiceName,
+                                RepairOrderId = job.RepairOrderId,
+                                Status = job.Status.ToString(),
+                                AssignedAt = DateTime.UtcNow,
+                                Message = "You have been assigned a new job"
+                            });
+
+                        // GỬI NOTIFICATION (LƯU DB + SIGNALR)
+                        if (!string.IsNullOrEmpty(userId))
+                        {
+                            await _notificationService.SendJobAssignedNotificationAsync(
+                                userId,
+                                jobId,
+                                job.JobName,
+                                job.Service?.ServiceName ?? "N/A"
+                            );
+                        }
+
+                        Console.WriteLine($"[JobService] Job {jobId} assigned and notification sent to User {userId}");
+                    }
+                }
+            }
+
+            return result;
         }
 
         public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
@@ -144,11 +234,49 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            // Validate technician exists
             if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
-                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
 
-            return await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+            var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+
+            if (result)
+            {
+                var job = await _jobRepository.GetJobByIdAsync(jobId);
+                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
+
+                if (job != null)
+                {
+                    // SignalR JobHub
+                    await _hubContext.Clients
+                        .Group($"Technician_{newTechnicianId}")
+                        .SendAsync("JobReassigned", new
+                        {
+                            JobId = jobId,
+                            TechnicianId = newTechnicianId,
+                            JobName = job.JobName,
+                            ServiceName = job.Service?.ServiceName,
+                            RepairOrderId = job.RepairOrderId,
+                            Status = job.Status.ToString(),
+                            ReassignedAt = DateTime.UtcNow,
+                            Message = "A job has been reassigned to you"
+                        });
+
+                    // GỬI NOTIFICATION
+                    if (!string.IsNullOrEmpty(userId))
+                    {
+                        await _notificationService.SendJobReassignedNotificationAsync(
+                            userId,
+                            jobId,
+                            job.JobName,
+                            job.Service?.ServiceName ?? "N/A"
+                        );
+                    }
+
+                    Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
+                }
+            }
+
+            return result;
         }
 
         public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)

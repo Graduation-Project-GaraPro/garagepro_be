@@ -26,6 +26,8 @@ namespace Repositories
         Task<bool> RemoveTechnicianFromJobAsync(Guid jobId, Guid technicianId);
         Task<IEnumerable<Job>> GetUnassignedJobsAsync();
         Task<IEnumerable<Job>> GetJobsByTechnicianIdAsync(Guid technicianId);
+        Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId);
+        Task<Job?> GetJobByIdAsync(Guid jobId);
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
         Task<IEnumerable<Job>> GetJobsReadyForAssignmentAsync(Guid? repairOrderId = null);

@@ -130,7 +130,19 @@ namespace Repositories
                 .Where(i => i.Status == InspectionStatus.Completed)
                 .ToListAsync();
         }
-
+        public async Task<Inspection?> GetInspectionByIdAsync(Guid inspectionId)
+        {
+            return await _context.Inspections
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Brand)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Model)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
+        }
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
             var inspection = await _context.Inspections.FindAsync(inspectionId);

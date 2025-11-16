@@ -1,11 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
+using Microsoft.AspNetCore.SignalR;
 using Repositories;
+using Services.Hubs;
 using Services.QuotationServices;
 
 namespace Services
@@ -15,15 +17,17 @@ namespace Services
         private readonly IInspectionRepository _inspectionRepository;
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
-
+        private readonly IHubContext<InspectionHub> _hubContext;
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
-            IQuotationService quotationService)
+            IQuotationService quotationService,
+            IHubContext<InspectionHub> hubContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
+            _hubContext = hubContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -157,11 +161,36 @@ namespace Services
             return inspections.Select(MapToCompletedInspectionDto);
         }
 
+        //public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
+        //{
+        //    return await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
+        //}
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
-            return await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
-        }
+            var result = await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
 
+            if (result)
+            {
+                var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
+
+                if (inspection != null)
+                {
+                    await _hubContext.Clients
+                        .Group($"Technician_{technicianId}")
+                        .SendAsync("InspectionAssigned", new
+                        {
+                            InspectionId = inspectionId,
+                            TechnicianId = technicianId,
+                            RepairOrderId = inspection.RepairOrderId,
+                            Status = inspection.Status.ToString(),
+                            AssignedAt = DateTime.UtcNow,
+                            Message = "You have been assigned a new inspection"
+                        });
+                }
+            }
+
+            return result;
+        }
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
         {
             // Get the completed inspection with details

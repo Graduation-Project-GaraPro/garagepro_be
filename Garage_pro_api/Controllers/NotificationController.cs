@@ -1,8 +1,11 @@
 ﻿using BusinessObject.Enums;
 using BusinessObject.FcmDataModels;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services.FCMServices;
+using Services.Notifications;
+using System.Security.Claims;
 
 namespace Garage_pro_api.Controllers
 {
@@ -11,10 +14,11 @@ namespace Garage_pro_api.Controllers
     public class NotificationController : ControllerBase
     {
         private readonly IFcmService _fcmService;
-
-        public NotificationController(IFcmService fcmService)
+        private readonly INotificationService _notificationService;
+        public NotificationController(IFcmService fcmService, INotificationService notificationService)
         {
             _fcmService = fcmService;
+            _notificationService = notificationService;
         }
 
         [HttpPost("send")]
@@ -53,6 +57,86 @@ namespace Garage_pro_api.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+        //      
+        [HttpGet]
+        [Authorize(Roles = "Technician")] 
+        public async Task<IActionResult> GetMyNotifications()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            var notifications = await _notificationService.GetUserNotificationsAsync(userId);
+            return Ok(notifications);
+        }
+
+        [HttpGet("unread")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> GetUnreadNotifications()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            var notifications = await _notificationService.GetUnreadNotificationsAsync(userId);
+            return Ok(notifications);
+        }
+
+        [HttpGet("unread-count")]
+        [Authorize(Roles = "Technician")] 
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            var count = await _notificationService.GetUnreadCountAsync(userId);
+            return Ok(new { unreadCount = count });
+        }
+        
+        [HttpPut("{id}/read")]
+        [Authorize(Roles = "Technician")] 
+        public async Task<IActionResult> MarkAsRead(Guid id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            var result = await _notificationService.MarkNotificationAsReadAsync(id, userId);
+
+            if (!result)
+                return NotFound("Notification not found or you don't have permission");
+
+            return NoContent();
+        }
+
+        [HttpPut("read-all")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> MarkAllAsRead()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            await _notificationService.MarkAllNotificationsAsReadAsync(userId);
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> DeleteNotification(Guid id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not authenticated");
+
+            var result = await _notificationService.DeleteNotificationAsync(id, userId);
+
+            if (!result)
+                return NotFound("Notification not found or you don't have permission");
+
+            return NoContent();
         }
     }
 }
