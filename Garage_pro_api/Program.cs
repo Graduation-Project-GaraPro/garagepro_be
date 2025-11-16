@@ -76,14 +76,15 @@ using Services.GeocodingServices;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Identity.Client;
 using Utils.RepairRequests;
-using Microsoft.AspNetCore.SignalR; // Add this line for SignalR
+using Microsoft.AspNetCore.SignalR;
 
 using Repositories.WebhookInboxRepositories;
+using Services.ExcelImportSerivces;
+using Repositories.Notifiactions;
+using Services.Notifications;
 using Services.PaymentServices;
 using BusinessObject.PayOsModels;
-using Services.PayOsClients; // Add this line for TechnicianAssignmentHub
-
-
+using Services.PayOsClients;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -378,14 +379,11 @@ builder.Services.AddScoped<IRepairProgressService, RepairProgressService>();
 builder.Services.AddSignalR();
 
 
-// Job repository and service
-builder.Services.AddScoped<IJobRepository, JobRepository>();
-builder.Services.AddScoped<IJobService>(provider =>
-{
-    var jobRepository = provider.GetRequiredService<IJobRepository>();
-    var hubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    return new Services.JobService(jobRepository, hubContext);
-});
+
+
+
+builder.Services.AddScoped<IMasterDataImportService, MasterDataImportService>();
+
 
 // Role and Permission services
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -474,7 +472,6 @@ builder.Services.AddScoped<IRepairImageRepository, RepairImageRepository>();
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// vehicle
 //vehicle
 
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
@@ -489,7 +486,9 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
-
+//Notifiaction 
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 
 
@@ -503,6 +502,17 @@ builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 
 
+// Job repository and service
+builder.Services.AddScoped<IJobRepository, JobRepository>();
+builder.Services.AddScoped<IJobService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
+    var jobHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.JobHub>>();
+    var notificationService = provider.GetRequiredService<INotificationService>();
+    return new Services.JobService(jobRepository, technicianAssignmentHubContext, jobHubContext, notificationService);
+});
+
 // Inspection services
 builder.Services.AddScoped<IInspectionRepository, InspectionRepository>();
 builder.Services.AddScoped<IInspectionService>(provider =>
@@ -510,8 +520,9 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var inspectionRepository = provider.GetRequiredService<IInspectionRepository>();
     var repairOrderRepository = provider.GetRequiredService<IRepairOrderRepository>();
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
-    var hubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, hubContext);
+    var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
+    var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
+    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
@@ -658,6 +669,10 @@ app.Use(async (context, next) =>
 });
 app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
+app.MapHub<PermissionHub>("/hubs/permissions");
+app.MapHub<InspectionHub>("/hubs/inspection");
+app.MapHub<JobHub>("/hubs/job");
+app.MapHub<NotificationHub>("/notificationHub");
 
 app.UseAuthentication();
 

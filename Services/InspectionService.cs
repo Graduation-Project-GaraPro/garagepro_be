@@ -1,4 +1,4 @@
-using System;
+﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,18 +17,21 @@ namespace Services
         private readonly IInspectionRepository _inspectionRepository;
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
-        private readonly IHubContext<TechnicianAssignmentHub> _hubContext;
+        private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
 
+        private readonly IHubContext<InspectionHub> _inspectionHubContext;
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
             IQuotationService quotationService,
-            IHubContext<TechnicianAssignmentHub> hubContext)
+            IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
+            IHubContext<InspectionHub> inspectionHubContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
-            _hubContext = hubContext;
+            _technicianAssignmentHubContext = technicianAssignmentHubContext;
+            _inspectionHubContext = inspectionHubContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -180,7 +183,7 @@ namespace Services
             // Send real-time notification if assignment was successful
             if (result)
             {
-                await _hubContext.Clients.All.SendAsync("InspectionAssigned", technicianId, technicianName, 1, new[] { inspection.CustomerConcern ?? "Unnamed Inspection" });
+                await _technicianAssignmentHubContext.Clients.All.SendAsync("InspectionAssigned", technicianId, technicianName, 1, new[] { inspection.CustomerConcern ?? "Unnamed Inspection" });
             }
 
             return result;

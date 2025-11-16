@@ -256,7 +256,29 @@ namespace Repositories
                 .ThenBy(j => j.Deadline ?? DateTime.MaxValue)
                 .ToListAsync();
         }
+        public async Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId)
+        {
+            var technician = await _context.Technicians
+                .Where(t => t.TechnicianId == technicianId)
+                .Select(t => t.UserId)
+                .FirstOrDefaultAsync();
 
+            return technician;
+        }
+        public async Task<Job?> GetJobByIdAsync(Guid jobId)
+        {
+            return await _context.Jobs
+                .Include(j => j.Service)
+                .Include(j => j.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Brand)
+                .Include(j => j.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Model)
+                .Include(j => j.JobTechnicians)
+                    .ThenInclude(jt => jt.Technician)
+                .FirstOrDefaultAsync(j => j.JobId == jobId);
+        }
         public async Task<bool> AssignTechnicianToJobAsync(Guid jobId, Guid technicianId)
         {
             // Check if assignment already exists

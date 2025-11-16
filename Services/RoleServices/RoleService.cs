@@ -8,9 +8,12 @@ using BusinessObject.Roles;
 using DataAccessLayer;
 using Dtos.Auth;
 using Dtos.Roles;
+
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Repositories.RoleRepositories;
+using Services.Hubs;
 
 namespace Services.RoleServices
 {
@@ -20,13 +23,15 @@ namespace Services.RoleServices
         private readonly IRoleRepository _roleRepo;
         private readonly IRolePermissionRepository _rolePermissionRepo;
         private readonly IPermissionService _permissionService;
+        private readonly IHubContext<PermissionHub> _permissionHub;
         private readonly IMapper _mapper;
-        public RoleService(MyAppDbContext context,IRoleRepository roleRepo, IRolePermissionRepository rolePermissionRepo, IPermissionService permissionService, IMapper mapper)
+        public RoleService(MyAppDbContext context, IHubContext<PermissionHub> permissionHub,IRoleRepository roleRepo, IRolePermissionRepository rolePermissionRepo, IPermissionService permissionService, IMapper mapper)
         {
             _roleRepo = roleRepo;
             _rolePermissionRepo = rolePermissionRepo;
             _permissionService = permissionService;
             _mapper = mapper;
+            _permissionHub = permissionHub;
             _context = context;
         }
 
@@ -181,6 +186,13 @@ namespace Services.RoleServices
                 _permissionService.InvalidateRolePermissions(role.Id);
 
                 await tx.CommitAsync();
+
+                await _permissionHub.Clients.Group(role.Name)
+                .SendAsync("PermissionsUpdated", new
+                {
+                    role = role.Name,
+                    roleId = role.Id
+                });
 
                 return await MapRoleWithPermissions(role);
             }

@@ -50,6 +50,12 @@ namespace Services.BranchServices
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
+
+                if (dto.ArrivalWindowMinutes % 30 != 0)
+                {
+                    throw new ApplicationException("Arrival window minutes must be in increments of 30 minutes (30, 60, 90, etc.).");
+                }
+
                 // === Check duplicate when CREATE ===
                 bool isNameDuplicate = await _branchRepo.ExistsAsync(
                     b => b.BranchName.ToLower().Trim() == dto.BranchName.ToLower().Trim()
@@ -152,6 +158,9 @@ namespace Services.BranchServices
                     Commune = dto.Commune,
                     Province = dto.Province,
                     Description = dto.Description,
+                    ArrivalWindowMinutes = dto.ArrivalWindowMinutes,
+                    MaxBookingsPerWindow = dto.MaxBookingsPerWindow,
+                    MaxConcurrentWip = dto.MaxBookingsPerWindow,
                     IsActive = true,
                     Latitude = lat,
                     Longitude = lng,
@@ -203,6 +212,11 @@ namespace Services.BranchServices
             {
                 var branch = await _branchRepo.GetBranchWithRelationsAsync(dto.BranchId);
                 if (branch == null) return null;
+
+                if (dto.ArrivalWindowMinutes % 30 != 0)
+                {
+                    throw new ApplicationException("Arrival window minutes must be in increments of 30 minutes (30, 60, 90, etc.).");
+                }
 
                 // === Check duplicate name/address ===
                 bool isNameDuplicate = await _branchRepo.ExistsAsync(
@@ -289,7 +303,9 @@ namespace Services.BranchServices
                 branch.Street = dto.Street;
                 branch.Commune = dto.Commune;
                 branch.Province= dto.Province;
-               
+               branch.ArrivalWindowMinutes = dto.ArrivalWindowMinutes;
+               branch.MaxBookingsPerWindow = dto.MaxBookingsPerWindow;
+               branch.MaxConcurrentWip = dto.MaxBookingsPerWindow;
                 branch.Description = dto.Description;
                 branch.IsActive = dto.IsActive;
                 branch.UpdatedAt = DateTime.UtcNow;
