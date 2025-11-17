@@ -10,7 +10,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Repositories; // Add this using statement
-using Services; // Add this using statement
+using Services;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
+using Services.FCMServices;
+using BusinessObject.FcmDataModels; // Add this using statement
 
 namespace Services.QuotationServices
 {
@@ -24,32 +28,53 @@ namespace Services.QuotationServices
         private readonly IRepairOrderRepository _repairOrderRepository; 
         private readonly IMapper _mapper;
         private readonly IJobService _jobService; // Add this field
-
+        private readonly IHubContext<QuotationHub> _quotationHubContext;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
         public QuotationManagementService(
-            IQuotationRepository quotationRepository,
-            IQuotationServiceRepository quotationServiceRepository,
-            IQuotationServicePartRepository quotationServicePartRepository, 
-            IMapper mapper) : this(quotationRepository, quotationServiceRepository, quotationServicePartRepository, null, null, null, null, mapper)
+        IQuotationRepository quotationRepository,
+        IQuotationServiceRepository quotationServiceRepository,
+        IQuotationServicePartRepository quotationServicePartRepository,
+        IMapper mapper)
+        : this(
+            quotationRepository,
+            quotationServiceRepository,
+            quotationServicePartRepository,
+            null, 
+            null, 
+            null, 
+            null, 
+            null, 
+            null,
+            null,
+            mapper)
         {
         }
 
+        // Constructor đầy đủ dùng cho DI chính
         public QuotationManagementService(
             IQuotationRepository quotationRepository,
             IQuotationServiceRepository quotationServiceRepository,
             IQuotationServicePartRepository quotationServicePartRepository,
             IServiceRepository serviceRepository,
             IPartRepository partRepository,
+            IHubContext<QuotationHub> quotationHubContext,
             IRepairOrderRepository repairOrderRepository,
             IJobService jobService, // Add this parameter
-            IMapper mapper)
+             IFcmService fcmService,
+            IUserService userService,
+        IMapper mapper)
         {
             _quotationRepository = quotationRepository;
             _quotationServiceRepository = quotationServiceRepository;
             _quotationServicePartRepository = quotationServicePartRepository;
             _serviceRepository = serviceRepository;
             _partRepository = partRepository;
+            _quotationHubContext = quotationHubContext;
             _repairOrderRepository = repairOrderRepository;
-            _jobService = jobService; // Add this assignment
+            _jobService = jobService;
+            _fcmService = fcmService;
+            _userService= userService;
             _mapper = mapper;
         }
 
@@ -150,6 +175,38 @@ namespace Services.QuotationServices
             // Update the quotation with the calculated total amount
             createdQuotation.TotalAmount = totalAmount;
             await _quotationRepository.UpdateAsync(createdQuotation);
+
+
+            await _quotationHubContext
+            .Clients
+            .Group($"User_{createQuotationDto.UserId}")
+            .SendAsync("QuotationCreated", new
+            {
+                createdQuotation.QuotationId,
+                createdQuotation.UserId,
+                createdQuotation.RepairOrderId,
+                createdQuotation.TotalAmount,
+                createdQuotation.Status,
+                createdQuotation.CreatedAt,
+                createQuotationDto.Note
+            });
+
+            var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "New Quotation Available",
+                    Body = "A new quotation has been created for your repair job. Tap to view details.",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = createdQuotation.QuotationId,
+                    Screen = AppScreen.QuotationDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
+
 
             // Reload the quotation with all related data to ensure we have the complete object
             var completeQuotation = await _quotationRepository.GetByIdAsync(createdQuotation.QuotationId);
@@ -364,8 +421,25 @@ namespace Services.QuotationServices
             // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
             //await ValidateAndCorrectPartSelectionAsync(quotation);
 
+
             // Lưu lại thay đổi
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
+
+            await _quotationHubContext
+                .Clients
+                .Group($"Quotation_{updatedQuotation.QuotationId}")
+                .SendAsync("QuotationUpdated", new
+                {
+                    updatedQuotation.QuotationId,
+                    updatedQuotation.UserId,
+                    updatedQuotation.RepairOrderId,
+                    updatedQuotation.TotalAmount,
+                    updatedQuotation.Status,
+                    updatedQuotation.Note,
+                    UpdatedAt = updatedQuotation.UpdatedAt ?? DateTime.UtcNow
+                });
+
+
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 

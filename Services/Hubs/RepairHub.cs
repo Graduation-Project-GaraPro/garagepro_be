@@ -29,5 +29,8 @@ namespace Services.Hubs
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Job_{jobId}");
         }
+
+
+
     }
 }

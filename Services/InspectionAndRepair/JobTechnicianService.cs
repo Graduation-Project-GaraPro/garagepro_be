@@ -1,10 +1,13 @@
 ﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
 using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
 using Microsoft.AspNetCore.SignalR;
+using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
 using Repositories.InspectionAndRepair;
+using Services.FCMServices;
 using Services.Hubs;
 using System;
 using System.Collections.Generic;
@@ -18,15 +21,19 @@ namespace Services.InspectionAndRepair
         private readonly IJobTechnicianRepository _jobTechnicianRepository;
         private readonly IMapper _mapper;
         private readonly IHubContext<JobHub> _hubContext;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
 
         public JobTechnicianService(
             IJobTechnicianRepository jobTechnicianRepository,
             IMapper mapper,
-            IHubContext<JobHub> hubContext)
+            IHubContext<JobHub> hubContext, IFcmService fcmService, IUserService userService)
         {
             _jobTechnicianRepository = jobTechnicianRepository;
             _mapper = mapper;
             _hubContext = hubContext;
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
         public async Task<List<JobTechnicianDto>> GetJobsByTechnicianAsync(string userId)
@@ -113,6 +120,33 @@ namespace Services.InspectionAndRepair
                 actualTime
             );
 
+            var payload = new
+            {
+                JobId = dto.JobId,
+                RepairOrderId = job.RepairOrderId,          // ✅ thêm RO Id vào JSON
+                OldStatus = oldStatus.ToString(),
+                NewStatus = dto.JobStatus.ToString(),
+                UpdatedAt = DateTime.UtcNow,
+                Message = $"Job status changed from {oldStatus} to {dto.JobStatus}"
+            };
+
+            var user = await _userService.GetUserByIdAsync(job.RepairOrder.UserId);
+
+           
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "Repair Update",
+                    Body = "Job " + job.JobName + "is  " + job.Status,
+                    EntityKey = EntityKeyType.repairOrderId,
+                    EntityId = job.RepairOrderId,
+                    Screen = AppScreen.RepairProgressDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+
+            }
             // Send notification
             await _hubContext.Clients
                 .Group($"Job_{dto.JobId}")
@@ -124,6 +158,10 @@ namespace Services.InspectionAndRepair
                     UpdatedAt = DateTime.UtcNow,
                     Message = $"Job status changed from {oldStatus} to {dto.JobStatus}"
                 });
+
+            await _hubContext.Clients
+            .Group($"RepairOrder_{job.RepairOrderId}")
+            .SendAsync("JobStatusUpdated", payload);
 
             return true;
         }

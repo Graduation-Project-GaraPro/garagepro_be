@@ -56,7 +56,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
 
