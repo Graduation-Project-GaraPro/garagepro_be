@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 
@@ -149,7 +150,7 @@ namespace Repositories
             if (inspection == null) return false;
 
             inspection.TechnicianId = technicianId;
-
+            // Change status from pending to new when assigning technician
             if (inspection.Status == InspectionStatus.Pending)
             {
                 inspection.Status = InspectionStatus.New;
@@ -166,5 +167,13 @@ namespace Repositories
                 return false;
             }
         }
+
+        public async Task<Technician?> GetTechnicianByIdAsync(Guid technicianId)
+        {
+            return await _context.Technicians
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.TechnicianId == technicianId);
+        }
+
     }
 }

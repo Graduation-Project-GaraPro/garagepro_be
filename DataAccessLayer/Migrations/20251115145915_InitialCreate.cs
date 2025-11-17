@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class newDB : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1363,9 +1363,6 @@ namespace DataAccessLayer.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Level = table.Column<int>(type: "int", nullable: false),
-                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerApprovalNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     AssignedByManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),

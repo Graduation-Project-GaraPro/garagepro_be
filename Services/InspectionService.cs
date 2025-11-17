@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,17 +17,21 @@ namespace Services
         private readonly IInspectionRepository _inspectionRepository;
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
-        private readonly IHubContext<InspectionHub> _hubContext;
+        private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
+
+        private readonly IHubContext<InspectionHub> _inspectionHubContext;
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
             IQuotationService quotationService,
-            IHubContext<InspectionHub> hubContext)
+            IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
+            IHubContext<InspectionHub> inspectionHubContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
-            _hubContext = hubContext;
+            _technicianAssignmentHubContext = technicianAssignmentHubContext;
+            _inspectionHubContext = inspectionHubContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -161,36 +165,30 @@ namespace Services
             return inspections.Select(MapToCompletedInspectionDto);
         }
 
-        //public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
-        //{
-        //    return await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
-        //}
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
+            // Get inspection details for notification
+            var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
+            if (inspection == null)
+                throw new ArgumentException("Inspection not found", nameof(inspectionId));
+
+            // We need to get the technician from the database context directly since it's not in IInspectionRepository
+            // Get technician details for notification
+            var technician = await _inspectionRepository.GetTechnicianByIdAsync(technicianId);
+            var technicianName = technician?.User?.FullName ?? "Unknown Technician";
+
+            // Perform the assignment
             var result = await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
 
+            // Send real-time notification if assignment was successful
             if (result)
             {
-                var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
-
-                if (inspection != null)
-                {
-                    await _hubContext.Clients
-                        .Group($"Technician_{technicianId}")
-                        .SendAsync("InspectionAssigned", new
-                        {
-                            InspectionId = inspectionId,
-                            TechnicianId = technicianId,
-                            RepairOrderId = inspection.RepairOrderId,
-                            Status = inspection.Status.ToString(),
-                            AssignedAt = DateTime.UtcNow,
-                            Message = "You have been assigned a new inspection"
-                        });
-                }
+                await _technicianAssignmentHubContext.Clients.All.SendAsync("InspectionAssigned", technicianId, technicianName, 1, new[] { inspection.CustomerConcern ?? "Unnamed Inspection" });
             }
 
             return result;
         }
+
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
         {
             // Get the completed inspection with details

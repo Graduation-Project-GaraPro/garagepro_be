@@ -57,6 +57,24 @@ namespace Repositories.Customers
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<RepairRequest>> GetByBranchIdAsync(Guid branchId)
+        {
+            return await _context.RepairRequests
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(r => r.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(r => r.RequestServices)
+                    .ThenInclude(rs => rs.Service)
+                  .Include(r => r.RequestServices)
+        .ThenInclude(rs => rs.RequestParts)
+            .ThenInclude(rp => rp.Part)
+                .Include(r => r.RepairImages)
+                .Include(r => r.Customer)
+                .Where(r => r.BranchId == branchId)
+                .ToListAsync();
+        }
+
         public async Task<IEnumerable<RepairRequest>> GetByUserIdAsync(string userId)
         {
             return await _context.RepairRequests
@@ -90,6 +108,7 @@ namespace Repositories.Customers
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.RequestParts)
                         .ThenInclude(rp => rp.Part)
+                .Include(r => r.RepairOrder) // Include the RepairOrder for 1-1 relationship
                                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
 
@@ -105,6 +124,7 @@ namespace Repositories.Customers
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RepairImages)
                 .Include(r => r.Customer)
+                .Include(r => r.RepairOrder) // Include the RepairOrder for 1-1 relationship
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
 

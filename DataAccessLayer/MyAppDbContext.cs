@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -399,7 +399,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 // Customer approval workflow properties
-                entity.Property(e => e.CustomerApprovalNote).HasMaxLength(1000);
                 entity.Property(e => e.AssignedByManagerId).HasMaxLength(450); // Standard ASP.NET Identity user ID length
                 entity.Property(e => e.RevisionReason).HasMaxLength(500); // Reason for estimate revision
 

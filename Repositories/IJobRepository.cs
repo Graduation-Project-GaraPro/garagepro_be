@@ -35,6 +35,7 @@ namespace Repositories
         // Technician methods
         Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId);
         Task<Technician?> GetTechnicianByUserIdAsync(string userId);
+        Task<Technician?> GetTechnicianByIdAsync(Guid technicianId);
         Task<bool> TechnicianExistsAsync(Guid technicianId);
         
         // Job parts management
@@ -65,6 +66,9 @@ namespace Repositories
         
         // NEW: Create revision job
         Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
+        
+        // Create job with parts in a transaction
+        Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts);
 
     }
 }

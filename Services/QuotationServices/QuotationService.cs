@@ -477,10 +477,15 @@ namespace Services.QuotationServices
 
         public async Task<bool> ApproveQuotationAsync(Guid quotationId)
         {
+            Console.WriteLine($"ApproveQuotationAsync called with ID: {quotationId}");
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
             if (quotation == null)
+            {
+                Console.WriteLine($"Quotation not found for ID: {quotationId}");
                 throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+            }
 
+            Console.WriteLine($"Approving quotation ID: {quotation.QuotationId}");
             quotation.Status = BusinessObject.Enums.QuotationStatus.Approved;
             quotation.CustomerResponseAt = DateTime.UtcNow;
 
@@ -491,6 +496,7 @@ namespace Services.QuotationServices
                 if (quotationService.IsRequired)
                 {
                     quotationService.IsSelected = true;
+                    Console.WriteLine($"Selected required service ID: {quotationService.ServiceId}");
                 }
                 
                 // Select all parts for selected services
@@ -500,6 +506,7 @@ namespace Services.QuotationServices
                     {
                         part.IsSelected = true;
                     }
+                    Console.WriteLine($"Selected {quotationService.QuotationServiceParts.Count} parts for service ID: {quotationService.ServiceId}");
                 }
             }
 
@@ -508,6 +515,7 @@ namespace Services.QuotationServices
             // Note: We no longer auto-generate jobs here as per new requirements
             // Jobs will be manually created by manager using CopyQuotationToJobsAsync
             
+            Console.WriteLine($"Quotation approved successfully");
             return true;
         }
 
@@ -541,16 +549,38 @@ namespace Services.QuotationServices
         /// <param name="quotation">The approved quotation</param>
         private async Task GenerateJobsFromQuotationAsync(Quotation quotation)
         {
+            // Debug: Log quotation information
+            Console.WriteLine($"Generating jobs for quotation ID: {quotation.QuotationId}");
+            Console.WriteLine($"Quotation services count: {quotation.QuotationServices?.Count() ?? 0}");
+            
             // Get all selected quotation services
             var selectedServices = quotation.QuotationServices.Where(qs => qs.IsSelected).ToList();
             
+            Console.WriteLine($"Selected services count: {selectedServices.Count}");
+            
+            if (!selectedServices.Any())
+            {
+                throw new InvalidOperationException("No selected services found in the quotation.");
+            }
+            
+            // Validate Repair Order ID
+            if (quotation.RepairOrderId == null || quotation.RepairOrderId == Guid.Empty)
+            {
+                throw new InvalidOperationException("Repair Order ID is required to create jobs.");
+            }
+            
             foreach (var quotationService in selectedServices)
             {
+                // Debug: Log service information
+                Console.WriteLine($"Processing service ID: {quotationService.ServiceId}");
+                Console.WriteLine($"Service name: {quotationService.Service?.ServiceName ?? "Unknown"}");
+                Console.WriteLine($"Quotation service parts count: {quotationService.QuotationServiceParts?.Count() ?? 0}");
+                
                 // Create a job for each selected service
                 var job = new Job
                 {
                     ServiceId = quotationService.ServiceId,
-                    RepairOrderId = quotation.RepairOrderId ?? Guid.Empty,
+                    RepairOrderId = quotation.RepairOrderId.Value,
                     JobName = $"{quotationService.Service?.ServiceName ?? "Service"} - Quotation {quotation.QuotationId.ToString().Substring(0, 8)}",
                     Status = JobStatus.Pending,
                     TotalAmount = quotationService.Price,
@@ -558,30 +588,28 @@ namespace Services.QuotationServices
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // Save the job
-                var createdJob = await _jobService.CreateJobAsync(job);
-                
                 // Create job parts for selected parts
                 var selectedParts = quotationService.QuotationServiceParts.Where(qsp => qsp.IsSelected).ToList();
+                Console.WriteLine($"Selected parts count: {selectedParts.Count}");
+                
+                var jobParts = new List<JobPart>();
                 foreach (var quotationPart in selectedParts)
                 {
                     var jobPart = new JobPart
                     {
-                        JobId = createdJob.JobId,
                         PartId = quotationPart.PartId,
                         Quantity = (int)quotationPart.Quantity,
                         UnitPrice = quotationPart.Price,
                         CreatedAt = DateTime.UtcNow
                     };
                     
-                    // Save job part
-                    await _jobService.AddJobPartAsync(jobPart);
+                    jobParts.Add(jobPart);
+                    Console.WriteLine($"Added part ID: {quotationPart.PartId} to job parts list");
                 }
                 
-                // Update job total amount after adding parts
-                var totalAmount = await _jobService.CalculateJobTotalAmountAsync(createdJob.JobId);
-                createdJob.TotalAmount = totalAmount;
-                await _jobService.UpdateJobAsync(createdJob);
+                // Save the job with all its parts in a transaction
+                var createdJob = await _jobService.CreateJobWithPartsAsync(job, jobParts);
+                Console.WriteLine($"Created job ID: {createdJob.JobId} with {jobParts.Count} parts");
             }
         }
         
@@ -592,18 +620,38 @@ namespace Services.QuotationServices
         /// <returns>True if successful, false otherwise</returns>
         public async Task<bool> CopyQuotationToJobsAsync(Guid quotationId)
         {
+            // Load quotation with all necessary navigation properties
+            // Note: The GetByIdAsync method in QuotationRepository already includes all necessary navigation properties
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
             if (quotation == null)
+            {
                 throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+            }
                 
+            Console.WriteLine($"Retrieved quotation ID: {quotation.QuotationId}");
+            Console.WriteLine($"Quotation status: {quotation.Status}");
+            Console.WriteLine($"Quotation services count: {quotation.QuotationServices?.Count() ?? 0}");
+            Console.WriteLine($"Quotation RepairOrderId: {quotation.RepairOrderId}");
+            
             // Check if quotation is approved
             if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
+            {
                 throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
+            }
             
-            // Generate jobs from the quotation
-            await GenerateJobsFromQuotationAsync(quotation);
-            
-            return true;
+            try
+            {
+                // Generate jobs from the quotation
+                await GenerateJobsFromQuotationAsync(quotation);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error copying quotation to jobs: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to copy quotation to jobs: {ex.Message}", ex);
+            }
         }
         
         /// <summary>

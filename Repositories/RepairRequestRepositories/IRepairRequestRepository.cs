@@ -10,6 +10,7 @@ namespace Repositories.Customers
     {
         Task<IEnumerable<RepairRequest>> GetAllAsync();
         Task<IEnumerable<RepairRequest>> GetByUserIdAsync(String userId);
+        Task<IEnumerable<RepairRequest>> GetByBranchIdAsync(Guid branchId); // New method
         Task<RepairRequest> GetByIdAsync(Guid id);
         Task<int> CountAsync(Expression<Func<RepairRequest, bool>> predicate);
         Task<IEnumerable<RepairRequest>> ListByConditionAsync(Expression<Func<RepairRequest, bool>> predicate);
