@@ -2,15 +2,17 @@
 using BusinessObject;
 using BusinessObject.Enums; // Add this using statement
 using Dtos.Quotations;
+using Repositories; // Add this using statement
+using Repositories.Customers;
+using Repositories.EmergencyRequestRepositories;
+using Repositories.PartRepositories;
 using Repositories.QuotationRepositories;
 using Repositories.ServiceRepositories;
-using Repositories.PartRepositories;
+using Services; // Add this using statement
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Repositories; // Add this using statement
-using Services; // Add this using statement
 
 namespace Services.QuotationServices
 {
@@ -23,13 +25,15 @@ namespace Services.QuotationServices
         private readonly IPartRepository _partRepository;
         private readonly IRepairOrderRepository _repairOrderRepository; 
         private readonly IMapper _mapper;
-        private readonly IJobService _jobService; // Add this field
+        private readonly IJobService _jobService;
+        private readonly IEmergencyRequestRepository _emergencyRepository; // Add this field
+        private readonly IRepairRequestRepository _repairRequestRepository;// Add this field
 
         public QuotationManagementService(
             IQuotationRepository quotationRepository,
             IQuotationServiceRepository quotationServiceRepository,
             IQuotationServicePartRepository quotationServicePartRepository, 
-            IMapper mapper) : this(quotationRepository, quotationServiceRepository, quotationServicePartRepository, null, null, null, null, mapper)
+            IMapper mapper) : this(quotationRepository, quotationServiceRepository, quotationServicePartRepository,null, null, null,null, null, null, mapper)
         {
         }
 
@@ -40,7 +44,9 @@ namespace Services.QuotationServices
             IServiceRepository serviceRepository,
             IPartRepository partRepository,
             IRepairOrderRepository repairOrderRepository,
-            IJobService jobService, // Add this parameter
+            IJobService jobService,
+            IRepairRequestRepository repairRequestRepository,
+            IEmergencyRequestRepository emergencyRequestRepository,// Add this parameter
             IMapper mapper)
         {
             _quotationRepository = quotationRepository;
@@ -49,7 +55,9 @@ namespace Services.QuotationServices
             _serviceRepository = serviceRepository;
             _partRepository = partRepository;
             _repairOrderRepository = repairOrderRepository;
-            _jobService = jobService; // Add this assignment
+            _jobService = jobService;
+            _repairRequestRepository = repairRequestRepository;
+            _emergencyRepository = emergencyRequestRepository;// Add this assignment
             _mapper = mapper;
         }
 
@@ -146,9 +154,37 @@ namespace Services.QuotationServices
                     }
                 }
             }
+            // Lấy thông tin Emergency nếu có
+            if (createQuotationDto.RepairOrderId.HasValue)
+            {
+                var repairOrder = await _repairOrderRepository.GetByIdAsync(createQuotationDto.RepairOrderId.Value);
+                if (repairOrder?.RepairRequestId != Guid.Empty)
+                {
+                    var repairRequest = await _repairRequestRepository.GetByIdAsync(repairOrder.RepairRequestId);
 
-            // Update the quotation with the calculated total amount
-            createdQuotation.TotalAmount = totalAmount;
+                    if (repairRequest?.EmergencyRequestId.HasValue == true)
+                    {
+                        var emergency = await _emergencyRepository.GetByIdAsync(repairRequest.EmergencyRequestId.Value);
+
+                        if (emergency != null)
+                        {
+
+
+
+                            // Cộng vào tổng tiền Quotation
+                            totalAmount += emergency.EstimatedCost ?? 0;
+
+                            // Nếu muốn lưu luôn giá vào Emergency
+                            //  emergency.EmergencyPrice = emergencyCost;
+                            // await _emergencyRepository.UpdateAsync(emergency);
+                        }
+                    }
+                }
+            }
+
+
+                // Update the quotation with the calculated total amount
+                createdQuotation.TotalAmount = totalAmount;
             await _quotationRepository.UpdateAsync(createdQuotation);
 
             // Reload the quotation with all related data to ensure we have the complete object

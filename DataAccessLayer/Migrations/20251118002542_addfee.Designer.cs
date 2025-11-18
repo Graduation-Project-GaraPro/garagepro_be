@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251118002542_addfee")]
+    partial class addfee
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -608,7 +611,7 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("RepairOrderId")
+                    b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RequestDate")
@@ -1797,26 +1800,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("RepairOrderServiceParts");
                 });
 
-            modelBuilder.Entity("BusinessObject.RequestEmergency.PriceEmergency", b =>
-                {
-                    b.Property<Guid>("PriceId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("BasePrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime>("DateCreated")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("PricePerKm")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.HasKey("PriceId");
-
-                    b.ToTable("PriceEmergencies");
-                });
-
             modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
                 {
                     b.Property<Guid>("EmergencyRequestId")
@@ -2660,7 +2643,9 @@ namespace DataAccessLayer.Migrations
 
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
                         .WithMany("RepairRequest")
-                        .HasForeignKey("RepairOrderId");
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")

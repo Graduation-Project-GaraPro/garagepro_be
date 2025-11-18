@@ -55,6 +55,8 @@ namespace BusinessObject.RequestEmergency
 
         public Guid? RepairRequestId { get; set; }
         public RepairRequest? RepairRequest { get; set; }
+        public decimal? EstimatedCost { get; set; } // Chi phí ước tính
+        public double? DistanceToGarageKm { get; set; } // Khoảng cách đến gara (km)
         //  Ảnh 
         public virtual ICollection<EmergencyMedia>? MediaFiles { get; set; } = new List<EmergencyMedia>();
 

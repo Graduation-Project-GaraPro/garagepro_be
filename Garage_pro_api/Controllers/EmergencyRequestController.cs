@@ -1,6 +1,7 @@
 ﻿using Dtos.Emergency;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Services.EmergencyRequestService;
 using System;
 using System.Collections.Generic;
@@ -120,9 +121,26 @@ namespace Garage_pro_api.Controllers
             {
                 return NotFound(ex.Message);
             }
+            catch (DbUpdateException dbEx)
+            {
+                // Log chi tiết lỗi database để debug
+                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
+                if (dbEx.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
+                }
+                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, $"An error occurred: {ex.Message}");
+                // Log chi tiết lỗi để debug
+                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Unhandled error: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
         // reject emergency

@@ -21,12 +21,14 @@ namespace Services.EmergencyRequestService
         private readonly IEmergencyRequestRepository _repository;
         private readonly IMapper _mapper;
         private readonly IRepairRequestRepository _requestRepository;
+        private readonly IPriceEmergencyRepositories _priceRepo;
 
-        public EmergencyRequestService(IEmergencyRequestRepository repository, IMapper mapper, IRepairRequestRepository repairRequestRepository)
+        public EmergencyRequestService(IEmergencyRequestRepository repository, IMapper mapper, IRepairRequestRepository repairRequestRepository, IPriceEmergencyRepositories priceRepo)
         {
             _repository = repository;
             _mapper = mapper;
             _requestRepository = repairRequestRepository;
+            _priceRepo = priceRepo;
         }
 
         public async Task<RequestEmergency> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto)
@@ -49,7 +51,7 @@ namespace Services.EmergencyRequestService
 
             var fullRequest = await _repository.GetByIdAsync(createdRequest.EmergencyRequestId);
 
-            return fullRequest!;
+            return fullRequest;
         }
 
         public async Task<IEnumerable<EmergencyResponeDto>> GetByCustomerAsync(string customerId)
@@ -98,8 +100,33 @@ namespace Services.EmergencyRequestService
             if (emergency == null)
                 throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
 
-            // 1️⃣ Cập nhật trạng thái
+            // Kiểm tra các trường bắt buộc
+            if (emergency.VehicleId == Guid.Empty)
+                throw new InvalidOperationException("Emergency request must have a valid VehicleId.");
+            if (emergency.BranchId == Guid.Empty)
+                throw new InvalidOperationException("Emergency request must have a valid BranchId.");
+            if (string.IsNullOrEmpty(emergency.CustomerId))
+                throw new InvalidOperationException("Emergency request must have a valid CustomerId.");
+
+            // Cập nhật trạng thái
             emergency.Status = RequestEmergency.EmergencyStatus.Accepted;
+
+            // 2 Tính tiền tự động khi approve
+            var priceConfig = await _priceRepo.GetLatestPriceAsync(); // Lấy giá mới nhất
+            if (priceConfig != null && emergency.Branch != null)
+            {
+                double distance = GetDistance(
+                    emergency.Latitude,
+                    emergency.Longitude,
+                    emergency.Branch.Latitude,
+                    emergency.Branch.Longitude
+                );
+
+                decimal totalPrice = priceConfig.BasePrice + (decimal)distance * priceConfig.PricePerKm;
+
+                emergency.DistanceToGarageKm = distance;
+                emergency.EstimatedCost = totalPrice;
+            }
             await _repository.UpdateAsync(emergency);
 
             // 2️⃣ Tạo RepairRequest tự động nếu chưa có
@@ -114,15 +141,45 @@ namespace Services.EmergencyRequestService
                     EmergencyRequestId = emergency.EmergencyRequestId,
                     RequestDate = emergency.RequestTime,
                     BranchId = emergency.BranchId,
-                    CreatedAt =emergency.RequestTime,
-                    UserID = emergency.CustomerId
+                    CreatedAt = emergency.RequestTime,
+                    UserID = emergency.CustomerId,
+                    ArrivalWindowStart = DateTimeOffset.UtcNow, // Thêm trường bắt buộc này
+                    EstimatedCost = emergency.EstimatedCost ?? 0
                 };
-                await _requestRepository.AddAsync(repairRequest);
+                
+                try
+                {
+                    await _requestRepository.AddAsync(repairRequest);
+                }
+                catch (Exception ex)
+                {
+                    // Log chi tiết lỗi
+                    Console.WriteLine($"Error creating RepairRequest: {ex.Message}");
+                    Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"InnerException: {ex.InnerException.Message}");
+                    }
+                    throw new Exception($"Failed to create RepairRequest: {ex.InnerException?.Message ?? ex.Message}", ex);
+                }
             }
 
             return true;
         }
+        // Hàm tính khoảng cách giữa hai tọa độ
+        private double GetDistance(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double R = 6371; // km
+            var dLat = ToRadians(lat2 - lat1);
+            var dLon = ToRadians(lon2 - lon1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+            return R * c;
+        }
 
+        private double ToRadians(double deg) => deg * (Math.PI / 180);
 
         public async Task<bool> RejectEmergency(Guid emergenciesId, string? reason)
         {

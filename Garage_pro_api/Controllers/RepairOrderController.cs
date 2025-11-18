@@ -1,22 +1,22 @@
+using BusinessObject.Authentication;
+using BusinessObject.Enums;
+using Dtos.InspectionAndRepair;
+using Dtos.RepairOrder;
+using Dtos.RoBoard;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
+using Repositories.ServiceRepositories; // Add this for service repository
+using Services;
+using Services.Hubs;
+using Services.VehicleServices;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.OData.Query;
-using Microsoft.AspNetCore.Authorization;
-using Services;
-using Dtos.RepairOrder;
-using Dtos.RoBoard;
 using System.Security.Claims;
-using BusinessObject.Authentication;
-using Services.VehicleServices;
-using Microsoft.AspNetCore.SignalR;
-using Services.Hubs;
-using Dtos.InspectionAndRepair;
-using BusinessObject.Enums;
-using Repositories.ServiceRepositories; // Add this for service repository
-using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
+using System.Threading.Tasks;
 
 namespace Garage_pro_api.Controllers
 {
@@ -166,10 +166,13 @@ namespace Garage_pro_api.Controllers
                         totalEstimatedAmount += service.Price;
                         totalEstimatedTime += (long)(service.EstimatedDuration * 60); // Convert hours to minutes
                     }
-                }
 
-                // Create a new repair order based on the simplified DTO
-                var repairOrder = new BusinessObject.RepairOrder
+                }
+                // Tính toán chi phí kh?n c?p n?u có
+              
+
+                    // Create a new repair order based on the simplified DTO
+                    var repairOrder = new BusinessObject.RepairOrder
                 {
                     VehicleId = createRoDto.VehicleId,
                     RoType = createRoDto.RoType,

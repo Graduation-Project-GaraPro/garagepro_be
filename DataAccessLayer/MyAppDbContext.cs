@@ -57,6 +57,7 @@ namespace DataAccessLayer
         public DbSet<WebhookInbox> WebhookInboxes { get; set; }
 
         public DbSet<RequestEmergency> RequestEmergencies { get; set; }
+        public DbSet<PriceEmergency> PriceEmergencies { get; set; }
         public DbSet<EmergencyMedia> EmergencyMedias { get; set; }
         public DbSet<QuotationServicePart> QuotationServiceParts { get; set; }
 

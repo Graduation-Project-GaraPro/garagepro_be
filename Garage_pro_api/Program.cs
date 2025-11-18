@@ -428,6 +428,8 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     var serviceRepository = provider.GetRequiredService<Repositories.ServiceRepositories.IServiceRepository>();
     var partRepository = provider.GetRequiredService<Repositories.PartRepositories.IPartRepository>();
     var repairOrderRepository = provider.GetRequiredService<Repositories.IRepairOrderRepository>();
+    var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
+    var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
     var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
     var mapper = provider.GetRequiredService<IMapper>();
     
@@ -437,8 +439,10 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
         quotationServicePartRepository,
         serviceRepository,
         partRepository,
-        repairOrderRepository,
-        jobService, // Add this parameter
+        repairOrderRepository,       
+        jobService,
+        RepairRequestRepository,
+        EmergencyRequestRepository,// Add this parameter
         mapper);
 });
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
@@ -502,7 +506,9 @@ builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 
-
+//priceEmer
+builder.Services.AddScoped<IPriceEmergencyRepositories, PriceEmergencyRepositories>();
+builder.Services.AddScoped<IPriceService, PriceEmergenciesService>();
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
