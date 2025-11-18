@@ -30,6 +30,9 @@ namespace Services.PaymentServices
         // Luồng thanh toán PayOS
         Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(CreatePaymentRequest input, string userId,  CancellationToken ct = default);
 
+        // Luồng thanh toán thủ công bởi manager
+        Task<Payment> CreateManualPaymentAsync(Guid repairOrderId, string managerId, decimal amount, PaymentMethod method, CancellationToken ct = default);
+
         // Xử lý webhook từ PayOS (đã verify chữ ký ở controller)
         //Task HandlePayOsWebhookAsync(PayOsWebhookData data, CancellationToken ct = default);
 

@@ -486,6 +486,8 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>(); // Add QR code service
+
 //Notifiaction 
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -499,7 +501,6 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
-
 
 
 // Job repository and service

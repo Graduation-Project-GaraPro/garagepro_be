@@ -11,6 +11,9 @@ using Services.PaymentServices;
 using System.Security.Claims;
 using Repositories.WebhookInboxRepositories;
 using BussinessObject;
+using Microsoft.AspNetCore.Identity;
+using BusinessObject;
+using BusinessObject.Authentication;
 
 namespace Garage_pro_api.Controllers
 {
@@ -21,13 +24,18 @@ namespace Garage_pro_api.Controllers
         private readonly IPaymentService _service;
         private readonly IPayOsClient _payos;
         private readonly IWebhookInboxRepository _webhookInboxRepo;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IQrCodeService _qrCodeService;
 
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo)
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
         {
             _service = service;
             _payos = payos;
-            _webhookInboxRepo= webhookInboxRepo;
+            _webhookInboxRepo = webhookInboxRepo;
+            _userManager = userManager;
+            _qrCodeService = qrCodeService;
         }
+        
         [Authorize]
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreatePaymentRequest req, CancellationToken ct)
@@ -44,6 +52,91 @@ namespace Garage_pro_api.Controllers
             }catch(Exception ex)
             {
                 return BadRequest(ex.Message);
+            }
+        }
+        
+        /// <summary>
+        /// Manager creates a payment record for a completed repair order
+        /// </summary>
+        [Authorize]
+        [HttpPost("manager-create/{repairOrderId}")]
+        public async Task<IActionResult> ManagerCreatePayment(Guid repairOrderId, [FromBody] ManagerCreatePaymentDto dto, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get the current user ID
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // Check if user is a manager
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return Unauthorized();
+
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains("Manager"))
+                    return Forbid("Only managers can create payments for repair orders");
+
+                // Validate payment method
+                if (dto.Method != PaymentMethod.Cash && dto.Method != PaymentMethod.PayOs)
+                    return BadRequest("Invalid payment method. Only Cash and PayOs are supported.");
+
+                // Create the payment record
+                var payment = await _service.CreateManualPaymentAsync(repairOrderId, userId, dto.Amount, dto.Method, ct);
+                
+                return Ok(new { 
+                    Message = "Payment record created successfully", 
+                    PaymentId = payment.PaymentId,
+                    Method = payment.Method,
+                    Amount = payment.Amount,
+                    Status = payment.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+        
+        /// <summary>
+        /// Manager generates a QR code for payment collection
+        /// </summary>
+        [Authorize]
+        [HttpPost("generate-qr/{repairOrderId}")]
+        public async Task<IActionResult> GeneratePaymentQrCode(Guid repairOrderId, [FromBody] ManagerCreatePaymentDto dto)
+        {
+            try
+            {
+                // Get the current user ID
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // Check if user is a manager
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return Unauthorized();
+
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains("Manager"))
+                    return Forbid("Only managers can generate payment QR codes");
+
+                // Generate QR code
+                var qrCodeData = await _qrCodeService.GeneratePaymentQrCodeAsync(repairOrderId, dto.Amount, dto.Description ?? "Payment for repair order");
+                
+                return Ok(new { 
+                    Message = "QR code generated successfully", 
+                    QrCodeData = qrCodeData,
+                    RepairOrderId = repairOrderId,
+                    Amount = dto.Amount
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
             }
         }
 
@@ -99,7 +192,6 @@ namespace Garage_pro_api.Controllers
                 // 5. Save to database - với webhook nên dùng CancellationToken.None
                 // để đảm bảo lưu thành công ngay cả khi client disconnect
                 await _webhookInboxRepo.SaveChangesAsync(CancellationToken.None);
-
              
 
                 // 6. Có thể trigger background processing ở đây

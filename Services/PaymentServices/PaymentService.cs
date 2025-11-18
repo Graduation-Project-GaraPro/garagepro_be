@@ -1,6 +1,4 @@
-﻿
-
-using BusinessObject.PayOsModels;
+﻿using BusinessObject.PayOsModels;
 using BusinessObject;
 using BussinessObject;
 using DataAccessLayer;
@@ -10,6 +8,7 @@ using Repositories.PaymentRepositories;
 using Services.PayOsClients;
 using Repositories;
 using Microsoft.Extensions.Configuration;
+using BusinessObject.Enums;
 
 namespace Services.PaymentServices
 {
@@ -215,7 +214,6 @@ namespace Services.PaymentServices
 
        
 
-
         private static string BuildMyAppUrl(
             string hostPath,              // "payment/success" hoặc "payment/cancel"
             long orderCode,
@@ -245,6 +243,68 @@ namespace Services.PaymentServices
                 ProviderCode = p.ProviderCode,
                 ProviderDesc = p.ProviderDesc,
             };
+        }
+        #endregion
+
+        #region Luồng thanh toán thủ công bởi manager
+        public async Task<Payment> CreateManualPaymentAsync(Guid repairOrderId, string managerId, decimal amount, PaymentMethod method, CancellationToken ct = default)
+        {
+            // 1. Validate input
+            if (amount <= 0) throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be > 0");
+            if (method != PaymentMethod.Cash && method != PaymentMethod.PayOs)
+                throw new ArgumentException("Invalid payment method for manual payment", nameof(method));
+
+            // 2. Get repair order and validate all jobs are completed
+            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
+            if (repairOrder == null)
+            {
+                throw new Exception($"Repair order with ID {repairOrderId} not found");
+            }
+
+            // Check if all jobs are completed
+            var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
+            if (!allJobsCompleted)
+            {
+                throw new Exception($"All jobs in repair order must be completed before payment can be created");
+            }
+
+            // 3. Check if there's already a paid payment
+            var paidPayment = await _repo.GetByConditionAsync(
+                p => p.RepairOrderId == repairOrderId && p.Status == PaymentStatus.Paid, ct);
+            if (paidPayment != null) throw new Exception($"Payment {paidPayment.PaymentId} already paid");
+
+            // 4. Create payment record
+            var payment = new Payment
+            {
+                RepairOrderId = repairOrderId,
+                UserId = managerId, // Manager ID
+                Amount = amount,
+                Method = method,
+                Status = PaymentStatus.Paid, // Manual payments are immediately marked as paid
+                PaymentDate = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            // 5. Add payment to database
+            await _repo.AddAsync(payment);
+            await _repo.SaveChangesAsync(ct);
+
+            // 6. Update repair order paid status
+            repairOrder.PaidAmount += amount;
+            if (repairOrder.PaidAmount >= repairOrder.EstimatedAmount)
+            {
+                repairOrder.PaidStatus = PaidStatus.Paid;
+            }
+            else
+            {
+                // Keep as Unpaid for partial payments since there's no Partial status in the enum
+                repairOrder.PaidStatus = PaidStatus.Unpaid;
+            }
+
+            await _repoRepairOrder.UpdateAsync(repairOrder);
+            await _repoRepairOrder.Context.SaveChangesAsync(ct);
+
+            return payment;
         }
         #endregion
 
