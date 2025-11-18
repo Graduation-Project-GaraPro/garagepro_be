@@ -627,6 +627,9 @@ builder.WebHost.ConfigureKestrel(options =>
 var app = builder.Build();
 app.UseCors("AllowFrontendAndAndroid");
 
+// Enable static files để serve test HTML page
+app.UseStaticFiles();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -662,6 +665,7 @@ app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 
 
 //Initialize database

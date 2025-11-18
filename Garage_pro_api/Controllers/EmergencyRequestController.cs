@@ -12,6 +12,7 @@ namespace Garage_pro_api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+
     public class EmergencyRequestController : ControllerBase
     {
         private readonly IEmergencyRequestService _service;
@@ -109,7 +110,9 @@ namespace Garage_pro_api.Controllers
             return Ok(request);
         }
         // approve emergency
+        
         [HttpPost("approve/{emergenciesId}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> ApproveEmergency(Guid emergenciesId)
         {
             try
@@ -145,6 +148,7 @@ namespace Garage_pro_api.Controllers
         }
         // reject emergency
         [HttpPut("reject/{emergencyId}")]
+        [Authorize(Roles = "Manager")]
         public async Task<IActionResult> RejectEmergency(Guid emergencyId, [FromBody] string? reason)
         {
             try

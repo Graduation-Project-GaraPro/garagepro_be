@@ -6,8 +6,10 @@ using CloudinaryDotNet.Core;
 using Dtos.Customers;
 using Dtos.Emergency;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Repositories.Customers;
 using Repositories.EmergencyRequestRepositories;
+using Services.Hubs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,13 +24,20 @@ namespace Services.EmergencyRequestService
         private readonly IMapper _mapper;
         private readonly IRepairRequestRepository _requestRepository;
         private readonly IPriceEmergencyRepositories _priceRepo;
+        private readonly IHubContext<EmergencyRequestHub> _hubContext;
 
-        public EmergencyRequestService(IEmergencyRequestRepository repository, IMapper mapper, IRepairRequestRepository repairRequestRepository, IPriceEmergencyRepositories priceRepo)
+        public EmergencyRequestService(
+            IEmergencyRequestRepository repository, 
+            IMapper mapper, 
+            IRepairRequestRepository repairRequestRepository, 
+            IPriceEmergencyRepositories priceRepo,
+            IHubContext<EmergencyRequestHub> hubContext)
         {
             _repository = repository;
             _mapper = mapper;
             _requestRepository = repairRequestRepository;
             _priceRepo = priceRepo;
+            _hubContext = hubContext;
         }
 
         public async Task<RequestEmergency> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto)
@@ -50,6 +59,44 @@ namespace Services.EmergencyRequestService
             var createdRequest = await _repository.CreateAsync(emergencyRequest);
 
             var fullRequest = await _repository.GetByIdAsync(createdRequest.EmergencyRequestId);
+
+            // 🔔 Gửi real-time notification qua SignalR khi tạo emergency mới
+            try
+            {
+                var notificationData = new
+                {
+                    EmergencyRequestId = fullRequest.EmergencyRequestId,
+                    Status = "Pending",
+                    CustomerId = fullRequest.CustomerId,
+                    BranchId = fullRequest.BranchId,
+                    VehicleId = fullRequest.VehicleId,
+                    IssueDescription = fullRequest.IssueDescription,
+                    Latitude = fullRequest.Latitude,
+                    Longitude = fullRequest.Longitude,
+                    RequestTime = fullRequest.RequestTime,
+                    CustomerName = fullRequest.Customer?.UserName ?? "",
+                    CustomerPhone = fullRequest.Customer?.PhoneNumber ?? "",
+                    BranchName = fullRequest.Branch?.BranchName ?? "",
+                    Message = "Có yêu cầu cứu hộ mới",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
+
+                // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
+                await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
+                    .SendAsync("EmergencyRequestCreated", notificationData);
+
+                // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
+                await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")
+                    .SendAsync("EmergencyRequestCreated", notificationData);
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không làm gián đoạn quá trình tạo emergency
+                Console.WriteLine($"Error sending real-time notification: {ex.Message}");
+            }
 
             return fullRequest;
         }
@@ -164,6 +211,38 @@ namespace Services.EmergencyRequestService
                 }
             }
 
+            // 🔔 Gửi real-time notification qua SignalR
+            try
+            {
+                var notificationData = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Accepted",
+                    CustomerId = emergency.CustomerId,
+                    BranchId = emergency.BranchId,
+                    EstimatedCost = emergency.EstimatedCost,
+                    DistanceToGarageKm = emergency.DistanceToGarageKm,
+                    Message = "Yêu cầu cứu hộ đã được duyệt",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Gửi đến tất cả clients
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestApproved", notificationData);
+
+                // Gửi đến customer cụ thể
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}")
+                    .SendAsync("EmergencyRequestApproved", notificationData);
+
+                // Gửi đến branch cụ thể
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}")
+                    .SendAsync("EmergencyRequestApproved", notificationData);
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không làm gián đoạn quá trình approve
+                Console.WriteLine($"Error sending real-time notification: {ex.Message}");
+            }
+
             return true;
         }
         // Hàm tính khoảng cách giữa hai tọa độ
@@ -197,6 +276,38 @@ namespace Services.EmergencyRequestService
             emergency.RejectReason = reason;
 
             await _repository.UpdateAsync(emergency);
+
+            // 🔔 Gửi real-time notification qua SignalR
+            try
+            {
+                var notificationData = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Canceled",
+                    CustomerId = emergency.CustomerId,
+                    BranchId = emergency.BranchId,
+                    RejectReason = reason,
+                    Message = "Yêu cầu cứu hộ đã bị từ chối",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                // Gửi đến tất cả clients
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestRejected", notificationData);
+
+                // Gửi đến customer cụ thể
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}")
+                    .SendAsync("EmergencyRequestRejected", notificationData);
+
+                // Gửi đến branch cụ thể
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}")
+                    .SendAsync("EmergencyRequestRejected", notificationData);
+            }
+            catch (Exception ex)
+            {
+                // Log lỗi nhưng không làm gián đoạn quá trình reject
+                Console.WriteLine($"Error sending real-time notification: {ex.Message}");
+            }
+
             return true;
 
         }

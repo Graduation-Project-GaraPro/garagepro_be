@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test SignalR - EmergencyRequest</title>
+    <script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr@latest/dist/browser/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .button-group {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn-test {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-test:hover {
+            background-color: #0056b3;
+        }
+        .btn-join {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-join:hover {
+            background-color: #218838;
+        }
+        .log-container {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px;
+            margin: 5px 0;
+            border-left: 3px solid #007bff;
+            background-color: white;
+            border-radius: 2px;
+        }
+        .log-created {
+            border-left-color: #17a2b8;
+        }
+        .log-approved {
+            border-left-color: #28a745;
+        }
+        .log-rejected {
+            border-left-color: #dc3545;
+        }
+        .log-info {
+            border-left-color: #ffc107;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        label {
+            display: inline-block;
+            width: 120px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Test SignalR - EmergencyRequest Hub</h1>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="button-group">
+            <button class="btn-test" onclick="connect()">Connect</button>
+            <button class="btn-test" onclick="disconnect()">Disconnect</button>
+        </div>
+
+        <div class="input-group">
+            <label>Customer ID:</label>
+            <input type="text" id="customerId" placeholder="Enter customer ID">
+            <button class="btn-join" onclick="joinCustomerGroup()">Join Customer Group</button>
+        </div>
+
+        <div class="input-group">
+            <label>Branch ID:</label>
+            <input type="text" id="branchId" placeholder="Enter branch ID">
+            <button class="btn-join" onclick="joinBranchGroup()">Join Branch Group</button>
+        </div>
+
+        <div class="button-group">
+            <h3>Test Notifications (Backend API):</h3>
+            <button class="btn-test" onclick="testCreated()">Test Created</button>
+            <button class="btn-test" onclick="testApproved()">Test Approved</button>
+            <button class="btn-test" onclick="testRejected()">Test Rejected</button>
+        </div>
+
+        <div class="button-group">
+            <button onclick="clearLogs()">Clear Logs</button>
+        </div>
+
+        <div class="log-container">
+            <h3>Event Logs:</h3>
+            <div id="logs"></div>
+        </div>
+    </div>
+
+    <script>
+        let connection = null;
+        const apiBaseUrl = window.location.origin; // Tự động lấy URL hiện tại
+
+        function connect() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl(`${apiBaseUrl}/api/emergencyrequesthub`)
+                .withAutomaticReconnect()
+                .build();
+
+            // Lắng nghe khi kết nối
+            connection.on("Connected", (connectionId) => {
+                updateStatus("Connected", true);
+                addLog("Connected to hub", "info", { connectionId });
+            });
+
+            // Lắng nghe EmergencyRequestCreated
+            connection.on("EmergencyRequestCreated", (data) => {
+                addLog("EmergencyRequestCreated", "created", data);
+            });
+
+            // Lắng nghe EmergencyRequestApproved
+            connection.on("EmergencyRequestApproved", (data) => {
+                addLog("EmergencyRequestApproved", "approved", data);
+            });
+
+            // Lắng nghe EmergencyRequestRejected
+            connection.on("EmergencyRequestRejected", (data) => {
+                addLog("EmergencyRequestRejected", "rejected", data);
+            });
+
+            // Xử lý lỗi kết nối
+            connection.onclose(() => {
+                updateStatus("Disconnected", false);
+                addLog("Connection closed", "info");
+            });
+
+            // Bắt đầu kết nối
+            connection.start()
+                .then(() => {
+                    updateStatus("Connected", true);
+                    addLog("Connection started successfully", "info");
+                })
+                .catch(err => {
+                    updateStatus("Connection Error", false);
+                    addLog("Connection error: " + err.toString(), "info");
+                    console.error("Connection error:", err);
+                });
+        }
+
+        function disconnect() {
+            if (connection) {
+                connection.stop();
+                updateStatus("Disconnected", false);
+                addLog("Disconnected from hub", "info");
+            }
+        }
+
+        function joinCustomerGroup() {
+            const customerId = document.getElementById("customerId").value;
+            if (!customerId) {
+                alert("Please enter Customer ID");
+                return;
+            }
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke("JoinCustomerGroup", customerId)
+                    .then(() => {
+                        addLog(`Joined customer group: ${customerId}`, "info");
+                    })
+                    .catch(err => {
+                        addLog(`Error joining customer group: ${err}`, "info");
+                    });
+            } else {
+                alert("Please connect first");
+            }
+        }
+
+        function joinBranchGroup() {
+            const branchId = document.getElementById("branchId").value;
+            if (!branchId) {
+                alert("Please enter Branch ID");
+                return;
+            }
+            if (connection && connection.state === signalR.HubConnectionState.Connected) {
+                connection.invoke("JoinBranchGroup", branchId)
+                    .then(() => {
+                        addLog(`Joined branch group: ${branchId}`, "info");
+                    })
+                    .catch(err => {
+                        addLog(`Error joining branch group: ${err}`, "info");
+                    });
+            } else {
+                alert("Please connect first");
+            }
+        }
+
+        async function testCreated() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/TestSignalR/test-created`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                addLog("Test Created API called", "info", result);
+            } catch (error) {
+                addLog("Error calling test API: " + error, "info");
+            }
+        }
+
+        async function testApproved() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/TestSignalR/test-approved`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                addLog("Test Approved API called", "info", result);
+            } catch (error) {
+                addLog("Error calling test API: " + error, "info");
+            }
+        }
+
+        async function testRejected() {
+            try {
+                const response = await fetch(`${apiBaseUrl}/api/TestSignalR/test-rejected`, {
+                    method: 'POST'
+                });
+                const result = await response.json();
+                addLog("Test Rejected API called", "info", result);
+            } catch (error) {
+                addLog("Error calling test API: " + error, "info");
+            }
+        }
+
+        function updateStatus(message, isConnected) {
+            const statusDiv = document.getElementById("status");
+            statusDiv.textContent = message;
+            statusDiv.className = isConnected ? "status connected" : "status disconnected";
+        }
+
+        function addLog(eventName, type, data = null) {
+            const logsDiv = document.getElementById("logs");
+            const logEntry = document.createElement("div");
+            logEntry.className = `log-entry log-${type}`;
+            
+            const time = new Date().toLocaleTimeString();
+            let content = `[${time}] <strong>${eventName}</strong>`;
+            
+            if (data) {
+                content += `<br><pre style="margin: 5px 0; font-size: 12px;">${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            logEntry.innerHTML = content;
+            logsDiv.insertBefore(logEntry, logsDiv.firstChild);
+        }
+
+        function clearLogs() {
+            document.getElementById("logs").innerHTML = "";
+        }
+
+        // Tự động kết nối khi load trang
+        window.onload = function() {
+            addLog("Page loaded. Click 'Connect' to start.", "info");
+        };
+    </script>
+</body>
+</html>
+
