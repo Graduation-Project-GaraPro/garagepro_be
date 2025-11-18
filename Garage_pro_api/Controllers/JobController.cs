@@ -252,13 +252,24 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("Manager ID not found in token");
             }
 
-            var result = await _jobService.AssignJobsToTechnicianAsync(new List<Guid> { id }, technicianId, managerId);
-            if (!result)
+            try
             {
-                return NotFound("Job not found or could not be assigned");
-            }
+                var result = await _jobService.AssignJobsToTechnicianAsync(new List<Guid> { id }, technicianId, managerId);
+                if (!result)
+                {
+                    return NotFound("Job not found or could not be assigned");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while assigning the job: {ex.Message}");
+            }
         }
 
         // POST: api/Job/assign
@@ -278,13 +289,24 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("At least one job ID must be provided");
             }
 
-            var result = await _jobService.AssignJobsToTechnicianAsync(assignDto.JobIds, assignDto.TechnicianId, managerId);
-            if (!result)
+            try
             {
-                return BadRequest("Failed to assign jobs to technician");
-            }
+                var result = await _jobService.AssignJobsToTechnicianAsync(assignDto.JobIds, assignDto.TechnicianId, managerId);
+                if (!result)
+                {
+                    return BadRequest("Failed to assign jobs to technician");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while assigning jobs: {ex.Message}");
+            }
         }
 
         // PUT: api/Job/{id}/reassign/{technicianId}
@@ -299,13 +321,24 @@ namespace Garage_pro_api.Controllers
                 return BadRequest("Manager ID not found in token");
             }
 
-            var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
-            if (!result)
+            try
             {
-                return NotFound("Job not found or could not be reassigned");
-            }
+                var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
+                if (!result)
+                {
+                    return NotFound("Job not found or could not be reassigned");
+                }
 
-            return NoContent();
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while reassigning the job: {ex.Message}");
+            }
         }
 
         

@@ -19,7 +19,7 @@ namespace Dtos.Job
         [MaxLength(100)]
         public string? JobName { get; set; }
         
-        public JobStatus Status { get; set; }
+        public JobStatus Status { get; set; } = JobStatus.Pending;
         
         public DateTime? Deadline { get; set; }
         

@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Customers;
 using Dtos.Customers;
+using Dtos.RepairOrder;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +11,15 @@ namespace Services.Customer
 {
     public interface IRepairRequestService
     {
+
         Task<IEnumerable<RepairRequest>> GetAllAsync();
         Task<IEnumerable<RepairRequest>> GetByUserIdAsync(string userId);
         Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); // New method for managers
         Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id); // New method for getting single request for manager        
+       
+        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId); 
+              
+
         Task<RPDetailDto> GetByIdDetailsAsync(Guid id);
 
         Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date);
@@ -22,6 +28,12 @@ namespace Services.Customer
         Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto,string userId);
         Task<bool> DeleteRepairRequestAsync(Guid id);
 
+        // Approval and rejection methods
+        Task<bool> ApproveRepairRequestAsync(Guid requestId);
+        Task<bool> RejectRepairRequestAsync(Guid requestId);
+
+        // Conversion method
+        Task<RepairOrderDto> ConvertToRepairOrderAsync(Guid requestId, CreateRoFromRequestDto dto);
 
         Task<object> GetPagedAsync(
             int pageNumber = 1,

@@ -35,7 +35,7 @@ namespace Dtos.Services
 
         // parts có thể để trống, nhưng nếu có thì validate số lượng
         [MaxLength(50, ErrorMessage = "A service cannot have more than 50 parts")]
-        public List<Guid> PartIds { get; set; } = new();
+        public List<Guid> PartCategoryIds { get; set; } = new();
 
     }
 }

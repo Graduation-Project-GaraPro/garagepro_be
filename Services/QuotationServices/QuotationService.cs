@@ -1,18 +1,20 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BusinessObject;
 using BusinessObject.Enums; // Add this using statement
 using Dtos.Quotations;
-using Repositories; // Add this using statement
-using Repositories.Customers;
-using Repositories.EmergencyRequestRepositories;
-using Repositories.PartRepositories;
 using Repositories.QuotationRepositories;
 using Repositories.ServiceRepositories;
-using Services; // Add this using statement
+using Repositories.PartRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Repositories; // Add this using statement
+using Services;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
+using Services.FCMServices;
+using BusinessObject.FcmDataModels; // Add this using statement
 
 namespace Services.QuotationServices
 {
@@ -23,41 +25,57 @@ namespace Services.QuotationServices
         private readonly IQuotationServicePartRepository _quotationServicePartRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IPartRepository _partRepository;
-        private readonly IRepairOrderRepository _repairOrderRepository; 
+        private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IMapper _mapper;
-        private readonly IJobService _jobService;
-        private readonly IEmergencyRequestRepository _emergencyRepository; // Add this field
-        private readonly IRepairRequestRepository _repairRequestRepository;// Add this field
-
+        private readonly IJobService _jobService; // Add this field
+        private readonly IHubContext<QuotationHub> _quotationHubContext;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
         public QuotationManagementService(
-            IQuotationRepository quotationRepository,
-            IQuotationServiceRepository quotationServiceRepository,
-            IQuotationServicePartRepository quotationServicePartRepository, 
-            IMapper mapper) : this(quotationRepository, quotationServiceRepository, quotationServicePartRepository,null, null, null,null, null, null, mapper)
+        IQuotationRepository quotationRepository,
+        IQuotationServiceRepository quotationServiceRepository,
+        IQuotationServicePartRepository quotationServicePartRepository,
+        IMapper mapper)
+        : this(
+            quotationRepository,
+            quotationServiceRepository,
+            quotationServicePartRepository,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            mapper)
         {
         }
 
+        // Constructor đầy đủ dùng cho DI chính
         public QuotationManagementService(
             IQuotationRepository quotationRepository,
             IQuotationServiceRepository quotationServiceRepository,
             IQuotationServicePartRepository quotationServicePartRepository,
             IServiceRepository serviceRepository,
             IPartRepository partRepository,
+            IHubContext<QuotationHub> quotationHubContext,
             IRepairOrderRepository repairOrderRepository,
-            IJobService jobService,
-            IRepairRequestRepository repairRequestRepository,
-            IEmergencyRequestRepository emergencyRequestRepository,// Add this parameter
-            IMapper mapper)
+            IJobService jobService, 
+            // Add this parameter
+             IFcmService fcmService,
+            IUserService userService,
+        IMapper mapper)
         {
             _quotationRepository = quotationRepository;
             _quotationServiceRepository = quotationServiceRepository;
             _quotationServicePartRepository = quotationServicePartRepository;
             _serviceRepository = serviceRepository;
             _partRepository = partRepository;
+            _quotationHubContext = quotationHubContext;
             _repairOrderRepository = repairOrderRepository;
             _jobService = jobService;
-            _repairRequestRepository = repairRequestRepository;
-            _emergencyRepository = emergencyRequestRepository;// Add this assignment
+            _fcmService = fcmService;
+            _userService = userService;
             _mapper = mapper;
         }
 
@@ -66,7 +84,7 @@ namespace Services.QuotationServices
             // If RepairOrderId is provided, get UserId and VehicleId from the RepairOrder
             string userId = createQuotationDto.UserId;
             Guid vehicleId = createQuotationDto.VehicleId;
-            
+
             if (createQuotationDto.RepairOrderId.HasValue)
             {
                 var repairOrder = await _repairOrderRepository.GetByIdAsync(createQuotationDto.RepairOrderId.Value);
@@ -81,7 +99,7 @@ namespace Services.QuotationServices
             var quotation = new Quotation
             {
                 // Made InspectionId nullable to allow creating quotes without inspection
-                InspectionId = createQuotationDto.InspectionId ?? default(Guid?), 
+                InspectionId = createQuotationDto.InspectionId ?? default(Guid?),
                 RepairOrderId = createQuotationDto.RepairOrderId ?? default(Guid?), // Add RepairOrderId
                 UserId = userId,
                 VehicleId = vehicleId,
@@ -119,10 +137,10 @@ namespace Services.QuotationServices
                         IsRequired = serviceDto.IsRequired, // Set the IsRequired flag
                         Price = service.Price // Store the actual service price at the time of quotation creation
                     };
-                    
+
                     await _quotationServiceRepository.CreateAsync(quotationService);
                     // Don't add to the collection directly, let the repository handle the relationship
-                    
+
                     // Create quotation service parts for this service
                     if (serviceDto.QuotationServiceParts != null)
                     {
@@ -147,45 +165,49 @@ namespace Services.QuotationServices
                                 Price = part.Price, // Store the actual part price at the time of quotation creation
                                 Quantity = partDto.Quantity
                             };
-                            
+
                             await _quotationServicePartRepository.CreateAsync(quotationServicePart);
                             // Don't add to the collection directly, let the repository handle the relationship
                         }
                     }
                 }
             }
-            // Lấy thông tin Emergency nếu có
-            if (createQuotationDto.RepairOrderId.HasValue)
+
+            // Update the quotation with the calculated total amount
+            createdQuotation.TotalAmount = totalAmount;
+            await _quotationRepository.UpdateAsync(createdQuotation);
+
+
+            await _quotationHubContext
+            .Clients
+            .Group($"User_{createQuotationDto.UserId}")
+            .SendAsync("QuotationCreated", new
             {
-                var repairOrder = await _repairOrderRepository.GetByIdAsync(createQuotationDto.RepairOrderId.Value);
-                if (repairOrder?.RepairRequestId != Guid.Empty)
+                createdQuotation.QuotationId,
+                createdQuotation.UserId,
+                createdQuotation.RepairOrderId,
+                createdQuotation.TotalAmount,
+                createdQuotation.Status,
+                createdQuotation.CreatedAt,
+                createQuotationDto.Note
+            });
+
+            var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
                 {
-                    var repairRequest = await _repairRequestRepository.GetByIdAsync(repairOrder.RepairRequestId);
-
-                    if (repairRequest?.EmergencyRequestId.HasValue == true)
-                    {
-                        var emergency = await _emergencyRepository.GetByIdAsync(repairRequest.EmergencyRequestId.Value);
-
-                        if (emergency != null)
-                        {
-
-
-
-                            // Cộng vào tổng tiền Quotation
-                            totalAmount += emergency.EstimatedCost ?? 0;
-
-                            // Nếu muốn lưu luôn giá vào Emergency
-                            //  emergency.EmergencyPrice = emergencyCost;
-                            // await _emergencyRepository.UpdateAsync(emergency);
-                        }
-                    }
-                }
+                    Type = NotificationType.Repair,
+                    Title = "New Quotation Available",
+                    Body = "A new quotation has been created for your repair job. Tap to view details.",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = createdQuotation.QuotationId,
+                    Screen = AppScreen.QuotationDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
             }
 
-
-                // Update the quotation with the calculated total amount
-                createdQuotation.TotalAmount = totalAmount;
-            await _quotationRepository.UpdateAsync(createdQuotation);
 
             // Reload the quotation with all related data to ensure we have the complete object
             var completeQuotation = await _quotationRepository.GetByIdAsync(createdQuotation.QuotationId);
@@ -319,12 +341,12 @@ namespace Services.QuotationServices
 
             // Convert string status to enum
             existingQuotation.Status = Enum.Parse<QuotationStatus>(updateStatusDto.Status);
-            
+
             if (updateStatusDto.CustomerResponseAt.HasValue)
             {
                 existingQuotation.CustomerResponseAt = updateStatusDto.CustomerResponseAt.Value;
             }
-            
+
             if (updateStatusDto.Status == "Sent")
             {
                 existingQuotation.SentToCustomerAt = DateTime.UtcNow;
@@ -400,8 +422,25 @@ namespace Services.QuotationServices
             // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
             //await ValidateAndCorrectPartSelectionAsync(quotation);
 
+
             // Lưu lại thay đổi
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
+
+            await _quotationHubContext
+                .Clients
+                .Group($"Quotation_{updatedQuotation.QuotationId}")
+                .SendAsync("QuotationUpdated", new
+                {
+                    updatedQuotation.QuotationId,
+                    updatedQuotation.UserId,
+                    updatedQuotation.RepairOrderId,
+                    updatedQuotation.TotalAmount,
+                    updatedQuotation.Status,
+                    updatedQuotation.Note,
+                    UpdatedAt = updatedQuotation.UpdatedAt ?? DateTime.UtcNow
+                });
+
+
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 
@@ -439,10 +478,15 @@ namespace Services.QuotationServices
 
         public async Task<bool> ApproveQuotationAsync(Guid quotationId)
         {
+            Console.WriteLine($"ApproveQuotationAsync called with ID: {quotationId}");
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
             if (quotation == null)
+            {
+                Console.WriteLine($"Quotation not found for ID: {quotationId}");
                 throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+            }
 
+            Console.WriteLine($"Approving quotation ID: {quotation.QuotationId}");
             quotation.Status = BusinessObject.Enums.QuotationStatus.Approved;
             quotation.CustomerResponseAt = DateTime.UtcNow;
 
@@ -453,8 +497,9 @@ namespace Services.QuotationServices
                 if (quotationService.IsRequired)
                 {
                     quotationService.IsSelected = true;
+                    Console.WriteLine($"Selected required service ID: {quotationService.ServiceId}");
                 }
-                
+
                 // Select all parts for selected services
                 if (quotationService.IsSelected)
                 {
@@ -462,14 +507,16 @@ namespace Services.QuotationServices
                     {
                         part.IsSelected = true;
                     }
+                    Console.WriteLine($"Selected {quotationService.QuotationServiceParts.Count} parts for service ID: {quotationService.ServiceId}");
                 }
             }
 
             await _quotationRepository.UpdateAsync(quotation);
-            
+
             // Note: We no longer auto-generate jobs here as per new requirements
             // Jobs will be manually created by manager using CopyQuotationToJobsAsync
-            
+
+            Console.WriteLine($"Quotation approved successfully");
             return true;
         }
 
@@ -496,23 +543,45 @@ namespace Services.QuotationServices
             await _quotationRepository.UpdateAsync(quotation);
             return true;
         }
-        
+
         /// <summary>
         /// Generates jobs from an approved quotation
         /// </summary>
         /// <param name="quotation">The approved quotation</param>
         private async Task GenerateJobsFromQuotationAsync(Quotation quotation)
         {
+            // Debug: Log quotation information
+            Console.WriteLine($"Generating jobs for quotation ID: {quotation.QuotationId}");
+            Console.WriteLine($"Quotation services count: {quotation.QuotationServices?.Count() ?? 0}");
+
             // Get all selected quotation services
             var selectedServices = quotation.QuotationServices.Where(qs => qs.IsSelected).ToList();
-            
+
+            Console.WriteLine($"Selected services count: {selectedServices.Count}");
+
+            if (!selectedServices.Any())
+            {
+                throw new InvalidOperationException("No selected services found in the quotation.");
+            }
+
+            // Validate Repair Order ID
+            if (quotation.RepairOrderId == null || quotation.RepairOrderId == Guid.Empty)
+            {
+                throw new InvalidOperationException("Repair Order ID is required to create jobs.");
+            }
+
             foreach (var quotationService in selectedServices)
             {
+                // Debug: Log service information
+                Console.WriteLine($"Processing service ID: {quotationService.ServiceId}");
+                Console.WriteLine($"Service name: {quotationService.Service?.ServiceName ?? "Unknown"}");
+                Console.WriteLine($"Quotation service parts count: {quotationService.QuotationServiceParts?.Count() ?? 0}");
+
                 // Create a job for each selected service
                 var job = new Job
                 {
                     ServiceId = quotationService.ServiceId,
-                    RepairOrderId = quotation.RepairOrderId ?? Guid.Empty,
+                    RepairOrderId = quotation.RepairOrderId.Value,
                     JobName = $"{quotationService.Service?.ServiceName ?? "Service"} - Quotation {quotation.QuotationId.ToString().Substring(0, 8)}",
                     Status = JobStatus.Pending,
                     TotalAmount = quotationService.Price,
@@ -520,33 +589,31 @@ namespace Services.QuotationServices
                     CreatedAt = DateTime.UtcNow
                 };
 
-                // Save the job
-                var createdJob = await _jobService.CreateJobAsync(job);
-                
                 // Create job parts for selected parts
                 var selectedParts = quotationService.QuotationServiceParts.Where(qsp => qsp.IsSelected).ToList();
+                Console.WriteLine($"Selected parts count: {selectedParts.Count}");
+
+                var jobParts = new List<JobPart>();
                 foreach (var quotationPart in selectedParts)
                 {
                     var jobPart = new JobPart
                     {
-                        JobId = createdJob.JobId,
                         PartId = quotationPart.PartId,
                         Quantity = (int)quotationPart.Quantity,
                         UnitPrice = quotationPart.Price,
                         CreatedAt = DateTime.UtcNow
                     };
-                    
-                    // Save job part
-                    await _jobService.AddJobPartAsync(jobPart);
+
+                    jobParts.Add(jobPart);
+                    Console.WriteLine($"Added part ID: {quotationPart.PartId} to job parts list");
                 }
-                
-                // Update job total amount after adding parts
-                var totalAmount = await _jobService.CalculateJobTotalAmountAsync(createdJob.JobId);
-                createdJob.TotalAmount = totalAmount;
-                await _jobService.UpdateJobAsync(createdJob);
+
+                // Save the job with all its parts in a transaction
+                var createdJob = await _jobService.CreateJobWithPartsAsync(job, jobParts);
+                Console.WriteLine($"Created job ID: {createdJob.JobId} with {jobParts.Count} parts");
             }
         }
-        
+
         /// <summary>
         /// Copies an approved quotation to jobs
         /// </summary>
@@ -554,17 +621,59 @@ namespace Services.QuotationServices
         /// <returns>True if successful, false otherwise</returns>
         public async Task<bool> CopyQuotationToJobsAsync(Guid quotationId)
         {
+            // Load quotation with all necessary navigation properties
+            // Note: The GetByIdAsync method in QuotationRepository already includes all necessary navigation properties
+            var quotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (quotation == null)
+            {
+                throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+            }
+
+            Console.WriteLine($"Retrieved quotation ID: {quotation.QuotationId}");
+            Console.WriteLine($"Quotation status: {quotation.Status}");
+            Console.WriteLine($"Quotation services count: {quotation.QuotationServices?.Count() ?? 0}");
+            Console.WriteLine($"Quotation RepairOrderId: {quotation.RepairOrderId}");
+
+            // Check if quotation is approved
+            if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
+            {
+                throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
+            }
+
+            try
+            {
+                // Generate jobs from the quotation
+                await GenerateJobsFromQuotationAsync(quotation);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error copying quotation to jobs: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to copy quotation to jobs: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Creates revision jobs for an updated quotation
+        /// </summary>
+        /// <param name="quotationId">The ID of the quotation</param>
+        /// <param name="revisionReason">The reason for the revision</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> CreateRevisionJobsAsync(Guid quotationId, string revisionReason)
+        {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
             if (quotation == null)
                 throw new ArgumentException($"Quotation with ID {quotationId} not found.");
-                
+
             // Check if quotation is approved
             if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
-                throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
-            
-            // Generate jobs from the quotation
+                throw new InvalidOperationException("Only approved quotations can be used to create revision jobs.");
+
+            // Generate jobs from the quotation (these will be the revision jobs)
             await GenerateJobsFromQuotationAsync(quotation);
-            
+
             return true;
         }
     }

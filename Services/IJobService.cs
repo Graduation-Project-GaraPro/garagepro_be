@@ -29,6 +29,8 @@ namespace Services
         // Manager Assignment Workflow
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
+        // NEW: Create revision jobs from existing jobs
+        Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
 
         // Job Parts Management
         Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId);
@@ -54,12 +56,16 @@ namespace Services
             DateTime? fromDate = null,
             DateTime? toDate = null);
 
-
-
+        // Technician methods
+        Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId);
+        Task<Technician?> GetTechnicianByUserIdAsync(string userId);
 
         // Workflow Validation
         Task<bool> ValidateJobWorkflowAsync(Guid jobId, JobStatus targetStatus);
         Task<string> GetNextAllowedStatusesAsync(Guid jobId);
+        
+        // Create job with parts in a transaction
+        Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts);
         
     }
 }

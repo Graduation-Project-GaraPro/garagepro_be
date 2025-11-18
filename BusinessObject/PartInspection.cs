@@ -18,9 +18,8 @@ namespace BusinessObject
 
         [Required]
         public Guid InspectionId { get; set; }
-
-        [MaxLength(100)]
-        public string Status { get; set; }
+        [Required]
+        public Guid PartCategoryId { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -28,5 +27,6 @@ namespace BusinessObject
         // Navigation properties
         public virtual Part Part { get; set; }
         public virtual Inspection Inspection { get; set; }
+        public virtual PartCategory PartCategory { get; set; }
     }
 }

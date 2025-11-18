@@ -39,6 +39,7 @@ namespace Repositories.InspectionAndRepair
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.JobParts)
                         .ThenInclude(jp => jp.Part)
+                        .ThenInclude(p => p.PartCategory)
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.Repair)
                 .FirstOrDefaultAsync(r => r.RepairOrderId == repairOrderId);

@@ -1,10 +1,13 @@
 ﻿using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Repositories.InspectionAndRepair
@@ -20,43 +23,187 @@ namespace Repositories.InspectionAndRepair
 
         public async Task<List<Job>> GetJobsByTechnicianAsync(string userId)
         {
-            return await _context.JobTechnicians
+            // Query chính - lấy JobIds trước
+            var jobIds = await _context.JobTechnicians
+                .AsNoTracking()
                 .Where(jt => jt.Technician.UserId == userId)
-                .Include(jt => jt.Job)
-                    .ThenInclude(j => j.Service)  // Để lấy ServiceName
-                .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder)  // Để lấy RepairOrderId
-                        .ThenInclude(ro => ro.User)  // Thêm: Lấy Vehicle từ RepairOrder
-                            //.ThenInclude(v => v.User)  // Thêm: Lấy Customer (User) từ Vehicle
-                 .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder) 
-                        .ThenInclude(ro => ro.Vehicle)  
-                            .ThenInclude(v => v.Brand)
-                 .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder)  
-                        .ThenInclude(ro => ro.Vehicle)  
-                            .ThenInclude(v => v.Color)
-                 .Include(jt => jt.Job)
-                    .ThenInclude(j => j.RepairOrder)  
-                        .ThenInclude(ro => ro.Vehicle)  
-                            .ThenInclude(v => v.Model)
-                .Include(jt => jt.Job)
-                    .ThenInclude(j => j.JobParts)
-                        .ThenInclude(jp => jp.Part)  // Để lấy Parts
-                .Include(jt => jt.Job)
-                    .ThenInclude(j => j.Repair)  // Để lấy Repairs 
-                .Include(jt => jt.Job)
-                    .ThenInclude(j => j.JobTechnicians)
-                        .ThenInclude(jobTech => jobTech.Technician)
-                            .ThenInclude(tech => tech.User)
-                .Select(jt => jt.Job)
+                .Select(jt => jt.JobId)
+                .Distinct()
                 .ToListAsync();
-        }
-        public async Task UpdateJobAsync(Job job)
-        {
-            _context.Jobs.Update(job);
-            await _context.SaveChangesAsync();
+
+            if (!jobIds.Any())
+                return new List<Job>();
+
+            // Query đầy đủ với projection
+            var query = from j in _context.Jobs.AsNoTracking()
+                        where jobIds.Contains(j.JobId)
+                        select new Job
+                        {
+                            JobId = j.JobId,
+                            JobName = j.JobName,
+                            Status = j.Status,
+                            Deadline = j.Deadline,
+                            TotalAmount = j.TotalAmount,
+                            Note = j.Note,
+                            CreatedAt = j.CreatedAt,
+                            UpdatedAt = j.UpdatedAt,
+                            Level = j.Level,
+                            RepairOrderId = j.RepairOrderId,
+
+                            Service = new Service
+                            {
+                                ServiceId = j.Service.ServiceId,
+                                ServiceName = j.Service.ServiceName
+                            },
+
+                            RepairOrder = new RepairOrder
+                            {
+                                RepairOrderId = j.RepairOrder.RepairOrderId,
+                                Vehicle = new Vehicle
+                                {
+                                    VehicleId = j.RepairOrder.Vehicle.VehicleId,
+                                    LicensePlate = j.RepairOrder.Vehicle.LicensePlate,
+                                    Year = j.RepairOrder.Vehicle.Year,
+                                    Color = j.RepairOrder.Vehicle.Color,
+                                    Brand = new BusinessObject.Vehicles.VehicleBrand
+                                    {
+                                        BrandID = j.RepairOrder.Vehicle.Brand.BrandID,
+                                        BrandName = j.RepairOrder.Vehicle.Brand.BrandName
+                                    },
+                                    Model = new BusinessObject.Vehicles.VehicleModel
+                                    {
+                                        ModelID = j.RepairOrder.Vehicle.Model.ModelID,
+                                        ModelName = j.RepairOrder.Vehicle.Model.ModelName
+                                    },
+                                    User = new ApplicationUser
+                                    {
+                                        Id = j.RepairOrder.Vehicle.User.Id,
+                                        FirstName = j.RepairOrder.Vehicle.User.FirstName,
+                                        LastName = j.RepairOrder.Vehicle.User.LastName,
+                                        Email = j.RepairOrder.Vehicle.User.Email,
+                                        PhoneNumber = j.RepairOrder.Vehicle.User.PhoneNumber
+                                    }
+                                }
+                            },
+
+                            Repair = j.Repair == null ? null : new Repair
+                            {
+                                RepairId = j.Repair.RepairId,
+                                Description = j.Repair.Description,
+                                StartTime = j.Repair.StartTime,
+                                EndTime = j.Repair.EndTime,
+                                ActualTime = j.Repair.ActualTime,
+                                EstimatedTime = j.Repair.EstimatedTime,
+                                Notes = j.Repair.Notes,
+                                JobId = j.Repair.JobId
+                            }
+                        };
+
+            var jobs = await query.ToListAsync();
+
+            // Load JobParts và JobTechnicians riêng
+            if (jobs.Any())
+            {
+                var jobParts = await _context.JobParts
+                    .AsNoTracking()
+                    .Where(jp => jobIds.Contains(jp.JobId))
+                    .Select(jp => new
+                    {
+                        jp.JobId,
+                        Part = new Part
+                        {
+                            PartId = jp.Part.PartId,
+                            Name = jp.Part.Name,
+                            PartCategoryId = jp.Part.PartCategoryId,
+                            PartCategory = new PartCategory
+                            {
+                                LaborCategoryId = jp.Part.PartCategory.LaborCategoryId,
+                                CategoryName = jp.Part.PartCategory.CategoryName
+                            }
+                        }
+                    })
+                    .ToListAsync();
+
+                var jobTechnicians = await _context.JobTechnicians
+                    .AsNoTracking()
+                    .Where(jt => jobIds.Contains(jt.JobId))
+                    .Select(jt => new
+                    {
+                        jt.JobId,
+                        Technician = new Technician
+                        {
+                            TechnicianId = jt.Technician.TechnicianId,
+                            User = new ApplicationUser
+                            {
+                                Id = jt.Technician.User.Id,
+                                FirstName = jt.Technician.User.FirstName,
+                                LastName = jt.Technician.User.LastName,
+                                Email = jt.Technician.User.Email,
+                                PhoneNumber = jt.Technician.User.PhoneNumber
+                            }
+                        }
+                    })
+                    .ToListAsync();
+
+                foreach (var job in jobs)
+                {
+                    job.JobParts = jobParts
+                        .Where(jp => jp.JobId == job.JobId)
+                        .Select(jp => new JobPart
+                        {
+                            JobId = jp.JobId,
+                            Part = jp.Part
+                        })
+                        .ToList();
+
+                    job.JobTechnicians = jobTechnicians
+                        .Where(jt => jt.JobId == job.JobId)
+                        .Select(jt => new JobTechnician
+                        {
+                            JobId = jt.JobId,
+                            Technician = jt.Technician
+                        })
+                        .ToList();
+                }
+            }
+
+            return jobs;
         }
 
+        public async Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null)
+        {
+            // Tạo context riêng cho update để tránh tracking conflicts
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Update Job
+                var job = await _context.Jobs.Include(j=>j.RepairOrder).FirstOrDefaultAsync(j => j.JobId == jobId);
+                if (job == null)
+                    throw new Exception("Job không tồn tại");
+
+                job.Status = newStatus;
+                job.UpdatedAt = DateTime.UtcNow;
+
+                // Update Repair nếu có
+                if (endTime.HasValue)
+                {
+                    var repair = await _context.Repairs.FirstOrDefaultAsync(r => r.JobId == jobId);
+                    if (repair != null)
+                    {
+                        repair.EndTime = endTime;
+                        repair.ActualTime = actualTime;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
     }
 }

@@ -1,5 +1,5 @@
 
-﻿using BusinessObject.Enums;
+using BusinessObject.Enums;
 using BusinessObject.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
@@ -26,7 +26,7 @@ namespace BusinessObject
         [MaxLength(100)]
         public string JobName { get; set; }
 
-        public JobStatus Status { get; set; } = JobStatus.New;
+        public JobStatus Status { get; set; } = JobStatus.Pending;
 
         public DateTime? Deadline { get; set; }
 
@@ -43,10 +43,6 @@ namespace BusinessObject
 
         public int Level { get; set; }
 
-        // Customer approval workflow properties
-        public DateTime? SentToCustomerAt { get; set; }
-        public DateTime? CustomerResponseAt { get; set; }
-        public string? CustomerApprovalNote { get; set; }
         public string? AssignedByManagerId { get; set; }  // UserId of manager who assigned
         public DateTime? AssignedAt { get; set; }
 
@@ -62,5 +58,6 @@ namespace BusinessObject
         public virtual ICollection<JobPart> JobParts { get; set; }
         public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
         public virtual Repair Repair { get; set; }
+        public virtual Job OriginalJob { get; set; } // Navigation property for the original job
     }
 }

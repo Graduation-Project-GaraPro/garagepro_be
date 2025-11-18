@@ -7,23 +7,26 @@ using System.Threading.Tasks;
 
 namespace Dtos.RepairHistory
 {
-    
     public class RepairHistoryDto
     {
-        public VehicleDto Vehicle { get; set; } 
+        public VehicleDto Vehicle { get; set; }
         public CustomerDto Owner { get; set; }
         public int RepairCount { get; set; }
+        public decimal TotalVehicleAmount { get; set; }
+       
+        public string CustomerIssue { get; set; }
         public List<JobHistoryDto> CompletedJobs { get; set; } = new();
     }
 
     public class JobHistoryDto
     {
         public string JobName { get; set; }
-        public string Note { get; set; }
+       
+        public string RepairDescription { get; set; } 
         public decimal TotalAmount { get; set; }
         public DateTime? Deadline { get; set; }
         public int Level { get; set; }
-        public string CustomerIssue { get; set; } // Notes từ RepairOrder
+        public string Note { get; set; }
         public List<JobPartDto> JobParts { get; set; } = new();
         public List<ServiceDto> Services { get; set; } = new();
     }
@@ -42,5 +45,4 @@ namespace Dtos.RepairHistory
         public decimal ActualDuration { get; set; }
         public string Notes { get; set; }
     }
-
 }

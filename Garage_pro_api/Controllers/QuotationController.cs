@@ -155,9 +155,39 @@ namespace Garage_pro_api.Controllers
         [Authorize(Roles = "Manager")]
         public async Task<ActionResult<bool>> CopyQuotationToJobs(Guid id)
         {
+            Console.WriteLine($"CopyQuotationToJobs called with ID: {id}");
             try
             {
                 var result = await _quotationService.CopyQuotationToJobsAsync(id);
+                Console.WriteLine($"CopyQuotationToJobs completed with result: {result}");
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                Console.WriteLine($"CopyQuotationToJobs failed with ArgumentException: {ex.Message}");
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"CopyQuotationToJobs failed with InvalidOperationException: {ex.Message}");
+                return BadRequest(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"CopyQuotationToJobs failed with Exception: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, $"An error occurred: {ex.Message}");
+            }
+        }
+        
+        // Create revision jobs for an updated quotation - Manager only
+        [HttpPost("{id}/create-revision-jobs")]
+        [Authorize(Roles = "Manager")]
+        public async Task<ActionResult<bool>> CreateRevisionJobs(Guid id, [FromBody] CreateRevisionJobsDto createRevisionJobsDto)
+        {
+            try
+            {
+                var result = await _quotationService.CreateRevisionJobsAsync(id, createRevisionJobsDto.RevisionReason);
                 return Ok(result);
             }
             catch (ArgumentException ex)

@@ -41,6 +41,16 @@ namespace Dtos.Branches
         [MaxLength(1000, ErrorMessage = "Description cannot exceed 1000 characters")]
         public string? Description { get; set; }
 
+        [Range(30, int.MaxValue, ErrorMessage = "Must be at least 30 minute")]
+        public int ArrivalWindowMinutes { get; set; } = 30;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Must be at least 1")]
+        public int MaxBookingsPerWindow { get; set; } = 6;
+
+        [Range(1, int.MaxValue, ErrorMessage = "Must be at least 1")]
+        public int MaxConcurrentWip { get; set; } = 8;
+
+
         [MinLength(1, ErrorMessage = "At least one service must be assigned to the branch")]
         public List<Guid> ServiceIds { get; set; } = new();
 

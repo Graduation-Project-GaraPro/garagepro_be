@@ -1,4 +1,4 @@
-﻿using BusinessObject.Customers;
+﻿﻿using BusinessObject.Customers;
 using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,7 @@ namespace Dtos.Customers
         public string? Description { get; set; }
         public Guid BranchId { get; set; }
         public DateTime RequestDate { get; set; }
+        public DateTimeOffset ArrivalWindowStart { get; set; }
         public DateTime? CompletedDate { get; set; }
         public RepairRequestStatus Status { get; set; }
         public DateTime CreatedAt { get; set; }

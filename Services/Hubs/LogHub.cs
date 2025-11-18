@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using System.Text.RegularExpressions;
 
-namespace Services.LogServices
+namespace Services.Hubs
 {
     public class LogHub : Hub
     {

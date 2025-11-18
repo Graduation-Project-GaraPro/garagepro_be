@@ -164,6 +164,19 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
                 .ForMember(dest => dest.QuotationServices, opt => opt.Ignore());
 
+            CreateMap<UpdateQuotationDto, Quotation>()
+                .ForMember(dest => dest.QuotationId, opt => opt.Ignore())
+                .ForMember(dest => dest.InspectionId, opt => opt.Ignore())
+                .ForMember(dest => dest.RepairOrderId, opt => opt.Ignore())
+                .ForMember(dest => dest.UserId, opt => opt.Ignore())
+                .ForMember(dest => dest.VehicleId, opt => opt.Ignore())
+                .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
+                .ForMember(dest => dest.SentToCustomerAt, opt => opt.Ignore())
+                .ForMember(dest => dest.CustomerResponseAt, opt => opt.Ignore())
+                .ForMember(dest => dest.Status, opt => opt.Ignore())
+                .ForMember(dest => dest.TotalAmount, opt => opt.Ignore())
+                .ForMember(dest => dest.DiscountAmount, opt => opt.Ignore());
+
             CreateMap<QuotationService, QuotationServiceDto>()
                 .ForMember(dest => dest.QuotationServiceId, opt => opt.MapFrom(src => src.QuotationServiceId))
                 .ForMember(dest => dest.QuotationId, opt => opt.MapFrom(src => src.QuotationId))
@@ -206,7 +219,9 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Branches,
                            opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)))
                 .ForMember(dest => dest.Parts,
-                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)));
+                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)))
+                .ForMember(dest => dest.PartCategories,
+                               opt => opt.MapFrom(src => src.ServicePartCategories.Select(bs => bs.PartCategory)));
 
 
             CreateMap<ServiceCategory, ServiceCategoryDto>().ReverseMap();

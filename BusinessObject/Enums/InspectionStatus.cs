@@ -8,8 +8,8 @@ namespace BusinessObject.Enums
 {
     public enum InspectionStatus
     {
-        New = 0,
-        Pending = 1,
+        Pending = 0,
+        New = 1,
         InProgress = 2,
         Completed = 3
 

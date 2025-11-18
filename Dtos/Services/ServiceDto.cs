@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Branches;
+using Dtos.Parts;
 
 namespace Dtos.Services
 {
@@ -25,6 +26,7 @@ namespace Dtos.Services
 
         public virtual ICollection<BranchServiceRelatedDto>? Branches { get; set; } = new List<BranchServiceRelatedDto>();
         public virtual ICollection<PartServiceRelatedDto>? Parts { get; set; } = new List<PartServiceRelatedDto>();
+        public virtual ICollection<PartCategoryWithPartsDto>? PartCategories { get; set; } = new List<PartCategoryWithPartsDto>();
 
     }
 }

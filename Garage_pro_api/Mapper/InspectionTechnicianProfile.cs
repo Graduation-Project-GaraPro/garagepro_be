@@ -11,7 +11,6 @@ namespace Garage_pro_api.Mapper
         {
             CreateMap<Inspection, InspectionTechnicianDto>()
                 .ForMember(d => d.StatusText, o => o.MapFrom(s => s.Status.ToString()))
-                .ForMember(d => d.Status, o => o.MapFrom(s => (int)s.Status))
                 .ForMember(d => d.ServiceInspections, o => o.MapFrom(s => s.ServiceInspections));
 
             CreateMap<RepairOrder, RepairOrderDto>()
@@ -20,8 +19,7 @@ namespace Garage_pro_api.Mapper
             // Map Vehicle with nested Brand, Model, Color
             CreateMap<Vehicle, VehicleDto>()
                 .ForMember(d => d.Brand, o => o.MapFrom(s => s.Brand))
-                .ForMember(d => d.Model, o => o.MapFrom(s => s.Model))
-                .ForMember(d => d.Color, o => o.MapFrom(s => s.Color));
+                .ForMember(d => d.Model, o => o.MapFrom(s => s.Model));
 
             // Map Brand, Model, Color separately
             CreateMap<VehicleBrand, VehicleBrandDto>()
@@ -29,24 +27,24 @@ namespace Garage_pro_api.Mapper
 
             CreateMap<VehicleModel, VehicleModelDto>()
                 .ForMember(d => d.ModelId, o => o.MapFrom(s => s.ModelID));
-
-            CreateMap<VehicleColor, VehicleColorDto>()
-                .ForMember(d => d.ColorId, o => o.MapFrom(s => s.ColorID));
+        
 
             CreateMap<BusinessObject.Authentication.ApplicationUser, CustomerDto>()
                 .ForMember(d => d.CustomerId, o => o.MapFrom(s => s.Id))
                 .ForMember(d => d.FullName, o => o.MapFrom(s => $"{s.FirstName} {s.LastName}".Trim()));
 
-             
+
 
             CreateMap<RepairOrderService, RepairOrderServiceDto>()
-                .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
-                 .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RepairOrderServiceParts))
-                  .ForMember(dest => dest.IsAdvanced, opt => opt.MapFrom(src => src.Service.IsAdvanced))
-              .ForMember(dest => dest.AllServiceParts, opt => opt.MapFrom(src => src.Service.ServiceParts));
+             .ForMember(dest => dest.ServiceName, opt => opt.MapFrom(src => src.Service.ServiceName))
+             .ForMember(dest => dest.ServicePrice, opt => opt.MapFrom(src => src.Service.Price))
+             .ForMember(dest => dest.IsAdvanced, opt => opt.MapFrom(src => src.Service.IsAdvanced))
+             .ForMember(dest => dest.AllPartCategories, opt => opt.MapFrom(src =>
+                 src.Service.ServicePartCategories.Select(spc => spc.PartCategory).ToList()))
+             .ForMember(dest => dest.ServiceCategoryId, opt => opt.MapFrom(src => src.Service.ServiceCategoryId))
+             .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Service.ServiceCategory != null ? src.Service.ServiceCategory.CategoryName : null));
 
-            CreateMap<RepairOrderServicePart, RepairOrderServicePartDto>()
-              .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name));
+
 
             CreateMap<BusinessObject.Branches.ServicePart, ServicePartDto>()
               .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name))
@@ -54,16 +52,37 @@ namespace Garage_pro_api.Mapper
 
             CreateMap<ServiceInspection, ServiceInspectionDto>()
                 .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.Service.ServiceName))
-                .ForMember(d => d.ConditionStatus, o => o.MapFrom(s => (int)s.ConditionStatus));
-
-            CreateMap<PartInspection, PartInspectionDto>();
+                .ForMember(d => d.ConditionStatus, o => o.MapFrom(s => (int)s.ConditionStatus))
+                .ForMember(d => d.ServiceCategoryId, o => o.MapFrom(s => s.Service.ServiceCategoryId))
+                .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.Service.ServiceCategory != null ? s.Service.ServiceCategory.CategoryName : null))
+                .ForMember(d => d.IsAdvanced, o => o.MapFrom(s => s.Service.IsAdvanced))
+                .ForMember(d => d.AllPartCategories, o => o.MapFrom(s =>
+                    s.Service.ServicePartCategories.Select(spc => spc.PartCategory).ToList()));
 
             CreateMap<Service, AllServiceDto>()
                 .ForMember(d => d.ServiceId, o => o.MapFrom(s => s.ServiceId))
+                .ForMember(d => d.ServiceCategoryId, o => o.MapFrom(s => s.ServiceCategoryId))
                 .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.ServiceName))
                 .ForMember(d => d.Price, o => o.MapFrom(s => s.Price))
-                .ForMember(d => d.IsAdvanced, o => o.MapFrom(s => s.IsAdvanced));
+                .ForMember(d => d.IsAdvanced, o => o.MapFrom(s => s.IsAdvanced))
+                .ForMember(d => d.ServiceCategoryId, o => o.MapFrom(s => s.ServiceCategoryId))
+                .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.ServiceCategory != null ? s.ServiceCategory.CategoryName : null));
 
+            CreateMap<PartCategory, PartCategoryDto>()
+                .ForMember(d => d.PartCategoryId, o => o.MapFrom(s => s.LaborCategoryId))
+                .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.CategoryName))
+                .ForMember(d => d.Parts, o => o.MapFrom(s => s.Parts));
+
+            CreateMap<Part, ServicePartDto>()
+                .ForMember(d => d.ServicePartId, o => o.MapFrom(s => s.PartId))
+                .ForMember(d => d.PartId, o => o.MapFrom(s => s.PartId))
+                .ForMember(d => d.PartName, o => o.MapFrom(s => s.Name))
+                .ForMember(d => d.UnitPrice, o => o.MapFrom(s => s.Price));
+
+            CreateMap<PartInspection, PartInspectionDto>()
+                .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name))
+                .ForMember(d => d.PartCategoryId, o => o.MapFrom(s => s.PartCategoryId))
+                .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.PartCategory.CategoryName));
         }
     }
 }

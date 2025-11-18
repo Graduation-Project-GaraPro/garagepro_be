@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,6 +25,11 @@ namespace Repositories
                 .Include(i => i.RepairOrder)
                 .Include(i => i.Technician)
                     .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                        .ThenInclude(s => s.ServiceParts)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
                 .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
         }
 
@@ -42,6 +48,10 @@ namespace Repositories
                 .Include(i => i.RepairOrder)
                 .Include(i => i.Technician)
                     .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
                 .Where(i => i.RepairOrderId == repairOrderId)
                 .ToListAsync();
         }
@@ -108,13 +118,43 @@ namespace Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Inspection>> GetCompletedInspectionsWithDetailsAsync()
+        {
+            return await _context.Inspections
+                .Include(i => i.RepairOrder)
+                .Include(i => i.Technician)
+                    .ThenInclude(t => t.User)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .Include(i => i.PartInspections)
+                    .ThenInclude(pi => pi.Part)
+                .Where(i => i.Status == InspectionStatus.Completed)
+                .ToListAsync();
+        }
+        public async Task<Inspection?> GetInspectionByIdAsync(Guid inspectionId)
+        {
+            return await _context.Inspections
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Brand)
+                .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.Vehicle)
+                        .ThenInclude(v => v.Model)
+                .Include(i => i.ServiceInspections)
+                    .ThenInclude(si => si.Service)
+                .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
+        }
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
             var inspection = await _context.Inspections.FindAsync(inspectionId);
             if (inspection == null) return false;
 
             inspection.TechnicianId = technicianId;
-            inspection.Status = InspectionStatus.InProgress;
+            // Change status from pending to new when assigning technician
+            if (inspection.Status == InspectionStatus.Pending)
+            {
+                inspection.Status = InspectionStatus.New;
+            }
             inspection.UpdatedAt = DateTime.UtcNow;
 
             try
@@ -128,83 +168,12 @@ namespace Repositories
             }
         }
 
-        public async Task<bool> UpdateInspectionFindingAsync(Guid inspectionId, string finding, string note, IssueRating rating)
+        public async Task<Technician?> GetTechnicianByIdAsync(Guid technicianId)
         {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.Finding = finding;
-            inspection.Note = note;
-            inspection.IssueRating = rating;
-            inspection.Status = InspectionStatus.Completed;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
+            return await _context.Technicians
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.TechnicianId == technicianId);
         }
 
-        public async Task<bool> UpdateCustomerConcernAsync(Guid inspectionId, string concern)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.CustomerConcern = concern;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public async Task<bool> UpdateInspectionPriceAsync(Guid inspectionId, decimal price)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.InspectionPrice = price;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-        
-        public async Task<bool> UpdateInspectionTypeAsync(Guid inspectionId, InspectionType type)
-        {
-            var inspection = await _context.Inspections.FindAsync(inspectionId);
-            if (inspection == null) return false;
-
-            inspection.InspectionType = type;
-            inspection.UpdatedAt = DateTime.UtcNow;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
     }
 }

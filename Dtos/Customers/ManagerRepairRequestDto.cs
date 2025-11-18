@@ -13,6 +13,7 @@ namespace Dtos.Customers
         public string VehicleInfo { get; set; } // Brand + Model
         public string Description { get; set; }
         public DateTime RequestDate { get; set; }
+        public DateTimeOffset ArrivalWindowStart { get; set; }
         public DateTime? CompletedDate { get; set; }
         public bool IsCompleted { get; set; }
         public List<string> ImageUrls { get; set; }
@@ -20,5 +21,6 @@ namespace Dtos.Customers
         public List<RequestPartDto> Parts { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        public string Status { get; set; } // Add this line
     }
 }

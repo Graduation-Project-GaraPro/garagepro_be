@@ -36,6 +36,5 @@ namespace BusinessObject.Roles
         // Ngày giờ gán quyền
         public DateTime GrantedAt { get; set; } = DateTime.UtcNow;
 
-
     }
 }

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -79,6 +79,7 @@ namespace DataAccessLayer
         public DbSet<RepairOrderService> RepairOrderServices { get; set; }
         public DbSet<RepairOrderServicePart> RepairOrderServiceParts { get; set; }
         public DbSet<ServiceInspection> ServiceInspections { get; set; }
+        public DbSet<ServicePartCategory> ServicePartCategories { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
 
         public DbSet<ServicePart> ServiceParts { get; set; }
@@ -399,7 +400,6 @@ namespace DataAccessLayer
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 // Customer approval workflow properties
-                entity.Property(e => e.CustomerApprovalNote).HasMaxLength(1000);
                 entity.Property(e => e.AssignedByManagerId).HasMaxLength(450); // Standard ASP.NET Identity user ID length
                 entity.Property(e => e.RevisionReason).HasMaxLength(500); // Reason for estimate revision
 
@@ -413,6 +413,12 @@ namespace DataAccessLayer
                       .HasForeignKey<Repair>(r => r.JobId)
                       .IsRequired()
                       .OnDelete(DeleteBehavior.Cascade);
+                      
+                // Configure the relationship with the original job
+                entity.HasOne(j => j.OriginalJob)
+                      .WithMany()
+                      .HasForeignKey(j => j.OriginalJobId)
+                      .OnDelete(DeleteBehavior.Restrict);
             });
             
             // Repair configuration
@@ -434,15 +440,14 @@ namespace DataAccessLayer
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
                 entity.Property(e => e.Note).HasMaxLength(500);
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .IsRequired();
                 entity.Property(e => e.IssueRating)
                       .HasConversion<string>()
                       .IsRequired();
-                entity.Property(e => e.InspectionType)
-                      .HasConversion<string>()
-                      .IsRequired();
+                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)
@@ -470,7 +475,7 @@ namespace DataAccessLayer
                 // Relationship với Specification
                 entity.HasMany(e => e.Specifications)
                       .WithOne(s => s.SpecificationCategory)
-                      .HasForeignKey(s => s.TemplateID)
+                      .HasForeignKey(s => s.CategoryID)
                       .OnDelete(DeleteBehavior.Restrict); // Không cho xóa category nếu có specifications
             });
 
@@ -489,17 +494,17 @@ namespace DataAccessLayer
                 // Relationship với SpecificationCategory
                 entity.HasOne(s => s.SpecificationCategory)
                       .WithMany(c => c.Specifications)
-                      .HasForeignKey(s => s.TemplateID)
+                      .HasForeignKey(s => s.CategoryID)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 // Relationship với SpecificationsData
                 entity.HasMany(s => s.SpecificationsDatas)
                       .WithOne(d => d.Specification)
-                      .HasForeignKey(d => d.FieldTemplateID)
+                      .HasForeignKey(d => d.SpecificationID)
                       .OnDelete(DeleteBehavior.Restrict); // Không cho xóa specification nếu có data
 
                 // Composite Index để tăng performance khi query theo category và sort
-                entity.HasIndex(e => new { e.TemplateID, e.DisplayOrder });
+                entity.HasIndex(e => new { e.CategoryID, e.DisplayOrder });
 
                 // Index để search theo Label
                 entity.HasIndex(e => e.Label);
@@ -546,15 +551,15 @@ namespace DataAccessLayer
                 // Relationship với Specification
                 entity.HasOne(d => d.Specification)
                       .WithMany(s => s.SpecificationsDatas)
-                      .HasForeignKey(d => d.FieldTemplateID)
+                      .HasForeignKey(d => d.SpecificationID)
                       .OnDelete(DeleteBehavior.Restrict);
 
                 // Composite Index để tăng performance khi query theo xe và specification
-                entity.HasIndex(e => new { e.LookupID, e.FieldTemplateID })
+                entity.HasIndex(e => new { e.LookupID, e.SpecificationID})
                       .IsUnique(); // Đảm bảo mỗi xe chỉ có 1 giá trị cho mỗi specification
 
                 // Index để query theo FieldTemplateID (khi muốn xem tất cả xe có specification này)
-                entity.HasIndex(e => e.FieldTemplateID);
+                entity.HasIndex(e => e.SpecificationID);
             });
 
             //Log System
@@ -700,6 +705,15 @@ namespace DataAccessLayer
             // Configure relationships to prevent cascade delete cycles
 
             // RepairOrder relationships - prevent cascade delete conflicts
+
+            modelBuilder.Entity<RepairOrder>()
+             .HasOne(ro => ro.RepairRequest)
+             .WithOne(rr => rr.RepairOrder)
+             .HasForeignKey<RepairOrder>(ro => ro.RepairRequestId) 
+             .IsRequired(false)                                    
+             .OnDelete(DeleteBehavior.Restrict);                   
+
+
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
                 .WithMany()
@@ -744,12 +758,7 @@ namespace DataAccessLayer
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Part-Branch relationship
-            modelBuilder.Entity<Part>()
-                .HasOne(p => p.Branch)
-                .WithMany(b => b.Parts)
-                .HasForeignKey(p => p.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
+           
 
             // ServiceCategory self-referencing relationship
             modelBuilder.Entity<ServiceCategory>()
@@ -788,7 +797,7 @@ namespace DataAccessLayer
                 entity.HasOne(f => f.RepairOrder)
                       .WithMany()
                       .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
 
             // Job relationships - prevent cascade delete conflicts
@@ -881,7 +890,7 @@ namespace DataAccessLayer
                 entity.HasOne(ros => ros.RepairOrder)
                       .WithMany(ro => ro.RepairOrderServices)
                       .HasForeignKey(ros => ros.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(ros => ros.Service)
                       .WithMany(s => s.RepairOrderServices)
@@ -937,8 +946,7 @@ namespace DataAccessLayer
             // PartInspection configuration (Junction table)
             modelBuilder.Entity<PartInspection>(entity =>
             {
-                entity.HasKey(e => e.PartInspectionId);
-                entity.Property(e => e.Status).HasMaxLength(100);
+                entity.HasKey(e => e.PartInspectionId);              
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(pi => pi.Part)
@@ -1083,7 +1091,7 @@ namespace DataAccessLayer
                 entity.HasOne(v => v.RepairOrder)
                       .WithMany(ro => ro.VoucherUsages)
                       .HasForeignKey(v => v.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                      .OnDelete(DeleteBehavior.Restrict);
             });
         }
 

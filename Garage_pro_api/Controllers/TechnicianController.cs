@@ -139,6 +139,31 @@ namespace Garage_pro_api.Controllers
             return NoContent();
         }
 
+        // GET: api/Technician/by-branch/{branchId}
+        [HttpGet("by-branch/{branchId}")]
+        [Authorize(Policy = "BOOKING_VIEW")]
+        public async Task<IActionResult> GetTechniciansByBranchId(Guid branchId)
+        {
+            try
+            {
+                var technicians = await _jobService.GetTechniciansByBranchIdAsync(branchId);
+                return Ok(technicians.Select(t => new
+                {
+                    t.TechnicianId,
+                    t.UserId,
+                    UserFullName = t.User != null ? $"{t.User.FirstName} {t.User.LastName}" : "Unknown",
+                    t.Quality,
+                    t.Speed,
+                    t.Efficiency,
+                    t.Score
+                }));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving technicians", error = ex.Message });
+            }
+        }
+
         #region Helper Methods
 
         private IEnumerable<Job> FilterJobs(IEnumerable<Job> jobs, TechnicianScheduleFilterDto filter)

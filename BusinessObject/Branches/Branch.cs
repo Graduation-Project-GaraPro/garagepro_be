@@ -55,7 +55,7 @@ namespace BusinessObject.Branches
         public virtual ICollection<RepairOrder>? RepairOrders { get; set; } = null!;
         //repair request 
         public virtual ICollection<RepairRequest>? RepairRequests { get; set; } = null!;
-        public virtual ICollection<Part>? Parts { get; set; } = null!;
+       
         public virtual ICollection<ApplicationUser> Staffs { get; set; } = new List<ApplicationUser>();
 
         // Many-to-many
