@@ -627,9 +627,6 @@ builder.WebHost.ConfigureKestrel(options =>
 var app = builder.Build();
 app.UseCors("AllowFrontendAndAndroid");
 
-// Enable static files để serve test HTML page
-app.UseStaticFiles();
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
