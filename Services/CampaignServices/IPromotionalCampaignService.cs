@@ -14,6 +14,11 @@ namespace Services.CampaignServices
          GetPagedAsync(int page, int limit, string? search, CampaignType? type, bool? isActive, DateTime? startDate, DateTime? endDate);
 
         Task<IEnumerable<PromotionalCampaignDto>> GetAllAsync();
+        Task<CustomerPromotionResponse> GetCustomerPromotionsForServiceAsync(Guid serviceId, decimal currentOrderValue = 0);
+
+
+
+
         Task<bool> ActivateAsync(Guid id);
         Task<bool> DeactivateAsync(Guid id);
         Task<bool> BulkUpdateStatusAsync(IEnumerable<Guid> ids, bool isActive);

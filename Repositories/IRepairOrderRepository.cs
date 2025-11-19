@@ -13,7 +13,7 @@ namespace Repositories
     {
         // Add Context property
         MyAppDbContext Context { get; }
-
+        Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId);
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);

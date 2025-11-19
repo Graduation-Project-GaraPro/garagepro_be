@@ -1323,7 +1323,7 @@ namespace Garage_pro_api.DbInit
                 Name = "Year-End Free Checkup",
                 Description = "Get a free maintenance check for any service above 1,000,000₫.",
                 Type = CampaignType.Discount,
-                DiscountType = DiscountType.FreeService,
+                DiscountType = DiscountType.Fixed,
                 DiscountValue = 0,
                 StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
                 EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),

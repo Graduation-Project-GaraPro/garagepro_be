@@ -11,6 +11,8 @@ using Services.PaymentServices;
 using System.Security.Claims;
 using Repositories.WebhookInboxRepositories;
 using BussinessObject;
+using Services.BillServices;
+using Dtos.Bills;
 
 namespace Garage_pro_api.Controllers
 {
@@ -21,13 +23,30 @@ namespace Garage_pro_api.Controllers
         private readonly IPaymentService _service;
         private readonly IPayOsClient _payos;
         private readonly IWebhookInboxRepository _webhookInboxRepo;
-
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo)
+        private readonly IRepairOrderPaymentService _paymentService;
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, IRepairOrderPaymentService paymentService)
         {
             _service = service;
             _payos = payos;
             _webhookInboxRepo= webhookInboxRepo;
+            _paymentService = paymentService;
         }
+
+        [HttpGet("{repairOrderId:guid}/payment")]
+        public async Task<ActionResult<RepairOrderPaymentDto>> GetPaymentInfo(Guid repairOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? User.FindFirstValue("sub"); 
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+            var result = await _paymentService.GetRepairOrderPaymentInfoAsync(repairOrderId, userId);
+
+            if (result == null)
+                return NotFound(new { message = "RepairOrder không tồn tại." });
+
+            return Ok(result);
+        }
+
         [Authorize]
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreatePaymentRequest req, CancellationToken ct)

@@ -1561,6 +1561,12 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AppliedPromotionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");
 
@@ -1580,6 +1586,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("QuotationServiceId");
+
+                    b.HasIndex("AppliedPromotionId");
 
                     b.HasIndex("QuotationId");
 
@@ -3018,6 +3026,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
                 {
+                    b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "AppliedPromotion")
+                        .WithMany()
+                        .HasForeignKey("AppliedPromotionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BusinessObject.Quotation", "Quotation")
                         .WithMany("QuotationServices")
                         .HasForeignKey("QuotationId")
@@ -3033,6 +3046,8 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Service", null)
                         .WithMany("QuotationServices")
                         .HasForeignKey("ServiceId1");
+
+                    b.Navigation("AppliedPromotion");
 
                     b.Navigation("Quotation");
 

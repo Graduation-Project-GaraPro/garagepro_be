@@ -85,6 +85,7 @@ using Services.Notifications;
 using Services.PaymentServices;
 using BusinessObject.PayOsModels;
 using Services.PayOsClients;
+using Services.BillServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -161,6 +162,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<InspectionTechnicianProfile>();
     cfg.AddProfile<JobTechnicianProfile>();
     cfg.AddProfile<QuotationProfile>();
+    cfg.AddProfile<RepairOrderBillProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -371,6 +373,10 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
+
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
+
+builder.Services.AddScoped<IRepairOrderPaymentService, RepairOrderPaymentService>();
 
 
 builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
