@@ -27,20 +27,20 @@ namespace Repositories.CampaignRepositories
                 .AsQueryable();
         }
 
-
-        // Hàm lấy ưu đãi tốt nhất cho một Service
-        public PromotionalCampaign? GetBestPromotionForService(Guid serviceId, decimal orderValue = 0)
+        public async Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(
+            Guid serviceId,
+            decimal orderValue = 0)
         {
             var now = DateTime.Now;
 
-            var applicablePromotions = Query()
+            var applicablePromotions = await Query()
                 .Where(pc => pc.IsActive &&
-                            pc.StartDate <= now &&
-                            pc.EndDate >= now &&
-                            (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
-                            pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
-                            (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue))
-                .ToList();
+                             pc.StartDate <= now &&
+                             pc.EndDate >= now &&
+                             (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
+                             (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue))
+                .ToListAsync();
 
             if (!applicablePromotions.Any())
                 return null;
@@ -54,21 +54,21 @@ namespace Repositories.CampaignRepositories
             return bestPromotion;
         }
 
-        // Hàm lấy tất cả ưu đãi khả dụng cho một Service (có thể dùng cho dropdown)
-        public List<PromotionalCampaign> GetAvailablePromotionsForService(Guid serviceId)
+        // Hàm lấy tất cả ưu đãi khả dụng cho một Service (async – dùng cho dropdown)
+        public Task<List<PromotionalCampaign>> GetAvailablePromotionsForServiceAsync(Guid serviceId)
         {
             var now = DateTime.Now;
 
             return Query()
                 .Where(pc => pc.IsActive &&
-                            pc.StartDate <= now &&
-                            pc.EndDate >= now &&
-                            (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
-                            pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId))
-                .ToList();
+                             pc.StartDate <= now &&
+                             pc.EndDate >= now &&
+                             (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId))
+                .ToListAsync();
         }
 
-        // Hàm tính giá trị chiết khấu thực tế
+        // Hàm tính giá trị chiết khấu thực tế (vẫn sync vì chỉ là tính toán trong memory)
         public decimal CalculateActualDiscountValue(PromotionalCampaign promotion, decimal orderValue)
         {
             if (promotion.DiscountType == DiscountType.Fixed)
@@ -92,18 +92,23 @@ namespace Repositories.CampaignRepositories
                 return discountAmount;
             }
         }
-        public bool IsPromotionApplicableForService(Guid promotionId, Guid serviceId, decimal orderValue = 0)
+
+        // Hàm kiểm tra promotion có áp dụng được hay không (async)
+        public Task<bool> IsPromotionApplicableForServiceAsync(
+            Guid promotionId,
+            Guid serviceId,
+            decimal orderValue = 0)
         {
             var now = DateTime.Now;
 
             return Query()
-                .Any(pc => pc.Id == promotionId &&
-                          pc.IsActive &&
-                          pc.StartDate <= now &&
-                          pc.EndDate >= now &&
-                          (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
-                          pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
-                          (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue));
+                .AnyAsync(pc => pc.Id == promotionId &&
+                                pc.IsActive &&
+                                pc.StartDate <= now &&
+                                pc.EndDate >= now &&
+                                (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                                pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
+                                (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue));
         }
 
 

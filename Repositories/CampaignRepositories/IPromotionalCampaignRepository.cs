@@ -15,11 +15,16 @@ namespace Repositories.CampaignRepositories
         Task<PromotionalCampaign?> GetWithServicesAsync(Guid id);
 
 
-        PromotionalCampaign? GetBestPromotionForService(Guid serviceId, decimal orderValue = 0);
-        List<PromotionalCampaign> GetAvailablePromotionsForService(Guid serviceId);
+        Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(
+            Guid serviceId,
+            decimal orderValue = 0);
+        Task<List<PromotionalCampaign>> GetAvailablePromotionsForServiceAsync(Guid serviceId);
 
         decimal CalculateActualDiscountValue(PromotionalCampaign promotion, decimal orderValue);
-        bool IsPromotionApplicableForService(Guid promotionId, Guid serviceId, decimal orderValue = 0);
+        Task<bool> IsPromotionApplicableForServiceAsync(
+            Guid promotionId,
+            Guid serviceId,
+            decimal orderValue = 0);
 
         Task<bool> ExistsAsync(Guid id);
 

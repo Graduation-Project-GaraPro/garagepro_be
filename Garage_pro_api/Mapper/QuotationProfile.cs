@@ -25,9 +25,8 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.PartCategories, opt => opt.Ignore()) // sẽ gán thủ công sau
                 .ForMember(dest => dest.Quantity, opt => opt.MapFrom(src =>
                     src.QuotationServiceParts.Sum(p => p.Quantity))) // optional
-                .ForMember(dest => dest.IsAdvanced, otp=> otp.MapFrom(s=>s.Service.IsAdvanced))
-                .ForMember(dest => dest.TotalPrice, opt => opt.MapFrom(src =>
-                    src.QuotationServiceParts.Sum(p => p.Price * p.Quantity)));
+                .ForMember(dest => dest.IsAdvanced, otp => otp.MapFrom(s => s.Service.IsAdvanced));
+                
 
             // QuotationServicePart → QuotationPart
             CreateMap<QuotationServicePart, QuotationPart>()

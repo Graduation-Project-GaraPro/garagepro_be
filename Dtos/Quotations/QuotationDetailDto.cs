@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Dtos.Campaigns;
 
 namespace Dtos.Quotations
 {
@@ -45,8 +46,16 @@ namespace Dtos.Quotations
 
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
-        public decimal TotalPrice { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public decimal DiscountValue { get; set; } = 0;
+
+
+        public decimal FinalPrice => Price - DiscountValue;
+
+        public Guid? AppliedPromotionId { get; set; }
+
+        public virtual PromotionalCampaignDto? AppliedPromotion { get; set; }
 
         // Service details
         public string ServiceName { get; set; }

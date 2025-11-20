@@ -91,7 +91,7 @@ namespace Services.CampaignServices
                 throw new Exception("Service is not exist");
 
             // Lấy tất cả promotions cho service này (không filter theo currentOrderValue)
-            var allPromotions = _repository.GetAvailablePromotionsForService(serviceId);
+            var allPromotions = await _repository.GetAvailablePromotionsForServiceAsync(serviceId);
 
             var promotionDtos = new List<CustomerPromotionDto>();
 
@@ -100,7 +100,7 @@ namespace Services.CampaignServices
                 var (isEligible, calculatedDiscount, eligibilityMessage) =
                     await EvaluatePromotionEligibility(promotion, service.Price, currentOrderValue);
 
-                var finalPrice = service.Price - calculatedDiscount;
+                var finalPrice = currentOrderValue - calculatedDiscount;
 
                 var promotionDto = new CustomerPromotionDto
                 {

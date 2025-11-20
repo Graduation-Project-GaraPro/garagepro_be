@@ -27,10 +27,10 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal DiscountValue { get; set; } = 0;
 
-        [NotMapped]
-        public decimal FinalPrice => Price - DiscountValue;
 
-        
+        public decimal FinalPrice { get; set; } = 0;
+
+
         public Guid? AppliedPromotionId { get; set; }
         
         public virtual PromotionalCampaign? AppliedPromotion { get; set; }

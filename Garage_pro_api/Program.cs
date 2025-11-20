@@ -408,6 +408,9 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 builder.Services.AddScoped<IEmergencyRequestRepository, EmergencyRequestRepository>();
 builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 // Quotation services
+
+builder.Services.AddScoped<ICustomerResponseQuotationService, CustomerResponseQuotationService>();
+
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
 // Update to use the new QuotationServicePartRepository

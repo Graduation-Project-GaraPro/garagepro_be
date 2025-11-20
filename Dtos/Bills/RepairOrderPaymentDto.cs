@@ -58,7 +58,9 @@ namespace Dtos.Bills
 
         public bool IsSelected { get; set; }
         public bool IsRequired { get; set; }
+        public decimal DiscountValue { get; set; } = 0;
 
+        public decimal FinalPrice { get; set; } = 0;
         public decimal Price { get; set; }
 
         public List<QuotationServicePartDto> Parts { get; set; } = new();

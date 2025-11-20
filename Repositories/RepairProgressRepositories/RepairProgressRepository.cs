@@ -81,6 +81,8 @@ namespace Repositories.RepairProgressRepositories
                     VehicleLicensePlate = ro.Vehicle.LicensePlate,
                     VehicleModel = ro.Vehicle.Model.ModelName,
                     StatusName = ro.OrderStatus.StatusName,
+                    IsArchived = ro.IsArchived,
+                    ArchivedAt = ro.ArchivedAt,
                     Labels = ro.OrderStatus.Labels.Select(l => new LabelDto
                     {
                         LabelId = l.LabelId,
@@ -129,6 +131,8 @@ namespace Repositories.RepairProgressRepositories
                     EstimatedAmount = ro.EstimatedAmount,
                     PaidAmount = ro.PaidAmount,
                     PaidStatus = ro.PaidStatus.ToString(),
+                    IsArchived = ro.IsArchived,
+                    ArchivedAt = ro.ArchivedAt,
                     Note = ro.Note ?? string.Empty,
                     Vehicle = new Dtos.RepairProgressDto.VehicleDto
                     {
