@@ -22,6 +22,9 @@ namespace BusinessObject
         public Guid PartCategoryId { get; set; }
 
         [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
+        public int Quantity { get; set; } = 1;
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties

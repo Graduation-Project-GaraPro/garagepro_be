@@ -58,6 +58,9 @@ namespace Repositories.InspectionAndRepair
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
                         .ThenInclude(v => v.User)
+                        .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.RepairRequest)
+                        .ThenInclude(rr => rr.RepairImages)
                 .OrderByDescending(i => i.CreatedAt)
                 .AsSplitQuery()
                 .ToListAsync();
@@ -102,6 +105,9 @@ namespace Repositories.InspectionAndRepair
                 .Include(i => i.RepairOrder)
                     .ThenInclude(ro => ro.Vehicle)
                         .ThenInclude(v => v.User)
+                        .Include(i => i.RepairOrder)
+                    .ThenInclude(ro => ro.RepairRequest)
+                        .ThenInclude(rr => rr.RepairImages)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync();
         }

@@ -711,10 +711,6 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("IssueRating")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -1255,6 +1251,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("PartId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
                     b.HasKey("PartInspectionId");
 
                     b.HasIndex("InspectionId");
@@ -1264,36 +1263,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("PartId");
 
                     b.ToTable("PartInspections");
-                });
-
-            modelBuilder.Entity("BusinessObject.PartSpecification", b =>
-                {
-                    b.Property<Guid>("SpecId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("PartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("SpecTypeId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("SpecValue")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("SpecId");
-
-                    b.HasIndex("PartId");
-
-                    b.ToTable("PartSpecifications");
                 });
 
             modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
@@ -2917,17 +2886,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("PartCategory");
                 });
 
-            modelBuilder.Entity("BusinessObject.PartSpecification", b =>
-                {
-                    b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany("PartSpecifications")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-                });
-
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
@@ -3532,8 +3490,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("JobParts");
 
                     b.Navigation("PartInspections");
-
-                    b.Navigation("PartSpecifications");
 
                     b.Navigation("RepairOrderServiceParts");
 

@@ -85,6 +85,7 @@ using Services.Notifications;
 using Services.PaymentServices;
 using BusinessObject.PayOsModels;
 using Services.PayOsClients;
+using Services.DeadlineServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -495,7 +496,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 //Notifiaction 
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
-
+builder.Services.AddScoped<IJobDeadlineService, JobDeadlineService>();
 
 
 // Repositories & Services
@@ -528,7 +529,8 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext);
+    var notifiactionService = provider.GetRequiredService<INotificationService>();  
+    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();

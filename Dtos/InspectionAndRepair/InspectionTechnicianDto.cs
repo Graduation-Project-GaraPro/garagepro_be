@@ -29,8 +29,14 @@ namespace Dtos.InspectionAndRepair
         public VehicleDto? Vehicle { get; set; }
         public CustomerDto? Customer { get; set; }
         public List<RepairOrderServiceDto> Services { get; set; } = new();
+        public List<RepairImageDto> RepairImages { get; set; } = new();
     }
 
+    public class RepairImageDto
+    {
+        public Guid ImageId { get; set; }
+        public string ImageUrl { get; set; } = string.Empty;
+    }
     public class VehicleDto
     {
         public Guid VehicleId { get; set; }
@@ -104,6 +110,8 @@ namespace Dtos.InspectionAndRepair
         public string? PartName { get; set; }
         public Guid PartCategoryId { get; set; }
         public string? CategoryName { get; set; }
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
+        public int Quantity { get; set; } = 1;
     }
     public class AddServiceToInspectionRequest
     {

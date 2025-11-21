@@ -45,7 +45,6 @@ namespace DataAccessLayer
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }
-        public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
         public DbSet<Quotation> Quotations { get; set; }
@@ -438,15 +437,13 @@ namespace DataAccessLayer
                 entity.HasKey(e => e.InspectionId);
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
-                entity.Property(e => e.Note).HasMaxLength(500);
-                entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.Property(e => e.Note).HasMaxLength(500);              
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .IsRequired();
                 entity.Property(e => e.IssueRating)
                       .HasConversion<string>()
                       .IsRequired();
-                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)
@@ -961,18 +958,7 @@ namespace DataAccessLayer
             
             });
 
-            // PartSpecification configuration
-            modelBuilder.Entity<PartSpecification>(entity =>
-            {
-                entity.HasKey(e => e.SpecId);
-                entity.Property(e => e.SpecValue).IsRequired().HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).IsRequired();
-
-                entity.HasOne(ps => ps.Part)
-                      .WithMany(p => p.PartSpecifications)
-                      .HasForeignKey(ps => ps.PartId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
+            
 
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>().HasKey(bs => new { bs.BranchId, bs.ServiceId });
