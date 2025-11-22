@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class updatePaymentkey : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -395,8 +395,7 @@ namespace DataAccessLayer.Migrations
                         name: "FK_Parts_Branches_BranchId",
                         column: x => x.BranchId,
                         principalTable: "Branches",
-                        principalColumn: "BranchId",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "BranchId");
                     table.ForeignKey(
                         name: "FK_Parts_PartCategories_PartCategoryId",
                         column: x => x.PartCategoryId,
@@ -730,28 +729,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PartSpecifications",
-                columns: table => new
-                {
-                    SpecId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SpecTypeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SpecValue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PartSpecifications", x => x.SpecId);
-                    table.ForeignKey(
-                        name: "FK_PartSpecifications_Parts_PartId",
-                        column: x => x.PartId,
-                        principalTable: "Parts",
-                        principalColumn: "PartId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "RolePermissions",
                 columns: table => new
                 {
@@ -833,7 +810,7 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ServicePartCategory",
+                name: "ServicePartCategories",
                 columns: table => new
                 {
                     ServicePartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
@@ -843,15 +820,15 @@ namespace DataAccessLayer.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ServicePartCategory", x => x.ServicePartCategoryId);
+                    table.PrimaryKey("PK_ServicePartCategories", x => x.ServicePartCategoryId);
                     table.ForeignKey(
-                        name: "FK_ServicePartCategory_PartCategories_PartCategoryId",
+                        name: "FK_ServicePartCategories_PartCategories_PartCategoryId",
                         column: x => x.PartCategoryId,
                         principalTable: "PartCategories",
                         principalColumn: "LaborCategoryId",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_ServicePartCategory_Services_ServiceId",
+                        name: "FK_ServicePartCategories_Services_ServiceId",
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "ServiceId",
@@ -1294,7 +1271,6 @@ namespace DataAccessLayer.Migrations
                     Finding = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     IssueRating = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Note = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1330,9 +1306,6 @@ namespace DataAccessLayer.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Level = table.Column<int>(type: "int", nullable: false),
-                    SentToCustomerAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerResponseAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CustomerApprovalNote = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     AssignedByManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EstimateExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -1367,8 +1340,7 @@ namespace DataAccessLayer.Migrations
                 name: "Payments",
                 columns: table => new
                 {
-                    PaymentId = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PaymentId = table.Column<long>(type: "bigint", nullable: false),
                     RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Amount = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -1493,6 +1465,7 @@ namespace DataAccessLayer.Migrations
                     PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     InspectionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
@@ -1726,11 +1699,20 @@ namespace DataAccessLayer.Migrations
                     IsSelected = table.Column<bool>(type: "bit", nullable: false),
                     IsRequired = table.Column<bool>(type: "bit", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DiscountValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    FinalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    AppliedPromotionId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     ServiceId1 = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_QuotationServices", x => x.QuotationServiceId);
+                    table.ForeignKey(
+                        name: "FK_QuotationServices_PromotionalCampaigns_AppliedPromotionId",
+                        column: x => x.AppliedPromotionId,
+                        principalTable: "PromotionalCampaigns",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_QuotationServices_Quotations_QuotationId",
                         column: x => x.QuotationId,
@@ -1959,11 +1941,6 @@ namespace DataAccessLayer.Migrations
                 column: "PartCategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_PartSpecifications_PartId",
-                table: "PartSpecifications",
-                column: "PartId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Payments_RepairOrderId",
                 table: "Payments",
                 column: "RepairOrderId");
@@ -2022,6 +1999,11 @@ namespace DataAccessLayer.Migrations
                 name: "IX_QuotationServiceParts_QuotationServiceId",
                 table: "QuotationServiceParts",
                 column: "QuotationServiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_QuotationServices_AppliedPromotionId",
+                table: "QuotationServices",
+                column: "AppliedPromotionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_QuotationServices_QuotationId",
@@ -2192,13 +2174,13 @@ namespace DataAccessLayer.Migrations
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartCategory_PartCategoryId",
-                table: "ServicePartCategory",
+                name: "IX_ServicePartCategories_PartCategoryId",
+                table: "ServicePartCategories",
                 column: "PartCategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartCategory_ServiceId",
-                table: "ServicePartCategory",
+                name: "IX_ServicePartCategories_ServiceId",
+                table: "ServicePartCategories",
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
@@ -2378,9 +2360,6 @@ namespace DataAccessLayer.Migrations
                 name: "PartInspections");
 
             migrationBuilder.DropTable(
-                name: "PartSpecifications");
-
-            migrationBuilder.DropTable(
                 name: "Payments");
 
             migrationBuilder.DropTable(
@@ -2411,7 +2390,7 @@ namespace DataAccessLayer.Migrations
                 name: "ServiceInspections");
 
             migrationBuilder.DropTable(
-                name: "ServicePartCategory");
+                name: "ServicePartCategories");
 
             migrationBuilder.DropTable(
                 name: "ServiceParts");
@@ -2468,10 +2447,10 @@ namespace DataAccessLayer.Migrations
                 name: "VehicleLookups");
 
             migrationBuilder.DropTable(
-                name: "PromotionalCampaigns");
+                name: "AiChatMessages");
 
             migrationBuilder.DropTable(
-                name: "AiChatMessages");
+                name: "PromotionalCampaigns");
 
             migrationBuilder.DropTable(
                 name: "Quotations");

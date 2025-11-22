@@ -237,6 +237,8 @@ namespace Repositories.RepairProgressRepositories
         public async Task<RepairOrderProgressDto?> GetRepairOrderProgressAsync(Guid repairOrderId, string userId)
         {
             var repairOrder = await _context.RepairOrders
+                .AsNoTracking()
+                .AsSplitQuery()
                 .Include(rp => rp.OrderStatus).ThenInclude(os => os.Labels)
                 .Include(rp => rp.Vehicle).ThenInclude(v => v.Brand)
                 .Include(rp => rp.Vehicle).ThenInclude(v => v.Model)
@@ -264,6 +266,7 @@ namespace Repositories.RepairProgressRepositories
                     IsArchived = ro.IsArchived,
                     ArchivedAt = ro.ArchivedAt,
                     Note = ro.Note ?? string.Empty,
+                    
                     Vehicle = new Dtos.RepairProgressDto.VehicleDto
                     {
                         VehicleId = ro.Vehicle.VehicleId,
@@ -347,7 +350,11 @@ namespace Repositories.RepairProgressRepositories
             if (jobs == null || !jobs.Any()) return 0;
 
             var completedJobs = jobs.Count(j => j.Status == JobStatus.Completed);
-            return (decimal)completedJobs / jobs.Count * 100;
+
+            var value = (decimal)completedJobs / jobs.Count * 100;
+
+            // Làm tròn về số chẵn
+            return Math.Round(value, 0, MidpointRounding.ToEven);
         }
 
         private static string GetProgressStatus(ICollection<Job> jobs)

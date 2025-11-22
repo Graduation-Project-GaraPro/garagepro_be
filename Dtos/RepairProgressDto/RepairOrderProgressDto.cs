@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 
 namespace Dtos.RepairProgressDto
 {
@@ -41,7 +42,11 @@ namespace Dtos.RepairProgressDto
                 if (Jobs.Count == 0) return 0;
 
                 var completedJobs = Jobs.Count(j => j.Status == "Completed");
-                return (decimal)completedJobs / Jobs.Count * 100;
+                var value = (decimal)completedJobs / Jobs.Count * 100;
+
+                // Làm tròn về số chẵn
+                return Math.Round(value, 0, MidpointRounding.ToEven);
+                
             }
         }
 
@@ -52,10 +57,10 @@ namespace Dtos.RepairProgressDto
                 var percentage = ProgressPercentage;
                 return percentage switch
                 {
-                    0 => "Chưa bắt đầu",
-                    < 100 => "Đang thực hiện",
-                    100 => "Hoàn thành",
-                    _ => "Không xác định"
+                    0 => "Not Start",
+                    < 100 => "In Progress",
+                    100 => "Completed",
+                    _ => "Unknown"
                 };
             }
         }

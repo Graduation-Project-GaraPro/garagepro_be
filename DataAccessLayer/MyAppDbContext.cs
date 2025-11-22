@@ -759,8 +759,10 @@ namespace DataAccessLayer
                 .WithMany()
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.PaymentId)
+                .ValueGeneratedNever();
 
-           
 
             // ServiceCategory self-referencing relationship
             modelBuilder.Entity<ServiceCategory>()

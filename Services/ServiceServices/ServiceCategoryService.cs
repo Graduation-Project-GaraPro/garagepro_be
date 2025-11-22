@@ -36,11 +36,11 @@ namespace Services.ServiceServices
            string? searchTerm = null,
            bool? isActive = null)
         {
-            // 🔹 Gọi đến repository
+            //  Gọi đến repository
             var categories = await _repository.GetAllCategoriesWithFilterAsync(
                 parentServiceCategoryId, searchTerm, isActive);
 
-            // 🔹 Map sang DTO
+            //  Map sang DTO
             var categoryDtos = _mapper.Map<IEnumerable<ServiceCategoryDto>>(categories);
 
             return categoryDtos;
@@ -122,7 +122,7 @@ namespace Services.ServiceServices
                 ServiceCategoryId = cat.ServiceCategoryId,
                 ParentServiceCategoryId = cat.ParentServiceCategoryId,
                 CategoryName = cat.CategoryName,
-                Services = cat.Services.Select(service => new ServiceDtoForBooking
+                Services = cat.Services.Where(s=>s.IsActive==true).Select(service => new ServiceDtoForBooking
                 {
                     ServiceId = service.ServiceId,
                     ServiceCategoryId = service.ServiceCategoryId,
