@@ -27,9 +27,7 @@ namespace Garage_pro_api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateFeedback([FromBody] FeedBackCreateDto feedback)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            // Lấy userId từ token
+           
             try
             {
                 var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)

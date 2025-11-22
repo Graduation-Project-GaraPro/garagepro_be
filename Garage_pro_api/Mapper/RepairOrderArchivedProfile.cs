@@ -31,7 +31,9 @@
                  .ForMember(d => d.BrandName,
                     opt => opt.MapFrom(s => s.Vehicle.Brand.BrandName))
                 .ForMember(d => d.Jobs,
-                    opt => opt.MapFrom(s => s.Jobs));
+                    opt => opt.MapFrom(s => s.Jobs))
+                .ForMember(d => d.FeedBacks,
+                    opt => opt.MapFrom(s => s.FeedBack));
 
             // Job
             CreateMap<Job, RepairOrderArchivedJobDto>()

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Enums;
+using Dtos.RepairProgressDto;
 
 namespace Dtos.RepairOrderArchivedDtos
 {
@@ -27,7 +28,7 @@ namespace Dtos.RepairOrderArchivedDtos
         public decimal PaidAmount { get; set; }
         public PaidStatus PaidStatus { get; set; }
         public string Note { get; set; }
-
+        public FeedbackDto? FeedBacks { get; set; }
         // Jobs
         public List<RepairOrderArchivedJobDto> Jobs { get; set; } = new();
     }

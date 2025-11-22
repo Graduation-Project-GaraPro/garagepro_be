@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Dtos.RepairProgressDto;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,5 +24,6 @@ namespace Dtos.RepairOrderArchivedDtos
         public decimal Cost { get; set; }
         public decimal PaidAmount { get; set; }
         public int StatusId { get; set; }
+        
     }
 }

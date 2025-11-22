@@ -189,6 +189,7 @@ namespace Repositories.RepairProgressRepositories
                              && ro.UserId == userId
                              && ro.StatusId == 3
                              && ro.IsArchived)
+                .Include(ro => ro.FeedBack)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Model)
