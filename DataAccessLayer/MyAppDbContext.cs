@@ -775,35 +775,12 @@ namespace DataAccessLayer
 
 
 
-            modelBuilder.Entity<FeedBack>(entity =>
-            {
-                entity.ToTable("FeedBacks");
-                entity.HasKey(f => f.FeedBackId);
+            modelBuilder.Entity<FeedBack>()
+    .HasOne(f => f.RepairOrder)
+    .WithOne(ro => ro.FeedBack)
+    .HasForeignKey<FeedBack>(f => f.RepairOrderId)
+    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(f => f.Description)
-                      .HasMaxLength(1000);
-
-                entity.Property(f => f.Rating)
-                      .IsRequired();
-
-                entity.Property(f => f.CreatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.Property(f => f.UpdatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-
-                entity.HasOne(f => f.User)
-                      .WithMany()
-                      .HasForeignKey(f => f.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-
-                entity.HasOne(f => f.RepairOrder)
-                      .WithMany()
-                      .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
 
             // Job relationships - prevent cascade delete conflicts
             modelBuilder.Entity<Job>()

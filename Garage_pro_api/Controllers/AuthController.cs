@@ -53,7 +53,7 @@ namespace Garage_pro_api.Controllers
             _config = config;
             _smsSender = smsSender;
             _logService = logService;
-            _securityPolicyService= iSecurityPolicyService;
+            _securityPolicyService = iSecurityPolicyService;
         }
 
         //  Gửi OTP
@@ -70,7 +70,7 @@ namespace Garage_pro_api.Controllers
             if (existingUser != null)
             {
                 // Nếu đã có thì trả lỗi theo format model validation
-                
+
                 return BadRequest(new { error = "Phone number already existing!" });
             }
 
@@ -135,7 +135,7 @@ namespace Garage_pro_api.Controllers
 
             await _userManager.AddToRoleAsync(user, "Customer");
 
-          
+
 
             return Ok(new
             {
@@ -210,7 +210,7 @@ namespace Garage_pro_api.Controllers
             });
         }
 
-       
+
         [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto model)
@@ -321,7 +321,7 @@ namespace Garage_pro_api.Controllers
             var userRoles = await _userManager.GetRolesAsync(user);
             var jwtSettings = _config.GetSection("Jwt");
             int accessTokenExpiryMinutes = jwtSettings.GetValue<int>("ExpireMinutes", 30); // Default expiry time
-            
+
             // Check if user has manager role and set longer expiration time
             if (userRoles.Contains("Manager") || userRoles.Contains("Admin"))
             {
@@ -367,7 +367,7 @@ namespace Garage_pro_api.Controllers
             // SỬ DỤNG PHƯƠNG THỨC GetUserAsync MỚI
             var user = await _authService.GetUserAsync(User);
             if (user == null) return Unauthorized();
-           
+
             var passwordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
             if (!passwordValid)
                 return BadRequest(new { error = "Current password is incorrect" });
@@ -400,14 +400,14 @@ namespace Garage_pro_api.Controllers
             var user = await _authService.GetUserAsync(User);
             if (user == null) return Unauthorized();
 
-          
+
             // Reset password mà không cần mật khẩu cũ
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             var result = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
 
             if (result.Succeeded)
             {
-                
+
                 await _authService.UpdateLastPasswordChangeAsync(user);
                 await _userManager.UpdateSecurityStampAsync(user);
 
@@ -454,7 +454,7 @@ namespace Garage_pro_api.Controllers
 
                 var refreshLifetimeMinutes = 7 * 24 * 60;
                 var newToken = await _tokenService.GenerateRefreshToken(user, refreshLifetimeMinutes);
-               
+
 
                 return Ok(new AuthResponseDto
                 {
@@ -495,5 +495,5 @@ namespace Garage_pro_api.Controllers
 
     }
 
-             
+
 }

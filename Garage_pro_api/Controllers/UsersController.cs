@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using BusinessObject.Roles;
+using BusinessObject;
 using Dtos.Auth;
 using Dtos.Customers;
 using Microsoft.AspNetCore.Authorization;
@@ -36,52 +36,17 @@ namespace Garage_pro_api.Controllers
         [Authorize(Policy = "USER_VIEW")]
         // GET: api/users
         [HttpGet]
+
         public async Task<IActionResult> GetUsers([FromQuery] UserFilterDto filters)
         {
-            var users = await _userService.GetAllUsersAsync();
-            var result = new List<object>();
+            var (data, total) = await _userService.GetUsersFiltered(filters);
+            return Ok(new { total, filters.Page, filters.Limit, data });
+        }
 
-            foreach (var user in users)
-            {
-                var roles = await _userService.GetUserRolesAsync(user);
-
-                // 🔍 Lọc theo role (nếu có)
-                if (!string.IsNullOrEmpty(filters.Role) &&
-                    !roles.Any(r => r.Equals(filters.Role, StringComparison.OrdinalIgnoreCase)))
-                    continue;
-
-                // 🔍 Lọc theo status (nếu có)
-                if (!string.IsNullOrEmpty(filters.Status))
-                {
-                    var isBanned = filters.Status.Equals("banned", StringComparison.OrdinalIgnoreCase);
-                    if (isBanned && user.IsActive) continue;   // chỉ lấy user bị banned
-                    if (!isBanned && !user.IsActive) continue; // chỉ lấy user active
-                }
-
-                // 🔍 Lọc theo search (optional)
-                if (!string.IsNullOrEmpty(filters.Search))
-                {
-                    var q = filters.Search.ToLower();
-                    if (!(user.FirstName.ToLower().Contains(q) ||
-                          user.LastName.ToLower().Contains(q) ||
-                          user.Email.ToLower().Contains(q)))
-                        continue;
-                }
-
-                result.Add(new
-                {
-                    user.Id,
-                    FullName = $"{user.FirstName} {user.LastName}",
-                    user.Email,
-                    user.IsActive,
-                    user.Status,
-                    user.CreatedAt,
-                    user.EmailConfirmed,
-                    user.LastLogin,
-                    Roles = roles
-                });
-            }
-
+        [HttpPost]
+        public async Task<IActionResult> CreateUser(CreateUserDto dto)
+        {
+            var result = await _userService.CreateUserAsync(dto);
             return Ok(result);
         }
 
@@ -284,6 +249,18 @@ namespace Garage_pro_api.Controllers
             return Ok(new { message = "User unbanned successfully" });
         }
 
+        [HttpPut("{id}/verify")]
+        public async Task<IActionResult> VerifyUser(string id)
+        {
+            var user = await _userService.GetByIdAsync(id);
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+            user.EmailConfirmed = true;
+            var updated = await _userService.UpdateUserAsync(user);
+            if (!updated)
+                return BadRequest(new { message = "Failed to verify email" });
+            return Ok(new { message = "Email verified successfully" });
+        }
         
     }
     public class UpdateDeviceIdRequest

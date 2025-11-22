@@ -209,7 +209,7 @@ namespace Garage_pro_api.Mapper
 
 
             // Service -> ServiceDto
-
+            CreateMap<FeedBack, Dtos.RepairProgressDto.FeedbackDto>();
             CreateMap<Service, Dtos.Branches.ServiceDto>();
             CreateMap<Service, Dtos.Services.ServiceDto>();
             CreateMap<Service, CreateServiceDto>().ReverseMap();

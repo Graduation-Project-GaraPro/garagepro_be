@@ -45,6 +45,7 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
+using Repositories.Revenue;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
@@ -69,6 +70,7 @@ using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
 using Services.UserServices;
 using Repositories.PaymentRepositories;
+using Repositories.Revenue;
 using Services.FCMServices;
 using Repositories.EmergencyRequestRepositories;
 using Services.EmergencyRequestService;
@@ -585,6 +587,7 @@ builder.Services.Configure<CloudinarySettings>(
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
+builder.Services.AddScoped<IAdminRepairOrderRepository, AdminRepairOrderRepository>();
 
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();

@@ -34,6 +34,7 @@ namespace Repositories.RepairProgressRepositories
                 .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
                 .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
                 .Include(rp => rp.User)
+                .Include(rp => rp.FeedBack)
                 .Where(ro => ro.UserId == userId && !ro.IsArchived)
                 .AsQueryable();
 
@@ -68,6 +69,7 @@ namespace Repositories.RepairProgressRepositories
             var totalCount = await query.CountAsync();
 
             // Apply pagination
+#pragma warning disable CS8601 // Possible null reference assignment.
             var items = await query
                 .OrderByDescending(ro => ro.CreatedAt)
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
@@ -95,7 +97,13 @@ namespace Repositories.RepairProgressRepositories
                         HexCode = l.HexCode
                     }).ToList(),
                     ProgressPercentage = CalculateProgressPercentage(ro.Jobs),
-                    ProgressStatus = GetProgressStatus(ro.Jobs)
+                    ProgressStatus = GetProgressStatus(ro.Jobs),
+                    FeedBacks = ro.FeedBack != null ? new FeedbackDto
+                    {
+                        Rating = ro.FeedBack.Rating,
+                        Description = ro.FeedBack.Description ?? string.Empty,
+                        CreatedAt = ro.FeedBack.CreatedAt
+                    } : null
                 })
                 .ToListAsync();
 
@@ -206,14 +214,15 @@ namespace Repositories.RepairProgressRepositories
         public async Task<RepairOrderProgressDto?> GetRepairOrderProgressAsync(Guid repairOrderId, string userId)
         {
             var repairOrder = await _context.RepairOrders
-                .Include(rp=>rp.OrderStatus).ThenInclude(os=>os.Labels)
-                .Include(rp=>rp.Vehicle).ThenInclude(v=>v.Brand)
+                .Include(rp => rp.OrderStatus).ThenInclude(os => os.Labels)
+                .Include(rp => rp.Vehicle).ThenInclude(v => v.Brand)
                 .Include(rp => rp.Vehicle).ThenInclude(v => v.Model)
-                .Include(rp=>rp.Jobs).ThenInclude(j=>j.JobParts).ThenInclude(jp=>jp.Part)
-                .Include(rp => rp.Jobs).ThenInclude(j=>j.JobTechnicians).ThenInclude(jt=>jt.Technician).ThenInclude(t=>t.User)
-                .Include(rp => rp.Jobs).ThenInclude(j=>j.Repair)
-                .Include(rp=>rp.User)
-                
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobParts).ThenInclude(jp => jp.Part)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
+                .Include(rp => rp.User)
+                .Include(rp => rp.FeedBack)
+
 
                 .Where(ro => ro.RepairOrderId == repairOrderId &&
                             ro.UserId == userId &&
@@ -236,10 +245,16 @@ namespace Repositories.RepairProgressRepositories
                     {
                         VehicleId = ro.Vehicle.VehicleId,
                         LicensePlate = ro.Vehicle.LicensePlate,
-                        Model = ro.Vehicle.Model.ModelName ,
+                        Model = ro.Vehicle.Model.ModelName,
                         Brand = ro.Vehicle.Brand.BrandName,
                         Year = ro.Vehicle.Year
                     },
+                    FeedBacks = ro.FeedBack != null ? new FeedbackDto
+                    {
+                        Rating = ro.FeedBack.Rating,
+                        Description = ro.FeedBack.Description ?? string.Empty,
+                        CreatedAt = ro.FeedBack.CreatedAt
+                    } : null,
                     OrderStatus = new OrderStatusDto
                     {
                         OrderStatusId = ro.OrderStatus.OrderStatusId,
@@ -277,16 +292,18 @@ namespace Repositories.RepairProgressRepositories
                             PartId = jp.Part.PartId,
                             Name = jp.Part.Name,
                             Price = jp.Part.Price
-                                                 
+
                         }).ToList(),
                         Technicians = j.JobTechnicians.Select(jt => new Dtos.RepairProgressDto.TechnicianDto
                         {
                             TechnicianId = jt.Technician.TechnicianId,
-                            FullName = jt.Technician.User.LastName + " "+ jt.Technician.User.FirstName,
+                            FullName = jt.Technician.User.LastName + " " + jt.Technician.User.FirstName,
                             Email = jt.Technician.User.Email,
                             PhoneNumber = jt.Technician.User.PhoneNumber
                         }).ToList()
+
                     }).ToList()
+                    
                 })
                 .FirstOrDefaultAsync();
 

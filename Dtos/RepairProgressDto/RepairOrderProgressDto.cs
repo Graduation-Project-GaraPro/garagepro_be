@@ -31,6 +31,8 @@ namespace Dtos.RepairProgressDto
         // All jobs in this repair order
         public List<JobDto> Jobs { get; set; } = new List<JobDto>();
 
+        public FeedbackDto FeedBacks { get; set; }
+
         // Progress calculation
         public decimal ProgressPercentage
         {

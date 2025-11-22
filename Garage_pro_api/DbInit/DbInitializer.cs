@@ -59,7 +59,10 @@ namespace Garage_pro_api.DbInit
             await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
+            await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
+            await SeedPromotionalCampaignsWithServicesAsync();
+            //await SeedRepairOrdersAsync();
             // await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
         }
@@ -2075,164 +2078,389 @@ namespace Garage_pro_api.DbInit
                 Console.WriteLine("Repair Orders and related data seeded successfully!");
             }
         }
+        // Thêm using nếu cần:
+        // using System.Globalization;
 
-        private async Task SeedInspectionsAsync()
+        private async Task SeedManyCustomersAndRepairOrdersAsync(int customerCount = 10, int totalOrdersTarget = 500)
         {
-            // Check if there are already inspections seeded
-            if (!_context.Inspections.Any())
+            // Nếu đã có nhiều dữ liệu thì không seed nữa (bảo vệ)
+            if (_context.RepairOrders.Any() || _context.Users.Count() > 50) // adjust thresholds as needed
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                Console.WriteLine("Already have RepairOrders or plenty of users - skipping bulk seeding.");
+                return;
+            }
 
-                try
+            var rand = new Random();
+
+            // Ensure we have required pools
+            var services = await _context.Services.ToListAsync();
+            var parts = await _context.Parts.ToListAsync();
+            var branches = await _context.Branches.ToListAsync();
+            var statuses = await _context.OrderStatuses.ToListAsync();
+            var technicians = await _context.Technicians.ToListAsync();
+            var vehicleBrands = await _context.VehicleBrands.ToListAsync();
+            var vehicleColors = await _context.VehicleColors.ToListAsync();
+            var vehicleModels = await _context.VehicleModels.ToListAsync();
+
+            if (!services.Any() || !parts.Any() || !branches.Any() || !statuses.Any() || !technicians.Any() || !vehicleBrands.Any())
+            {
+                throw new Exception("Missing required seed data (services/parts/branches/technicians/etc.). Run other seeders first.");
+            }
+
+            var createdCustomerIds = new List<string>();
+            var createdVehicleIds = new List<Guid>();
+
+            // 1. Create customers
+            for (int i = 0; i < customerCount; i++)
+            {
+                var phone = $"0910000{100 + i}";
+                var existing = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+                ApplicationUser user;
+                if (existing == null)
                 {
-                    // Get the repair order with the specified ID
-                    var repairOrderId = Guid.Parse("6c062742-e2d5-4f11-953f-eee173fcfa79");
-                    var repairOrder = await _context.RepairOrders.FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
-                    
-                    // If the repair order doesn't exist, we'll create one
-                    if (repairOrder == null)
+                    user = new ApplicationUser
                     {
-                        // Get required entities for creating a repair order
-                        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-                        var vehicle = await _context.Vehicles.FirstOrDefaultAsync();
-                        var branch = await _context.Branches.FirstOrDefaultAsync();
-                        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Pending");
-                        
-                        if (customerUser != null && vehicle != null && branch != null && pendingStatus != null)
-                        {
-                            // Create a RepairRequest first
-                            var repairRequest = new RepairRequest
-                            {
-                                RepairRequestID = Guid.NewGuid(),
-                                VehicleID = vehicle.VehicleId,
-                                UserID = customerUser.Id,
-                                Description = "Inspection repair order",
-                                BranchId = branch.BranchId,
-                                RequestDate = DateTime.UtcNow,
-                                Status = RepairRequestStatus.Pending,
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow,
-                                EstimatedCost = 0,
-                                ArrivalWindowStart = DateTimeOffset.UtcNow
-                            };
+                        UserName = phone,
+                        PhoneNumber = phone,
+                        PhoneNumberConfirmed = true,
+                        FirstName = $"Customer{i + 1}",
+                        LastName = "Demo",
+                        Email = $"{phone}@demo.local",
+                        EmailConfirmed = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                            _context.RepairRequests.Add(repairRequest);
-                            await _context.SaveChangesAsync();
-
-                            repairOrder = new RepairOrder
-                            {
-                                RepairOrderId = repairOrderId,
-                                ReceiveDate = DateTime.UtcNow,
-                                RoType = RoType.WalkIn,
-                                EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
-                                Cost = 0,
-                                EstimatedAmount = 0,
-                                PaidAmount = 0,
-                                PaidStatus = PaidStatus.Unpaid,
-                                EstimatedRepairTime = 2,
-                                Note = "Inspection repair order",
-                                BranchId = branch.BranchId,
-                                StatusId = pendingStatus.OrderStatusId,
-                                VehicleId = vehicle.VehicleId,
-                                UserId = customerUser.Id,
-                                RepairRequestId = repairRequest.RepairRequestID, // Use actual RepairRequest ID
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
-                            };
-                            
-                            _context.RepairOrders.Add(repairOrder);
-                            await _context.SaveChangesAsync();
-                        }
-                        else
-                        {
-                            throw new Exception("Required entities for creating repair order not found");
-                        }
+                    var password = _configuration["AdminUser:Password"] ?? "String@1";
+                    var result = await _userManager.CreateAsync(user, password);
+                    if (!result.Succeeded)
+                    {
+                        Console.WriteLine($"Create customer {phone} failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                        continue;
                     }
 
-                    // Get two services and two parts for the inspection
-                    var services = await _context.Services.Take(2).ToListAsync();
-                    var parts = await _context.Parts.Take(2).ToListAsync();
-                    
-                    if (services.Count < 2 || parts.Count < 2)
-                    {
-                        throw new Exception("Not enough services or parts available for seeding");
-                    }
-
-                    // Create the inspection
-                    var inspection = new Inspection
-                    {
-                        InspectionId = Guid.NewGuid(),
-                        RepairOrderId = repairOrderId,
-                        TechnicianId = null,
-                        Status = InspectionStatus.New,
-                        CustomerConcern = "Vehicle inspection for maintenance services",
-                        Finding = "Initial inspection findings",
-                        IssueRating = IssueRating.Good,
-                        Note = "Initial inspection note",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-
-                    _context.Inspections.Add(inspection);
-                    await _context.SaveChangesAsync();
-
-                    // Create ServiceInspection entries (2 services)
-                    var serviceInspections = new List<ServiceInspection>
-                    {
-                        new ServiceInspection
-                        {
-                            ServiceInspectionId = Guid.NewGuid(),
-                            ServiceId = services[0].ServiceId,
-                            InspectionId = inspection.InspectionId,
-                            ConditionStatus = ConditionStatus.Good,
-                            CreatedAt = DateTime.UtcNow
-                        },
-                        new ServiceInspection
-                        {
-                            ServiceInspectionId = Guid.NewGuid(),
-                            ServiceId = services[1].ServiceId,
-                            InspectionId = inspection.InspectionId,
-                            ConditionStatus = ConditionStatus.Replace,
-                            CreatedAt = DateTime.UtcNow
-                        }
-                    };
-
-                    _context.ServiceInspections.AddRange(serviceInspections);
-                    await _context.SaveChangesAsync();
-
-                    // Create PartInspection entries (1 part for each service)
-                    var partInspections = new List<PartInspection>
-                    {
-                        new PartInspection
-                        {
-                            PartInspectionId = Guid.NewGuid(),
-                            PartId = parts[0].PartId,
-                            InspectionId = inspection.InspectionId,
-                            CreatedAt = DateTime.UtcNow
-                        },
-                        new PartInspection
-                        {
-                            PartInspectionId = Guid.NewGuid(),
-                            PartId = parts[1].PartId,
-                            InspectionId = inspection.InspectionId,
-                            CreatedAt = DateTime.UtcNow
-                        }
-                    };
-
-                    _context.PartInspections.AddRange(partInspections);
-                    await _context.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                    Console.WriteLine("Inspection data seeded successfully!");
+                    await _userManager.AddToRoleAsync(user, "Customer");
                 }
-                catch (Exception ex)
+                else
                 {
-                    await transaction.RollbackAsync();
-                    Console.WriteLine($"Error seeding inspection data: {ex.Message}");
-                    throw;
+                    user = existing;
+                }
+
+                createdCustomerIds.Add(user.Id);
+
+                // 1.a Create 1-3 vehicles for this customer
+                int vehiclePerCust = rand.Next(1, 4);
+                for (int v = 0; v < vehiclePerCust; v++)
+                {
+                    var brand = vehicleBrands[rand.Next(vehicleBrands.Count)];
+                    var modelsForBrand = vehicleModels.Where(m => m.BrandID == brand.BrandID).ToList();
+                    var model = modelsForBrand.Any() ? modelsForBrand[rand.Next(modelsForBrand.Count)] : vehicleModels[rand.Next(vehicleModels.Count)];
+                    var color = vehicleColors[rand.Next(vehicleColors.Count)];
+
+                    var vehicle = new Vehicle
+                    {
+                        BrandId = brand.BrandID,
+                        UserId = user.Id,
+                        ModelId = model.ModelID,
+                        ColorId = color.ColorID,
+                        LicensePlate = $"{rand.Next(10, 99)}A{rand.Next(10000, 99999)}",
+                        VIN = Guid.NewGuid().ToString().Substring(0, 17),
+                        Year = 2015 + rand.Next(0, 8),
+                        Odometer = rand.Next(0, 200000),
+                        LastServiceDate = DateTime.UtcNow.AddDays(-rand.Next(0, 400)),
+                        NextServiceDate = DateTime.UtcNow.AddDays(rand.Next(1, 180)),
+                        WarrantyStatus = rand.Next(0, 2) == 0 ? "Expired" : "Active",
+                        CreatedAt = DateTime.UtcNow.AddDays(-rand.Next(0, 400))
+                    };
+
+                    _context.Vehicles.Add(vehicle);
+                    await _context.SaveChangesAsync(); // need id
+                    createdVehicleIds.Add(vehicle.VehicleId);
                 }
             }
+
+            // 2. Create many RepairOrders distributed over last 24 months
+            var startDate = DateTime.UtcNow.AddMonths(-24);
+            int createdOrders = 0;
+            var batchSaveInterval = 100;
+
+            var allCustomers = await _userManager.Users.Where(u => createdCustomerIds.Contains(u.Id)).ToListAsync();
+            var allVehicles = await _context.Vehicles.Where(v => createdVehicleIds.Contains(v.VehicleId)).ToListAsync();
+
+            var jobList = new List<Job>();
+            var repairList = new List<Repair>();
+            var jobPartsList = new List<JobPart>();
+            var jobTechniciansList = new List<JobTechnician>();
+            var repairOrdersList = new List<RepairOrder>();
+            var repairOrderServicesList = new List<RepairOrderService>();
+            var quotationsList = new List<Quotation>();
+            var quotationServicesList = new List<QuotationService>();
+            var quotationServicePartsList = new List<QuotationServicePart>();
+
+            while (createdOrders < totalOrdersTarget)
+            {
+                // pick random date between startDate and now
+                var span = (DateTime.UtcNow - startDate).TotalDays;
+                var randDays = rand.NextDouble() * span;
+                var receiveDate = startDate.AddDays(randDays);
+
+                var customer = allCustomers[rand.Next(allCustomers.Count)];
+                var vehicle = allVehicles[rand.Next(allVehicles.Count)];
+                var branch = branches[rand.Next(branches.Count)];
+                var status = statuses[rand.Next(statuses.Count)];
+                var roType = (RoType)(rand.Next(Enum.GetNames(typeof(RoType)).Length)); // assume enum exists
+
+                var estimatedRepairTime = rand.Next(1, 8);
+                var estAmount = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).Sum(s => s.Price);
+
+                // Create per-order temporary lists so we can decide paid/completed after jobs are created
+                var currentJobs = new List<Job>();
+                var currentRepairs = new List<Repair>();
+                var currentJobParts = new List<JobPart>();
+                var currentJobTechnicians = new List<JobTechnician>();
+                var currentRepairOrderServices = new List<RepairOrderService>();
+                var currentQuotations = new List<Quotation>();
+                var currentQuotationServices = new List<QuotationService>();
+                var currentQuotationServiceParts = new List<QuotationServicePart>();
+
+                var ro = new RepairOrder
+                {
+                    RepairOrderId = Guid.NewGuid(),
+                    ReceiveDate = receiveDate,
+                    RoType = roType,
+                    EstimatedCompletionDate = receiveDate.AddDays(rand.Next(1, 10)),
+                    // CompletionDate will be set later if all jobs completed
+                    Cost = 0, // set later if paid
+                    EstimatedAmount = estAmount,
+                    PaidAmount = 0, // set later if paid
+                    PaidStatus = PaidStatus.Pending, // default, may change after job creation
+                    EstimatedRepairTime = estimatedRepairTime,
+                    Note = $"Auto-generated order for stats ({receiveDate.ToString("yyyy-MM-dd")})",
+                    BranchId = branch.BranchId,
+                    StatusId = status.OrderStatusId,
+                    VehicleId = vehicle.VehicleId,
+                    UserId = customer.Id,
+                    RepairRequestId = Guid.NewGuid(),
+                    CreatedAt = receiveDate,
+                    UpdatedAt = receiveDate.AddDays(rand.Next(0, 5))
+                };
+
+                repairOrdersList.Add(ro);
+
+                // pick 1-3 services for this RO
+                var chosenServices = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).ToList();
+                foreach (var s in chosenServices)
+                {
+                    var ros = new RepairOrderService
+                    {
+                        RepairOrderServiceId = Guid.NewGuid(),
+                        RepairOrderId = ro.RepairOrderId,
+                        ServiceId = s.ServiceId,
+                        CreatedAt = receiveDate
+                    };
+                    repairOrderServicesList.Add(ros);
+                    currentRepairOrderServices.Add(ros);
+                }
+
+                // create 1-3 jobs corresponding to services (and also related repairs, parts, technicians)
+                foreach (var s in chosenServices)
+                {
+                    var job = new Job
+                    {
+                        JobId = Guid.NewGuid(),
+                        ServiceId = s.ServiceId,
+                        RepairOrderId = ro.RepairOrderId,
+                        JobName = s.ServiceName,
+                        Status = (JobStatus)rand.Next(Enum.GetNames(typeof(JobStatus)).Length),
+                        Deadline = receiveDate.AddDays(rand.Next(0, 10)),
+                        TotalAmount = s.Price,
+                        Note = "Auto-generated job",
+                        CreatedAt = receiveDate,
+                        UpdatedAt = receiveDate,
+                        Level = rand.Next(1, 4),
+                        AssignedAt = rand.Next(0, 2) == 0 ? (DateTime?)receiveDate.AddHours(rand.Next(1, 48)) : null,
+                        AssignedByManagerId = customer.Id
+                    };
+
+                    currentJobs.Add(job);
+                    jobList.Add(job);
+
+                    // attach parts 0-3 per job
+                    var partsForJob = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 3)).ToList();
+                    foreach (var p in partsForJob)
+                    {
+                        var jp = new JobPart
+                        {
+                            JobPartId = Guid.NewGuid(),
+                            JobId = job.JobId,
+                            PartId = p.PartId,
+                            Quantity = rand.Next(1, 4),
+                            UnitPrice = p.Price,
+                            CreatedAt = receiveDate
+                        };
+                        jobPartsList.Add(jp);
+                        currentJobParts.Add(jp);
+                    }
+
+                    // assign 1-2 technicians
+                    var techsForJob = technicians.OrderBy(t => rand.Next()).Take(rand.Next(1, Math.Min(3, technicians.Count))).ToList();
+                    foreach (var t in techsForJob)
+                    {
+                        var jt = new JobTechnician
+                        {
+                            JobTechnicianId = Guid.NewGuid(),
+                            JobId = job.JobId,
+                            TechnicianId = t.TechnicianId,
+                            CreatedAt = receiveDate
+                        };
+                        jobTechniciansList.Add(jt);
+                        currentJobTechnicians.Add(jt);
+                    }
+
+                    // some jobs create Repairs entries (completed/in-progress)
+                    var repair = new Repair
+                    {
+                        RepairId = Guid.NewGuid(),
+                        JobId = job.JobId,
+                        Description = $"Repair record for {job.JobName}",
+                        StartTime = job.AssignedAt ?? receiveDate,
+                        EndTime = job.Status == JobStatus.Completed ? (DateTime?)(job.AssignedAt?.AddHours(rand.Next(1, 6)) ?? receiveDate.AddHours(rand.Next(1, 6))) : null,
+                        ActualTime = job.Status == JobStatus.Completed ? TimeSpan.FromHours(rand.Next(1, 6)) : (TimeSpan?)null,
+                        EstimatedTime = TimeSpan.FromHours(rand.Next(1, 6)),
+                        Notes = "Auto-generated repair note"
+                    };
+                    repairList.Add(repair);
+                    currentRepairs.Add(repair);
+                }
+
+                // occasional quotation for pending orders
+                if (rand.NextDouble() < 0.2) // 20% orders have quotations
+                {
+                    var q = new Quotation
+                    {
+                        QuotationId = Guid.NewGuid(),
+                        RepairOrderId = ro.RepairOrderId,
+                        UserId = customer.Id,
+                        VehicleId = vehicle.VehicleId,
+                        CreatedAt = receiveDate,
+                        SentToCustomerAt = receiveDate.AddDays(rand.Next(0, 2)),
+                        Status = QuotationStatus.Sent,
+                        TotalAmount = estAmount,
+                        DiscountAmount = rand.Next(0, 200000),
+                        Note = "Auto-generated quotation",
+                        ExpiresAt = receiveDate.AddDays(7)
+                    };
+                    quotationsList.Add(q);
+                    currentQuotations.Add(q);
+
+                    // add 1-2 services
+                    var qServices = chosenServices.Take(rand.Next(1, chosenServices.Count + 1)).ToList();
+                    foreach (var s in qServices)
+                    {
+                        var qs = new QuotationService
+                        {
+                            QuotationServiceId = Guid.NewGuid(),
+                            QuotationId = q.QuotationId,
+                            ServiceId = s.ServiceId,
+                            IsSelected = true,
+                            Price = s.Price
+                        };
+                        quotationServicesList.Add(qs);
+                        currentQuotationServices.Add(qs);
+
+                        // maybe add parts
+                        var qParts = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 2)).ToList();
+                        foreach (var p in qParts)
+                        {
+                            var qsp = new QuotationServicePart
+                            {
+                                QuotationServicePartId = Guid.NewGuid(),
+                                QuotationServiceId = qs.QuotationServiceId,
+                                PartId = p.PartId,
+                                IsSelected = true,
+                                Price = p.Price,
+                                Quantity = rand.Next(1, 3)
+                            };
+                            quotationServicePartsList.Add(qsp);
+                            currentQuotationServiceParts.Add(qsp);
+                        }
+                    }
+                }
+
+                // --- NEW: decide payment/completion AFTER jobs/repairs created for this RO ---
+                bool allJobsCompleted = currentJobs.Count > 0 && currentJobs.All(j => j.Status == JobStatus.Completed);
+                bool allRepairsHaveEnd = currentRepairs.Count == currentJobs.Count && currentRepairs.All(r => r.EndTime.HasValue);
+
+                if (allJobsCompleted && allRepairsHaveEnd)
+                {
+                    // completed: set completion date to latest repair end
+                    var latestEnd = currentRepairs.Max(r => r.EndTime.Value);
+                    ro.CompletionDate = latestEnd;
+                    ro.Cost = estAmount;
+                    ro.PaidAmount = estAmount;
+                    ro.PaidStatus = PaidStatus.Paid;
+                    // make sure UpdatedAt reflects completion
+                    ro.UpdatedAt = latestEnd;
+                }
+                else
+                {
+                    // NOT fully completed => NEVER set Paid.
+                    // Decide Pending or Partial (partial = customer paid some deposit, but job(s) still not finished)
+                    var paidDecision = rand.Next(0, 3); // 0 unpaid,1 partial,2 unpaid (treated same as 0)
+                    if (paidDecision == 1)
+                    {
+                        // Partial payment allowed but order is not marked Paid and CompletionDate stays null
+                        ro.PaidAmount = estAmount / 2;
+                        ro.Cost = 0; // final cost not set until completion
+                        ro.PaidStatus = PaidStatus.Partial;
+                    }
+                    else
+                    {
+                        ro.PaidAmount = 0;
+                        ro.Cost = 0;
+                        ro.PaidStatus = PaidStatus.Pending;
+                    }
+                    ro.CompletionDate = null;
+                }
+
+                createdOrders++;
+
+                // flush in batches
+                if (createdOrders % batchSaveInterval == 0 || createdOrders == totalOrdersTarget)
+                {
+                    // Add and save batches
+                    _context.RepairOrders.AddRange(repairOrdersList);
+                    _context.RepairOrderServices.AddRange(repairOrderServicesList);
+                    _context.Jobs.AddRange(jobList);
+                    _context.Repairs.AddRange(repairList);
+                    _context.JobParts.AddRange(jobPartsList);
+                    _context.JobTechnicians.AddRange(jobTechniciansList);
+                    _context.Quotations.AddRange(quotationsList);
+                    _context.QuotationServices.AddRange(quotationServicesList);
+                    _context.QuotationServiceParts.AddRange(quotationServicePartsList);
+
+                    await _context.SaveChangesAsync();
+
+                    // clear lists to free memory
+                    repairOrdersList.Clear();
+                    repairOrderServicesList.Clear();
+                    jobList.Clear();
+                    repairList.Clear();
+                    jobPartsList.Clear();
+                    jobTechniciansList.Clear();
+                    quotationsList.Clear();
+                    quotationServicesList.Clear();
+                    quotationServicePartsList.Clear();
+
+                    Console.WriteLine($"Seeded {createdOrders} repair orders so far...");
+                }
+
+                // safety break if loop unexpectedly long
+                if (createdOrders >= totalOrdersTarget) break;
+            }
+
+            Console.WriteLine($"Bulk seeding finished - total repair orders created: {createdOrders}");
         }
-    }
 
     }
+
+}
