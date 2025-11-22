@@ -24,6 +24,10 @@ namespace Dtos.Quotations
         public string? CustomerNote { get; set; }
         public DateTime? ExpiresAt { get; set; }
 
+        public bool IsArchived { get; set; } = false;
+
+        public DateTime? ArchivedAt { get; set; }
+
         // Navigation properties
         public string CustomerName { get; set; }
         public string VehicleInfo { get; set; }

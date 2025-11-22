@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
+using Dtos.RepairOrderArchivedDtos;
 using Dtos.RepairProgressDto;
 using Microsoft.Extensions.Logging;
 using Repositories;
@@ -13,13 +15,30 @@ namespace Services.RepairProgressServices
     public class RepairProgressService : IRepairProgressService
     {
         private readonly IRepairProgressRepository _repairProgressRepository;
+        private readonly IMapper _mapper;
         private readonly ILogger<RepairOrderService> _logger;
 
-        public RepairProgressService(IRepairProgressRepository repairProgressRepository, ILogger<RepairOrderService> logger)
+        public RepairProgressService(
+         IRepairProgressRepository repairProgressRepository,
+         IMapper mapper,
+         ILogger<RepairOrderService> logger)
         {
             _repairProgressRepository = repairProgressRepository;
+            _mapper = mapper;
             _logger = logger;
         }
+
+
+        public Task<PagedResult<RepairOrderArchivedListItemDto>> GetArchivedRepairOrdersAsync(
+        string userId,
+        RepairOrderFilterDto filter)
+        => _repairProgressRepository.GetArchivedRepairOrdersByUserIdAsync(userId, filter, _mapper);
+
+        public Task<RepairOrderArchivedDetailDto?> GetArchivedRepairOrderDetailAsync(
+            Guid repairOrderId,
+            string userId)
+            => _repairProgressRepository.GetArchivedRepairOrderDetailAsync(repairOrderId, userId, _mapper);
+
 
         public async Task<PagedResult<RepairOrderListItemDto>> GetUserRepairOrdersAsync(string userId, RepairOrderFilterDto filter)
         {

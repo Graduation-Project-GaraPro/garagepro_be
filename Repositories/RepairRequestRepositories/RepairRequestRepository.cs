@@ -123,6 +123,7 @@ namespace Repositories.Customers
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RepairImages)
+                .Include(r => r.RepairOrder)
                 .Include(r => r.Customer)
                 .Include(r => r.RepairOrder) // Include the RepairOrder for 1-1 relationship
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);

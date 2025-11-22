@@ -14,8 +14,7 @@ namespace Dtos.Bills
         public DateTime ReceiveDate { get; set; }
 
         public decimal Cost { get; set; }
-        public decimal EstimatedAmount { get; set; }
-        public decimal PaidAmount { get; set; }
+        
         public PaidStatus PaidStatus { get; set; }
 
         public VehicleDto Vehicle { get; set; }

@@ -240,8 +240,8 @@ namespace Services.QuotationServices
         {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
 
-            //if (quotation == null)
-            //    return new Exception("Not Found Quotation");
+            if (quotation == null)
+                throw new Exception("Not Found Quotation");
 
             var dto = _mapper.Map<QuotationDetailDto>(quotation);
 
@@ -273,7 +273,7 @@ namespace Services.QuotationServices
                                             }).ToList();
             }
 
-            //return Ok(dto);
+           
 
             return dto;
         }
@@ -352,6 +352,37 @@ namespace Services.QuotationServices
             }
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(existingQuotation);
+
+            await _quotationHubContext
+           .Clients
+           .Group($"User_{existingQuotation.UserId}")
+           .SendAsync("QuotationCreated", new
+           {
+               existingQuotation.QuotationId,
+               existingQuotation.UserId,
+               existingQuotation.RepairOrderId,
+               existingQuotation.TotalAmount,
+               existingQuotation.Status,
+               existingQuotation.CreatedAt,
+               existingQuotation.Note
+           });
+
+            var user = await _userService.GetUserByIdAsync(existingQuotation.UserId);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "New Quotation Available",
+                    Body = "A new quotation has been created for your repair job. Tap to view details.",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = existingQuotation.QuotationId,
+                    Screen = AppScreen.QuotationDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
+
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 

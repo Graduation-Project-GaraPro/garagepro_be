@@ -16,7 +16,9 @@ namespace Garage_pro_api.Mapper
                     : string.Empty))
                 .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                 .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
-                .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection));
+                .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection))
+                .ForMember(dest => dest.IsArchived, opt => opt.MapFrom(src => src.RepairOrder.IsArchived))
+                .ForMember(dest => dest.ArchivedAt, opt => opt.MapFrom(src => src.RepairOrder.ArchivedAt));
 
             // QuotationService → QuotationServiceDetailDto
             CreateMap<QuotationService, QuotationServiceDetailDto>()

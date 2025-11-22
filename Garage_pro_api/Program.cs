@@ -163,6 +163,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<JobTechnicianProfile>();
     cfg.AddProfile<QuotationProfile>();
     cfg.AddProfile<RepairOrderBillProfile>();
+    cfg.AddProfile<RepairOrderArchivedProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>

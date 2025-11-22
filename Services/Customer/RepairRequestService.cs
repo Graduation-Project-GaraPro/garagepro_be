@@ -507,8 +507,8 @@ namespace Services.Customer
             var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
                 x.UserID == userId && ActiveStatuses.Contains(x.Status));
 
-            if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
-                throw new Exception("Bạn đã đạt giới hạn số yêu cầu đang hoạt động. Hãy hoàn tất/hủy bớt yêu cầu trước.");
+            //if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
+            //    throw new Exception("Bạn đã đạt giới hạn số yêu cầu đang hoạt động. Hãy hoàn tất/hủy bớt yêu cầu trước.");
 
             // (C) Giới hạn theo vehicle trong 1 ngày (VN)
             var dayStart = new DateTimeOffset(winStart.Year, winStart.Month, winStart.Day, 0, 0, 0, VietnamTime.VN_OFFSET);

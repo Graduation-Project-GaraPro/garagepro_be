@@ -9,6 +9,9 @@ using DataAccessLayer;
 using Dtos.InspectionAndRepair;
 using Dtos.RepairProgressDto;
 using Microsoft.EntityFrameworkCore;
+using AutoMapper.QueryableExtensions;
+using AutoMapper;
+using Dtos.RepairOrderArchivedDtos;
 
 namespace Repositories.RepairProgressRepositories
 {
@@ -104,6 +107,101 @@ namespace Repositories.RepairProgressRepositories
                 PageSize = filter.PageSize
             };
         }
+
+        public async Task<PagedResult<RepairOrderArchivedListItemDto>> GetArchivedRepairOrdersByUserIdAsync(
+            string userId,
+            RepairOrderFilterDto filter,
+            IMapper mapper)
+        {
+            var query = _context.RepairOrders
+                .AsNoTracking()
+                .Where(ro => ro.UserId == userId
+                             && ro.StatusId == 3          // completed
+                             && ro.IsArchived)            // archived
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .AsQueryable();
+
+            // Apply thêm filter (date, branch, vehicle...) nếu bạn có trong RepairOrderFilterDto
+
+            if (filter.StatusId.HasValue)
+            {
+                query = query.Where(ro => ro.StatusId == filter.StatusId.Value);
+            }
+
+            if (filter.RoType.HasValue)
+            {
+                query = query.Where(ro => ro.RoType == filter.RoType.Value);
+            }
+
+            if (!string.IsNullOrEmpty(filter.PaidStatus))
+            {
+                query = query.Where(ro => ro.PaidStatus.ToString() == filter.PaidStatus);
+            }
+
+            if (filter.FromDate.HasValue)
+            {
+                query = query.Where(ro => ro.ReceiveDate >= filter.FromDate.Value.Date);
+            }
+
+            if (filter.ToDate.HasValue)
+            {
+                query = query.Where(ro => ro.ReceiveDate <= filter.ToDate.Value.Date.AddDays(1).AddTicks(-1));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderByDescending(ro => ro.ArchivedAt ?? ro.CompletionDate ?? ro.CreatedAt)
+                .Skip((filter.PageNumber - 1) * filter.PageSize)
+                .Take(filter.PageSize)
+                .ProjectTo<RepairOrderArchivedListItemDto>(mapper.ConfigurationProvider)
+                .ToListAsync();
+
+            return new PagedResult<RepairOrderArchivedListItemDto>
+            {
+                Items = items,
+                TotalCount = totalCount,
+                PageNumber = filter.PageNumber,
+                PageSize = filter.PageSize
+            };
+        }
+
+        public async Task<RepairOrderArchivedDetailDto?> GetArchivedRepairOrderDetailAsync(
+            Guid repairOrderId,
+            string userId,
+            IMapper mapper)
+        {
+            var query = _context.RepairOrders
+                .AsNoTracking()
+                .Where(ro => ro.RepairOrderId == repairOrderId
+                             && ro.UserId == userId
+                             && ro.StatusId == 3
+                             && ro.IsArchived)
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.Repair)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobParts)
+                        .ThenInclude(jp => jp.Part);
+
+            var entity = await query.FirstOrDefaultAsync();
+            if (entity == null) return null;
+
+            return mapper.Map<RepairOrderArchivedDetailDto>(entity);
+        }
+
 
         public async Task<RepairOrderProgressDto?> GetRepairOrderProgressAsync(Guid repairOrderId, string userId)
         {

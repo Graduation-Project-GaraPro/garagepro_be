@@ -52,25 +52,40 @@ namespace Services.QuotationServices
                 throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not your own");
 
             }
-            // Validate customer response
-            await ValidateCustomerResponseAsync(quotation, responseDto);
 
-            // Cập nhật trạng thái và thời gian phản hồi của khách hàng
-            quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
-            quotation.CustomerResponseAt = DateTime.UtcNow;
-            quotation.Note = responseDto.CustomerNote;
+            var status = Enum.Parse<QuotationStatus>(responseDto.Status); 
+            if(status == QuotationStatus.Approved)
+            {
+                await ValidateCustomerResponseAsync(quotation, responseDto);
 
-            // Xử lý lựa chọn dịch vụ và phụ tùng
-            await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
+                // Cập nhật trạng thái và thời gian phản hồi của khách hàng
+                
 
-            // Tính toán lại tổng tiền dựa trên lựa chọn của khách hàng
-            await RecalculateQuotationTotalAsync(quotation);
+                // Xử lý lựa chọn dịch vụ và phụ tùng
+                await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
 
-            // Lưu lại thay đổi
+                // Tính toán lại tổng tiền dựa trên lựa chọn của khách hàng
+                await RecalculateQuotationTotalAsync(quotation);
+
+                quotation.Status = status;
+                quotation.CustomerResponseAt = DateTime.UtcNow;
+                quotation.CustomerNote = responseDto.CustomerNote;
+            }
+            else
+            {
+                if(status == QuotationStatus.Rejected)
+                {
+                    quotation.Status = status;
+                    quotation.CustomerResponseAt = DateTime.UtcNow;
+                    quotation.CustomerNote = responseDto.CustomerNote;
+                }    
+            }
+
             var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
-
-            // Gửi real-time notification
             await SendQuotationUpdateNotificationAsync(updatedQuotation);
+
+            // Validate customer response
+
 
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
