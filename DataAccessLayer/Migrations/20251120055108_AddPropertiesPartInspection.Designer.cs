@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251118162227_updatePromotional.Designer.cs
+    [Migration("20251118162227_updatePromotional")]
+    partial class updatePromotional
+========
+    [Migration("20251120055108_AddPropertiesPartInspection")]
+    partial class AddPropertiesPartInspection
+>>>>>>>> hauhv_technician:DataAccessLayer/Migrations/20251120055108_AddPropertiesPartInspection.Designer.cs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1534,9 +1542,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("DiscountValue")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<decimal>("FinalPrice")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<bool>("IsRequired")

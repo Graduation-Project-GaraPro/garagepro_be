@@ -22,6 +22,15 @@ namespace Dtos.InspectionAndRepair
 
         public List<Guid>? SelectedPartCategoryIds { get; set; } = new();
 
-        public Dictionary<Guid, List<Guid>>? SuggestedPartsByCategory { get; set; } = new();
+        public Dictionary<Guid, List<PartWithQuantityDto>>? SuggestedPartsByCategory { get; set; } = new();
     }
+    public class PartWithQuantityDto
+    {
+        [Required]
+        public Guid PartId { get; set; }
+
+        [Range(1, int.MaxValue, ErrorMessage = "Quantity must be greater than 0")]
+        public int Quantity { get; set; } = 1;
+    }
+
 }

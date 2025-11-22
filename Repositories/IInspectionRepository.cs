@@ -26,5 +26,6 @@ namespace Repositories
         Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId);
         Task<Inspection?> GetInspectionByIdAsync(Guid inspectionId);
         Task<Technician?> GetTechnicianByIdAsync(Guid technicianId);
+        Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId);
     }
 }

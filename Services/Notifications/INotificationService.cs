@@ -11,7 +11,8 @@ namespace Services.Notifications
     {
         // Gửi notification
         Task SendJobAssignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName);
-        Task SendJobReassignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName);       
+        Task SendJobReassignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName);
+        Task SendInspectionAssignedNotificationAsync(string userId, Guid inspectionId, string customerConcern, Guid repairOrderId);
 
         // Lấy notification
         Task<List<Notification>> GetUserNotificationsAsync(string userId);
@@ -24,5 +25,9 @@ namespace Services.Notifications
 
         // Xóa notification (chỉ owner)
         Task<bool> DeleteNotificationAsync(Guid notificationId, string userId);
+
+        Task SendJobDeadlineReminderAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursRemaining);
+        Task SendJobOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursOverdue);
+        Task SendJobRecurringOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int daysOverdue);
     }
 }

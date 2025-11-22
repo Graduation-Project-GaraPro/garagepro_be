@@ -36,8 +36,7 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual PartCategory PartCategory { get; set; }
-        public virtual Branch? Branch { get; set; } // 1-n
-        public virtual ICollection<PartSpecification> PartSpecifications { get; set; } = new List<PartSpecification>();
+        public virtual Branch? Branch { get; set; } // 1-n     
         public virtual ICollection<JobPart> JobParts { get; set; } = new List<JobPart>();
         public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();

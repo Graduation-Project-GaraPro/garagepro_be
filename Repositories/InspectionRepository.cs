@@ -174,6 +174,15 @@ namespace Repositories
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.TechnicianId == technicianId);
         }
+        public async Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId)
+        {
+            var technician = await _context.Technicians
+                .Where(t => t.TechnicianId == technicianId)
+                .Select(t => t.UserId)
+                .FirstOrDefaultAsync();
+
+            return technician;
+        }
 
     }
 }
