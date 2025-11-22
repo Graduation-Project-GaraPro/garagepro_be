@@ -1,11 +1,14 @@
-using System;
+﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
+using Microsoft.AspNetCore.SignalR;
 using Repositories;
+using Services.Hubs;
+using Services.Notifications;
 using Services.QuotationServices;
 
 namespace Services
@@ -15,15 +18,24 @@ namespace Services
         private readonly IInspectionRepository _inspectionRepository;
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
+        private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
 
+        private readonly IHubContext<InspectionHub> _inspectionHubContext;
+        private readonly INotificationService _notificationService;
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
-            IQuotationService quotationService)
+            IQuotationService quotationService,
+            IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
+            IHubContext<InspectionHub> inspectionHubContext,
+            INotificationService notificationService)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
+            _technicianAssignmentHubContext = technicianAssignmentHubContext;
+            _inspectionHubContext = inspectionHubContext;
+            _notificationService = notificationService;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -120,8 +132,6 @@ namespace Services
             if (updateInspectionDto.Note != null)
                 inspection.Note = updateInspectionDto.Note;
                 
-            if (updateInspectionDto.ImageUrl != null)
-                inspection.ImageUrl = updateInspectionDto.ImageUrl;
                 
             inspection.UpdatedAt = DateTime.UtcNow;
 
@@ -159,7 +169,56 @@ namespace Services
 
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
-            return await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
+            // 1. Get inspection details
+            var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
+            if (inspection == null)
+                throw new ArgumentException("Inspection not found", nameof(inspectionId));
+
+            var technician = await _inspectionRepository.GetTechnicianByIdAsync(technicianId);
+            var technicianName = technician?.User?.FullName ?? "Unknown Technician";
+
+            var result = await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
+
+            if (result)
+            {
+                await _technicianAssignmentHubContext.Clients.All.SendAsync(
+                    "InspectionAssigned",
+                    technicianId,
+                    technicianName,
+                    1,
+                    new[] { inspection.CustomerConcern ?? "Unnamed Inspection" }
+                );
+
+                await _inspectionHubContext.Clients
+                    .Group($"Technician_{technicianId}")
+                    .SendAsync("InspectionAssigned", new
+                    {
+                        InspectionId = inspectionId,
+                        TechnicianId = technicianId,
+                        TechnicianName = technicianName,
+                        CustomerConcern = inspection.CustomerConcern ?? "No concern specified",
+                        RepairOrderId = inspection.RepairOrderId,
+                        Status = inspection.Status.ToString(),
+                        AssignedAt = DateTime.UtcNow,
+                        Message = "You have been assigned a new inspection"
+                    });
+
+                var userId = await _inspectionRepository.GetUserIdByTechnicianIdAsync(technicianId);
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _notificationService.SendInspectionAssignedNotificationAsync(
+                        userId,
+                        inspectionId,
+                        inspection.CustomerConcern ?? "New Inspection",
+                        inspection.RepairOrderId
+                    );
+
+                    Console.WriteLine($"[InspectionService] Inspection {inspectionId} assigned and notification sent to User {userId}");
+                }
+            }
+
+            return result;
         }
 
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
@@ -242,7 +301,6 @@ namespace Services
                 Finding = inspection.Finding,
                 IssueRating = inspection.IssueRating,
                 Note = inspection.Note,
-                ImageUrl = inspection.ImageUrl,
                 CreatedAt = inspection.CreatedAt,
                 UpdatedAt = inspection.UpdatedAt,
                 TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
@@ -278,7 +336,6 @@ namespace Services
                 Finding = inspection.Finding,
                 IssueRating = inspection.IssueRating,
                 Note = inspection.Note,
-                ImageUrl = inspection.ImageUrl,
                 CreatedAt = inspection.CreatedAt,
                 UpdatedAt = inspection.UpdatedAt,
                 TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",

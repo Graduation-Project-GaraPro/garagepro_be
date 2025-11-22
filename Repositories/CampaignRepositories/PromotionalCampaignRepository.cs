@@ -26,6 +26,92 @@ namespace Repositories.CampaignRepositories
                 .Include(pc => pc.VoucherUsages).ThenInclude(v=>v.RepairOrder)
                 .AsQueryable();
         }
+
+        public async Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(
+            Guid serviceId,
+            decimal orderValue = 0)
+        {
+            var now = DateTime.Now;
+
+            var applicablePromotions = await Query()
+                .Where(pc => pc.IsActive &&
+                             pc.StartDate <= now &&
+                             pc.EndDate >= now &&
+                             (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
+                             (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue))
+                .ToListAsync();
+
+            if (!applicablePromotions.Any())
+                return null;
+
+            // Tính toán giá trị chiết khấu thực tế và chọn ưu đãi tốt nhất
+            var bestPromotion = applicablePromotions
+                .OrderByDescending(pc => CalculateActualDiscountValue(pc, orderValue))
+                .ThenByDescending(pc => pc.DiscountValue)
+                .FirstOrDefault();
+
+            return bestPromotion;
+        }
+
+        // Hàm lấy tất cả ưu đãi khả dụng cho một Service (async – dùng cho dropdown)
+        public Task<List<PromotionalCampaign>> GetAvailablePromotionsForServiceAsync(Guid serviceId)
+        {
+            var now = DateTime.Now;
+
+            return Query()
+                .Where(pc => pc.IsActive &&
+                             pc.StartDate <= now &&
+                             pc.EndDate >= now &&
+                             (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId))
+                .ToListAsync();
+        }
+
+        // Hàm tính giá trị chiết khấu thực tế (vẫn sync vì chỉ là tính toán trong memory)
+        public decimal CalculateActualDiscountValue(PromotionalCampaign promotion, decimal orderValue)
+        {
+            if (promotion.DiscountType == DiscountType.Fixed)
+            {
+                // Với chiết khấu cố định
+                if (promotion.MaximumDiscount.HasValue)
+                {
+                    return Math.Min(promotion.DiscountValue, promotion.MaximumDiscount.Value);
+                }
+                return promotion.DiscountValue;
+            }
+            else // Percentage
+            {
+                // Với chiết khấu phần trăm
+                var discountAmount = orderValue * promotion.DiscountValue / 100;
+
+                if (promotion.MaximumDiscount.HasValue)
+                {
+                    return Math.Min(discountAmount, promotion.MaximumDiscount.Value);
+                }
+                return discountAmount;
+            }
+        }
+
+        // Hàm kiểm tra promotion có áp dụng được hay không (async)
+        public Task<bool> IsPromotionApplicableForServiceAsync(
+            Guid promotionId,
+            Guid serviceId,
+            decimal orderValue = 0)
+        {
+            var now = DateTime.Now;
+
+            return Query()
+                .AnyAsync(pc => pc.Id == promotionId &&
+                                pc.IsActive &&
+                                pc.StartDate <= now &&
+                                pc.EndDate >= now &&
+                                (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
+                                pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId) &&
+                                (pc.MinimumOrderValue == null || orderValue >= pc.MinimumOrderValue));
+        }
+
+
         public async Task<IEnumerable<PromotionalCampaign>> GetAllAsync()
         {
             return await _context.PromotionalCampaigns
@@ -104,9 +190,20 @@ namespace Repositories.CampaignRepositories
         }
 
 
+        public async Task<bool> ExistsAsync(Guid id)
+        {
+            var campaignExist = await _context.PromotionalCampaigns
+                .AnyAsync(pc => pc.Id == id);
+                
+            return campaignExist;
+        }
+
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
         }
+
+        
     }
 }

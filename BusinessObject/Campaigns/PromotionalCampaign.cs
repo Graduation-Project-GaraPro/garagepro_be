@@ -14,9 +14,9 @@ namespace BusinessObject.Campaigns
 
         public string? Description { get; set; } // NULLABLE
 
-        public CampaignType Type { get; set; } // ENUM('discount','seasonal','loyalty')
+        public CampaignType Type { get; set; } 
 
-        public DiscountType DiscountType { get; set; } // ENUM('percentage','fixed','free_service')
+        public DiscountType DiscountType { get; set; } 
 
         public decimal DiscountValue { get; set; } // >= 0
 
@@ -33,6 +33,8 @@ namespace BusinessObject.Campaigns
         public int? UsageLimit { get; set; } // NULLABLE
 
         public int UsedCount { get; set; } = 0; // DEFAULT 0
+
+
 
         public DateTime CreatedAt { get; set; }
 
@@ -55,6 +57,6 @@ namespace BusinessObject.Campaigns
     {
         Percentage,    // 'percentage'
         Fixed,         // 'fixed'
-        FreeService    // 'free_service'
+        
     }
 }

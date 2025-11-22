@@ -19,6 +19,9 @@ namespace Dtos.RepairProgressDto
         public string PaidStatus { get; set; } = string.Empty;
         public string Note { get; set; } = string.Empty;
 
+        public bool IsArchived { get; set; } = false;
+
+        public DateTime? ArchivedAt { get; set; }
         // Vehicle information
         public VehicleDto Vehicle { get; set; } = new VehicleDto();
 

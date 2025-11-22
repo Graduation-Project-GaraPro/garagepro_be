@@ -64,5 +64,8 @@ namespace Services
         Task<bool> ValidateJobWorkflowAsync(Guid jobId, JobStatus targetStatus);
         Task<string> GetNextAllowedStatusesAsync(Guid jobId);
         
+        // Create job with parts in a transaction
+        Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts);
+        
     }
 }

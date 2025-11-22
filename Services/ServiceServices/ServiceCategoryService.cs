@@ -224,10 +224,7 @@ namespace Services.ServiceServices
                         break;
                     case DiscountType.Fixed:
                         price -= campaign.DiscountValue;
-                        break;
-                    case DiscountType.FreeService:
-                        price = 0;
-                        break;
+                        break;                
                 }
             }
 

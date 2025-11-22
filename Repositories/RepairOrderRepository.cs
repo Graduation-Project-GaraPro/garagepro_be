@@ -8,6 +8,7 @@ using BusinessObject.Authentication;
 using BusinessObject.Customers;
 using BusinessObject.Enums;
 using DataAccessLayer;
+using Dtos.Quotations;
 using Dtos.RoBoard;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +37,35 @@ namespace Repositories
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+        }
+
+        public async Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId)
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                .Where(ro => ro.RepairOrderId == repairOrderId
+                          && ro.UserId == userId
+                          && ro.OrderStatus.StatusName == "Completed")
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                // Approved quotations
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    // Only selected services
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.Service)
+                // Approved quotations + selected services + selected parts
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.QuotationServiceParts
+                            .Where(p => p.IsSelected))
+                            .ThenInclude(qsp => qsp.Part)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate)

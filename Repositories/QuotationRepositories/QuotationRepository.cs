@@ -28,7 +28,7 @@ namespace Repositories.QuotationRepositories
             return await _context.Inspections
                 .Include(i => i.RepairOrder)
                 .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
+                //.Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
                 .Where(i => i.RepairOrder.UserId == userId)
                 .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)// d�ng projectto ?? map k c?n load h?t ch? c?n nhhuwnxg entities c?n thi?t
                 .ToListAsync();
@@ -74,7 +74,7 @@ namespace Repositories.QuotationRepositories
             return await _context.Inspections
                 .Include(i => i.RepairOrder)
                 .Include(i => i.ServiceInspections).ThenInclude(s => s.Service)
-                .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
+               // .Include(i => i.PartInspections).ThenInclude(p => p.Part).ThenInclude(p => p.PartSpecifications)
                 .Where(i => i.RepairOrder.UserId == userId && i.RepairOrderId == repairRequestId)
                 .ProjectTo<QuotationDto>(_mapper.ConfigurationProvider)
                 .ToListAsync();
@@ -125,6 +125,7 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle).ThenInclude(v => v.Brand)
                 .Include(q => q.Vehicle).ThenInclude(v => v.Model)
                 .Include(q => q.RepairOrder)
+                .Include(q=>q.QuotationServices).ThenInclude(qs=>qs.AppliedPromotion)
                 .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.Service)

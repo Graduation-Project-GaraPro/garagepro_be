@@ -1,21 +1,30 @@
-using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
 using BusinessObject.InspectionAndRepair;
+using Microsoft.AspNetCore.SignalR;
 using Repositories;
+using Services.Hubs;
+using Services.Notifications;
 
 namespace Services
 {
     public class JobService : IJobService
     {
         private readonly IJobRepository _jobRepository;
+        private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
+        private readonly IHubContext<JobHub> _jobHubContext;
+        private readonly INotificationService _notificationService;
 
-        public JobService(IJobRepository jobRepository)
+        public JobService(IJobRepository jobRepository, IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, IHubContext<JobHub> jobHubContext, INotificationService notificationService)
         {
             _jobRepository = jobRepository;
+            _technicianAssignmentHubContext = technicianAssignmentHubContext;
+            _jobHubContext = jobHubContext;
+            _notificationService = notificationService;
         }
 
         #region Basic CRUD Operations
@@ -42,7 +51,17 @@ namespace Services
             job.CreatedAt = DateTime.UtcNow;
             job.UpdatedAt = null;
 
-            return await _jobRepository.CreateAsync(job);
+            try
+            {
+                return await _jobRepository.CreateAsync(job);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error creating job in service: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to create job: {ex.Message}", ex);
+            }
         }
 
         public async Task<Job> UpdateJobAsync(Job job)
@@ -55,7 +74,17 @@ namespace Services
             job.CreatedAt = existingJob.CreatedAt;
             job.UpdatedAt = DateTime.UtcNow;
 
-            return await _jobRepository.UpdateAsync(job);
+            try
+            {
+                return await _jobRepository.UpdateAsync(job);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error updating job in service: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to update job: {ex.Message}", ex);
+            }
         }
 
         public async Task<bool> DeleteJobAsync(Guid jobId)
@@ -119,18 +148,60 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            // Validate technician exists
             if (!await _jobRepository.TechnicianExistsAsync(technicianId))
-                throw new InvalidOperationException($"Technician with ID {technicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+                throw new InvalidOperationException($"Technician with ID {technicianId} not found.");
 
-            // Validate all jobs can be assigned
             foreach (var jobId in jobIds)
             {
                 if (!await CanAssignJobToTechnicianAsync(jobId))
-                    throw new InvalidOperationException($"Job {jobId} cannot be assigned to technician");
+                    throw new InvalidOperationException($"Job {jobId} cannot be assigned");
             }
 
-            return await _jobRepository.AssignJobsToTechnicianAsync(jobIds, technicianId, managerId);
+            var result = await _jobRepository.AssignJobsToTechnicianAsync(jobIds, technicianId, managerId);
+
+            if (result)
+            {
+                // LẤY USERID TỪ TECHNICIANID
+                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(technicianId);
+
+                foreach (var jobId in jobIds)
+                {
+                    var job = await _jobRepository.GetJobByIdAsync(jobId);
+
+                    if (job != null)
+                    {
+                        // Gửi SignalR JobHub (real-time job update)
+                        await _jobHubContext.Clients
+                            .Group($"Technician_{technicianId}")
+                            .SendAsync("JobAssigned", new
+                            {
+                                JobId = jobId,
+                                TechnicianId = technicianId,
+                                JobName = job.JobName,
+                                ServiceName = job.Service?.ServiceName,
+                                RepairOrderId = job.RepairOrderId,
+                                Status = job.Status.ToString(),
+                                AssignedAt = DateTime.UtcNow,
+                                Message = "You have been assigned a new job"
+                            });
+
+                        // GỬI NOTIFICATION (LƯU DB + SIGNALR)
+                        if (!string.IsNullOrEmpty(userId))
+                        {
+                            await _notificationService.SendJobAssignedNotificationAsync(
+                                userId,
+                                jobId,
+                                job.JobName,
+                                job.Service?.ServiceName ?? "N/A"
+                            );
+                        }
+
+                        Console.WriteLine($"[JobService] Job {jobId} assigned and notification sent to User {userId}");
+                    }
+                }
+            }
+
+            return result;
         }
 
         public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
@@ -144,11 +215,49 @@ namespace Services
             if (string.IsNullOrWhiteSpace(managerId))
                 throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            // Validate technician exists
             if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
-                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found. Please ensure you're using a valid Technician ID, not a User ID.");
+                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
 
-            return await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+            var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+
+            if (result)
+            {
+                var job = await _jobRepository.GetJobByIdAsync(jobId);
+                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
+
+                if (job != null)
+                {
+                    // SignalR JobHub
+                    await _jobHubContext.Clients
+                        .Group($"Technician_{newTechnicianId}")
+                        .SendAsync("JobReassigned", new
+                        {
+                            JobId = jobId,
+                            TechnicianId = newTechnicianId,
+                            JobName = job.JobName,
+                            ServiceName = job.Service?.ServiceName,
+                            RepairOrderId = job.RepairOrderId,
+                            Status = job.Status.ToString(),
+                            ReassignedAt = DateTime.UtcNow,
+                            Message = "A job has been reassigned to you"
+                        });
+
+                    // GỬI NOTIFICATION
+                    if (!string.IsNullOrEmpty(userId))
+                    {
+                        await _notificationService.SendJobReassignedNotificationAsync(
+                            userId,
+                            jobId,
+                            job.JobName,
+                            job.Service?.ServiceName ?? "N/A"
+                        );
+                    }
+
+                    Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
+                }
+            }
+
+            return result;
         }
 
         public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
@@ -182,27 +291,62 @@ namespace Services
         // Job Parts Management
         public async Task<IEnumerable<JobPart>> GetJobPartsAsync(Guid jobId)
         {
-            return await _jobRepository.GetJobPartsAsync(jobId);
+            try
+            {
+                return await _jobRepository.GetJobPartsAsync(jobId);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error getting job parts in service: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to get job parts: {ex.Message}", ex);
+            }
         }
 
         public async Task<bool> AddJobPartAsync(JobPart jobPart)
         {
-            return await _jobRepository.AddJobPartAsync(jobPart);
+            var result = await _jobRepository.AddJobPartAsync(jobPart);
+            if (!result)
+            {
+                throw new InvalidOperationException($"Failed to add job part {jobPart.PartId} to job {jobPart.JobId}");
+            }
+            return result;
         }
 
         public async Task<bool> UpdateJobPartAsync(JobPart jobPart)
         {
-            return await _jobRepository.UpdateJobPartAsync(jobPart);
+            var result = await _jobRepository.UpdateJobPartAsync(jobPart);
+            if (!result)
+            {
+                throw new InvalidOperationException($"Failed to update job part {jobPart.JobPartId}");
+            }
+            return result;
         }
 
         public async Task<bool> RemoveJobPartAsync(Guid jobPartId)
         {
-            return await _jobRepository.RemoveJobPartAsync(jobPartId);
+            var result = await _jobRepository.RemoveJobPartAsync(jobPartId);
+            if (!result)
+            {
+                throw new InvalidOperationException($"Failed to remove job part {jobPartId}");
+            }
+            return result;
         }
 
         public async Task<decimal> CalculateJobTotalAmountAsync(Guid jobId)
         {
-            return await _jobRepository.CalculateJobTotalAmountAsync(jobId);
+            try
+            {
+                return await _jobRepository.CalculateJobTotalAmountAsync(jobId);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error calculating job total amount in service: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to calculate job total amount: {ex.Message}", ex);
+            }
         }
 
         // Status Management
@@ -294,6 +438,25 @@ namespace Services
                    new List<JobStatus>();
         }
 
+        // Create job with parts in a transaction
+        public async Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts)
+        {
+            try
+            {
+                Console.WriteLine($"JobService: Creating job with {jobParts?.Count ?? 0} parts");
+                var result = await _jobRepository.CreateJobWithPartsAsync(job, jobParts);
+                Console.WriteLine($"JobService: Created job with ID {result.JobId}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // Log the exception for debugging purposes
+                Console.WriteLine($"Error creating job with parts in service: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                throw new InvalidOperationException($"Failed to create job with parts: {ex.Message}", ex);
+            }
+        }
+        
         #endregion
         
     }

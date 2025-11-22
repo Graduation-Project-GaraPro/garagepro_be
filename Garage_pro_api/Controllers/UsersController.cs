@@ -1,13 +1,16 @@
 ﻿using AutoMapper;
 using BusinessObject;
+using BusinessObject.Roles;
 using Dtos.Auth;
 using Dtos.Customers;
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Services;
 using Services.Authentication;
+using Services.RoleServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -16,15 +19,19 @@ namespace Garage_pro_api.Controllers
     public class UsersController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly DynamicAuthenticationService _authorizationService;
+        private readonly IPermissionService _permissionService;
         private readonly IMapper _mapper;
 
         public UsersController(IUserService userService, 
-            DynamicAuthenticationService authorizationService,
+            DynamicAuthenticationService authorizationService, IPermissionService permissionService, RoleManager<ApplicationRole> roleManager,
             IMapper mapper)
         {
             _userService = userService;
             _authorizationService = authorizationService;
+            _permissionService = permissionService;
+            _roleManager = roleManager;
             _mapper = mapper;
         }
         [Authorize(Policy = "USER_VIEW")]
@@ -56,6 +63,35 @@ namespace Garage_pro_api.Controllers
             
             return Ok(_mapper.Map<UserDto>(result));
         }
+
+        [HttpGet("permissions")]
+        public async Task<IActionResult> GetMyPermissions()
+        {
+            var user = await _authorizationService.GetUserAsync(User);
+            if (user == null) return Unauthorized();
+
+            var roleNames = await _userService.GetUserRolesAsync(user);
+
+            var permissionCodes = new HashSet<string>();
+
+            foreach (var roleName in roleNames)
+            {
+                var role = await _roleManager.FindByNameAsync(roleName);
+                if (role == null) continue;
+
+                var rolePermissionCodes = await _permissionService.GetPermissionsByRoleIdAsync(role.Id);
+                foreach (var code in rolePermissionCodes)
+                    permissionCodes.Add(code);
+            }
+
+            return Ok(new
+            {
+                permissions = permissionCodes.ToList(),
+                // Có thể trả kèm version/timestamp nếu muốn
+                fetchedAt = DateTime.UtcNow
+            });
+        }
+
 
         [HttpPut("me")]
         public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateUserDto model)

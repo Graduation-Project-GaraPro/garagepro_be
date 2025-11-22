@@ -7,7 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Dtos.RepairOrder; // Add this
+using Dtos.RepairOrder;
 
 namespace Garage_pro_api.Controllers.Customer
 {
@@ -29,6 +29,15 @@ namespace Garage_pro_api.Controllers.Customer
         public async Task<IActionResult> GetRepairRequests()
         {
             var requests = await _repairRequestService.GetForManagerAsync();
+            return Ok(requests);
+        }
+
+        // GET: api/ManagerRepairRequest/branch/{branchId}
+        [HttpGet("branch/{branchId}")]
+        [EnableQuery] // Enable OData query support
+        public async Task<IActionResult> GetRepairRequestsByBranch(Guid branchId)
+        {
+            var requests = await _repairRequestService.GetForManagerByBranchAsync(branchId);
             return Ok(requests);
         }
 

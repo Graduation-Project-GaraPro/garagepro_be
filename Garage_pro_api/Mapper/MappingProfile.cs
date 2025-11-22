@@ -258,7 +258,7 @@ namespace Garage_pro_api.Mapper
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
             CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
             CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
-
+            CreateMap<PromotionalCampaign, CustomerPromotionDto>();
 
             CreateMap<VoucherUsageDto, VoucherUsage>().ReverseMap();
 
@@ -304,7 +304,9 @@ namespace Garage_pro_api.Mapper
                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src =>
                    src.RepairImages.Select(img => img.ImageUrl).ToList()))
-               .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
+               .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices))
+               .ForMember(dest => dest.IsArchived, opt => opt.MapFrom(src => src.RepairOrder != null && src.RepairOrder.IsArchived))
+               .ForMember(dest => dest.ArchivedAt, opt => opt.MapFrom(src => src.RepairOrder.ArchivedAt));
 
             CreateMap<RepairRequest, RepairRequestDto>()
 

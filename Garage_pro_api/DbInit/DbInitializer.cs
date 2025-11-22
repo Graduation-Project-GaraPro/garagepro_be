@@ -56,7 +56,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
             await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
@@ -1326,7 +1326,7 @@ namespace Garage_pro_api.DbInit
                 Name = "Year-End Free Checkup",
                 Description = "Get a free maintenance check for any service above 1,000,000₫.",
                 Type = CampaignType.Discount,
-                DiscountType = DiscountType.FreeService,
+                DiscountType = DiscountType.Fixed,
                 DiscountValue = 0,
                 StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
                 EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
@@ -1720,7 +1720,6 @@ namespace Garage_pro_api.DbInit
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
                 Level = 2,
-                SentToCustomerAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
 

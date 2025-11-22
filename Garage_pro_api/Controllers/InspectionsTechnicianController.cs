@@ -100,8 +100,6 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // Thêm vào InspectionsTechnicianController
-
         [HttpDelete("{inspectionId}/services/{serviceInspectionId}/part-categories/{partCategoryId}")]
         [Authorize(Roles = "Technician")]
         public async Task<IActionResult> RemovePartCategoryFromService(

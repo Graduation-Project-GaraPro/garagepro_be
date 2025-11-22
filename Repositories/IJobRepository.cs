@@ -26,6 +26,8 @@ namespace Repositories
         Task<bool> RemoveTechnicianFromJobAsync(Guid jobId, Guid technicianId);
         Task<IEnumerable<Job>> GetUnassignedJobsAsync();
         Task<IEnumerable<Job>> GetJobsByTechnicianIdAsync(Guid technicianId);
+        Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId);
+        Task<Job?> GetJobByIdAsync(Guid jobId);
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
         Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
         Task<IEnumerable<Job>> GetJobsReadyForAssignmentAsync(Guid? repairOrderId = null);
@@ -33,6 +35,7 @@ namespace Repositories
         // Technician methods
         Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId);
         Task<Technician?> GetTechnicianByUserIdAsync(string userId);
+        Task<Technician?> GetTechnicianByIdAsync(Guid technicianId);
         Task<bool> TechnicianExistsAsync(Guid technicianId);
         
         // Job parts management
@@ -63,6 +66,9 @@ namespace Repositories
         
         // NEW: Create revision job
         Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
+        
+        // Create job with parts in a transaction
+        Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts);
 
     }
 }

@@ -65,8 +65,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         var inspection = await _repo.GetInspectionByIdAndTechnicianIdAsync(id, technician.TechnicianId);
         if (inspection == null) throw new InvalidOperationException("Inspection không tồn tại hoặc bạn không có quyền.");
 
-        if (inspection.Status != InspectionStatus.Pending)
-            throw new InvalidOperationException("Chỉ có thể bắt đầu khi Inspection ở trạng thái 'Pending'.");
+        if (inspection.Status != InspectionStatus.New)
+            throw new InvalidOperationException("Chỉ có thể bắt đầu khi Inspection ở trạng thái 'New'");
 
         inspection.Status = InspectionStatus.InProgress;
         inspection.UpdatedAt = DateTime.UtcNow;
@@ -120,7 +120,6 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 service = existingServiceInspections[serviceUpdate.ServiceId].Service;
             }
 
-            // Update hoặc tạo ServiceInspection
             ServiceInspection serviceInspection;
             if (existingServiceInspections.ContainsKey(serviceUpdate.ServiceId))
             {
@@ -189,9 +188,9 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 foreach (var kvp in serviceUpdate.SuggestedPartsByCategory)
                 {
                     var categoryId = kvp.Key;
-                    var partIds = kvp.Value;
+                    var partRequests = kvp.Value;
 
-                    if (partIds == null || !partIds.Any())
+                    if (partRequests == null || !partRequests.Any())
                         continue;
 
                     var category = service.ServicePartCategories
@@ -204,10 +203,13 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                         .Select(p => p.PartId)
                         .ToHashSet();
 
-                    foreach (var partId in partIds)
+                    foreach (var partRequest in partRequests)
                     {
-                        if (!validPartIdsInCategory.Contains(partId))
-                            throw new InvalidOperationException($"Part {partId} không thuộc PartCategory {category.PartCategory.CategoryName}.");
+                        if (!validPartIdsInCategory.Contains(partRequest.PartId))
+                            throw new InvalidOperationException($"Part {partRequest.PartId} không thuộc PartCategory {category.PartCategory.CategoryName}.");
+
+                        if (partRequest.Quantity <= 0)
+                            throw new InvalidOperationException($"Số lượng của Part {partRequest.PartId} phải lớn hơn 0.");
                     }
                 }
 
@@ -221,19 +223,20 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 foreach (var kvp in serviceUpdate.SuggestedPartsByCategory)
                 {
                     var categoryId = kvp.Key;
-                    var partIds = kvp.Value;
+                    var partRequests = kvp.Value;
 
-                    if (partIds == null || !partIds.Any())
+                    if (partRequests == null || !partRequests.Any())
                         continue;
 
-                    foreach (var partId in partIds)
+                    foreach (var partRequest in partRequests)
                     {
                         _repo.AddPartInspection(new PartInspection
                         {
                             PartInspectionId = Guid.NewGuid(),
                             InspectionId = id,
-                            PartId = partId,
+                            PartId = partRequest.PartId,
                             PartCategoryId = categoryId,
+                            Quantity = partRequest.Quantity,
                             CreatedAt = DateTime.UtcNow
                         });
                     }
@@ -318,10 +321,6 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             inspection.Status != InspectionStatus.InProgress &&
             inspection.Status != InspectionStatus.New)
             throw new InvalidOperationException("Chỉ có thể xóa PartCategory khi Inspection đang New, Pending hoặc InProgress.");
-
-        //var hasRepairOrderServices = await _repo.HasRepairOrderServicesAsync(inspection.RepairOrderId);
-        //if (hasRepairOrderServices)
-        //    throw new InvalidOperationException("Không thể xóa PartCategory vì RepairOrder này đã có service được chỉ định trong RepairOrderService.");
 
         var serviceInspection = inspection.ServiceInspections
             .FirstOrDefault(si => si.ServiceInspectionId == serviceInspectionId);

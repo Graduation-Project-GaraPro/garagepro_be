@@ -103,7 +103,7 @@ namespace Services.PaymentServices
                     throw new Exception($"Repair order with ID {input.RepairOrderId} is not Complete");
                 }
 
-                if (repairOrder.PaidAmount != input.Amount)
+                if (repairOrder.Cost != input.Amount)
                     throw new Exception("Amount does not match order total");
 
 
