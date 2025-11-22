@@ -2223,8 +2223,27 @@ namespace Garage_pro_api.DbInit
                 var currentQuotationServices = new List<QuotationService>();
                 var currentQuotationServiceParts = new List<QuotationServicePart>();
 
+                //  --- CREATE REPAIR REQUEST FIRST (to satisfy FK) ---
+                var repairRequest = new RepairRequest
+                {
+                    RepairRequestID = Guid.NewGuid(),
+                    BranchId = Guid.Parse("8B1CEB17-019E-41FD-A4F0-7E91941007C8"),
+                    UserID = customer.Id,
+                    VehicleID = vehicle.VehicleId,
+                    Description = $"Auto-generated repair request for {customer.FirstName}",
+                    CreatedAt = receiveDate,
+                    UpdatedAt = receiveDate.AddHours(rand.Next(0, 48)),
+                    Status = RepairRequestStatus.Accept  // hoặc cột status bạn đang dùng
+                };
+
+                // add to batch list
+                _context.RepairRequests.Add(repairRequest);
+                // không SaveChanges đây, để batch flush cùng RepairOrder
+
+
                 var ro = new RepairOrder
                 {
+
                     RepairOrderId = Guid.NewGuid(),
                     ReceiveDate = receiveDate,
                     RoType = roType,
@@ -2240,7 +2259,7 @@ namespace Garage_pro_api.DbInit
                     StatusId = status.OrderStatusId,
                     VehicleId = vehicle.VehicleId,
                     UserId = customer.Id,
-                    RepairRequestId = Guid.NewGuid(),
+                    RepairRequestId = repairRequest.RepairRequestID,
                     CreatedAt = receiveDate,
                     UpdatedAt = receiveDate.AddDays(rand.Next(0, 5))
                 };

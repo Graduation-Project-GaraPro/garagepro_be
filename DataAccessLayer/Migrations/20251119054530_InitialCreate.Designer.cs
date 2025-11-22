@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251112134702_InitialCreate.Designer.cs
-    [Migration("20251112134702_InitialCreate")]
+    [Migration("20251119054530_InitialCreate")]
     partial class InitialCreate
-========
-    [Migration("20251113042429_newDB")]
-    partial class newDB
->>>>>>>> main:DataAccessLayer/Migrations/20251113042429_newDB.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1708,15 +1703,10 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("BranchId");
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251112134702_InitialCreate.Designer.cs
-========
-                    b.HasIndex("FeedBackId1");
-
                     b.HasIndex("RepairRequestId")
                         .IsUnique()
                         .HasFilter("[RepairRequestId] IS NOT NULL");
 
->>>>>>>> main:DataAccessLayer/Migrations/20251113042429_newDB.Designer.cs
                     b.HasIndex("StatusId");
 
                     b.HasIndex("UserId");
@@ -2852,15 +2842,9 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251112134702_InitialCreate.Designer.cs
                         .WithOne("FeedBack")
                         .HasForeignKey("BusinessObject.Manager.FeedBack", "RepairOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
-========
-                        .WithMany()
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
->>>>>>>> main:DataAccessLayer/Migrations/20251113042429_newDB.Designer.cs
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
@@ -3079,18 +3063,11 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251112134702_InitialCreate.Designer.cs
-========
-                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
-                        .WithMany()
-                        .HasForeignKey("FeedBackId1");
-
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
                         .WithOne("RepairOrder")
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
                         .OnDelete(DeleteBehavior.Restrict);
 
->>>>>>>> main:DataAccessLayer/Migrations/20251113042429_newDB.Designer.cs
                     b.HasOne("BusinessObject.OrderStatus", "OrderStatus")
                         .WithMany("RepairOrders")
                         .HasForeignKey("StatusId")

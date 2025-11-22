@@ -1092,29 +1092,22 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int>("Rating")
+                    b.Property<int?>("Rating")
                         .HasColumnType("int");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -1122,13 +1115,12 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("FeedBackId");
 
-                    b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("RepairOrderId");
+                    b.HasIndex("RepairOrderId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("FeedBacks", (string)null);
+                    b.ToTable("FeedBacks");
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
@@ -1666,9 +1658,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid?>("FeedBackId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("FeedBackId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
@@ -1710,8 +1699,6 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
-
-                    b.HasIndex("FeedBackId1");
 
                     b.HasIndex("RepairRequestId")
                         .IsUnique()
@@ -2851,18 +2838,14 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
-                        .WithMany("FeedBacks")
-                        .HasForeignKey("ApplicationUserId");
-
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-                        .WithMany()
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .WithOne("FeedBack")
+                        .HasForeignKey("BusinessObject.Manager.FeedBack", "RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
-                        .WithMany()
+                        .WithMany("FeedBacks")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3077,10 +3060,6 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
-                        .WithMany()
-                        .HasForeignKey("FeedBackId1");
-
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
                         .WithOne("RepairOrder")
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
@@ -3105,8 +3084,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
-
-                    b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
 
@@ -3577,6 +3554,8 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
                 {
+                    b.Navigation("FeedBack");
+
                     b.Navigation("Inspections");
 
                     b.Navigation("Jobs");
