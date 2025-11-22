@@ -24,56 +24,77 @@ namespace Repositories.RepairProgressRepositories
         {
             _context = context;
         }
-        public async Task<PagedResult<RepairOrderListItemDto>> GetRepairOrdersByUserIdAsync(string userId, RepairOrderFilterDto filter)
+        public async Task<PagedResult<RepairOrderListItemDto>> GetRepairOrdersByUserIdAsync(
+    string userId,
+    RepairOrderFilterDto filter)
         {
-            var query = _context.RepairOrders
-                .Include(rp => rp.OrderStatus).ThenInclude(os => os.Labels)
-                .Include(rp => rp.Vehicle).ThenInclude(v => v.Brand)
-                .Include(rp => rp.Vehicle).ThenInclude(v => v.Model)
-                .Include(rp => rp.Jobs).ThenInclude(j => j.JobParts).ThenInclude(jp => jp.Part)
-                .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
-                .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
-                .Include(rp => rp.User)
-                .Include(rp => rp.FeedBack)
-                .Where(ro => ro.UserId == userId && !ro.IsArchived)
-                .AsQueryable();
+            // 1. Base query WITHOUT includes
+            var baseQuery = _context.RepairOrders
+                .Where(ro => ro.UserId == userId && !ro.IsArchived);
 
             // Apply filters
             if (filter.StatusId.HasValue)
             {
-                query = query.Where(ro => ro.StatusId == filter.StatusId.Value);
+                baseQuery = baseQuery.Where(ro => ro.StatusId == filter.StatusId.Value);
             }
 
             if (filter.RoType.HasValue)
             {
-                query = query.Where(ro => ro.RoType == filter.RoType.Value);
+                baseQuery = baseQuery.Where(ro => ro.RoType == filter.RoType.Value);
             }
 
             if (!string.IsNullOrEmpty(filter.PaidStatus))
             {
-                query = query.Where(ro => ro.PaidStatus.ToString() == filter.PaidStatus);
+                // Assume PaidStatus is an enum
+                if (Enum.TryParse<PaidStatus>(filter.PaidStatus, out var paidStatus))
+                {
+                    baseQuery = baseQuery.Where(ro => ro.PaidStatus == paidStatus);
+                }
+                // else ignore invalid value or handle as you want
             }
 
             if (filter.FromDate.HasValue)
             {
-                query = query.Where(ro => ro.ReceiveDate >= filter.FromDate.Value.Date);
+                var from = filter.FromDate.Value.Date;
+                baseQuery = baseQuery.Where(ro => ro.ReceiveDate >= from);
             }
 
             if (filter.ToDate.HasValue)
             {
-                query = query.Where(ro => ro.ReceiveDate <= filter.ToDate.Value.Date.AddDays(1).AddTicks(-1));
+                var to = filter.ToDate.Value.Date.AddDays(1).AddTicks(-1);
+                baseQuery = baseQuery.Where(ro => ro.ReceiveDate <= to);
             }
 
+            // 2. Get total count using the LIGHT query
+            var totalCount = await baseQuery.CountAsync();
 
-            // Get total count before pagination
-            var totalCount = await query.CountAsync();
-
-            // Apply pagination
-#pragma warning disable CS8601 // Possible null reference assignment.
-            var items = await query
+            // 3. Get the page of IDs first (still light)
+            var pageQuery = baseQuery
                 .OrderByDescending(ro => ro.CreatedAt)
                 .Skip((filter.PageNumber - 1) * filter.PageSize)
-                .Take(filter.PageSize)
+                .Take(filter.PageSize);
+
+            var repairOrderIds = await pageQuery
+                .Select(ro => ro.RepairOrderId)
+                .ToListAsync();
+
+            // 4. Heavy query only on the paged results
+            var itemsQuery = _context.RepairOrders
+                .AsNoTracking()
+                .Where(ro => repairOrderIds.Contains(ro.RepairOrderId))
+                .Include(rp => rp.OrderStatus).ThenInclude(os => os.Labels)
+                .Include(rp => rp.Vehicle).ThenInclude(v => v.Brand)
+                .Include(rp => rp.Vehicle).ThenInclude(v => v.Model)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobParts).ThenInclude(jp => jp.Part)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians)
+                    .ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
+                .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
+                .Include(rp => rp.User)
+                .Include(rp => rp.FeedBack)
+                .AsSplitQuery(); // EF Core 5+ – VERY helpful for this graph
+
+            var items = await itemsQuery
+                .OrderByDescending(ro => ro.CreatedAt) // keep ordering
                 .Select(ro => new RepairOrderListItemDto
                 {
                     RepairOrderId = ro.RepairOrderId,
@@ -115,6 +136,7 @@ namespace Repositories.RepairProgressRepositories
                 PageSize = filter.PageSize
             };
         }
+
 
         public async Task<PagedResult<RepairOrderArchivedListItemDto>> GetArchivedRepairOrdersByUserIdAsync(
             string userId,
