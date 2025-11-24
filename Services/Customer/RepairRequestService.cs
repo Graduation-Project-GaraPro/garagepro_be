@@ -276,23 +276,7 @@ namespace Services.Customer
 
                 totalServiceFee += service.Price;
 
-                if (serviceDto.Parts != null)
-                {
-                    foreach (var partDto in serviceDto.Parts)
-                    {
-                        var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                                   ?? throw new Exception($"Part {partDto.PartId} not found");
-
-                        var requestPart = new RequestPart
-                        {
-                            PartId = part.PartId,
-                            UnitPrice = part.Price,
-                        };
-
-                        totalPartsFee += requestPart.UnitPrice;
-                        requestService.RequestParts.Add(requestPart);
-                    }
-                }
+              
 
                 repairRequest.RequestServices.Add(requestService);
             }
@@ -405,59 +389,14 @@ namespace Services.Customer
 
                         totalServiceFee += service.Price;
 
-                        // Thêm parts nếu có
-                        if (serviceDto.Parts != null)
-                        {
-                            foreach (var partDto in serviceDto.Parts)
-                            {
-                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                                           ?? throw new Exception($"Part {partDto.PartId} not found");
-
-                                requestService.RequestParts.Add(new RequestPart
-                                {
-                                    RequestPartId = Guid.NewGuid(),
-                                    PartId = part.PartId,
-                                    UnitPrice = part.Price,
-                                    RequestServiceId = requestService.RequestServiceId
-                                });
-
-                                totalPartsFee += part.Price;
-                            }
-                        }
+                       
 
                         repairRequest.RequestServices.Add(requestService);
                     }
                     else
                     {
-                        // Update parts cho service đã tồn tại
-                        var dtoParts = serviceDto.Parts ?? new List<RequestPartDto>();
-                        var existingPartIds = existingService.RequestParts.Select(p => p.PartId).ToHashSet();
-
-                        // Xóa parts không còn trong DTO
-                        var partsToRemove = existingService.RequestParts
-                            .Where(p => !dtoParts.Any(dp => dp.PartId == p.PartId))
-                            .ToList();
-
-                        foreach (var part in partsToRemove)
-                            existingService.RequestParts.Remove(part);
-
-                        // Thêm parts mới
-                        foreach (var partDto in dtoParts)
-                        {
-                            if (!existingPartIds.Contains(partDto.PartId))
-                            {
-                                var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                                           ?? throw new Exception($"Part {partDto.PartId} not found");
-
-                                existingService.RequestParts.Add(new RequestPart
-                                {
-                                    RequestPartId = Guid.NewGuid(),
-                                    PartId = part.PartId,
-                                    UnitPrice = part.Price,
-                                    RequestServiceId = existingService.RequestServiceId
-                                });
-                            }
-                        }
+                        
+                        
 
                         totalServiceFee += existingService.ServiceFee;
                         totalPartsFee += existingService.RequestParts.Sum(p => p.UnitPrice);
@@ -478,67 +417,71 @@ namespace Services.Customer
 
         public async Task<RepairRequestDto> CreateRepairWithImageRequestAsync(CreateRepairRequestWithImageDto dto, string userId)
         {
-            // 🔹 Kiểm tra quyền sở hữu xe
+            // Validate vehicle ownership
             var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
             if (vehicle == null || vehicle.UserId != userId)
-                throw new Exception("This vehicle does not belong to the current user");
-
+                throw new Exception("This vehicle does not belong to the current user.");
 
             var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
-                ?? throw new Exception("Branch not found");
-            if (!branch.IsActive) throw new Exception("Branch inactive");
+                ?? throw new Exception("Branch not found.");
+            if (!branch.IsActive)
+                throw new Exception("This branch is currently inactive.");
 
             var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
             var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
 
             await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
 
-            // (A) Cooldown theo user
+            // User cooldown throttling
             var now = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
             var cooldownCutoff = now - RepairRequestAppConfig.CreateCooldown;
 
-            var recentCount = await _unitOfWork.RepairRequests.CountAsync(x =>
-                x.UserID == userId && x.CreatedAt >= cooldownCutoff.UtcDateTime); // CreatedAt lưu UTC → so theo UTC
-
-            if (recentCount > 0)
-                throw new Exception($"Bạn vừa tạo yêu cầu trước đó. Vui lòng thử lại sau {(int)RepairRequestAppConfig.CreateCooldown.TotalMinutes} phút.");
-
-            // (B) Giới hạn số request đang hoạt động của user
+            // Limit active requests for the user
             var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
                 x.UserID == userId && ActiveStatuses.Contains(x.Status));
 
-            //if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
-            //    throw new Exception("Bạn đã đạt giới hạn số yêu cầu đang hoạt động. Hãy hoàn tất/hủy bớt yêu cầu trước.");
+            if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
+                throw new Exception("You have reached the maximum number of active repair requests. Please complete or cancel existing requests before creating a new one.");
 
-            // (C) Giới hạn theo vehicle trong 1 ngày (VN)
+            // Prevent multiple active repairs for the same vehicle
+            var hasActiveVehicleRequest = await _unitOfWork.RepairRequests.AnyAsync(x =>
+                x.VehicleID == dto.VehicleID &&
+                ActiveStatuses.Contains(x.Status));
+
+            if (hasActiveVehicleRequest)
+                throw new Exception("This vehicle already has an active repair request. Please complete the previous request before creating a new one.");
+
+            // Check if the vehicle is currently under repair (existing RepairOrder)
+            var hasActiveRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(x =>
+                x.VehicleId == dto.VehicleID &&
+                !x.IsArchived);
+
+            if (hasActiveRepairOrder)
+                throw new Exception("This vehicle is currently being repaired in the garage. Please wait until the repair is completed before booking another request.");
+
+            // Limit number of requests per vehicle per day
             var dayStart = new DateTimeOffset(winStart.Year, winStart.Month, winStart.Day, 0, 0, 0, VietnamTime.VN_OFFSET);
             var dayEnd = dayStart.AddDays(1);
 
             var vehicleDaily = await _unitOfWork.RepairRequests.CountAsync(x =>
-                x.VehicleID == dto.VehicleID
-                && x.ArrivalWindowStart >= dayStart
-                && x.ArrivalWindowStart < dayEnd);
+                x.VehicleID == dto.VehicleID &&
+                x.ArrivalWindowStart >= dayStart &&
+                x.ArrivalWindowStart < dayEnd);
 
             if (vehicleDaily >= RepairRequestAppConfig.MaxRequestsPerVehiclePerDay)
-                throw new Exception("Xe này đã đạt giới hạn số yêu cầu trong ngày. Vui lòng chọn ngày khác.");
+                throw new Exception("This vehicle has reached the maximum number of requests allowed for today. Please choose another date.");
 
-            // (D) Chặn trùng slot: User + Vehicle + Branch + Slot + Status in (Pending,Accept)
+            // Prevent duplicate requests for the same time window
             var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
-                x.UserID == userId
-                && x.VehicleID == dto.VehicleID
-                && x.BranchId == dto.BranchId
-                && ActiveStatuses.Contains(x.Status)
-                && x.ArrivalWindowStart == winStart);
+                x.UserID == userId &&
+                x.VehicleID == dto.VehicleID &&
+                x.BranchId == dto.BranchId &&
+                ActiveStatuses.Contains(x.Status) &&
+                x.ArrivalWindowStart == winStart);
 
             if (dup)
-                throw new Exception("Bạn đã có một yêu cầu cho khung giờ này. Vui lòng chọn khung khác.");
+                throw new Exception("You already have a repair request for this time slot. Please choose a different time window.");
 
-
-
-
-
-
-            // 🔹 Khởi tạo đối tượng RepairRequest
             var repairRequest = new RepairRequest
             {
                 VehicleID = dto.VehicleID,
@@ -556,11 +499,11 @@ namespace Services.Customer
             decimal totalServiceFee = 0;
             decimal totalPartsFee = 0;
 
-            // 🔹 Duyệt danh sách service khách chọn
+            // Process requested services
             foreach (var serviceDto in dto.Services)
             {
                 var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
-                              ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
+                              ?? throw new Exception($"Service with ID {serviceDto.ServiceId} not found.");
 
                 var requestService = new RequestService
                 {
@@ -570,33 +513,13 @@ namespace Services.Customer
                 };
 
                 totalServiceFee += service.Price;
-
-                // 🔹 Nếu có parts kèm theo service
-                if (serviceDto.Parts != null)
-                {
-                    foreach (var partDto in serviceDto.Parts)
-                    {
-                        var part = await _unitOfWork.Parts.GetByIdAsync(partDto.PartId)
-                                   ?? throw new Exception($"Part {partDto.PartId} not found");
-
-                        var requestPart = new RequestPart
-                        {
-                            PartId = part.PartId,
-                            UnitPrice = part.Price,
-                        };
-
-                        totalPartsFee += part.Price;
-                        requestService.RequestParts.Add(requestPart);
-                    }
-                }
-
                 repairRequest.RequestServices.Add(requestService);
             }
 
-            // 🔹 Tổng chi phí ước tính
+            
             repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
 
-            // 🔹 Upload ảnh (nếu có)
+            // Upload images
             if (dto.Images != null && dto.Images.Any())
             {
                 var uploadedUrls = await _cloudinaryService.UploadImagesAsync(dto.Images);
@@ -611,13 +534,15 @@ namespace Services.Customer
                 }
             }
 
-            // 🔹 Lưu vào database
+           
             await _unitOfWork.RepairRequests.AddAsync(repairRequest);
             await _unitOfWork.SaveChangesAsync();
 
-            // 🔹 Map sang DTO trả về
+            
             return _mapper.Map<RepairRequestDto>(repairRequest);
         }
+
+
 
         public async Task CheckInAsync(Guid repairRequestId)
         {

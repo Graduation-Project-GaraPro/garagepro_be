@@ -169,10 +169,12 @@ namespace DataAccessLayer
                       .OnDelete(DeleteBehavior.Cascade);
 
                 // Thêm khóa ngoại đến PromotionalCampaign
-                entity.HasOne(qs => qs.AppliedPromotion)
-                      .WithMany()
-                      .HasForeignKey(qs => qs.AppliedPromotionId)
-                      .OnDelete(DeleteBehavior.Restrict);
+               
+                    entity.HasOne(qs => qs.AppliedPromotion)
+                        .WithMany(pc => pc.QuotationServices)
+                        .HasForeignKey(qs => qs.AppliedPromotionId)
+                        .OnDelete(DeleteBehavior.Restrict);
+                
             });
 
             // Add the new QuotationServicePart configuration

@@ -321,8 +321,8 @@ namespace Garage_pro_api.Mapper
             //   .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
             // Map reuqest Servcie
             CreateMap<RequestService, RequestServiceDto>()
-     .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
-     .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
+     .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId));
+     
 
             CreateMap<RequestPart, RequestPartDto>()
                 .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId));

@@ -15,7 +15,7 @@ namespace Services.CampaignServices
 
         Task<IEnumerable<PromotionalCampaignDto>> GetAllAsync();
         Task<CustomerPromotionResponse> GetCustomerPromotionsForServiceAsync(Guid serviceId, decimal currentOrderValue = 0);
-
+        Task<CampaignAnalyticsDto?> GetCampaignAnalyticsAsync(Guid campaignId);
 
 
 

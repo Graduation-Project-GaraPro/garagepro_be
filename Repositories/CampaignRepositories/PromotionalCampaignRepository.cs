@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 using BusinessObject.Campaigns;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
@@ -25,6 +26,16 @@ namespace Repositories.CampaignRepositories
                 .Include(pc => pc.VoucherUsages).ThenInclude(v=>v.Customer)
                 .Include(pc => pc.VoucherUsages).ThenInclude(v=>v.RepairOrder)
                 .AsQueryable();
+        }
+
+        public async Task<List<QuotationService>> GetQuotationServicesByCampaignAsync(Guid campaignId)
+        {
+            return await _context.QuotationServices
+                .Include(qs => qs.Quotation)
+                    .ThenInclude(q => q.User)
+                .Include(qs => qs.Service) // assuming you have Service navigation
+                .Where(qs => qs.AppliedPromotionId == campaignId)
+                .ToListAsync();
         }
 
         public async Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(

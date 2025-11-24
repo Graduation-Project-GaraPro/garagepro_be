@@ -17,6 +17,7 @@ using Services.CampaignServices;
 using Services.Hubs;
 using BusinessObject.Campaigns;
 using Repositories.UnitOfWork;
+using Dtos.PromotionalAplieds;
 
 namespace Services.QuotationServices
 {
@@ -27,7 +28,7 @@ namespace Services.QuotationServices
         private readonly IPromotionalCampaignRepository _promotionalCampaignRepo;
         private readonly IHubContext<QuotationHub> _quotationHubContext;
         private readonly IUnitOfWork _iUnitOfWork;
-
+        private readonly IHubContext<PromotionalHub> _promotionalHub;
         private readonly IMapper _mapper;
 
         public CustomerResponseQuotationService(
@@ -35,6 +36,7 @@ namespace Services.QuotationServices
             IServiceRepository serviceRepository,
             IPromotionalCampaignRepository promotionalCampaignRepo,
             IHubContext<QuotationHub> quotationHubContext,
+            IHubContext<PromotionalHub> promotionalHub,
             IUnitOfWork iUnitOfWork,
             IMapper mapper)
         {
@@ -42,13 +44,14 @@ namespace Services.QuotationServices
             _serviceRepository = serviceRepository;
             _promotionalCampaignRepo = promotionalCampaignRepo;
             _quotationHubContext = quotationHubContext;
+            _promotionalHub = promotionalHub;
             _iUnitOfWork = iUnitOfWork;
             _mapper = mapper;
         }
 
         public async Task<QuotationDto> ProcessCustomerResponseAsync(
-    CustomerQuotationResponseDto responseDto,
-    string userId)
+            CustomerQuotationResponseDto responseDto,
+            string userId)
         {
             // Bắt đầu transaction
             await _iUnitOfWork.BeginTransactionAsync();
@@ -86,23 +89,23 @@ namespace Services.QuotationServices
                     quotation.CustomerNote = responseDto.CustomerNote;
                 }
 
-                // 2. Update quotation (chỉ mark modified)
+                
                await _quotationRepository.UpdateAsync(quotation); 
 
-                // 3. Save tất cả thay đổi (quotation + promotion)
+                
                 await _iUnitOfWork.SaveChangesAsync();
 
-                // 4. Commit transaction
+                
                 await _iUnitOfWork.CommitAsync();
 
-                // 5. Gửi notification sau khi commit thành công
+                
                 await SendQuotationUpdateNotificationAsync(quotation);
 
+                await NotifyPromotionsAppliedAsync(quotation);
                 return _mapper.Map<QuotationDto>(quotation);
             }
             catch
-            {
-                // Nếu lỗi -> rollback mọi thay đổi
+            {                
                 await _iUnitOfWork.RollbackAsync();
                 throw;
             }
@@ -295,6 +298,57 @@ namespace Services.QuotationServices
                     }
 
                 }
+            }
+        }
+
+        private async Task NotifyPromotionsAppliedAsync(Quotation quotation)
+        {
+            // Only on approved quotations
+            if (quotation.Status != QuotationStatus.Approved)
+                return;
+
+            // Ensure QuotationServices and AppliedPromotion are loaded in GetByIdAsync
+            if (quotation.QuotationServices == null || !quotation.QuotationServices.Any())
+                return;
+
+            var servicesWithPromo = quotation.QuotationServices
+                .Where(qs => qs.AppliedPromotionId.HasValue)
+                .Select(qs => new PromotionAppliedServiceDto
+                {
+                    QuotationServiceId = qs.QuotationServiceId,
+                    AppliedPromotionId = qs.AppliedPromotionId,
+                    PromotionName = qs.AppliedPromotion?.Name
+                })
+                .ToList();
+
+            if (!servicesWithPromo.Any())
+                return;
+
+            var payload = new PromotionAppliedNotificationDto
+            {
+                QuotationId = quotation.QuotationId,
+                UserId = quotation.UserId,
+                Services = servicesWithPromo
+            };
+
+            // 1) Send to global promotions dashboard group
+            await _promotionalHub.Clients
+                .Group("promotions-dashboard")
+                .SendAsync("PromotionAppliedToQuotation", payload);
+
+            // 2) Also send to each promotion-specific group
+            var promotionIds = servicesWithPromo
+                .Where(s => s.AppliedPromotionId.HasValue)
+                .Select(s => s.AppliedPromotionId!.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (var promotionId in promotionIds)
+            {
+                var groupName = $"promotion-{promotionId}";
+                await _promotionalHub.Clients
+                    .Group(groupName)
+                    .SendAsync("PromotionAppliedToQuotation", payload);
             }
         }
 

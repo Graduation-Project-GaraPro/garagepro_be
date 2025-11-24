@@ -695,7 +695,8 @@ app.MapHub<InspectionHub>("/hubs/inspection");
 app.MapHub<JobHub>("/hubs/job");            
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
-                                 
+app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
+
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();
@@ -709,7 +710,6 @@ app.MapControllers();
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
-
 
 //Initialize database
 using (var scope = app.Services.CreateScope())

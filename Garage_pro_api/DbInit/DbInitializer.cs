@@ -207,17 +207,18 @@ namespace Garage_pro_api.DbInit
         private async Task SeedPermissionCategoriesAsync()
         {
             var categories = new List<PermissionCategory>
-    {
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" }
-    };
+            {
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Basic Permission" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" }
+            };
 
             foreach (var cat in categories)
             {
@@ -233,7 +234,7 @@ namespace Garage_pro_api.DbInit
         {
             var categories = await _context.PermissionCategories.ToListAsync();
             var userCatId = categories.First(c => c.Name == "User Management").Id;
-            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
+            var basicCatId = categories.First(c => c.Name == "Basic Permission").Id;
             var roleCatId = categories.First(c => c.Name == "Role Management").Id;
             var branchCatId = categories.First(c => c.Name == "Branch Management").Id;
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
@@ -241,6 +242,7 @@ namespace Garage_pro_api.DbInit
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
+            var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
 
             var defaultPermissions = new List<Permission>
                 {
@@ -255,10 +257,11 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Delete Role", Description = "Can delete roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "View Roles", Description = "Can view roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASSIGN", Name = "Assign Permissions", Description = "Can assign permissions to roles", CategoryId = roleCatId },
+                     // ✅ Statistic Monitoring
+                     new Permission { Id = Guid.NewGuid(), Code = "VIEW_STAT", Name = "View Statistic", Description = "Can view stats in the system", CategoryId = statCatId },
 
-                    // ✅ Booking Management
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view booking records", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage booking details", CategoryId = bookingCatId },
+                    // ✅ Basic permission
+                    new Permission { Id = Guid.NewGuid(), Code = "BASIC_ACCESS", Name = "Basic Access", Description = "Can do action as a customer role", CategoryId = basicCatId },
 
                     // ✅ Branch Management
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_VIEW", Name = "View Branches", Description = "Can view branch list", CategoryId = branchCatId },
@@ -288,11 +291,11 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
                     
                     // ✅ Vehicle Management
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = basicCatId },
 
                      // ✅ Log View
 
@@ -328,8 +331,10 @@ namespace Garage_pro_api.DbInit
                                     "USER_VIEW", "USER_EDIT", "USER_DELETE",
             
                                     // Booking
-                                    "BOOKING_VIEW", "BOOKING_MANAGE",
-            
+                                   
+
+                                    //Stat
+                                    "VIEW_STAT",
                                     // Role
                                     "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
             
@@ -357,7 +362,7 @@ namespace Garage_pro_api.DbInit
                                 }
                             },
                             {
-                                "Customer", new[] { "BOOKING_VIEW" }
+                                "Customer", new[] { "BASIC_ACCESS" }
                             },
                             {
                                 "Technician", new[] { "BOOKING_MANAGE" }
