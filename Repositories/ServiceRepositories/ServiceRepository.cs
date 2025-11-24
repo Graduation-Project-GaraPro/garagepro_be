@@ -22,15 +22,15 @@ namespace Repositories.ServiceRepositories
         public async Task<IEnumerable<Service>> GetAllAsync()
         {
             return await _context.Services
-                .Include(s => s.ServiceCategory).Include(s=>s.BranchServices).ThenInclude(bs=>bs.Branch).Include(s => s.ServiceParts).ThenInclude(sp => sp.Part).AsNoTracking()
+                .Include(s => s.ServiceCategory).Include(s=>s.BranchServices).ThenInclude(bs=>bs.Branch).Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts).AsNoTracking()
                 .ToListAsync();
         }
 
         public async Task<Service> GetByIdAsync(Guid id)
         {
-            return await _context.Services
+            return await _context.Services.AsNoTracking()
                 .Include(s => s.ServiceCategory).Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
-                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                
                 .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
                 .FirstOrDefaultAsync(s => s.ServiceId == id);
         }
@@ -40,7 +40,7 @@ namespace Repositories.ServiceRepositories
             return await _context.Services
                  .Include(s => s.ServiceCategory)
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
-                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                
                 .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
 
 
@@ -50,8 +50,7 @@ namespace Repositories.ServiceRepositories
         {
             return _context.Services
                 .Include(s => s.ServiceCategory)
-                .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
-                .Include(s => s.ServiceParts).ThenInclude(sp => sp.Part)
+                .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)              
                 .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p=>p.Parts)
                 .Include(s => s.RepairOrderServices)
                 .Include(s => s.ServiceInspections)

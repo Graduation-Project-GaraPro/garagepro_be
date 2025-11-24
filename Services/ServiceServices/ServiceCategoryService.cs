@@ -74,21 +74,9 @@ namespace Services.ServiceServices
                     {
                         ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
                         CategoryName = service.ServiceCategory.CategoryName
-                    },
-                    PartCategories = service.ServiceParts
-                        .Where(sp => sp.Part != null)
-                        .GroupBy(sp => sp.Part!.PartCategoryId)
-                        .Select(g => new PartCategoryForBooking
-                        {
-                            PartCategoryId = g.Key,
-                            CategoryName = g.First().Part!.PartCategory.CategoryName,
-                            Parts = g.Select(sp => new PartDto
-                            {
-                                PartId = sp.PartId,
-                                Name = sp.Part!.Name,
-                                Price = sp.Part.Price
-                            }).ToList()
-                        }).ToList()
+                    }
+                   
+                        
                 }).ToList()
             }).ToList();
 
@@ -140,21 +128,7 @@ namespace Services.ServiceServices
                     {
                         ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
                         CategoryName = service.ServiceCategory.CategoryName
-                    },
-                    PartCategories = service.ServiceParts
-                        .Where(sp => sp.Part != null)
-                        .GroupBy(sp => sp.Part!.PartCategoryId)
-                        .Select(g => new PartCategoryForBooking
-                        {
-                            PartCategoryId = g.Key,
-                            CategoryName = g.First().Part!.PartCategory.CategoryName,
-                            Parts = g.Select(sp => new PartDto
-                            {
-                                PartId = sp.PartId,
-                                Name = sp.Part!.Name,
-                                Price = sp.Part.Price
-                            }).ToList()
-                        }).ToList()
+                    }
                 }).ToList()
             }).ToList();
 

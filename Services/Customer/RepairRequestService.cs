@@ -247,6 +247,8 @@ namespace Services.Customer
             var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
             var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
 
+
+
             var repairRequest = new RepairRequest
             {
                 VehicleID = dto.VehicleID,
@@ -429,7 +431,9 @@ namespace Services.Customer
 
             var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
             var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
-
+            var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+            if (winStart <= nowLocal)
+                throw new Exception("The selected time slot is in the past. Please choose a future time slot.");
             await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
 
             // User cooldown throttling
@@ -659,11 +663,29 @@ namespace Services.Customer
             if (oh == null || !oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
                 return Array.Empty<SlotAvailabilityDto>();
 
-            var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(date, oh.OpenTime.Value, oh.CloseTime.Value);
-            var windows = SlotWindowUtil.GenerateWindows(openLocal, closeLocal, windowMin);
+            var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(
+                date, oh.OpenTime.Value, oh.CloseTime.Value);
+
+            // Gen full windows cho ngày đó
+            var windows = SlotWindowUtil.GenerateWindows(openLocal, closeLocal, windowMin)
+                                        .ToList();
             if (windows.Count == 0) return Array.Empty<SlotAvailabilityDto>();
 
-            // Query trực tiếp vì ArrivalWindowStart luôn lưu +07:00
+            // Nếu là ngày hôm nay thì bỏ hết các window đã hoàn toàn nằm trong quá khứ
+            var todayVn = DateOnly.FromDateTime(DateTime.Now);
+            if (date == todayVn)
+            {
+                var nowLocal = DateTime.Now;
+
+                // Chỉ giữ những window ko nằm trong quá khứ
+                windows = windows
+                    .Where(w => w.end > nowLocal)
+                    .ToList();
+
+                if (windows.Count == 0)
+                    return Array.Empty<SlotAvailabilityDto>();
+            }
+
             var accepts = await _unitOfWork.RepairRequests.ListByConditionAsync(x =>
                 x.BranchId == branchId
                 && x.Status == RepairRequestStatus.Accept
@@ -675,6 +697,7 @@ namespace Services.Customer
 
             return AvailabilityUtil.Build(windows, usedMap, branch.MaxBookingsPerWindow);
         }
+
 
 
 
@@ -735,16 +758,17 @@ namespace Services.Customer
         }
         private async Task EnsureWithinOperatingHoursAsync(Guid branchId, DateTimeOffset windowStartLocal, int windowMinutes)
         {
-            if (windowMinutes <= 0) throw new ArgumentOutOfRangeException(nameof(windowMinutes));
+            if (windowMinutes <= 0)
+                throw new ArgumentOutOfRangeException(nameof(windowMinutes));
 
             var dow = DowUtil.ToCustomDow(windowStartLocal.DayOfWeek);
 
             var oh = await _unitOfWork.OperatingHours.SingleOrDefaultAsync(o =>
                 o.BranchId == branchId && o.DayOfWeek == dow)
-                ?? throw new Exception("Chi nhánh chưa cấu hình giờ làm việc.");
+                ?? throw new Exception("The branch has not configured its operating hours.");
 
             if (!oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
-                throw new Exception("Chi nhánh nghỉ vào ngày đã chọn.");
+                throw new Exception("The branch is closed on the selected date.");
 
             var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(
                 DateOnly.FromDateTime(windowStartLocal.Date), oh.OpenTime.Value, oh.CloseTime.Value);
@@ -768,6 +792,40 @@ namespace Services.Customer
             await _unitOfWork.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> CustomerCancelRepairRequestAsync(Guid requestId, string userId)
+        {
+            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId)
+                ?? throw new Exception("Repair request not found.");
+
+            
+            if (repairRequest.UserID != userId)
+                throw new Exception("You are not allowed to cancel this repair request.");
+
+           
+            if (repairRequest.Status == RepairRequestStatus.Completed)
+                throw new Exception("You cannot cancel a completed repair request.");
+
+          
+            if (repairRequest.Status == RepairRequestStatus.Cancelled)
+                throw new Exception("This repair request cannot be cancelled.");
+
+            
+            var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+            var cutoff = repairRequest.ArrivalWindowStart.AddMinutes(-30);
+
+            if (nowLocal > cutoff)
+                throw new Exception("You can only cancel a request at least 30 minutes before the scheduled arrival time.");
+
+            
+            repairRequest.Status = RepairRequestStatus.Cancelled;
+            repairRequest.UpdatedAt = DateTime.UtcNow;
+
+            await _unitOfWork.SaveChangesAsync();
+            return true;
+        }
+
+
 
         public async Task<bool> RejectRepairRequestAsync(Guid requestId)
         {

@@ -218,8 +218,8 @@ namespace Garage_pro_api.Mapper
             CreateMap<Service, Dtos.Services.ServiceDto>()
                 .ForMember(dest => dest.Branches,
                            opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)))
-                .ForMember(dest => dest.Parts,
-                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)))
+                .ForMember(dest => dest.PartCategories,
+                           opt => opt.MapFrom(src => src.ServicePartCategories.Select(bs => bs.PartCategoryId)))
                 .ForMember(dest => dest.PartCategories,
                                opt => opt.MapFrom(src => src.ServicePartCategories.Select(bs => bs.PartCategory)));
 

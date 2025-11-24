@@ -18,6 +18,8 @@ namespace Services.Customer
         Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id);        
         Task<RPDetailDto> GetByIdDetailsAsync(Guid id);
 
+        Task<bool> CustomerCancelRepairRequestAsync(Guid requestId, string userId);
+
         Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date);
 
         Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId);

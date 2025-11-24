@@ -27,7 +27,7 @@ namespace Repositories
                     .ThenInclude(t => t.User)
                 .Include(i => i.ServiceInspections)
                     .ThenInclude(si => si.Service)
-                        .ThenInclude(s => s.ServiceParts)
+                       .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
                 .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
