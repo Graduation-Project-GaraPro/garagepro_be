@@ -159,10 +159,9 @@ namespace Garage_pro_api.Controllers.Customer
             try
             {
                 // Lấy userId từ token
-                var userId = User.FindFirst("uid")?.Value
-                             ?? User.FindFirst("sub")?.Value
-                             ?? throw new Exception("User not found in token.");
-
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
                 var result = await _repairRequestService.CustomerCancelRepairRequestAsync(requestId, userId);
 
                 return Ok(new
