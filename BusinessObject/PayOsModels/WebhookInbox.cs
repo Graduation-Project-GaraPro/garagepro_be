@@ -13,8 +13,7 @@ namespace BusinessObject.PayOsModels
         public long OrderCode { get; set; }           // để join nhanh sang Payment
         public string Payload { get; set; } = null!;
         public string? Signature { get; set; }
-
-        // 🔹 Dùng enum thay vì string
+     
         public WebhookStatus Status { get; set; } = WebhookStatus.Pending;
 
         public int Attempts { get; set; } = 0;
