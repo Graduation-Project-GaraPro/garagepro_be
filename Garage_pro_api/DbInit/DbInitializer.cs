@@ -50,7 +50,7 @@ namespace Garage_pro_api.DbInit
             await SeedPartsAsync();
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
-            await SeedServicePartsAsync();
+            await SeedServicePartCategoriesAsync();
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
@@ -207,17 +207,19 @@ namespace Garage_pro_api.DbInit
         private async Task SeedPermissionCategoriesAsync()
         {
             var categories = new List<PermissionCategory>
-    {
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" }
-    };
+            {
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Basic Permission" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" },
+                new PermissionCategory { Id = Guid.NewGuid(), Name = "Job Repair" }
+            };
 
             foreach (var cat in categories)
             {
@@ -233,7 +235,7 @@ namespace Garage_pro_api.DbInit
         {
             var categories = await _context.PermissionCategories.ToListAsync();
             var userCatId = categories.First(c => c.Name == "User Management").Id;
-            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
+            var basicCatId = categories.First(c => c.Name == "Basic Permission").Id;
             var roleCatId = categories.First(c => c.Name == "Role Management").Id;
             var branchCatId = categories.First(c => c.Name == "Branch Management").Id;
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
@@ -241,6 +243,8 @@ namespace Garage_pro_api.DbInit
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
+            var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
+            var jobCatId = categories.First(c => c.Name == "Job Repair").Id;
 
             var defaultPermissions = new List<Permission>
                 {
@@ -255,10 +259,11 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Delete Role", Description = "Can delete roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "View Roles", Description = "Can view roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASSIGN", Name = "Assign Permissions", Description = "Can assign permissions to roles", CategoryId = roleCatId },
+                     // ✅ Statistic Monitoring
+                     new Permission { Id = Guid.NewGuid(), Code = "VIEW_STAT", Name = "View Statistic", Description = "Can view stats in the system", CategoryId = statCatId },
 
-                    // ✅ Booking Management
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view booking records", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage booking details", CategoryId = bookingCatId },
+                    // ✅ Basic permission
+                    new Permission { Id = Guid.NewGuid(), Code = "BASIC_ACCESS", Name = "Basic Access", Description = "Can do action as a customer role", CategoryId = basicCatId },
 
                     // ✅ Branch Management
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_VIEW", Name = "View Branches", Description = "Can view branch list", CategoryId = branchCatId },
@@ -288,16 +293,18 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
                     
                     // ✅ Vehicle Management
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = basicCatId },
 
                      // ✅ Log View
 
                      new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId },
 
+                     // ✅ JobRepair
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_UPDATE", Name = "Job Update", Description = "Can view Logs page", CategoryId = jobCatId },
                      // ✅ PolicySecurity
 
                      new Permission { Id = Guid.NewGuid(), Code = "POLICY_MANAGEMENT", Name = "Policy Management", Description = "Can view and update, revert Policy,Policy history.", CategoryId = policyCatId }
@@ -328,8 +335,10 @@ namespace Garage_pro_api.DbInit
                                     "USER_VIEW", "USER_EDIT", "USER_DELETE",
             
                                     // Booking
-                                    "BOOKING_VIEW", "BOOKING_MANAGE",
-            
+                                   
+
+                                    //Stat
+                                    "VIEW_STAT",
                                     // Role
                                     "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
             
@@ -357,7 +366,7 @@ namespace Garage_pro_api.DbInit
                                 }
                             },
                             {
-                                "Customer", new[] { "BOOKING_VIEW" }
+                                "Customer", new[] { "BASIC_ACCESS" }
                             },
                             {
                                 "Technician", new[] { "BOOKING_MANAGE" }
@@ -717,11 +726,11 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        private async Task SeedServicePartsAsync()
+        private async Task SeedServicePartCategoriesAsync()
         {
-            if (!_context.ServiceParts.Any())
+            if (!_context.ServicePartCategories.Any())
             {
-                // Lấy các service từ database - sửa tên service cho khớp với dữ liệu đã seed
+                // Lấy service
                 var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
                 var premiumOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Premium Oil Change");
                 var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
@@ -729,52 +738,52 @@ namespace Garage_pro_api.DbInit
                 var shockAbsorberReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Shock Absorber Replacement");
                 var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
 
-                // Lấy các parts từ database - sửa tên part cho khớp với dữ liệu đã seed
-                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
-                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
-                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
-                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
-                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
-                var batteryCheap = await _context.Parts.FirstAsync(p => p.Name == "Battery (Cheap)");
-                var alternatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Alternator (Medium)");
-                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
-                var controlArmMedium = await _context.Parts.FirstAsync(p => p.Name == "Control Arm (Medium)");
-                var radiatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Radiator (Medium)");
-                var coolantHoseCheap = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose (Cheap)");
+                // Lấy Part Category (đã seed trước đó)
+                var frontEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Engine");
+                var rearEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Engine");
+                var frontBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Brakes");
+                var rearBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Brakes");
+                var frontElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Electrical System");
+                var rearElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Electrical System");
+                var frontSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Suspension");
+                var rearSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Suspension");
+                var frontCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Cooling System");
+                var rearCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Cooling System");
 
-                var mappings = new List<ServicePart>
+                var mappings = new List<ServicePartCategory>
         {
-            // 🔧 Basic Oil Change Service
-            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
+            // Basic Oil Change
+            new ServicePartCategory { ServiceId = basicOilChange.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = basicOilChange.ServiceId, PartCategoryId = rearEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔧 Premium Oil Change Service - dùng linh kiện cao cấp hơn
-            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
+            // Premium Oil Change
+            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = rearEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🚗 Brake Pad Replacement
-            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakePadCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakeDiscMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Brake Pad Replacement
+            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = frontBrakes.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = rearBrakes.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔋 Battery Health Check - có thể cần thay thế
-            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = batteryCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = alternatorMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Battery Health Check
+            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = rearElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🛞 Shock Absorber Replacement
-            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = shockAbsorberCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = controlArmMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Shock Absorber Replacement
+            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = frontSuspension.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = rearSuspension.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔍 Full Engine Diagnostic - các linh kiện cần kiểm tra
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = coolantHoseCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = radiatorMedium.PartId, CreatedAt = DateTime.UtcNow }
+            // Full Engine Diagnostic
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontCooling.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = rearCooling.LaborCategoryId, CreatedAt = DateTime.UtcNow }
         };
 
-                _context.ServiceParts.AddRange(mappings);
+                _context.ServicePartCategories.AddRange(mappings);
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedBranchesAsync()
         {

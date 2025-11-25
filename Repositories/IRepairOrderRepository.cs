@@ -18,6 +18,7 @@ namespace Repositories
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
+        Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);
         Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate);

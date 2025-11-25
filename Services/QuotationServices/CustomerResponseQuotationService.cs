@@ -16,6 +16,8 @@ using Microsoft.AspNetCore.SignalR;
 using Services.CampaignServices;
 using Services.Hubs;
 using BusinessObject.Campaigns;
+using Repositories.UnitOfWork;
+using Dtos.PromotionalAplieds;
 
 namespace Services.QuotationServices
 {
@@ -25,6 +27,8 @@ namespace Services.QuotationServices
         private readonly IServiceRepository _serviceRepository;
         private readonly IPromotionalCampaignRepository _promotionalCampaignRepo;
         private readonly IHubContext<QuotationHub> _quotationHubContext;
+        private readonly IUnitOfWork _iUnitOfWork;
+        private readonly IHubContext<PromotionalHub> _promotionalHub;
         private readonly IMapper _mapper;
 
         public CustomerResponseQuotationService(
@@ -32,62 +36,79 @@ namespace Services.QuotationServices
             IServiceRepository serviceRepository,
             IPromotionalCampaignRepository promotionalCampaignRepo,
             IHubContext<QuotationHub> quotationHubContext,
+            IHubContext<PromotionalHub> promotionalHub,
+            IUnitOfWork iUnitOfWork,
             IMapper mapper)
         {
             _quotationRepository = quotationRepository;
             _serviceRepository = serviceRepository;
             _promotionalCampaignRepo = promotionalCampaignRepo;
             _quotationHubContext = quotationHubContext;
+            _promotionalHub = promotionalHub;
+            _iUnitOfWork = iUnitOfWork;
             _mapper = mapper;
         }
 
-        public async Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto, string userId)
+        public async Task<QuotationDto> ProcessCustomerResponseAsync(
+            CustomerQuotationResponseDto responseDto,
+            string userId)
         {
-            // Lấy quotation cùng toàn bộ dữ liệu liên quan
-            var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
-            if (quotation == null)
-                throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
-            if(quotation.UserId != userId)
+            // Bắt đầu transaction
+            await _iUnitOfWork.BeginTransactionAsync();
+
+            try
             {
-                throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not your own");
+                // 1. Lấy quotation
+                var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
+                if (quotation == null)
+                    throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
 
-            }
+                if (quotation.UserId != userId)
+                    throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not your own");
 
-            var status = Enum.Parse<QuotationStatus>(responseDto.Status); 
-            if(status == QuotationStatus.Approved)
-            {
-                await ValidateCustomerResponseAsync(quotation, responseDto);
+                var status = Enum.Parse<QuotationStatus>(responseDto.Status);
 
-                // Cập nhật trạng thái và thời gian phản hồi của khách hàng
-                
+                if (status == QuotationStatus.Approved)
+                {
+                    await ValidateCustomerResponseAsync(quotation, responseDto);
 
-                // Xử lý lựa chọn dịch vụ và phụ tùng
-                await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
+                    // Xử lý service + part + promotion
+                    await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
 
-                // Tính toán lại tổng tiền dựa trên lựa chọn của khách hàng
-                await RecalculateQuotationTotalAsync(quotation);
+                    // Tính lại tổng
+                    await RecalculateQuotationTotalAsync(quotation);
 
-                quotation.Status = status;
-                quotation.CustomerResponseAt = DateTime.UtcNow;
-                quotation.CustomerNote = responseDto.CustomerNote;
-            }
-            else
-            {
-                if(status == QuotationStatus.Rejected)
+                    quotation.Status = status;
+                    quotation.CustomerResponseAt = DateTime.UtcNow;
+                    quotation.CustomerNote = responseDto.CustomerNote;
+                }
+                else if (status == QuotationStatus.Rejected)
                 {
                     quotation.Status = status;
                     quotation.CustomerResponseAt = DateTime.UtcNow;
                     quotation.CustomerNote = responseDto.CustomerNote;
-                }    
+                }
+
+                
+               await _quotationRepository.UpdateAsync(quotation); 
+
+                
+                await _iUnitOfWork.SaveChangesAsync();
+
+                
+                await _iUnitOfWork.CommitAsync();
+
+                
+                await SendQuotationUpdateNotificationAsync(quotation);
+
+                await NotifyPromotionsAppliedAsync(quotation);
+                return _mapper.Map<QuotationDto>(quotation);
             }
-
-            var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
-            await SendQuotationUpdateNotificationAsync(updatedQuotation);
-
-            // Validate customer response
-
-
-            return _mapper.Map<QuotationDto>(updatedQuotation);
+            catch
+            {                
+                await _iUnitOfWork.RollbackAsync();
+                throw;
+            }
         }
 
         private async Task ValidateCustomerResponseAsync(Quotation quotation, CustomerQuotationResponseDto responseDto)
@@ -157,14 +178,25 @@ namespace Services.QuotationServices
                         var promotional = await _promotionalCampaignRepo.GetByIdAsync(serviceDto.AppliedPromotionId.Value);
                         if (promotional != null)
                         {
+                            if (promotional.UsageLimit <= 0)
+                                throw new Exception("Promotion has reached usage limit.");
 
+                            // Tính discount
                             var discountValue = _promotionalCampaignRepo.CalculateActualDiscountValue(
-                           promotional,
-                           quotationService.Price);
+                                promotional,
+                                quotationService.Price);
+
+                            // Giảm limit
+                            promotional.UsageLimit--;
+                            promotional.UsedCount++;
+
+                            // Lưu lại vào DB
+                             _promotionalCampaignRepo.Update(promotional);
+                            
 
                             quotationService.DiscountValue = discountValue;
                         }
-                       
+
                     }
                     else
                     {
@@ -266,6 +298,57 @@ namespace Services.QuotationServices
                     }
 
                 }
+            }
+        }
+
+        private async Task NotifyPromotionsAppliedAsync(Quotation quotation)
+        {
+            // Only on approved quotations
+            if (quotation.Status != QuotationStatus.Approved)
+                return;
+
+            // Ensure QuotationServices and AppliedPromotion are loaded in GetByIdAsync
+            if (quotation.QuotationServices == null || !quotation.QuotationServices.Any())
+                return;
+
+            var servicesWithPromo = quotation.QuotationServices
+                .Where(qs => qs.AppliedPromotionId.HasValue)
+                .Select(qs => new PromotionAppliedServiceDto
+                {
+                    QuotationServiceId = qs.QuotationServiceId,
+                    AppliedPromotionId = qs.AppliedPromotionId,
+                    PromotionName = qs.AppliedPromotion?.Name
+                })
+                .ToList();
+
+            if (!servicesWithPromo.Any())
+                return;
+
+            var payload = new PromotionAppliedNotificationDto
+            {
+                QuotationId = quotation.QuotationId,
+                UserId = quotation.UserId,
+                Services = servicesWithPromo
+            };
+
+            // 1) Send to global promotions dashboard group
+            await _promotionalHub.Clients
+                .Group("promotions-dashboard")
+                .SendAsync("PromotionAppliedToQuotation", payload);
+
+            // 2) Also send to each promotion-specific group
+            var promotionIds = servicesWithPromo
+                .Where(s => s.AppliedPromotionId.HasValue)
+                .Select(s => s.AppliedPromotionId!.Value)
+                .Distinct()
+                .ToList();
+
+            foreach (var promotionId in promotionIds)
+            {
+                var groupName = $"promotion-{promotionId}";
+                await _promotionalHub.Clients
+                    .Group(groupName)
+                    .SendAsync("PromotionAppliedToQuotation", payload);
             }
         }
 

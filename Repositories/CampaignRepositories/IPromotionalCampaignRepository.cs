@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 using BusinessObject.Campaigns;
 
 namespace Repositories.CampaignRepositories
@@ -13,7 +14,7 @@ namespace Repositories.CampaignRepositories
         IQueryable<PromotionalCampaign> Query();
         Task<PromotionalCampaign?> GetByIdAsync(Guid id);
         Task<PromotionalCampaign?> GetWithServicesAsync(Guid id);
-
+        Task<List<QuotationService>> GetQuotationServicesByCampaignAsync(Guid campaignId);
 
         Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(
             Guid serviceId,

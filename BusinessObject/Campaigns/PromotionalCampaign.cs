@@ -41,6 +41,8 @@ namespace BusinessObject.Campaigns
         public DateTime UpdatedAt { get; set; }
 
         // Many-to-many
+        public virtual ICollection<QuotationService>? QuotationServices { get; set; }
+         = new List<QuotationService>();
         public virtual ICollection<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
             = new List<PromotionalCampaignService>();
         public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }

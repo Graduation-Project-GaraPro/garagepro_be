@@ -71,11 +71,89 @@ namespace Services.CampaignServices
         }
 
 
-       
 
-        
+        public async Task<CampaignAnalyticsDto?> GetCampaignAnalyticsAsync(Guid campaignId)
+        {
+            var exists = await _repository.ExistsAsync(campaignId);
+            if (!exists)
+            {
+                return null;
+            }
 
-      
+            var quotationServices = await _repository.GetQuotationServicesByCampaignAsync(campaignId);
+
+            if (quotationServices == null || quotationServices.Count == 0)
+            {
+                return new CampaignAnalyticsDto
+                {
+                    TotalUsage = 0
+                };
+            }
+
+            
+            var totalUsage = quotationServices.Count;
+
+           
+            var topCustomers = quotationServices
+                .Where(qs => qs.Quotation != null && qs.Quotation.User != null)
+                .GroupBy(qs => new
+                {
+                    qs.Quotation.UserId,
+                    Name = qs.Quotation.User.FullName 
+                })
+                .Select(g => new TopCustomerDto
+                {
+                    CustomerId = g.Key.UserId,
+                    CustomerName = g.Key.Name ?? "Unknown",
+                    UsageCount = g.Count()
+                })
+                .OrderByDescending(x => x.UsageCount)
+                .Take(10)
+                .ToList();
+
+            // Usage by date: group by quotation created date
+           
+            var usageByDate = quotationServices
+                .Where(qs => qs.Quotation != null)
+                .GroupBy(qs => qs.Quotation.CreatedAt.Date)
+                .Select(g => new UsageByDateDto
+                {
+                    Date = g.Key,
+                    UsageCount = g.Count()
+                })
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            // Service performance: group by service
+            var servicePerformance = quotationServices
+                .Where(qs => qs.Service != null)
+                .GroupBy(qs => new
+                {
+                    qs.ServiceId,
+                    qs.Service!.ServiceName
+                })
+                .Select(g => new ServicePerformanceDto
+                {
+                    ServiceId = g.Key.ServiceId,
+                    ServiceName = g.Key.ServiceName,
+                    UsageCount = g.Count()
+                })
+                .OrderByDescending(x => x.UsageCount)
+                .ToList();
+
+            var result = new CampaignAnalyticsDto
+            {
+                TotalUsage = totalUsage,
+                TopCustomers = topCustomers,
+                UsageByDate = usageByDate,
+                ServicePerformance = servicePerformance
+            };
+
+            return result;
+        }
+
+
+
         public async Task<CustomerPromotionResponse> GetCustomerPromotionsForServiceAsync(Guid serviceId, decimal currentOrderValue = 0)
         {
             // Validate input

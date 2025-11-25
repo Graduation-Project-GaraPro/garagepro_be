@@ -74,6 +74,12 @@ namespace Repositories
                 .Where(predicate)
                 .CountAsync();
         }
+        public async Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate)
+        {
+            return await _context.RepairOrders
+                .AnyAsync(predicate);
+                
+        }
 
         public async Task<RepairOrder> CreateAsync(RepairOrder repairOrder)
         {

@@ -36,11 +36,11 @@ namespace Services.ServiceServices
            string? searchTerm = null,
            bool? isActive = null)
         {
-            // 🔹 Gọi đến repository
+            //  Gọi đến repository
             var categories = await _repository.GetAllCategoriesWithFilterAsync(
                 parentServiceCategoryId, searchTerm, isActive);
 
-            // 🔹 Map sang DTO
+            //  Map sang DTO
             var categoryDtos = _mapper.Map<IEnumerable<ServiceCategoryDto>>(categories);
 
             return categoryDtos;
@@ -74,21 +74,9 @@ namespace Services.ServiceServices
                     {
                         ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
                         CategoryName = service.ServiceCategory.CategoryName
-                    },
-                    PartCategories = service.ServiceParts
-                        .Where(sp => sp.Part != null)
-                        .GroupBy(sp => sp.Part!.PartCategoryId)
-                        .Select(g => new PartCategoryForBooking
-                        {
-                            PartCategoryId = g.Key,
-                            CategoryName = g.First().Part!.PartCategory.CategoryName,
-                            Parts = g.Select(sp => new PartDto
-                            {
-                                PartId = sp.PartId,
-                                Name = sp.Part!.Name,
-                                Price = sp.Part.Price
-                            }).ToList()
-                        }).ToList()
+                    }
+                   
+                        
                 }).ToList()
             }).ToList();
 
@@ -122,7 +110,7 @@ namespace Services.ServiceServices
                 ServiceCategoryId = cat.ServiceCategoryId,
                 ParentServiceCategoryId = cat.ParentServiceCategoryId,
                 CategoryName = cat.CategoryName,
-                Services = cat.Services.Select(service => new ServiceDtoForBooking
+                Services = cat.Services.Where(s=>s.IsActive==true).Select(service => new ServiceDtoForBooking
                 {
                     ServiceId = service.ServiceId,
                     ServiceCategoryId = service.ServiceCategoryId,
@@ -140,21 +128,7 @@ namespace Services.ServiceServices
                     {
                         ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
                         CategoryName = service.ServiceCategory.CategoryName
-                    },
-                    PartCategories = service.ServiceParts
-                        .Where(sp => sp.Part != null)
-                        .GroupBy(sp => sp.Part!.PartCategoryId)
-                        .Select(g => new PartCategoryForBooking
-                        {
-                            PartCategoryId = g.Key,
-                            CategoryName = g.First().Part!.PartCategory.CategoryName,
-                            Parts = g.Select(sp => new PartDto
-                            {
-                                PartId = sp.PartId,
-                                Name = sp.Part!.Name,
-                                Price = sp.Part.Price
-                            }).ToList()
-                        }).ToList()
+                    }
                 }).ToList()
             }).ToList();
 

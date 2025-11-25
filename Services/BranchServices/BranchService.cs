@@ -494,6 +494,10 @@ namespace Services.BranchServices
         public async Task<IEnumerable<Branch>> GetAllBranchesBasicAsync()
         {
             var branches = await _branchRepo.GetAllAsync();
+            if(branches != null)
+            {
+                branches = branches.Where(b=>b.IsActive==true); 
+            }    
             return branches;
         }
 

@@ -62,25 +62,25 @@ namespace Services.PartCategoryServices
             return part;
         }
 
-        public async Task<IEnumerable<PartByServiceDto>> GetPartsByServiceIdAsync(Guid serviceId)
-        {
-            var parts = await _context.ServiceParts
-                .Where(sp => sp.ServiceId == serviceId)
-                .Include(sp => sp.Part)
-                .ThenInclude(p => p.PartCategory)
-                .Select(sp => new PartByServiceDto
-                {
-                    PartId = sp.Part.PartId,
-                    PartCategoryId = sp.Part.PartCategoryId,
-                    BranchId = sp.Part.BranchId,
-                    Name = sp.Part.Name,
-                    Price = sp.Part.Price,
-                    Stock = sp.Part.Stock
-                })
-                .ToListAsync();
+        //public async Task<IEnumerable<PartByServiceDto>> GetPartsByServiceIdAsync(Guid serviceId)
+        //{
+        //    var parts = await _context.ServicePartCategories
+        //        .Where(sp => sp.ServiceId == serviceId)
+        //        .Include(sp => sp.PartCategory)
+        //        .ThenInclude(p => p.Parts)
+        //        .Select(sp => new PartByServiceDto
+        //        {
+        //            PartId = sp.Part.PartId,
+        //            PartCategoryId = sp.PartCategory.LaborCategoryId,
+        //            BranchId = sp.Part.BranchId,
+        //            Name = sp.Part.Name,
+        //            Price = sp.Part.Price,
+        //            Stock = sp.Part.Stock
+        //        })
+        //        .ToListAsync();
 
-            return parts;
-        }
+        //    return parts;
+        //}
 
         public async Task<PartDto> CreatePartAsync(CreatePartDto dto)
         {
