@@ -243,6 +243,8 @@ namespace Garage_pro_api.Controllers
             if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.Failed)
                 return BadRequest(new { error = "Invalid phone number or password." });
 
+            if (signInResult == Microsoft.AspNetCore.Identity.SignInResult.NotAllowed)
+                return BadRequest(new { error = "User is not allowed to sign in." });
 
             //// Tạo JWT token
             //var accessToken = await _tokenService.GenerateJwtToken(user, 30); 
@@ -492,6 +494,93 @@ namespace Garage_pro_api.Controllers
             return NotFound(new { error = "No OTP found for this number" });
         }
 
+        [HttpPost("forgot-password/send-otp")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPasswordSendOtp([FromBody] SendOtpDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+
+            if (user == null)
+                return BadRequest(new { error = "Phone number not found" });
+
+            // Tạo OTP
+            var otp = new Random().Next(100000, 999999).ToString();
+
+            // Lưu OTP tạm
+            _otpTempStore[model.PhoneNumber] = otp;
+
+            await _smsSender.SendSmsAsync(model.PhoneNumber, otp);
+
+            return Ok(new { message = "OTP sent for password reset" });
+        }
+
+        [HttpPost("forgot-password/verify-otp")]
+        [AllowAnonymous]
+        public IActionResult ForgotPasswordVerifyOtp([FromBody] VerifyOtpDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Check OTP
+            if (!_otpTempStore.TryGetValue(model.PhoneNumber, out var otp))
+                return BadRequest(new { error = "OTP not found" });
+
+            if (otp != model.Token)
+                return BadRequest(new { error = "Invalid OTP" });
+
+            // OTP đúng → tạo reset token (GUID)
+            var resetToken = Guid.NewGuid().ToString("N");
+
+            // Lưu token tạm
+            _otpTempStore[$"reset:{model.PhoneNumber}"] = resetToken;
+
+            return Ok(new
+            {
+                message = "OTP verified",
+                resetToken
+            });
+        }
+
+        [HttpPost("forgot-password/reset")]
+        [AllowAnonymous]
+        public async Task<IActionResult> ForgotPasswordReset([FromBody] PasswordChangeRequest model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Kiểm tra reset token
+            if (!_otpTempStore.TryGetValue($"reset:{model.PhoneNumber}", out var savedToken))
+                return BadRequest(new { error = "Reset token not found" });
+
+            if (savedToken != model.ResetToken)
+                return BadRequest(new { error = "Invalid reset token" });
+
+            // Lấy user
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
+
+            if (user == null)
+                return BadRequest(new { error = "User not found" });
+
+            // Reset password (không cần mật khẩu cũ)
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var result = await _userManager.ResetPasswordAsync(user, token, model.NewPassword);
+
+            if (!result.Succeeded)
+                return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+            // Xoá token sau khi dùng
+            _otpTempStore.Remove($"reset:{model.PhoneNumber}");
+
+            // Cập nhật security stamp
+            await _userManager.UpdateSecurityStampAsync(user);
+
+            return Ok(new { message = "Password reset successfully" });
+        }
 
     }
 

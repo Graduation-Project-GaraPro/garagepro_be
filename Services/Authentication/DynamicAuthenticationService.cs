@@ -47,6 +47,10 @@ namespace Services.Authentication
                 return SignInResult.Failed;
             var policy = await _securityPolicyService.GetCurrentAsync();
 
+            if(user.IsActive == false)
+            {
+                return SignInResult.NotAllowed;
+            }
             // Kiểm tra lockout real-time
             if (policy?.EnableBruteForceProtection == true && await IsAccountLockedOutAsync(user))
             {
