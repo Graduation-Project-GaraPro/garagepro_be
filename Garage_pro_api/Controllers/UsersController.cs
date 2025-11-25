@@ -3,11 +3,13 @@ using BusinessObject;
 using BusinessObject.Roles;
 using Dtos.Auth;
 using Dtos.Customers;
+using Dtos.Roles;
 using Microsoft.AspNetCore.Authorization;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Services;
 using Services.Authentication;
 using Services.RoleServices;
@@ -51,7 +53,22 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
+        [HttpGet("roles")]
+            public async Task<ActionResult<IEnumerable<RoleLookupDto>>> GetAssignableRoles()
+            {
+                var roles = await _roleManager.Roles
+                    .Where(r =>
+                        r.NormalizedName != "ADMIN" &&
+                        r.NormalizedName != "CUSTOMER")
+                    .Select(r => new RoleLookupDto
+                    {
+                        Id = r.Id,
+                        Name = r.Name
+                    })
+                    .ToListAsync();
 
+                return Ok(roles);
+            }
 
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()

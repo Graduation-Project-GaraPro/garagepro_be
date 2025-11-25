@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class updatePaymentkey : Migration
+    public partial class init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -96,6 +96,7 @@ namespace DataAccessLayer.Migrations
                 {
                     LaborCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CategoryName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -829,35 +830,6 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ServicePartCategories_Services_ServiceId",
-                        column: x => x.ServiceId,
-                        principalTable: "Services",
-                        principalColumn: "ServiceId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ServiceParts",
-                columns: table => new
-                {
-                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ServicePartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
-                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ServiceParts", x => new { x.ServiceId, x.PartId });
-                    table.ForeignKey(
-                        name: "FK_ServiceParts_Parts_PartId",
-                        column: x => x.PartId,
-                        principalTable: "Parts",
-                        principalColumn: "PartId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ServiceParts_Services_ServiceId",
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "ServiceId",
@@ -2184,11 +2156,6 @@ namespace DataAccessLayer.Migrations
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServiceParts_PartId",
-                table: "ServiceParts",
-                column: "PartId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Services_ServiceCategoryId",
                 table: "Services",
                 column: "ServiceCategoryId");
@@ -2393,9 +2360,6 @@ namespace DataAccessLayer.Migrations
                 name: "ServicePartCategories");
 
             migrationBuilder.DropTable(
-                name: "ServiceParts");
-
-            migrationBuilder.DropTable(
                 name: "SpecificationsData");
 
             migrationBuilder.DropTable(
@@ -2426,6 +2390,9 @@ namespace DataAccessLayer.Migrations
                 name: "Jobs");
 
             migrationBuilder.DropTable(
+                name: "Parts");
+
+            migrationBuilder.DropTable(
                 name: "RequestServices");
 
             migrationBuilder.DropTable(
@@ -2436,9 +2403,6 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "SecurityPolicies");
-
-            migrationBuilder.DropTable(
-                name: "Parts");
 
             migrationBuilder.DropTable(
                 name: "Specification");
@@ -2456,13 +2420,13 @@ namespace DataAccessLayer.Migrations
                 name: "Quotations");
 
             migrationBuilder.DropTable(
+                name: "PartCategories");
+
+            migrationBuilder.DropTable(
                 name: "Services");
 
             migrationBuilder.DropTable(
                 name: "PermissionCategories");
-
-            migrationBuilder.DropTable(
-                name: "PartCategories");
 
             migrationBuilder.DropTable(
                 name: "SpecificationCategory");
