@@ -221,5 +221,17 @@ namespace Repositories
             var users = await _userManager.GetUsersInRoleAsync("Customer");
             return users;
         }
+
+        public IQueryable<ApplicationUser> QueryUsers()
+        => _userManager.Users.AsQueryable();
+
+        public Task<ApplicationUser?> GetByEmailAsync(string email)
+            => _userManager.FindByEmailAsync(email);
+
+        public Task<IdentityResult> CreateUserAsync(ApplicationUser user, string password)
+            => _userManager.CreateAsync(user, password);
+
+        public Task AddUserToRoleAsync(ApplicationUser user, string role)
+            => _userManager.AddToRoleAsync(user, role);
     }
 }

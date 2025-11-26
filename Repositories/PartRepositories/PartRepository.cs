@@ -29,8 +29,8 @@ namespace Repositories.PartRepositories
         {
             return _context.Parts
                 .Include(p => p.PartCategory)
-                .Include(p => p.ServiceParts)
-                    .ThenInclude(sp => sp.Part)
+                
+                    
                 .AsQueryable();
         }
 

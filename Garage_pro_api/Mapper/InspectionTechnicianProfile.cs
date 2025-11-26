@@ -43,9 +43,9 @@ namespace Garage_pro_api.Mapper
              .ForMember(dest => dest.ServiceCategoryId, opt => opt.MapFrom(src => src.Service.ServiceCategoryId))
              .ForMember(dest => dest.CategoryName, opt => opt.MapFrom(src => src.Service.ServiceCategory != null ? src.Service.ServiceCategory.CategoryName : null));
 
-            CreateMap<BusinessObject.Branches.ServicePart, ServicePartDto>()
-              .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name))
-              .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.Part.Price));
+            //CreateMap<BusinessObject.Branches.ServicePart, ServicePartDto>()
+            //  .ForMember(d => d.PartName, o => o.MapFrom(s => s.Part.Name))
+            //  .ForMember(dest => dest.UnitPrice, opt => opt.MapFrom(src => src.Part.Price));
 
             CreateMap<ServiceInspection, ServiceInspectionDto>()
                 .ForMember(d => d.ServiceName, o => o.MapFrom(s => s.Service.ServiceName))

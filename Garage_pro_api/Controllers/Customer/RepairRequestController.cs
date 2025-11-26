@@ -152,6 +152,31 @@ namespace Garage_pro_api.Controllers.Customer
             var requests = await _repairRequestService.GetByUserIdAsync(userId);
             return Ok(requests);
         }
+
+        [HttpPost("{requestId}/cancel")]
+        public async Task<IActionResult> CancelRepairRequest(Guid requestId)
+        {
+            try
+            {
+                // Lấy userId từ token
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+                var result = await _repairRequestService.CustomerCancelRepairRequestAsync(requestId, userId);
+
+                return Ok(new
+                {                    
+                    message = "Repair request has been cancelled successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {                   
+                    message = ex.Message
+                });
+            }
+        }
     }
 }
 

@@ -429,36 +429,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("OperatingHours");
                 });
 
-            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
-                {
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("ServicePartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ServiceId", "PartId");
-
-                    b.HasIndex("PartId");
-
-                    b.ToTable("ServiceParts");
-                });
-
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1078,29 +1048,22 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("ApplicationUserId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int>("Rating")
+                    b.Property<int?>("Rating")
                         .HasColumnType("int");
 
                     b.Property<Guid>("RepairOrderId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -1108,13 +1071,12 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("FeedBackId");
 
-                    b.HasIndex("ApplicationUserId");
-
-                    b.HasIndex("RepairOrderId");
+                    b.HasIndex("RepairOrderId")
+                        .IsUnique();
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("FeedBacks", (string)null);
+                    b.ToTable("FeedBacks");
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
@@ -1225,6 +1187,10 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1316,10 +1282,7 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Payment", b =>
                 {
                     b.Property<long>("PaymentId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PaymentId"));
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
@@ -1530,6 +1493,15 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("AppliedPromotionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("FinalPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");
 
@@ -1549,6 +1521,8 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("QuotationServiceId");
+
+                    b.HasIndex("AppliedPromotionId");
 
                     b.HasIndex("QuotationId");
 
@@ -1625,9 +1599,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid?>("FeedBackId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("FeedBackId1")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("IsArchived")
                         .HasColumnType("bit");
 
@@ -1669,8 +1640,6 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
-
-                    b.HasIndex("FeedBackId1");
 
                     b.HasIndex("RepairRequestId")
                         .IsUnique()
@@ -1876,6 +1845,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -2522,25 +2494,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
-                {
-                    b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-
-                    b.Navigation("Service");
-                });
-
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
                 {
                     b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "PromotionalCampaign")
@@ -2810,18 +2763,14 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
                 {
-                    b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
-                        .WithMany("FeedBacks")
-                        .HasForeignKey("ApplicationUserId");
-
                     b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-                        .WithMany()
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .WithOne("FeedBack")
+                        .HasForeignKey("BusinessObject.Manager.FeedBack", "RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "User")
-                        .WithMany()
+                        .WithMany("FeedBacks")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2976,6 +2925,11 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
                 {
+                    b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "AppliedPromotion")
+                        .WithMany("QuotationServices")
+                        .HasForeignKey("AppliedPromotionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("BusinessObject.Quotation", "Quotation")
                         .WithMany("QuotationServices")
                         .HasForeignKey("QuotationId")
@@ -2991,6 +2945,8 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Service", null)
                         .WithMany("QuotationServices")
                         .HasForeignKey("ServiceId1");
+
+                    b.Navigation("AppliedPromotion");
 
                     b.Navigation("Quotation");
 
@@ -3024,10 +2980,6 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("BusinessObject.Manager.FeedBack", "FeedBack")
-                        .WithMany()
-                        .HasForeignKey("FeedBackId1");
-
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
                         .WithOne("RepairOrder")
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
@@ -3052,8 +3004,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
-
-                    b.Navigation("FeedBack");
 
                     b.Navigation("OrderStatus");
 
@@ -3418,6 +3368,8 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("PromotionalCampaignServices");
 
+                    b.Navigation("QuotationServices");
+
                     b.Navigation("VoucherUsages");
                 });
 
@@ -3494,8 +3446,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderServiceParts");
 
                     b.Navigation("RequestParts");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
@@ -3520,6 +3470,8 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
                 {
+                    b.Navigation("FeedBack");
+
                     b.Navigation("Inspections");
 
                     b.Navigation("Jobs");
@@ -3575,8 +3527,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ServiceInspections");
 
                     b.Navigation("ServicePartCategories");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceCategory", b =>

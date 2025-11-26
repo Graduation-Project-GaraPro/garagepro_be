@@ -45,6 +45,7 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
+using Repositories.Revenue;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
@@ -69,6 +70,7 @@ using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
 using Services.UserServices;
 using Repositories.PaymentRepositories;
+using Repositories.Revenue;
 using Services.FCMServices;
 using Repositories.EmergencyRequestRepositories;
 using Services.EmergencyRequestService;
@@ -85,6 +87,7 @@ using Services.Notifications;
 using Services.PaymentServices;
 using BusinessObject.PayOsModels;
 using Services.PayOsClients;
+using Services.BillServices;
 using Services.DeadlineServices;
 var builder = WebApplication.CreateBuilder(args);
 
@@ -162,6 +165,8 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<InspectionTechnicianProfile>();
     cfg.AddProfile<JobTechnicianProfile>();
     cfg.AddProfile<QuotationProfile>();
+    cfg.AddProfile<RepairOrderBillProfile>();
+    cfg.AddProfile<RepairOrderArchivedProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -373,6 +378,10 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
 
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
+
+builder.Services.AddScoped<IRepairOrderPaymentService, RepairOrderPaymentService>();
+
 
 builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
 builder.Services.AddScoped<IRepairProgressService, RepairProgressService>();
@@ -403,6 +412,9 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 builder.Services.AddScoped<IEmergencyRequestRepository, EmergencyRequestRepository>();
 builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 // Quotation services
+
+builder.Services.AddScoped<ICustomerResponseQuotationService, CustomerResponseQuotationService>();
+
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
 // Update to use the new QuotationServicePartRepository
@@ -577,6 +589,7 @@ builder.Services.Configure<CloudinarySettings>(
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
+builder.Services.AddScoped<IAdminRepairOrderRepository, AdminRepairOrderRepository>();
 
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -682,7 +695,8 @@ app.MapHub<InspectionHub>("/hubs/inspection");
 app.MapHub<JobHub>("/hubs/job");            
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
-                                 
+app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
+
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();
@@ -696,7 +710,6 @@ app.MapControllers();
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
-
 
 //Initialize database
 using (var scope = app.Services.CreateScope())

@@ -8,6 +8,12 @@ namespace BusinessObject.Enums
         Unpaid,
             
         [Display(Name = "Paid")]
-        Paid
+        Paid,
+
+        [Display(Name = "Partial")]
+        Partial,
+
+        [Display(Name = "Pending")]
+        Pending
     }
 }

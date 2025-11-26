@@ -80,7 +80,7 @@ namespace DataAccessLayer
         public DbSet<ServicePartCategory> ServicePartCategories { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
 
-        public DbSet<ServicePart> ServiceParts { get; set; }
+      
 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -167,6 +167,14 @@ namespace DataAccessLayer
                       .WithOne(qsp => qsp.QuotationService)
                       .HasForeignKey(qsp => qsp.QuotationServiceId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                // Thêm khóa ngoại đến PromotionalCampaign
+               
+                    entity.HasOne(qs => qs.AppliedPromotion)
+                        .WithMany(pc => pc.QuotationServices)
+                        .HasForeignKey(qs => qs.AppliedPromotionId)
+                        .OnDelete(DeleteBehavior.Restrict);
+                
             });
 
             // Add the new QuotationServicePart configuration
@@ -753,8 +761,10 @@ namespace DataAccessLayer
                 .WithMany()
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.PaymentId)
+                .ValueGeneratedNever();
 
-           
 
             // ServiceCategory self-referencing relationship
             modelBuilder.Entity<ServiceCategory>()
@@ -766,35 +776,12 @@ namespace DataAccessLayer
 
 
 
-            modelBuilder.Entity<FeedBack>(entity =>
-            {
-                entity.ToTable("FeedBacks");
-                entity.HasKey(f => f.FeedBackId);
+            modelBuilder.Entity<FeedBack>()
+    .HasOne(f => f.RepairOrder)
+    .WithOne(ro => ro.FeedBack)
+    .HasForeignKey<FeedBack>(f => f.RepairOrderId)
+    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(f => f.Description)
-                      .HasMaxLength(1000);
-
-                entity.Property(f => f.Rating)
-                      .IsRequired();
-
-                entity.Property(f => f.CreatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.Property(f => f.UpdatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-
-                entity.HasOne(f => f.User)
-                      .WithMany()
-                      .HasForeignKey(f => f.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-
-                entity.HasOne(f => f.RepairOrder)
-                      .WithMany()
-                      .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
 
             // Job relationships - prevent cascade delete conflicts
             modelBuilder.Entity<Job>()
@@ -980,22 +967,22 @@ namespace DataAccessLayer
 
 
             // ServicePart configuration
-            modelBuilder.Entity<ServicePart>(entity =>
-            {
+            //modelBuilder.Entity<ServicePart>(entity =>
+            //{
 
-                entity.HasKey(e => new { e.ServiceId, e.PartId });
-                entity.Property(e => e.CreatedAt).IsRequired();
+            //    entity.HasKey(e => new { e.ServiceId, e.PartId });
+            //    entity.Property(e => e.CreatedAt).IsRequired();
 
-                entity.HasOne(sp => sp.Service)
-                      .WithMany(s => s.ServiceParts)
-                      .HasForeignKey(sp => sp.ServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
+            //    entity.HasOne(sp => sp.Service)
+            //          .WithMany(s => s.ServiceParts)
+            //          .HasForeignKey(sp => sp.ServiceId)
+            //          .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(sp => sp.Part)
-                      .WithMany(p => p.ServiceParts)
-                      .HasForeignKey(sp => sp.PartId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
+            //    entity.HasOne(sp => sp.Part)
+            //          .WithMany(p => p.ServiceParts)
+            //          .HasForeignKey(sp => sp.PartId)
+            //          .OnDelete(DeleteBehavior.Restrict);
+            //});
             // branch 1 -> application User
 
             modelBuilder.Entity<ApplicationUser>()

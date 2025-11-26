@@ -257,7 +257,8 @@ namespace Services
                     };
                     
                     // Add parts for this service
-                    var servicePartIds = serviceInspection.Service.ServiceParts?.Select(sp => sp.PartId).ToList() ?? new List<Guid>();
+                    //var servicePartIds = serviceInspection.Service.ServiceParts?.Select(sp => sp.PartId).ToList() ?? new List<Guid>();
+                    var servicePartIds = serviceInspection.Service.ServicePartCategories?.Select(sp => sp.PartCategoryId).ToList() ?? new List<Guid>();
                     var partInspections = inspection.PartInspections?.Where(pi => servicePartIds.Contains(pi.PartId)).ToList() ?? new List<PartInspection>();
                     
                     foreach (var partInspection in partInspections)
@@ -291,72 +292,74 @@ namespace Services
 
         private InspectionDto MapToDto(Inspection inspection)
         {
-            return new InspectionDto
-            {
-                InspectionId = inspection.InspectionId,
-                RepairOrderId = inspection.RepairOrderId,
-                TechnicianId = inspection.TechnicianId,
-                Status = inspection.Status.ToString(),
-                CustomerConcern = inspection.CustomerConcern,
-                Finding = inspection.Finding,
-                IssueRating = inspection.IssueRating,
-                Note = inspection.Note,
-                CreatedAt = inspection.CreatedAt,
-                UpdatedAt = inspection.UpdatedAt,
-                TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
-                Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
-                {
-                    ServiceInspectionId = si.ServiceInspectionId,
-                    ServiceId = si.ServiceId,
-                    ServiceName = si.Service?.ServiceName ?? "Unknown Service",
-                    ConditionStatus = si.ConditionStatus,
-                    CreatedAt = si.CreatedAt,
-                    Parts = inspection.PartInspections?
-                        .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
-                        .Select(pi => new InspectionPartDto
-                        {
-                            PartInspectionId = pi.PartInspectionId,
-                            PartId = pi.PartId,
-                            PartName = pi.Part?.Name ?? "Unknown Part",
-                            CreatedAt = pi.CreatedAt
-                        }).ToList() ?? new List<InspectionPartDto>()
-                }).ToList() ?? new List<InspectionServiceDto>()
-            };
+            //return new InspectionDto
+            //{
+            //    InspectionId = inspection.InspectionId,
+            //    RepairOrderId = inspection.RepairOrderId,
+            //    TechnicianId = inspection.TechnicianId,
+            //    Status = inspection.Status.ToString(),
+            //    CustomerConcern = inspection.CustomerConcern,
+            //    Finding = inspection.Finding,
+            //    IssueRating = inspection.IssueRating,
+            //    Note = inspection.Note,
+            //    CreatedAt = inspection.CreatedAt,
+            //    UpdatedAt = inspection.UpdatedAt,
+            //    TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
+            //    Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
+            //    {
+            //        ServiceInspectionId = si.ServiceInspectionId,
+            //        ServiceId = si.ServiceId,
+            //        ServiceName = si.Service?.ServiceName ?? "Unknown Service",
+            //        ConditionStatus = si.ConditionStatus,
+            //        CreatedAt = si.CreatedAt,
+            //        Parts = inspection.PartInspections?
+            //            .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
+            //            .Select(pi => new InspectionPartDto
+            //            {
+            //                PartInspectionId = pi.PartInspectionId,
+            //                PartId = pi.PartId,
+            //                PartName = pi.Part?.Name ?? "Unknown Part",
+            //                CreatedAt = pi.CreatedAt
+            //            }).ToList() ?? new List<InspectionPartDto>()
+            //    }).ToList() ?? new List<InspectionServiceDto>()
+            //};
+            return new InspectionDto();
         }
 
         private CompletedInspectionDto MapToCompletedInspectionDto(Inspection inspection)
         {
-            return new CompletedInspectionDto
-            {
-                InspectionId = inspection.InspectionId,
-                RepairOrderId = inspection.RepairOrderId,
-                TechnicianId = inspection.TechnicianId,
-                Status = inspection.Status.ToString(),
-                CustomerConcern = inspection.CustomerConcern,
-                Finding = inspection.Finding,
-                IssueRating = inspection.IssueRating,
-                Note = inspection.Note,
-                CreatedAt = inspection.CreatedAt,
-                UpdatedAt = inspection.UpdatedAt,
-                TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
-                Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
-                {
-                    ServiceInspectionId = si.ServiceInspectionId,
-                    ServiceId = si.ServiceId,
-                    ServiceName = si.Service?.ServiceName ?? "Unknown Service",
-                    ConditionStatus = si.ConditionStatus,
-                    CreatedAt = si.CreatedAt,
-                    Parts = inspection.PartInspections?
-                        .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
-                        .Select(pi => new InspectionPartDto
-                        {
-                            PartInspectionId = pi.PartInspectionId,
-                            PartId = pi.PartId,
-                            PartName = pi.Part?.Name ?? "Unknown Part",
-                            CreatedAt = pi.CreatedAt
-                        }).ToList() ?? new List<InspectionPartDto>()
-                }).ToList() ?? new List<InspectionServiceDto>()
-            };
+            //return new CompletedInspectionDto
+            //{
+            //    InspectionId = inspection.InspectionId,
+            //    RepairOrderId = inspection.RepairOrderId,
+            //    TechnicianId = inspection.TechnicianId,
+            //    Status = inspection.Status.ToString(),
+            //    CustomerConcern = inspection.CustomerConcern,
+            //    Finding = inspection.Finding,
+            //    IssueRating = inspection.IssueRating,
+            //    Note = inspection.Note,
+            //    CreatedAt = inspection.CreatedAt,
+            //    UpdatedAt = inspection.UpdatedAt,
+            //    TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
+            //    Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
+            //    {
+            //        ServiceInspectionId = si.ServiceInspectionId,
+            //        ServiceId = si.ServiceId,
+            //        ServiceName = si.Service?.ServiceName ?? "Unknown Service",
+            //        ConditionStatus = si.ConditionStatus,
+            //        CreatedAt = si.CreatedAt,
+            //        Parts = inspection.PartInspections?
+            //            .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
+            //            .Select(pi => new InspectionPartDto
+            //            {
+            //                PartInspectionId = pi.PartInspectionId,
+            //                PartId = pi.PartId,
+            //                PartName = pi.Part?.Name ?? "Unknown Part",
+            //                CreatedAt = pi.CreatedAt
+            //            }).ToList() ?? new List<InspectionPartDto>()
+            //    }).ToList() ?? new List<InspectionServiceDto>()
+            //};
+            return new CompletedInspectionDto();
         }
     }
 }

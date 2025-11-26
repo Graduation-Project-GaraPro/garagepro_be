@@ -22,9 +22,9 @@ namespace Repositories.ServiceRepositories
         public async Task<IEnumerable<ServiceCategory>> GetAllAsync()
         {
             return await _context.ServiceCategories
-                .Include(sc => sc.Services).ThenInclude(s => s.ServiceParts).ThenInclude(s => s.Part).ThenInclude(p=>p.PartCategory)
+                .Include(sc => sc.Services).ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
                 .Include(sc => sc.ChildServiceCategories)
-                    .ThenInclude(c => c.Services).ThenInclude(s=>s.ServiceParts).ThenInclude(s=>s.Part).ThenInclude(p => p.PartCategory)
+                    .ThenInclude(c => c.Services).ThenInclude(s=>s.ServicePartCategories).ThenInclude(s=>s.PartCategory).ThenInclude(p => p.Parts)
                 .Include(sc => sc.ChildServiceCategories)
                     .ThenInclude(c => c.ChildServiceCategories) // nếu muốn nhiều cấp
                 .ToListAsync();
@@ -38,9 +38,7 @@ namespace Repositories.ServiceRepositories
         {
             var query = _context.ServiceCategories
                 .Include(c => c.Services)
-                    .ThenInclude(s => s.ServiceParts)
-                        .ThenInclude(sp => sp.Part)
-                            .ThenInclude(p => p.PartCategory)
+                    .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
                 .Include(c => c.ChildServiceCategories)
                 .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId)
                 .AsQueryable();
@@ -137,9 +135,7 @@ namespace Repositories.ServiceRepositories
         {
             var query = _context.ServiceCategories
                 .Include(c => c.Services)
-                    .ThenInclude(s => s.ServiceParts)
-                        .ThenInclude(sp => sp.Part)
-                            .ThenInclude(p => p.PartCategory)
+                    .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)                       
                 .AsQueryable();
 
             // Filter theo category

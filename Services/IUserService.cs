@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using Dtos.Customers;
 
 namespace Services
 {
@@ -24,6 +25,9 @@ namespace Services
         Task<List<ApplicationUser>> GetTechniciansAsync();
         Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
         Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
+
+        Task<(List<object> Data, int Total)> GetUsersFiltered(UserFilterDto filters);
+        Task<object> CreateUserAsync(CreateUserDto dto);
         
         // New method to get technicians by branch
         Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId);

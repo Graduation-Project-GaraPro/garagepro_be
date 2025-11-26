@@ -26,7 +26,7 @@ namespace Services.QuotationServices
         Task<QuotationDto> UpdateQuotationStatusAsync(Guid quotationId, UpdateQuotationStatusDto updateStatusDto);
         Task<bool> DeleteQuotationAsync(Guid quotationId);
         Task<bool> QuotationExistsAsync(Guid quotationId);
-        Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);
+        //Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);
         Task<bool> ApproveQuotationAsync(Guid quotationId);
         Task<bool> RejectQuotationAsync(Guid quotationId);
         // New method to copy quotation to jobs
