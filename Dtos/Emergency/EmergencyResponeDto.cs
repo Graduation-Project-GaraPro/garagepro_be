@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -19,14 +19,21 @@ namespace Dtos.Emergency
             // Vị trí cứu hộ
             public double? Latitude { get; set; }
             public double? Longitude { get; set; }
+            public string? Address { get; set; }
+            public string? MapUrl { get; set; }
+            public DateTime? ResponseDeadline { get; set; }
+            public DateTime? RespondedAt { get; set; }
+            public DateTime? AutoCanceledAt { get; set; }
+            public double? DistanceToGarageKm { get; set; }
+            public int? EstimatedArrivalMinutes { get; set; }
 
             // Thông tin khách hàng
             public string CustomerName { get; set; }
             public string CustomerPhone { get; set; }
 
             // Tùy chọn thêm nếu muốn hiển thị tiến độ
-            public string? AssignedTechnicianName { get; set; } // Ai đang cứu hộ (null nếu chưa gán)
-            public decimal? EmergencyFee { get; set; }          // Cước cứu hộ tạm tính
+            public string? AssignedTechnicianName { get; set; }
+            public decimal? EmergencyFee { get; set; }
         }
 
     }

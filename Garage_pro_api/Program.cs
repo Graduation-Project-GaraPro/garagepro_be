@@ -598,6 +598,7 @@ builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 
 builder.Services.AddHostedService<CampaignExpirationService>();
 builder.Services.AddHostedService<PayOsWebhookProcessor>();
+builder.Services.AddHostedService<EmergencySlaService>();
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>

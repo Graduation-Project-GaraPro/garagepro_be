@@ -20,5 +20,9 @@ namespace Repositories.VehicleRepositories
         Task<bool> ExistsAsync(Guid vehicleId);
         Task<bool> ExistsByVinAsync(string vin);
         Task<bool> ExistsByLicensePlateAsync(string licensePlate);
+        Task<bool> HasRepairRequestsAsync(Guid vehicleId);
+        Task<bool> HasRepairOrdersAsync(Guid vehicleId);
+        Task<bool> HasQuotationsAsync(Guid vehicleId);
+        Task<bool> HasEmergencyRequestsAsync(Guid vehicleId);
     }
 }

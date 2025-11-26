@@ -1,4 +1,4 @@
-﻿using BusinessObject.RequestEmergency;
+using BusinessObject.RequestEmergency;
 using DataAccessLayer;
 using Dtos.Emergency;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +45,15 @@ namespace Repositories.EmergencyRequestRepositories
                  .ToListAsync();
         }
 
+        public async Task<bool> AnyActiveAsync(string customerId, Guid vehicleId)
+        {
+            return await _context.RequestEmergencies.AnyAsync(e =>
+                e.CustomerId == customerId &&
+                e.VehicleId == vehicleId &&
+                (e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted));
+        }
+
         public async Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId)
         {
             return await _context.RequestEmergencies
@@ -70,14 +79,17 @@ namespace Repositories.EmergencyRequestRepositories
 
         public async Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5)
         {
-            var branches = await _context.Branches.ToListAsync();
+            var branches = await _context.Branches
+                .Where(b => b.IsActive)
+                .ToListAsync();
 
             var nearestBranches = branches
                 .Select(branch => new BranchNearbyResponseDto
                 {
                     BranchId = branch.BranchId,
                     BranchName = branch.BranchName,
-                    Address = branch.Province + branch.Commune,
+                    PhoneNumber = branch.PhoneNumber,
+                    Address = string.Join(", ", new[] { branch.Street, branch.Commune, branch.Province }.Where(s => !string.IsNullOrWhiteSpace(s))),
                     DistanceKm = GetDistance(userLat, userLon, branch.Latitude, branch.Longitude)
                 })
                 .OrderBy(x => x.DistanceKm)

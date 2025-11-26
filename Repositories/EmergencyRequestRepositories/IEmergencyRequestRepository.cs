@@ -1,4 +1,4 @@
-﻿using BusinessObject.RequestEmergency;
+using BusinessObject.RequestEmergency;
 using Dtos.Emergency;
 using System;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ namespace Repositories.EmergencyRequestRepositories
             Task<List<RequestEmergency>> GetAllEmergencyAsync();
            
             Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
+            Task<bool> AnyActiveAsync(string customerId, Guid vehicleId);
     }
     }
 

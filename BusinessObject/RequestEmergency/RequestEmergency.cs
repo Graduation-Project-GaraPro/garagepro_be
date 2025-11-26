@@ -1,4 +1,4 @@
-﻿using BusinessObject.Authentication;
+using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Customers;
 using System;
@@ -37,6 +37,7 @@ namespace BusinessObject.RequestEmergency
         {
             Pending,    // Chờ gara xác nhận
             Accepted,   // Gara đã tiếp nhận
+            InProgress, // Đang xử lý cứu hộ
             Completed,  // Hoàn thành
             Canceled    // Khách hủy
         }
@@ -64,5 +65,10 @@ namespace BusinessObject.RequestEmergency
         public ApplicationUser Customer { get; set; }
         public Branch Branch { get; set; }
         public Vehicle Vehicle { get; set; }
+
+        public string? Address { get; set; }
+        public DateTime? ResponseDeadline { get; set; }
+        public DateTime? RespondedAt { get; set; }
+        public DateTime? AutoCanceledAt { get; set; }
     }
 }

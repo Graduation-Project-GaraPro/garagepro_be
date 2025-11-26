@@ -1,4 +1,4 @@
-﻿using BusinessObject.Authentication;
+using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Vehicles;
 using BusinessObject.RequestEmergency;

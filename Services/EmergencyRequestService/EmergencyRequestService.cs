@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using BusinessObject;
 using BusinessObject.Customers;
 using BusinessObject.RequestEmergency;
@@ -7,14 +7,20 @@ using Dtos.Customers;
 using Dtos.Emergency;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Caching.Memory;
+using Repositories;
 using Repositories.Customers;
 using Repositories.EmergencyRequestRepositories;
+using Repositories.VehicleRepositories;
 using Services.Hubs;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
+using System.Security.Authentication;
 
 namespace Services.EmergencyRequestService
 {
@@ -25,25 +31,73 @@ namespace Services.EmergencyRequestService
         private readonly IRepairRequestRepository _requestRepository;
         private readonly IPriceEmergencyRepositories _priceRepo;
         private readonly IHubContext<EmergencyRequestHub> _hubContext;
+        private readonly Services.GeocodingServices.IGeocodingService _geocodingService;
+        private readonly IVehicleRepository _vehicleRepository;
+        private readonly IMemoryCache _cache;
+        private readonly IUserRepository _userRepository;
+
 
         public EmergencyRequestService(
             IEmergencyRequestRepository repository, 
             IMapper mapper, 
             IRepairRequestRepository repairRequestRepository, 
             IPriceEmergencyRepositories priceRepo,
-            IHubContext<EmergencyRequestHub> hubContext)
+            IHubContext<EmergencyRequestHub> hubContext,
+            Services.GeocodingServices.IGeocodingService geocodingService,
+            IVehicleRepository vehicleRepository,
+            IMemoryCache cache,
+            IUserRepository userRepository)
         {
             _repository = repository;
             _mapper = mapper;
             _requestRepository = repairRequestRepository;
             _priceRepo = priceRepo;
             _hubContext = hubContext;
+            _geocodingService = geocodingService;
+            _vehicleRepository = vehicleRepository;
+            _cache = cache;
+            _userRepository = userRepository;
         }
 
-        public async Task<RequestEmergency> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto)
+        public async Task<EmergencyResponeDto> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto, string? idempotencyKey = null)
         {
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
+
+            if (dto.Latitude < -90 || dto.Latitude > 90 || dto.Longitude < -180 || dto.Longitude > 180)
+                throw new ArgumentOutOfRangeException("Coordinates are out of range.");
+
+            if (dto.VehicleId == Guid.Empty)
+                throw new ArgumentException("VehicleId is required.");
+            if (string.IsNullOrWhiteSpace(dto.IssueDescription))
+                throw new ArgumentException("Issue description is required.");
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                var cacheKey = $"emg:idemp:{userId}:{idempotencyKey}";
+                if (_cache.TryGetValue<Guid>(cacheKey, out var existingId))
+                {
+                    var existing = await _repository.GetByIdAsync(existingId);
+                    if (existing != null)
+                        return MapToDto(existing);
+                }
+            }
+
+            var lastKey = $"emg:last:{userId}";
+            if (_cache.TryGetValue<DateTime>(lastKey, out var last) && (DateTime.UtcNow - last) < TimeSpan.FromSeconds(60))
+            {
+                throw new InvalidOperationException("Too many requests. Please wait before creating another emergency.");
+            }
+
+            var hasActive = await _repository.AnyActiveAsync(userId, dto.VehicleId);
+            if (hasActive)
+                throw new InvalidOperationException("Active emergency already exists for this vehicle.");
+
+
+            var vehicle = await _vehicleRepository.GetByIdAsync(dto.VehicleId);
+            if (vehicle == null)
+                throw new ArgumentException("Vehicle not found.");
+            if (!string.Equals(vehicle.UserId, userId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Vehicle does not belong to user.");
 
             // Mapping từ DTO sang entity
             var emergencyRequest = _mapper.Map<RequestEmergency>(dto);
@@ -54,13 +108,32 @@ namespace Services.EmergencyRequestService
             // Thêm thời gian hiện tại và trạng thái mặc định
             emergencyRequest.RequestTime = DateTime.UtcNow;
             emergencyRequest.Status = RequestEmergency.EmergencyStatus.Pending;
+            emergencyRequest.ResponseDeadline = emergencyRequest.RequestTime.AddMinutes(5);
+            emergencyRequest.Address = await _geocodingService.ReverseGeocodeAsync(emergencyRequest.Latitude, emergencyRequest.Longitude);
 
             // Lưu vào repository
             var createdRequest = await _repository.CreateAsync(emergencyRequest);
 
             var fullRequest = await _repository.GetByIdAsync(createdRequest.EmergencyRequestId);
+            if (fullRequest?.Branch != null && HasValidCoords(fullRequest.Branch.Latitude, fullRequest.Branch.Longitude))
+            {
+                fullRequest.DistanceToGarageKm = GetDistance(
+                    fullRequest.Latitude,
+                    fullRequest.Longitude,
+                    fullRequest.Branch.Latitude,
+                    fullRequest.Branch.Longitude
+                );
+                await _repository.UpdateAsync(fullRequest);
+            }
 
-            // 🔔 Gửi real-time notification qua SignalR khi tạo emergency mới
+            _cache.Set(lastKey, DateTime.UtcNow, TimeSpan.FromMinutes(5));
+            if (!string.IsNullOrWhiteSpace(idempotencyKey))
+            {
+                var cacheKey = $"emg:idemp:{userId}:{idempotencyKey}";
+                _cache.Set(cacheKey, fullRequest.EmergencyRequestId, TimeSpan.FromHours(1));
+            }
+
+            // Gửi real-time notification qua SignalR khi tạo emergency mới
             try
             {
                 var notificationData = new
@@ -73,7 +146,11 @@ namespace Services.EmergencyRequestService
                     IssueDescription = fullRequest.IssueDescription,
                     Latitude = fullRequest.Latitude,
                     Longitude = fullRequest.Longitude,
+                    DistanceToGarageKm = fullRequest.DistanceToGarageKm,
+                    EstimatedArrivalMinutes = fullRequest.DistanceToGarageKm.HasValue ? (int?)Math.Ceiling(fullRequest.DistanceToGarageKm.Value / 30.0 * 60.0) : null,
                     RequestTime = fullRequest.RequestTime,
+                    ResponseDeadline = fullRequest.ResponseDeadline,
+                    Address = fullRequest.Address,
                     CustomerName = fullRequest.Customer?.UserName ?? "",
                     CustomerPhone = fullRequest.Customer?.PhoneNumber ?? "",
                     BranchName = fullRequest.Branch?.BranchName ?? "",
@@ -83,14 +160,17 @@ namespace Services.EmergencyRequestService
 
                 // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestCreated → All, id={fullRequest.EmergencyRequestId}");
 
                 // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
                 await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestCreated → customer-{fullRequest.CustomerId}, id={fullRequest.EmergencyRequestId}");
 
                 // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
                 await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestCreated → branch-{fullRequest.BranchId}, id={fullRequest.EmergencyRequestId}");
             }
             catch (Exception ex)
             {
@@ -98,7 +178,43 @@ namespace Services.EmergencyRequestService
                 Console.WriteLine($"Error sending real-time notification: {ex.Message}");
             }
 
-            return fullRequest;
+            return MapToDto(fullRequest);
+        }
+
+        private EmergencyResponeDto MapToDto(RequestEmergency fr)
+        {
+            var addr = string.IsNullOrWhiteSpace(fr.Address) ? $"{fr.Latitude},{fr.Longitude}" : fr.Address;
+            var mapUrl = (fr.Latitude != 0 || fr.Longitude != 0) ? $"https://www.google.com/maps?q={fr.Latitude},{fr.Longitude}" : null;
+            int? etaMinutes = null;
+            if (fr.DistanceToGarageKm.HasValue)
+            {
+                const double avgSpeedKmh = 30.0; // giả định tốc độ trung bình trong đô thị
+                etaMinutes = (int)Math.Ceiling(fr.DistanceToGarageKm.Value / avgSpeedKmh * 60.0);
+            }
+
+            return new EmergencyResponeDto
+            {
+                EmergencyRequestId = fr.EmergencyRequestId,
+                VehicleName = fr.Vehicle != null
+                    ? $"{fr.Vehicle.Model?.ModelName ?? ""} {fr.Vehicle.Brand?.BrandName ?? ""} {fr.Vehicle.LicensePlate ?? ""}".Trim()
+                    : "",
+                IssueDescription = fr.IssueDescription,
+                EmergencyType = fr.Type.ToString(),
+                RequestTime = fr.RequestTime,
+                Status = fr.Status.ToString(),
+                Latitude = fr.Latitude,
+                Longitude = fr.Longitude,
+                Address = addr,
+                MapUrl = mapUrl,
+                ResponseDeadline = fr.ResponseDeadline,
+                RespondedAt = fr.RespondedAt,
+                AutoCanceledAt = fr.AutoCanceledAt,
+                CustomerName = fr.Customer?.UserName ?? "",
+                CustomerPhone = fr.Customer?.PhoneNumber ?? "",
+                DistanceToGarageKm = fr.DistanceToGarageKm,
+                EstimatedArrivalMinutes = etaMinutes,
+                EmergencyFee = fr.EstimatedCost
+            };
         }
 
         public async Task<IEnumerable<EmergencyResponeDto>> GetByCustomerAsync(string customerId)
@@ -117,6 +233,12 @@ namespace Services.EmergencyRequestService
                 Status = fr.Status.ToString(),
                 Latitude = fr.Latitude,
                 Longitude = fr.Longitude,
+                Address = fr.Address,
+                DistanceToGarageKm = fr.DistanceToGarageKm,
+                EstimatedArrivalMinutes = fr.DistanceToGarageKm.HasValue ? (int?)Math.Ceiling(fr.DistanceToGarageKm.Value / 30.0 * 60.0) : null,
+                ResponseDeadline = fr.ResponseDeadline,
+                RespondedAt = fr.RespondedAt,
+                AutoCanceledAt = fr.AutoCanceledAt,
                 CustomerName = fr.Customer?.UserName ?? "",
                 CustomerPhone = fr.Customer?.PhoneNumber ?? ""
             }).ToList();
@@ -128,6 +250,22 @@ namespace Services.EmergencyRequestService
         public async Task<RequestEmergency?> GetByIdAsync(Guid id)
         {
             return await _repository.GetByIdAsync(id);
+        }
+
+        public async Task<EmergencyResponeDto?> GetDtoByIdAsync(Guid id)
+        {
+            var fr = await _repository.GetByIdAsync(id);
+            if (fr == null) return null;
+            return MapToDto(fr);
+        }
+
+        public async Task<string> ReverseGeocodeAddressAsync(double latitude, double longitude)
+        {
+            if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180)
+                throw new ArgumentOutOfRangeException("Coordinates are out of range.");
+
+            var address = await _geocodingService.ReverseGeocodeAsync(latitude, longitude);
+            return string.IsNullOrWhiteSpace(address) ? $"{latitude},{longitude}" : address;
         }
         
 
@@ -141,7 +279,7 @@ namespace Services.EmergencyRequestService
             return await _repository.GetAllEmergencyAsync();
         }
 
-        public async Task<bool> ApproveEmergency(Guid emergenciesId)
+        public async Task<bool> ApproveEmergency(Guid emergenciesId, string managerUserId)
         {
             var emergency = await _repository.GetByIdAsync(emergenciesId);
             if (emergency == null)
@@ -155,12 +293,25 @@ namespace Services.EmergencyRequestService
             if (string.IsNullOrEmpty(emergency.CustomerId))
                 throw new InvalidOperationException("Emergency request must have a valid CustomerId.");
 
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Pending)
+                throw new InvalidOperationException("Only pending emergencies can be approved.");
+
+            if (emergency.Branch == null || !emergency.Branch.IsActive)
+                throw new InvalidOperationException("Branch is inactive or not available.");
+            var manager = await _userRepository.GetByIdAsync(managerUserId);
+            if (manager == null)
+                throw new InvalidOperationException("Manager user not found.");
+            if (!manager.BranchId.HasValue || manager.BranchId.Value != emergency.BranchId)
+                throw new InvalidOperationException("Manager not authorized to approve this branch.");
+
+
             // Cập nhật trạng thái
             emergency.Status = RequestEmergency.EmergencyStatus.Accepted;
+            emergency.RespondedAt = DateTime.UtcNow;
 
             // 2 Tính tiền tự động khi approve
             var priceConfig = await _priceRepo.GetLatestPriceAsync(); // Lấy giá mới nhất
-            if (priceConfig != null && emergency.Branch != null)
+            if (priceConfig != null && emergency.Branch != null && HasValidCoords(emergency.Branch.Latitude, emergency.Branch.Longitude))
             {
                 double distance = GetDistance(
                     emergency.Latitude,
@@ -169,7 +320,11 @@ namespace Services.EmergencyRequestService
                     emergency.Branch.Longitude
                 );
 
-                decimal totalPrice = priceConfig.BasePrice + (decimal)distance * priceConfig.PricePerKm;
+                decimal totalPrice = priceConfig.BasePrice;
+                if (emergency.Type == RequestEmergency.EmergencyType.TowToGarage)
+                {
+                    totalPrice += (decimal)distance * priceConfig.PricePerKm;
+                }
 
                 emergency.DistanceToGarageKm = distance;
                 emergency.EstimatedCost = totalPrice;
@@ -222,20 +377,24 @@ namespace Services.EmergencyRequestService
                     BranchId = emergency.BranchId,
                     EstimatedCost = emergency.EstimatedCost,
                     DistanceToGarageKm = emergency.DistanceToGarageKm,
+                    RespondedAt = emergency.RespondedAt,
                     Message = "Yêu cầu cứu hộ đã được duyệt",
                     Timestamp = DateTime.UtcNow
                 };
 
                 // Gửi đến tất cả clients
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestApproved", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestApproved → All, id={emergency.EmergencyRequestId}");
 
                 // Gửi đến customer cụ thể
                 await _hubContext.Clients.Group($"customer-{emergency.CustomerId}")
                     .SendAsync("EmergencyRequestApproved", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestApproved → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
 
                 // Gửi đến branch cụ thể
                 await _hubContext.Clients.Group($"branch-{emergency.BranchId}")
                     .SendAsync("EmergencyRequestApproved", notificationData);
+                Console.WriteLine($"RT sent: EmergencyRequestApproved → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
             }
             catch (Exception ex)
             {
@@ -260,6 +419,14 @@ namespace Services.EmergencyRequestService
 
         private double ToRadians(double deg) => deg * (Math.PI / 180);
 
+        private static bool HasValidCoords(double lat, double lon)
+        {
+            if (double.IsNaN(lat) || double.IsNaN(lon)) return false;
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return false;
+            if (lat == 0 && lon == 0) return false;
+            return true;
+        }
+
         public async Task<bool> RejectEmergency(Guid emergenciesId, string? reason)
         {
 
@@ -268,16 +435,16 @@ namespace Services.EmergencyRequestService
                 throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
 
             // Không được reject khi đã được xử lý
-            if (emergency.Status == RequestEmergency.EmergencyStatus.Accepted ||
-                emergency.Status == RequestEmergency.EmergencyStatus.Completed)
-                throw new InvalidOperationException("Cannot reject an accepted or completed emergency.");
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Pending)
+                throw new InvalidOperationException("Cannot reject an emergency.");
 
             emergency.Status = RequestEmergency.EmergencyStatus.Canceled;
             emergency.RejectReason = reason;
+            emergency.RespondedAt = DateTime.UtcNow;
 
             await _repository.UpdateAsync(emergency);
 
-            // 🔔 Gửi real-time notification qua SignalR
+            //  Gửi real-time notification qua SignalR
             try
             {
                 var notificationData = new
@@ -287,6 +454,7 @@ namespace Services.EmergencyRequestService
                     CustomerId = emergency.CustomerId,
                     BranchId = emergency.BranchId,
                     RejectReason = reason,
+                    RespondedAt = emergency.RespondedAt,
                     Message = "Yêu cầu cứu hộ đã bị từ chối",
                     Timestamp = DateTime.UtcNow
                 };
@@ -310,6 +478,232 @@ namespace Services.EmergencyRequestService
 
             return true;
 
+        }
+
+        public async Task<bool> SetInProgressAsync(Guid emergenciesId)
+        {
+            var emergency = await _repository.GetByIdAsync(emergenciesId);
+            if (emergency == null)
+                throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
+
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted)
+                throw new InvalidOperationException("Only accepted emergencies can be set to InProgress.");
+
+            emergency.Status = RequestEmergency.EmergencyStatus.InProgress;
+            await _repository.UpdateAsync(emergency);
+
+            try
+            {
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "InProgress",
+                    CustomerId = emergency.CustomerId,
+                    BranchId = emergency.BranchId,
+                    Message = "Cứu hộ đang được xử lý",
+                    Timestamp = DateTime.UtcNow
+                };
+
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestInProgress", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestInProgress → All, id={emergency.EmergencyRequestId}");
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestInProgress", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestInProgress → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestInProgress", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestInProgress → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
+            }
+            catch { }
+
+            return true;
+        }
+
+        public async Task<bool> CancelEmergencyAsync(string userId, Guid emergenciesId)
+        {
+            var emergency = await _repository.GetByIdAsync(emergenciesId);
+            if (emergency == null)
+                throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
+
+            if (!string.Equals(emergency.CustomerId, userId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Emergency does not belong to user.");
+
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Pending)
+                throw new InvalidOperationException("Only pending emergencies can be canceled.");
+
+            emergency.Status = RequestEmergency.EmergencyStatus.Canceled;
+            
+
+            await _repository.UpdateAsync(emergency);
+
+            try
+            {
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Canceled",
+                    CustomerId = emergency.CustomerId,
+                    BranchId = emergency.BranchId,                 
+                    Timestamp = DateTime.UtcNow
+                };
+
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestCanceled", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestCanceled → All, id={emergency.EmergencyRequestId}");
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestCanceled", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestCanceled → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestCanceled", payload);
+                Console.WriteLine($"RT sent: EmergencyRequestCanceled → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
+            }
+            catch { }
+
+            return true;
+        }
+
+        // Đảm bảo bạn đã có DTO này
+        /*
+        namespace Dtos.Emergency
+        {
+            public class RouteDto
+            {
+                public double DistanceKm { get; set; }
+                public int DurationMinutes { get; set; }
+                public System.Text.Json.JsonElement Geometry { get; set; }
+            }
+        }
+        */
+
+        public async Task<RouteDto> GetRouteAsync(double fromLat, double fromLon, double toLat, double toLon)
+        {
+            // ===== 0. HTTP CLIENT SETUP (BYPASS SSL) =====
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
+
+            using var http = new HttpClient(handler);
+            http.Timeout = TimeSpan.FromSeconds(10);
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("garagepro-osrm-client");
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+
+            // OSRM yêu cầu thứ tự LON,LAT
+            var coords = string.Join(";", new[]
+            {
+                fromLon.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + fromLat.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                toLon.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + toLat.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            });
+            var baseUrl = Environment.GetEnvironmentVariable("OSRM_BASE_URL");
+            string urlHttps, urlHttp;
+            if (!string.IsNullOrWhiteSpace(baseUrl))
+            {
+                var b = baseUrl.TrimEnd('/');
+                urlHttps = b + $"/route/v1/driving/{coords}?overview=full&geometries=geojson";
+                urlHttp = urlHttps;
+            }
+            else
+            {
+                urlHttps = $"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson";
+                urlHttp = $"http://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson";
+            }
+
+            HttpResponseMessage res = null;
+            var preferHttp = string.Equals(Environment.GetEnvironmentVariable("OSRM_PREFER_HTTP"), "1", StringComparison.OrdinalIgnoreCase);
+
+            try
+            {
+                // Thử HTTPS trước hoặc HTTP nếu prefer
+                if (!preferHttp)
+                    res = await http.GetAsync(urlHttps);
+                else
+                    res = await http.GetAsync(urlHttp);
+            }
+            catch (HttpRequestException)
+            {
+                // Nếu thất bại, fallback
+                if (!preferHttp)
+                    res = await http.GetAsync(urlHttp);
+                else
+                    res = await http.GetAsync(urlHttps);
+            }
+
+            if (!res.IsSuccessStatusCode)
+            {
+                var raw = await res.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"OSRM API error. HTTP {res.StatusCode}: {raw}");
+            }
+
+            var json = await res.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            if (root.TryGetProperty("code", out var codeEl) && !string.Equals(codeEl.GetString(), "Ok", StringComparison.OrdinalIgnoreCase))
+            {
+                var msg = root.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
+                throw new InvalidOperationException($"OSRM Error: {codeEl.GetString()} - {msg}");
+            }
+
+            if (!root.TryGetProperty("routes", out var routes) || routes.ValueKind != JsonValueKind.Array || routes.GetArrayLength() == 0)
+                throw new InvalidOperationException("OSRM returned 'Ok' but routes[] is empty.");
+            var route = routes[0];
+            if (!route.TryGetProperty("distance", out var distanceEl) || distanceEl.ValueKind != JsonValueKind.Number)
+                throw new InvalidOperationException("Missing or invalid distance.");
+            if (!route.TryGetProperty("duration", out var durationEl) || durationEl.ValueKind != JsonValueKind.Number)
+                throw new InvalidOperationException("Missing or invalid duration.");
+            var geometry = route.TryGetProperty("geometry", out var geoEl) ? geoEl : default;
+            return new RouteDto
+            {
+                DistanceKm = Math.Round(distanceEl.GetDouble() / 1000.0, 3),
+                DurationMinutes = (int)Math.Ceiling(durationEl.GetDouble() / 60.0),
+                Geometry = geometry
+            };
+        }
+
+
+
+
+        public async Task<RouteDto> GetRouteByEmergencyIdAsync(Guid emergencyId)
+        {
+            var e = await _repository.GetByIdAsync(emergencyId);
+            if (e == null || e.Branch == null) throw new ArgumentException("Emergency or branch not found");
+            return await GetRouteAsync(e.Branch.Latitude, e.Branch.Longitude, e.Latitude, e.Longitude);
+        }
+
+        public async Task<bool> UpdateTechnicianLocationAsync(string technicianUserId, TechnicianLocationDto location)
+        {
+            var emergency = await _repository.GetByIdAsync(location.EmergencyRequestId);
+            if (emergency == null) throw new ArgumentException("Emergency not found");
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress)
+                throw new InvalidOperationException("Emergency must be accepted or in-progress to update location.");
+
+            RouteDto? route = null;
+            if (location.RecomputeRoute)
+            {
+                try
+                {
+                    route = await GetRouteAsync(location.Latitude, location.Longitude, emergency.Latitude, emergency.Longitude);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Route compute failed: {ex.Message}");
+                }
+            }
+
+            var payload = new
+            {
+                EmergencyRequestId = emergency.EmergencyRequestId,
+                TechnicianUserId = technicianUserId,
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
+                SpeedKmh = location.SpeedKmh,
+                Bearing = location.Bearing,
+                EtaMinutes = route?.DurationMinutes,
+                Route = route?.Geometry,
+                DistanceKm = route?.DistanceKm,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);
+            Console.WriteLine($"RT sent: TechnicianLocationUpdated → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+            await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("TechnicianLocationUpdated", payload);
+            Console.WriteLine($"RT sent: TechnicianLocationUpdated → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
+
+            return true;
         }
     }
 }

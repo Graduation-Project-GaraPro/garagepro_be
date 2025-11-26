@@ -608,9 +608,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("RepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
 
@@ -1820,6 +1817,12 @@ namespace DataAccessLayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AutoCanceledAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1850,6 +1853,12 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<DateTime>("RequestTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResponseDeadline")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
@@ -2256,7 +2265,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("VIN")
-                        .IsRequired()
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
@@ -2678,12 +2686,6 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("BranchId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-
-                    b.HasOne("BusinessObject.RepairOrder", "RepairOrder")
-                        .WithMany("RepairRequest")
-                        .HasForeignKey("RepairOrderId");
-
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
                         .WithMany("RepairRequests")
@@ -3119,7 +3121,7 @@ namespace DataAccessLayer.Migrations
                         .HasForeignKey("FeedBackId1");
 
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
-                        .WithOne("RepairOrder")
+                        .WithOne()
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -3523,11 +3525,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairImages");
 
-
                     b.Navigation("RequestEmergency")
                         .IsRequired();
-                    b.Navigation("RepairOrder");
-
 
                     b.Navigation("RequestServices");
                 });
