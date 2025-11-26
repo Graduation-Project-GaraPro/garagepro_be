@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Notifications;
 using DataAccessLayer;
+using Dtos.InspectionAndRepair;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -25,19 +26,41 @@ namespace Repositories.Notifiactions
             return notification;
         }
 
-        public async Task<List<Notification>> GetNotificationsByUserIdAsync(string userId)
+        public async Task<List<NotificationDto>> GetNotificationsByUserIdAsync(string userId)
         {
             return await _context.Notifications
+                .AsNoTracking()
                 .Where(n => n.UserID == userId)
                 .OrderByDescending(n => n.TimeSent)
+                .Select(n => new NotificationDto
+                {
+                    NotificationID = n.NotificationID,
+                    Content = n.Content,
+                    Type = n.Type,
+                    TimeSent = n.TimeSent,
+                    Status = n.Status,
+                    Target = n.Target,
+                    UserID = n.UserID
+                })
                 .ToListAsync();
         }
 
-        public async Task<List<Notification>> GetUnreadNotificationsByUserIdAsync(string userId)
+        public async Task<List<NotificationDto>> GetUnreadNotificationsByUserIdAsync(string userId)
         {
             return await _context.Notifications
+                .AsNoTracking()
                 .Where(n => n.UserID == userId && n.Status == NotificationStatus.Unread)
                 .OrderByDescending(n => n.TimeSent)
+                .Select(n => new NotificationDto
+                {
+                    NotificationID = n.NotificationID,
+                    Content = n.Content,
+                    Type = n.Type,
+                    TimeSent = n.TimeSent,
+                    Status = n.Status,
+                    Target = n.Target,
+                    UserID = n.UserID
+                })
                 .ToListAsync();
         }
 
@@ -88,7 +111,6 @@ namespace Repositories.Notifiactions
             return true;
         }
 
-        // KIỂM TRA QUYỀN SỞ HỮU
         public async Task<string> GetNotificationOwnerIdAsync(Guid notificationId)
         {
             var notification = await _context.Notifications

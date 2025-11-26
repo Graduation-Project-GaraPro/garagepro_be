@@ -10,7 +10,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Technician")]
+    [Authorize("SPECIFICATION_MANAGE")]
     public class SpecificationController : ODataController
     {
         private readonly ISpecificationService _specificationService;
@@ -23,10 +23,6 @@ namespace Garage_pro_api.Controllers
             _specificationService = specificationService;
             _userManager = userManager;
         }
-
-        /// <summary>
-        /// 🔹 Lấy tất cả thông số kỹ thuật của các xe
-        /// </summary>
         [HttpGet("all")]
         [EnableQuery]
         public async Task<IActionResult> GetAllSpecifications()
@@ -71,9 +67,6 @@ namespace Garage_pro_api.Controllers
             return Ok(result.AsQueryable());
         }
 
-        /// <summary>
-        /// 🔹 Tìm kiếm theo Automaker hoặc NameCar
-        /// </summary>
         [HttpGet("search")]
         [EnableQuery]
         public async Task<IActionResult> SearchSpecifications([FromQuery] string keyword)

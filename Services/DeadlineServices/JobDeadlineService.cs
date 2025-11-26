@@ -35,8 +35,6 @@ namespace Services.DeadlineServices
         public async Task CheckAndSendDeadlineNotificationsAsync()
         {
             var now = DateTime.UtcNow;
-
-            // Lấy tất cả jobs chưa hoàn thành và có deadline
             var jobs = await _context.Jobs
                 .Include(j => j.Service)
                 .Include(j => j.JobTechnicians)
@@ -53,17 +51,14 @@ namespace Services.DeadlineServices
                 var timeUntilDeadline = deadline - now;
                 var daysUntilDeadline = timeUntilDeadline.TotalDays;
 
-                // 1. THÔNG BÁO TRƯỚC DEADLINE 1 NGÀY (Message)
-                if (daysUntilDeadline > 0 && daysUntilDeadline <= 1.5) // Trong vòng 1-1.5 ngày
+                if (daysUntilDeadline > 0 && daysUntilDeadline <= 1.5)
                 {
                     await SendDeadlineReminderAsync(job, daysUntilDeadline);
                 }
-                // 2. THÔNG BÁO KHI QUÁ DEADLINE (Warning - lần đầu)
-                else if (daysUntilDeadline < 0 && daysUntilDeadline >= -1) // Quá deadline trong vòng 0-1 ngày
+                else if (daysUntilDeadline < 0 && daysUntilDeadline >= -1) 
                 {
                     await SendOverdueWarningAsync(job, Math.Abs(daysUntilDeadline));
                 }
-                // 3. THÔNG BÁO SAU KHI QUÁ DEADLINE (Mỗi ngày)
                 else if (daysUntilDeadline < -1)
                 {
                     await SendRecurringOverdueWarningAsync(job, Math.Abs(daysUntilDeadline));
@@ -73,12 +68,9 @@ namespace Services.DeadlineServices
             _logger.LogInformation("Checked {Count} jobs for deadline notifications", jobs.Count);
         }
 
-        // THÔNG BÁO TRƯỚC DEADLINE 1 NGÀY (Type: Message)
         private async Task SendDeadlineReminderAsync(Job job, double daysRemaining)
         {
             var notificationKey = $"deadline_reminder_{job.JobId}_{job.Deadline?.Date:yyyyMMdd}";
-
-            // Kiểm tra đã gửi chưa (tránh spam)
             if (await WasNotificationSentAsync(notificationKey))
                 return;
 
@@ -102,7 +94,6 @@ namespace Services.DeadlineServices
             _logger.LogInformation("Sent deadline reminder for Job {JobId}", job.JobId);
         }
 
-        // THÔNG BÁO KHI VỪA QUÁ DEADLINE (Type: Warning)
         private async Task SendOverdueWarningAsync(Job job, double daysOverdue)
         {
             var notificationKey = $"overdue_warning_{job.JobId}_{job.Deadline?.Date:yyyyMMdd}";
@@ -130,13 +121,11 @@ namespace Services.DeadlineServices
             _logger.LogWarning("Sent overdue warning for Job {JobId}", job.JobId);
         }
 
-        // THÔNG BÁO MỖI NGÀY SAU KHI QUÁ DEADLINE
         private async Task SendRecurringOverdueWarningAsync(Job job, double daysOverdue)
         {
             var dayCount = (int)Math.Floor(daysOverdue);
             var notificationKey = $"recurring_overdue_{job.JobId}_{dayCount}";
 
-            // Gửi mỗi khi qua 1 ngày mới (1 day, 2 days, 3 days...)
             if (await WasNotificationSentAsync(notificationKey))
                 return;
 

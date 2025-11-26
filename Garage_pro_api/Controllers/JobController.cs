@@ -309,39 +309,38 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // PUT: api/Job/{id}/reassign/{technicianId}
-        [HttpPut("{id}/reassign/{technicianId}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
-        public async Task<ActionResult> ReassignJobToTechnician(Guid id, Guid technicianId)
-        {
-            // Get the current user (manager) ID
-            var managerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(managerId))
-            {
-                return BadRequest("Manager ID not found in token");
-            }
+        //// PUT: api/Job/{id}/reassign/{technicianId}
+        //[HttpPut("{id}/reassign/{technicianId}")]
+        //[Authorize(Policy = "BOOKING_MANAGE")]
+        //public async Task<ActionResult> ReassignJobToTechnician(Guid id, Guid technicianId)
+        //{
+        //    // Get the current user (manager) ID
+        //    var managerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        //    if (string.IsNullOrEmpty(managerId))
+        //    {
+        //        return BadRequest("Manager ID not found in token");
+        //    }
 
-            try
-            {
-                var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
-                if (!result)
-                {
-                    return NotFound("Job not found or could not be reassigned");
-                }
+        //    try
+        //    {
+        //        var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
+        //        if (!result)
+        //        {
+        //            return NotFound("Job not found or could not be reassigned");
+        //        }
 
-                return NoContent();
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"An error occurred while reassigning the job: {ex.Message}");
-            }
-        }
-
-        
+        //        return NoContent();
+        //    }
+        //    catch (InvalidOperationException ex)
+        //    {
+        //        return BadRequest(ex.Message);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, $"An error occurred while reassigning the job: {ex.Message}");
+        //    }
+        //}
+       
 
         // GET: api/Job/{id}/parts
         [HttpGet("{id}/parts")]
