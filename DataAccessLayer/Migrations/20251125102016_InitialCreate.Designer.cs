@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251122134443_updatePaymentkey")]
-    partial class updatePaymentkey
+    [Migration("20251125102016_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -430,36 +430,6 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.ToTable("OperatingHours");
-                });
-
-            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
-                {
-                    b.Property<Guid>("ServiceId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("PartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("int");
-
-                    b.Property<Guid>("ServicePartId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<decimal>("UnitPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("ServiceId", "PartId");
-
-                    b.HasIndex("PartId");
-
-                    b.ToTable("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
@@ -2520,25 +2490,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
                 });
 
-            modelBuilder.Entity("BusinessObject.Branches.ServicePart", b =>
-                {
-                    b.HasOne("BusinessObject.Part", "Part")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("PartId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.Service", "Service")
-                        .WithMany("ServiceParts")
-                        .HasForeignKey("ServiceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Part");
-
-                    b.Navigation("Service");
-                });
-
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
                 {
                     b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "PromotionalCampaign")
@@ -2971,7 +2922,7 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
                 {
                     b.HasOne("BusinessObject.Campaigns.PromotionalCampaign", "AppliedPromotion")
-                        .WithMany()
+                        .WithMany("QuotationServices")
                         .HasForeignKey("AppliedPromotionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -3413,6 +3364,8 @@ namespace DataAccessLayer.Migrations
                 {
                     b.Navigation("PromotionalCampaignServices");
 
+                    b.Navigation("QuotationServices");
+
                     b.Navigation("VoucherUsages");
                 });
 
@@ -3489,8 +3442,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("RepairOrderServiceParts");
 
                     b.Navigation("RequestParts");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
@@ -3572,8 +3523,6 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("ServiceInspections");
 
                     b.Navigation("ServicePartCategories");
-
-                    b.Navigation("ServiceParts");
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceCategory", b =>
