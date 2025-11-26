@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251125102016_InitialCreate.Designer.cs
-    [Migration("20251125102016_InitialCreate")]
-    partial class InitialCreate
-========
-    [Migration("20251125062151_init")]
-    partial class init
->>>>>>>> main:DataAccessLayer/Migrations/20251125062151_init.Designer.cs
+    [Migration("20251125075220_addIsDefaultPermission")]
+    partial class addIsDefaultPermission
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1853,6 +1848,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Name")
                         .IsRequired()
