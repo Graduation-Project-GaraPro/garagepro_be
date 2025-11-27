@@ -1,5 +1,6 @@
-﻿using BusinessObject.Authentication;
+using BusinessObject.Authentication;
 using BusinessObject.Branches;
+using BusinessObject.Customers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -27,6 +28,8 @@ namespace BusinessObject.RequestEmergency
 
         [Required]
         public double Longitude { get; set; }
+        public string? RejectReason { get; set; }
+
 
         public DateTime RequestTime { get; set; } = DateTime.UtcNow;
 
@@ -34,6 +37,7 @@ namespace BusinessObject.RequestEmergency
         {
             Pending,    // Chờ gara xác nhận
             Accepted,   // Gara đã tiếp nhận
+            InProgress, // Đang xử lý cứu hộ
             Completed,  // Hoàn thành
             Canceled    // Khách hủy
         }
@@ -50,6 +54,10 @@ namespace BusinessObject.RequestEmergency
         [Required]
         public EmergencyStatus Status { get; set; } = EmergencyStatus.Pending;
 
+        public Guid? RepairRequestId { get; set; }
+        public RepairRequest? RepairRequest { get; set; }
+        public decimal? EstimatedCost { get; set; } // Chi phí ước tính
+        public double? DistanceToGarageKm { get; set; } // Khoảng cách đến gara (km)
         //  Ảnh 
         public virtual ICollection<EmergencyMedia>? MediaFiles { get; set; } = new List<EmergencyMedia>();
 
@@ -57,5 +65,10 @@ namespace BusinessObject.RequestEmergency
         public ApplicationUser Customer { get; set; }
         public Branch Branch { get; set; }
         public Vehicle Vehicle { get; set; }
+
+        public string? Address { get; set; }
+        public DateTime? ResponseDeadline { get; set; }
+        public DateTime? RespondedAt { get; set; }
+        public DateTime? AutoCanceledAt { get; set; }
     }
 }

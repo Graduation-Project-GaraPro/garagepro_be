@@ -1,6 +1,7 @@
-﻿using BusinessObject.Authentication;
+using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Vehicles;
+using BusinessObject.RequestEmergency;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -58,6 +59,9 @@ namespace BusinessObject.Customers
         // Một yêu cầu sửa chữa có thể dẫn đến một đơn sửa chữa
         public virtual RepairOrder? RepairOrder { get; set; }
 
+        //public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
+
+
         [Required]
         public DateTimeOffset ArrivalWindowStart { get; set; } = DateTimeOffset.UtcNow;
 
@@ -66,6 +70,8 @@ namespace BusinessObject.Customers
 
         // Optional: các tiến trình sửa chữa
         //public virtual ICollection<RepairTask> RepairTasks { get; set; }
+        public Guid? EmergencyRequestId { get; set; }  // Thêm field này
+        public RequestEmergency.RequestEmergency RequestEmergency { get; set; }
     }
     public enum RepairRequestStatus
     {

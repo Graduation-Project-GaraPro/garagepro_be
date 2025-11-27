@@ -428,13 +428,17 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     var serviceRepository = provider.GetRequiredService<Repositories.ServiceRepositories.IServiceRepository>();
     var partRepository = provider.GetRequiredService<Repositories.PartRepositories.IPartRepository>();
     var repairOrderRepository = provider.GetRequiredService<Repositories.IRepairOrderRepository>();
-    var jobService = provider.GetRequiredService<Services.IJobService>();
+    //var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
+    //var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
+    var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
+   // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
+
     var mapper = provider.GetRequiredService<IMapper>();
     var hubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
 
-    return new Services.QuotationServices.QuotationManagementService(
+    return new QuotationManagementService(
         quotationRepository,
         quotationServiceRepository,
         quotationServicePartRepository,
@@ -443,8 +447,8 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
         hubContext,
         repairOrderRepository,
         jobService,
-        fcmService, // Add this
-        userService, // Add this
+        fcmService,
+        userService,
         mapper);
 });
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
@@ -510,6 +514,10 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IJobDeadlineService, JobDeadlineService>();
 
+
+//priceEmer
+builder.Services.AddScoped<IPriceEmergencyRepositories, PriceEmergencyRepositories>();
+builder.Services.AddScoped<IPriceService, PriceEmergenciesService>();
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
@@ -607,6 +615,7 @@ builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 
 builder.Services.AddHostedService<CampaignExpirationService>();
 builder.Services.AddHostedService<PayOsWebhookProcessor>();
+builder.Services.AddHostedService<EmergencySlaService>();
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -709,6 +718,7 @@ app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
 ////Initialize database

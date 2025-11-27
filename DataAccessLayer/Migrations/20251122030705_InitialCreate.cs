@@ -123,6 +123,20 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "PriceEmergencies",
+                columns: table => new
+                {
+                    PriceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BasePrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    PricePerKm = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    DateCreated = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PriceEmergencies", x => x.PriceId);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PromotionalCampaigns",
                 columns: table => new
                 {
@@ -835,6 +849,38 @@ namespace DataAccessLayer.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_ServicePartCategories_Services_ServiceId",
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126133404_InitialCreate.cs
+========
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ServiceParts",
+                columns: table => new
+                {
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServicePartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ServiceParts", x => new { x.ServiceId, x.PartId });
+                    table.ForeignKey(
+                        name: "FK_ServiceParts_Parts_PartId",
+                        column: x => x.PartId,
+                        principalTable: "Parts",
+                        principalColumn: "PartId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ServiceParts_Services_ServiceId",
+>>>>>>>> origin/emergency_btus:DataAccessLayer/Migrations/20251122030705_InitialCreate.cs
                         column: x => x.ServiceId,
                         principalTable: "Services",
                         principalColumn: "ServiceId",
@@ -902,7 +948,7 @@ namespace DataAccessLayer.Migrations
                     ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     ColorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     LicensePlate = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    VIN = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: false),
+                    VIN = table.Column<string>(type: "nvarchar(17)", maxLength: 17, nullable: true),
                     Year = table.Column<int>(type: "int", nullable: false),
                     Odometer = table.Column<long>(type: "bigint", nullable: true),
                     LastServiceDate = table.Column<DateTime>(type: "datetime2", nullable: false),
@@ -1016,7 +1062,8 @@ namespace DataAccessLayer.Migrations
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     EstimatedCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
                     ArrivalWindowStart = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false)
+                    RowVersion = table.Column<byte[]>(type: "rowversion", rowVersion: true, nullable: false),
+                    EmergencyRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1042,6 +1089,25 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RepairImages",
+                columns: table => new
+                {
+                    ImageId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    RepairRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RepairImages", x => x.ImageId);
+                    table.ForeignKey(
+                        name: "FK_RepairImages_RepairRequests_RepairRequestId",
+                        column: x => x.RepairRequestId,
+                        principalTable: "RepairRequests",
+                        principalColumn: "RepairRequestID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RequestEmergencies",
                 columns: table => new
                 {
@@ -1052,9 +1118,17 @@ namespace DataAccessLayer.Migrations
                     IssueDescription = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Latitude = table.Column<double>(type: "float", nullable: false),
                     Longitude = table.Column<double>(type: "float", nullable: false),
+                    RejectReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RequestTime = table.Column<DateTime>(type: "datetime2", nullable: false),
                     Type = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false)
+                    Status = table.Column<int>(type: "int", nullable: false),
+                    RepairRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    EstimatedCost = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    DistanceToGarageKm = table.Column<double>(type: "float", nullable: true),
+                    Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ResponseDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    RespondedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    AutoCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1072,6 +1146,11 @@ namespace DataAccessLayer.Migrations
                         principalColumn: "BranchId",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
+                        name: "FK_RequestEmergencies_RepairRequests_RepairRequestId",
+                        column: x => x.RepairRequestId,
+                        principalTable: "RepairRequests",
+                        principalColumn: "RepairRequestID");
+                    table.ForeignKey(
                         name: "FK_RequestEmergencies_Vehicles_VehicleId",
                         column: x => x.VehicleId,
                         principalTable: "Vehicles",
@@ -1080,6 +1159,7 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126133404_InitialCreate.cs
                 name: "RepairImages",
                 columns: table => new
                 {
@@ -1161,6 +1241,8 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+========
+>>>>>>>> origin/emergency_btus:DataAccessLayer/Migrations/20251122030705_InitialCreate.cs
                 name: "RequestServices",
                 columns: table => new
                 {
@@ -2086,6 +2168,13 @@ namespace DataAccessLayer.Migrations
                 column: "CustomerId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RequestEmergencies_RepairRequestId",
+                table: "RequestEmergencies",
+                column: "RepairRequestId",
+                unique: true,
+                filter: "[RepairRequestId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RequestEmergencies_VehicleId",
                 table: "RequestEmergencies",
                 column: "VehicleId");
@@ -2335,6 +2424,9 @@ namespace DataAccessLayer.Migrations
                 name: "Payments");
 
             migrationBuilder.DropTable(
+                name: "PriceEmergencies");
+
+            migrationBuilder.DropTable(
                 name: "PromotionalCampaignServices");
 
             migrationBuilder.DropTable(
@@ -2363,6 +2455,12 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "ServicePartCategories");
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126133404_InitialCreate.cs
+========
+
+            migrationBuilder.DropTable(
+                name: "ServiceParts");
+>>>>>>>> origin/emergency_btus:DataAccessLayer/Migrations/20251122030705_InitialCreate.cs
 
             migrationBuilder.DropTable(
                 name: "SpecificationsData");

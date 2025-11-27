@@ -55,10 +55,10 @@ namespace Services.Customer
             _vehicleService = vehicleService;
         }
 
-        public async Task<IEnumerable<RepairRequestDto>> GetAllAsync()
+        public async Task<IEnumerable<RepairRequest>> GetAllAsync()
         {
             var requests = await _unitOfWork.RepairRequests.GetAllAsync();
-            return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
+            return _mapper.Map<IEnumerable<RepairRequest>>(requests);
         }
 
         public async Task<object> GetPagedAsync(
@@ -122,10 +122,10 @@ namespace Services.Customer
             };
         }
 
-        public async Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId)
+        public async Task<IEnumerable<RepairRequest>> GetByUserIdAsync(string userId)
         {
             var requests = await _unitOfWork.RepairRequests.GetByUserIdAsync(userId);
-            return _mapper.Map<IEnumerable<RepairRequestDto>>(requests);
+            return _mapper.Map<IEnumerable<RepairRequest>>(requests);
         }
 
         public async Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync()

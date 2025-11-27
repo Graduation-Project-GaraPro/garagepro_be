@@ -280,6 +280,8 @@ namespace Services
 
             var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
 
+
+
             // Create RepairOrderService entries for selected services
             if (selectedServiceIds != null && selectedServiceIds.Any())
             {

@@ -33,7 +33,7 @@ namespace BusinessObject
 
         [MaxLength(17)]
         [RegularExpression(@"^[A-Z0-9]{17}$")]
-        public string VIN { get; set; }
+        public string? VIN { get; set; }
 
         [Required]
         [Range(1886, 2030)]

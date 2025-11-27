@@ -12,6 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126150340_UpdateDbMergeMain.Designer.cs
 <<<<<<<< HEAD:DataAccessLayer/Migrations/20251126133404_InitialCreate.Designer.cs
     [Migration("20251126133404_InitialCreate")]
     partial class InitialCreate
@@ -19,6 +20,10 @@ namespace DataAccessLayer.Migrations
     [Migration("20251126150340_UpdateDbMergeMain")]
     partial class UpdateDbMergeMain
 >>>>>>>> hauhv_technician:DataAccessLayer/Migrations/20251126150340_UpdateDbMergeMain.Designer.cs
+========
+    [Migration("20251122030705_InitialCreate")]
+    partial class InitialCreate
+>>>>>>>> origin/emergency_btus:DataAccessLayer/Migrations/20251122030705_InitialCreate.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -579,6 +584,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<Guid?>("EmergencyRequestId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal?>("EstimatedCost")
                         .HasColumnType("decimal(18,2)");
@@ -1734,11 +1742,37 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("RepairOrderServiceParts");
                 });
 
+            modelBuilder.Entity("BusinessObject.RequestEmergency.PriceEmergency", b =>
+                {
+                    b.Property<Guid>("PriceId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal>("BasePrice")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("DateCreated")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PricePerKm")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("PriceId");
+
+                    b.ToTable("PriceEmergencies");
+                });
+
             modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
                 {
                     b.Property<Guid>("EmergencyRequestId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("AutoCanceledAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
@@ -1746,6 +1780,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<string>("CustomerId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<double?>("DistanceToGarageKm")
+                        .HasColumnType("float");
+
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("IssueDescription")
                         .IsRequired()
@@ -1757,7 +1797,19 @@ namespace DataAccessLayer.Migrations
                     b.Property<double>("Longitude")
                         .HasColumnType("float");
 
+                    b.Property<string>("RejectReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("RepairRequestId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime>("RequestTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ResponseDeadline")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("Status")
@@ -1774,6 +1826,10 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("CustomerId");
+
+                    b.HasIndex("RepairRequestId")
+                        .IsUnique()
+                        .HasFilter("[RepairRequestId] IS NOT NULL");
 
                     b.HasIndex("VehicleId");
 
@@ -2163,7 +2219,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("VIN")
-                        .IsRequired()
                         .HasMaxLength(17)
                         .HasColumnType("nvarchar(17)");
 
@@ -2989,7 +3044,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
-                        .WithOne("RepairOrder")
+                        .WithOne()
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -3074,6 +3129,10 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
+                        .WithOne("RequestEmergency")
+                        .HasForeignKey("BusinessObject.RequestEmergency.RequestEmergency", "RepairRequestId");
+
                     b.HasOne("BusinessObject.Vehicle", "Vehicle")
                         .WithMany()
                         .HasForeignKey("VehicleId")
@@ -3083,6 +3142,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("RepairRequest");
 
                     b.Navigation("Vehicle");
                 });
@@ -3387,7 +3448,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("RepairImages");
 
-                    b.Navigation("RepairOrder");
+                    b.Navigation("RequestEmergency")
+                        .IsRequired();
 
                     b.Navigation("RequestServices");
                 });
