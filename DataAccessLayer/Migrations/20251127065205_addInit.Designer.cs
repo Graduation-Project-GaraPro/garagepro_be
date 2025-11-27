@@ -12,18 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126150340_UpdateDbMergeMain.Designer.cs
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251126133404_InitialCreate.Designer.cs
-    [Migration("20251126133404_InitialCreate")]
-    partial class InitialCreate
-========
-    [Migration("20251126150340_UpdateDbMergeMain")]
-    partial class UpdateDbMergeMain
->>>>>>>> hauhv_technician:DataAccessLayer/Migrations/20251126150340_UpdateDbMergeMain.Designer.cs
-========
-    [Migration("20251122030705_InitialCreate")]
-    partial class InitialCreate
->>>>>>>> origin/emergency_btus:DataAccessLayer/Migrations/20251122030705_InitialCreate.Designer.cs
+    [Migration("20251127065205_addInit")]
+    partial class addInit
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
