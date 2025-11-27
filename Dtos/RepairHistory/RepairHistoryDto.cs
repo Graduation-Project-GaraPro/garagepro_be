@@ -1,4 +1,4 @@
-﻿using Dtos.InspectionAndRepair;
+﻿﻿using Dtos.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +25,6 @@ namespace Dtos.RepairHistory
         public string RepairDescription { get; set; } 
         public decimal TotalAmount { get; set; }
         public DateTime? Deadline { get; set; }
-        public int Level { get; set; }
         public string Note { get; set; }
         public List<JobPartDto> JobParts { get; set; } = new();
         public List<ServiceDto> Services { get; set; } = new();

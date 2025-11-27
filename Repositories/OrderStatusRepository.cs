@@ -29,6 +29,11 @@ namespace Repositories
                 .FirstOrDefaultAsync(os => os.OrderStatusId == id);
         }
 
+        public async Task<OrderStatus?> GetOrderStatusByIdAsync(int id) // Alias for GetByIdAsync
+        {
+            return await GetByIdAsync(id);
+        }
+
         public async Task<OrderStatus> CreateAsync(OrderStatus orderStatus)
         {
             _context.OrderStatuses.Add(orderStatus);

@@ -138,7 +138,8 @@ namespace Services.VehicleServices
             var customerDto = new RoBoardCustomerDto
             {
                 UserId = vehicle.User.Id,
-                FullName = vehicle.User.FullName,
+                FirstName = vehicle.User.FirstName,
+                LastName = vehicle.User.LastName,
                 Email = vehicle.User.Email,
                 PhoneNumber = vehicle.User.PhoneNumber
             };

@@ -1,4 +1,4 @@
-﻿using BusinessObject.PayOsModels;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject.PayOsModels;
 using BusinessObject;
 using BussinessObject;
 using DataAccessLayer;
@@ -72,6 +72,11 @@ namespace Services.PaymentServices
                 .Where(p => p.Status == status)
                 .OrderByDescending(p => p.PaymentDate)
                 .ToListAsync();
+        }
+
+        public Task<RepairOrder> GetRepairOrderByIdAsync(Guid repairOrderId)
+        {
+            return _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
         }
         #endregion
 
@@ -261,6 +266,12 @@ namespace Services.PaymentServices
                 throw new Exception($"Repair order with ID {repairOrderId} not found");
             }
 
+            // Check if repair order status is Completed (StatusId = 3)
+            if (repairOrder.StatusId != 3)
+            {
+                throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
+            }
+
             // Check if all jobs are completed
             var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
             if (!allJobsCompleted)
@@ -280,8 +291,8 @@ namespace Services.PaymentServices
                 UserId = managerId, // Manager ID
                 Amount = amount,
                 Method = method,
-                Status = PaymentStatus.Paid, // Manual payments are immediately marked as paid
-                PaymentDate = DateTime.UtcNow,
+                Status = method == PaymentMethod.Cash ? PaymentStatus.Paid : PaymentStatus.Unpaid, // Cash payments are immediately paid, PayOs payments are unpaid until customer pays
+                PaymentDate = method == PaymentMethod.Cash ? DateTime.UtcNow : DateTime.MinValue, // Set payment date only for cash payments
                 UpdatedAt = DateTime.UtcNow
             };
 
@@ -289,22 +300,343 @@ namespace Services.PaymentServices
             await _repo.AddAsync(payment);
             await _repo.SaveChangesAsync(ct);
 
-            // 6. Update repair order paid status
-            repairOrder.PaidAmount += amount;
-            if (repairOrder.PaidAmount >= repairOrder.EstimatedAmount)
+            // 6. Update repair order paid status (only for cash payments)
+            if (method == PaymentMethod.Cash)
             {
-                repairOrder.PaidStatus = PaidStatus.Paid;
-            }
-            else
-            {
-                // Keep as Unpaid for partial payments since there's no Partial status in the enum
-                repairOrder.PaidStatus = PaidStatus.Unpaid;
-            }
+                repairOrder.PaidAmount += amount;
+                if (repairOrder.PaidAmount >= repairOrder.EstimatedAmount)
+                {
+                    repairOrder.PaidStatus = PaidStatus.Paid;
+                }
+                else
+                {
+                    // Keep as Unpaid for partial payments since there's no Partial status in the enum
+                    repairOrder.PaidStatus = PaidStatus.Unpaid;
+                }
 
-            await _repoRepairOrder.UpdateAsync(repairOrder);
-            await _repoRepairOrder.Context.SaveChangesAsync(ct);
+                await _repoRepairOrder.UpdateAsync(repairOrder);
+                await _repoRepairOrder.Context.SaveChangesAsync(ct);
+            }
 
             return payment;
+        }
+
+        public async Task<CreatePaymentLinkResult> CreateManagerPayOsPaymentAsync(Guid repairOrderId, string managerId, string? description = null, CancellationToken ct = default)
+        {
+            // 1. Get repair order and validate
+            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
+            if (repairOrder == null)
+            {
+                throw new Exception($"Repair order with ID {repairOrderId} not found");
+            }
+
+            // Check if repair order status is Completed (StatusId = 3)
+            if (repairOrder.StatusId != 3)
+            {
+                throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
+            }
+
+            // Check if all jobs are completed
+            var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
+            if (!allJobsCompleted)
+            {
+                throw new Exception($"All jobs in repair order must be completed before payment can be created");
+            }
+
+            // 2. Calculate amount to pay
+            var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+            if (amountToPay <= 0)
+            {
+                throw new Exception("Repair order is already fully paid");
+            }
+
+            // 3. Check if there's already a paid payment
+            var paidPayment = await _repo.GetByConditionAsync(
+                p => p.RepairOrderId == repairOrderId && p.Status == PaymentStatus.Paid, ct);
+            if (paidPayment != null)
+            {
+                throw new Exception($"Payment {paidPayment.PaymentId} already paid");
+            }
+
+            // 4. Check for existing unpaid PayOS payment
+            var existingOpen = await _repo.GetByConditionAsync(
+                p => p.RepairOrderId == repairOrderId && 
+                     p.Method == PaymentMethod.PayOs &&
+                     p.Status == PaymentStatus.Unpaid, ct);
+            
+            if (existingOpen != null)
+            {
+                return new CreatePaymentLinkResult 
+                { 
+                    PaymentId = existingOpen.PaymentId, 
+                    OrderCode = existingOpen.PaymentId, 
+                    CheckoutUrl = existingOpen.CheckoutUrl 
+                };
+            }
+
+            // 5. Create payment record
+            var payment = new Payment
+            {
+                RepairOrderId = repairOrderId,
+                UserId = repairOrder.UserId, // Customer's user ID for payment tracking
+                Amount = amountToPay,
+                Method = PaymentMethod.PayOs,
+                Status = PaymentStatus.Unpaid,
+                PaymentDate = DateTime.MinValue,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            await _repo.AddAsync(payment);
+            await _repo.SaveChangesAsync(ct);
+
+            // 6. Ensure payment is saved and has ID
+            if (payment.PaymentId <= 0)
+            {
+                throw new InvalidOperationException("Payment ID is not generated properly");
+            }
+
+            // 7. Prepare URLs for PayOS - Manager web flow
+            var returnUrl = $"{_baseUrl}/manager/payment/success?orderCode={payment.PaymentId}&repairOrderId={repairOrderId}";
+            var cancelUrl = $"{_baseUrl}/api/payments/cancel?orderCode={payment.PaymentId}&reason=user_cancel";
+
+            // 8. Create PayOS payment link
+            var payOsRequest = new CreatePaymentLinkRequest(
+                orderCode: payment.PaymentId,
+                amount: (int)Math.Round(amountToPay, MidpointRounding.AwayFromZero),
+                description: description ?? $"Payment for repair order {repairOrderId}",
+                cancelUrl: cancelUrl,
+                returnUrl: returnUrl
+            );
+
+            PayOsResponse<CreatePaymentLinkResponse> payOsResponse;
+            try
+            {
+                payOsResponse = await _payos.CreatePaymentLinkAsync(payOsRequest, ct);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception("PayOS error when creating link", ex);
+            }
+
+            // 9. Validate PayOS response
+            if (payOsResponse?.data == null || string.IsNullOrEmpty(payOsResponse.data.checkoutUrl))
+            {
+                payment.Status = PaymentStatus.Failed;
+                payment.UpdatedAt = DateTime.UtcNow;
+                await _repo.UpdateAsync(payment, ct);
+                await _repo.SaveChangesAsync(ct);
+
+                throw new InvalidOperationException($"PayOS returned invalid response: code={payOsResponse?.code}, desc={payOsResponse?.desc}");
+            }
+
+            // 10. Update payment with checkout URL
+            payment.CheckoutUrl = payOsResponse.data.checkoutUrl;
+            payment.UpdatedAt = DateTime.UtcNow;
+            await _repo.UpdateAsync(payment, ct);
+            await _repo.SaveChangesAsync(ct);
+
+            // 11. Return result
+            return new CreatePaymentLinkResult
+            {
+                PaymentId = payment.PaymentId,
+                OrderCode = payOsResponse.data.orderCode,
+                CheckoutUrl = payOsResponse.data.checkoutUrl
+            };
+        }
+
+        public async Task<PaymentPreviewDto> GetPaymentPreviewAsync(Guid repairOrderId, CancellationToken ct = default)
+        {
+            // Get repair order with all related data
+            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
+            if (repairOrder == null)
+            {
+                throw new Exception($"Repair order with ID {repairOrderId} not found");
+            }
+
+            // Check if repair order status is Completed (StatusId = 3)
+            if (repairOrder.StatusId != 3)
+            {
+                throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
+            }
+
+            var preview = new PaymentPreviewDto
+            {
+                RepairOrderId = repairOrder.RepairOrderId,
+                RepairOrderCost = repairOrder.Cost,
+                EstimatedAmount = repairOrder.EstimatedAmount,
+                PaidAmount = repairOrder.PaidAmount,
+                // Customer and vehicle information
+                CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
+                VehicleInfo = repairOrder.Vehicle != null ? $"{repairOrder.Vehicle.Brand?.BrandName ?? "Unknown Brand"} {repairOrder.Vehicle.Model?.ModelName ?? "Unknown Model"} ({repairOrder.Vehicle.LicensePlate ?? "No Plate"})" : "Unknown Vehicle"
+            };
+
+            // Calculate discount from quotations
+            decimal totalDiscount = 0;
+            if (repairOrder.Quotations != null && repairOrder.Quotations.Any())
+            {
+                // Only include approved quotations
+                var approvedQuotations = repairOrder.Quotations.Where(q => q.Status == QuotationStatus.Approved).ToList();
+                foreach (var quotation in approvedQuotations)
+                {
+                    totalDiscount += quotation.DiscountAmount;
+                    preview.Quotations.Add(new QuotationInfoDto
+                    {
+                        QuotationId = quotation.QuotationId,
+                        TotalAmount = quotation.TotalAmount,
+                        DiscountAmount = quotation.DiscountAmount,
+                        Status = quotation.Status.ToString()
+                    });
+                }
+            }
+            preview.DiscountAmount = totalDiscount;
+            
+            // Set TotalAmount as RepairOrderCost minus DiscountAmount
+            preview.TotalAmount = preview.RepairOrderCost - preview.DiscountAmount;
+
+            // Get services and parts from approved quotation (customer's selections)
+            if (repairOrder.Quotations != null && repairOrder.Quotations.Any())
+            {
+                // Get the approved quotation (should only be one per repair order)
+                var approvedQuotation = repairOrder.Quotations.FirstOrDefault(q => q.Status == QuotationStatus.Approved);
+                
+                if (approvedQuotation != null && approvedQuotation.QuotationServices != null)
+                {
+                    // Get selected services from quotation
+                    foreach (var quotationService in approvedQuotation.QuotationServices.Where(qs => qs.IsSelected))
+                    {
+                        if (quotationService.Service != null)
+                        {
+                            preview.Services.Add(new ServicePreviewDto
+                            {
+                                ServiceId = quotationService.ServiceId,
+                                ServiceName = quotationService.Service.ServiceName,
+                                Price = quotationService.Price, // Use price from quotation (locked at time of quote)
+                                EstimatedDuration = quotationService.Service.EstimatedDuration
+                            });
+                        }
+                        
+                        // Get selected parts for this service from quotation
+                        if (quotationService.QuotationServiceParts != null)
+                        {
+                            foreach (var quotationPart in quotationService.QuotationServiceParts.Where(qsp => qsp.IsSelected))
+                            {
+                                if (quotationPart.Part != null)
+                                {
+                                    preview.Parts.Add(new PartPreviewDto
+                                    {
+                                        PartId = quotationPart.PartId,
+                                        PartName = quotationPart.Part.Name,
+                                        Quantity = (int)quotationPart.Quantity,
+                                        UnitPrice = quotationPart.Price, // Use price from quotation (locked at time of quote)
+                                        TotalPrice = quotationPart.Quantity * quotationPart.Price
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Fallback: If no approved quotation, get from repair order services and job parts
+                    // This handles cases where payment is made without quotation flow
+                    if (repairOrder.RepairOrderServices != null)
+                    {
+                        var addedServiceIds = new HashSet<Guid>();
+                        foreach (var roService in repairOrder.RepairOrderServices)
+                        {
+                            if (roService.Service != null && !addedServiceIds.Contains(roService.ServiceId))
+                            {
+                                preview.Services.Add(new ServicePreviewDto
+                                {
+                                    ServiceId = roService.ServiceId,
+                                    ServiceName = roService.Service.ServiceName,
+                                    Price = roService.Service.Price,
+                                    EstimatedDuration = roService.Service.EstimatedDuration
+                                });
+                                addedServiceIds.Add(roService.ServiceId);
+                            }
+                        }
+                    }
+
+                    if (repairOrder.Jobs != null)
+                    {
+                        foreach (var job in repairOrder.Jobs)
+                        {
+                            if (job.JobParts != null)
+                            {
+                                foreach (var jobPart in job.JobParts)
+                                {
+                                    if (jobPart.Part != null)
+                                    {
+                                        preview.Parts.Add(new PartPreviewDto
+                                        {
+                                            PartId = jobPart.PartId,
+                                            PartName = jobPart.Part.Name,
+                                            Quantity = jobPart.Quantity,
+                                            UnitPrice = jobPart.UnitPrice,
+                                            TotalPrice = jobPart.Quantity * jobPart.UnitPrice
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return preview;
+        }
+
+        public async Task<PaymentSummaryDto> GetPaymentSummaryAsync(Guid repairOrderId, CancellationToken ct = default)
+        {
+            // Get repair order with all related data
+            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
+            if (repairOrder == null)
+            {
+                throw new Exception($"Repair order with ID {repairOrderId} not found");
+            }
+
+            // Calculate discount from quotations
+            decimal totalDiscount = 0;
+            if (repairOrder.Quotations != null && repairOrder.Quotations.Any())
+            {
+                foreach (var quotation in repairOrder.Quotations)
+                {
+                    totalDiscount += quotation.DiscountAmount;
+                }
+            }
+
+            // Get payment history
+            var paymentHistory = new List<PaymentHistoryDto>();
+            if (repairOrder.Payments != null && repairOrder.Payments.Any())
+            {
+                foreach (var payment in repairOrder.Payments)
+                {
+                    paymentHistory.Add(new PaymentHistoryDto
+                    {
+                        PaymentId = payment.PaymentId,
+                        Method = payment.Method,
+                        Status = payment.Status,
+                        Amount = payment.Amount,
+                        PaymentDate = payment.PaymentDate,
+                        ProcessedBy = payment.User?.UserName ?? "Unknown"
+                    });
+                }
+            }
+
+            var summary = new PaymentSummaryDto
+            {
+                RepairOrderId = repairOrder.RepairOrderId,
+                CustomerName = repairOrder.User?.UserName ?? "Unknown Customer",
+                VehicleInfo = $"{repairOrder.Vehicle?.Brand} {repairOrder.Vehicle?.Model} ({repairOrder.Vehicle?.LicensePlate})",
+                RepairOrderCost = repairOrder.Cost,
+                TotalDiscount = totalDiscount,
+                AmountToPay = repairOrder.Cost - totalDiscount,
+                PaidStatus = repairOrder.PaidStatus,
+                PaymentHistory = paymentHistory
+            };
+
+            return summary;
         }
         #endregion
 

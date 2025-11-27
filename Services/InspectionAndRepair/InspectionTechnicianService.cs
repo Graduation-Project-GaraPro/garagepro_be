@@ -10,16 +10,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Services;
 
 public class InspectionTechnicianService : IInspectionTechnicianService
 {
     private readonly IInspectionTechnicianRepository _repo;
     private readonly IMapper _mapper;
+    private readonly IRepairOrderService _repairOrderService;
 
-    public InspectionTechnicianService(IInspectionTechnicianRepository repo, IMapper mapper)
+    public InspectionTechnicianService(IInspectionTechnicianRepository repo, IMapper mapper, IRepairOrderService repairOrderService)
     {
         _repo = repo;
         _mapper = mapper;
+        _repairOrderService = repairOrderService;
     }   
     public async Task<List<InspectionTechnicianDto>> GetInspectionsByTechnicianAsync(string userId)
     {
@@ -247,11 +250,19 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         su.SuggestedPartsByCategory.All(spc => spc.Value != null && spc.Value.Any())
     ) && !string.IsNullOrWhiteSpace(request.Finding);
 
+        var previousStatus = inspection.Status; // store previous status
         inspection.Status = allServicesCompleted
             ? InspectionStatus.Completed
             : InspectionStatus.InProgress;
 
         await _repo.SaveChangesAsync();
+
+        // If the inspection was just completed, update the repair order cost
+        if (previousStatus != InspectionStatus.Completed && inspection.Status == InspectionStatus.Completed)
+        {
+            // Update the repair order cost based on inspection services
+            await _repairOrderService.UpdateCostFromInspectionAsync(inspection.RepairOrderId);
+        }
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);

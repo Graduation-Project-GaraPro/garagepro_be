@@ -159,7 +159,6 @@ namespace Repositories.RepairProgressRepositories
                         Deadline = j.Deadline,
                         TotalAmount = j.TotalAmount,
                         Note = j.Note ?? string.Empty,
-                        Level = j.Level,
                         Repair = j.Repair != null ? new Dtos.RepairProgressDto.RepairDto
                         {
                             RepairId = j.Repair.RepairId,
@@ -180,7 +179,8 @@ namespace Repositories.RepairProgressRepositories
                         Technicians = j.JobTechnicians.Select(jt => new Dtos.RepairProgressDto.TechnicianDto
                         {
                             TechnicianId = jt.Technician.TechnicianId,
-                            FullName = jt.Technician.User.LastName + " "+ jt.Technician.User.FirstName,
+                            FirstName = jt.Technician.User.FirstName,
+                            LastName = jt.Technician.User.LastName,
                             Email = jt.Technician.User.Email,
                             PhoneNumber = jt.Technician.User.PhoneNumber
                         }).ToList()

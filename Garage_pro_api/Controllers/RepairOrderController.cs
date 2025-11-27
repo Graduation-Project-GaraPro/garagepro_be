@@ -17,6 +17,7 @@ using Dtos.InspectionAndRepair;
 using BusinessObject.Enums;
 using Repositories.ServiceRepositories; // Add this for service repository
 using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
+using Dtos.RepairOrder; // Add this for UpdateRoStatusNoteServicesDto
 
 namespace Garage_pro_api.Controllers
 {
@@ -223,47 +224,15 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // First, get the existing repair order to preserve customer and vehicle information
-            var existingRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(id);
-            if (existingRepairOrder == null)
-            {
-                return NotFound();
-            }
-
-            // Ensure customer and vehicle cannot be changed to different entities
-            if (updateRepairOrderDto.UserId != existingRepairOrder.UserId)
-            {
-                return BadRequest("Cannot change customer. Please create a new repair order for a different customer.");
-            }
-
-            if (updateRepairOrderDto.VehicleId != existingRepairOrder.VehicleId)
-            {
-                return BadRequest("Cannot change vehicle. Please create a new repair order for a different vehicle.");
-            }
-
-            // Map the update DTO to the existing repair order
-            existingRepairOrder.ReceiveDate = updateRepairOrderDto.ReceiveDate;
-            existingRepairOrder.RoType = updateRepairOrderDto.RoType;
-            existingRepairOrder.EstimatedCompletionDate = updateRepairOrderDto.EstimatedCompletionDate;
-            existingRepairOrder.CompletionDate = updateRepairOrderDto.CompletionDate;
-            existingRepairOrder.Cost = updateRepairOrderDto.Cost;
-            existingRepairOrder.EstimatedAmount = updateRepairOrderDto.EstimatedAmount;
-            existingRepairOrder.PaidAmount = updateRepairOrderDto.PaidAmount;
-            existingRepairOrder.PaidStatus = updateRepairOrderDto.PaidStatus;
-            existingRepairOrder.EstimatedRepairTime = updateRepairOrderDto.EstimatedRepairTime;
-            existingRepairOrder.Note = updateRepairOrderDto.Note;
-            existingRepairOrder.UpdatedAt = DateTime.UtcNow;
-            existingRepairOrder.IsArchived = updateRepairOrderDto.IsArchived;
-            existingRepairOrder.ArchivedAt = updateRepairOrderDto.ArchivedAt;
-            existingRepairOrder.ArchivedByUserId = updateRepairOrderDto.ArchivedByUserId;
-            existingRepairOrder.BranchId = updateRepairOrderDto.BranchId;
-            existingRepairOrder.StatusId = updateRepairOrderDto.StatusId; // This is now an int
-
             try
             {
-                var updatedRepairOrder = await _repairOrderService.UpdateRepairOrderAsync(existingRepairOrder);
+                var updatedRepairOrder = await _repairOrderService.UpdateRepairOrderStatusNoteServicesAsync(id, updateRepairOrderDto);
                 var repairOrderDto = _repairOrderService.MapToRepairOrderDto(updatedRepairOrder);
                 return Ok(repairOrderDto);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -390,5 +359,63 @@ namespace Garage_pro_api.Controllers
             var archivedOrders = await _repairOrderService.GetArchivedRepairOrdersAsync(null, "ArchivedAt", "Desc", page, pageSize);
             return Ok(archivedOrders);
         }
+        
+        // POST: api/RepairOrder/cancel
+        [HttpPost("cancel")]
+        public async Task<IActionResult> CancelRepairOrder([FromBody] CancelRepairOrderDto cancelDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            var result = await _repairOrderService.CancelRepairOrderAsync(cancelDto);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return Ok(result);
+        }
+
+        // PUT: api/RepairOrder/{id}/labels
+        [HttpPut("{id}/labels")]
+        public async Task<IActionResult> UpdateRepairOrderLabels(Guid id, [FromBody] UpdateRepairOrderLabelsDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var result = await _repairOrderService.UpdateRepairOrderLabelsAsync(id, dto.LabelIds);
+                if (!result.Success)
+                {
+                    return BadRequest(new { message = result.Message });
+                }
+
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+            }
+        }
+        
+    }
+
+    // DTO for updating labels
+    public class UpdateRepairOrderLabelsDto
+    {
+        public List<Guid> LabelIds { get; set; } = new List<Guid>();
     }
 }

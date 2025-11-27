@@ -56,7 +56,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
 
@@ -1682,7 +1682,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Standard oil change completed successfully",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1698,7 +1697,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Tire rotation completed - even wear achieved",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1716,7 +1714,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Waiting for customer approval of brake repair",
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedByManagerId = userId
             },
 
@@ -1733,7 +1730,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Urgent brake system repair in progress",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 3,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1749,7 +1745,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Engine performance optimization",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1767,7 +1762,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Scheduled tire rotation service",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                Level = 1,
                 AssignedByManagerId = userId
             }
         };

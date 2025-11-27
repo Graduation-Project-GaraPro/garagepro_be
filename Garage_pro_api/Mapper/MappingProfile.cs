@@ -354,7 +354,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Finding, opt => opt.MapFrom(src => src.Finding))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
-                .ForMember(dest => dest.TechnicianName, opt => opt.MapFrom(src => src.Technician.User.FullName));
+                .ForMember(dest => dest.TechnicianName, opt => opt.MapFrom(src => src.Technician.User != null ? $"{src.Technician.User.FirstName} {src.Technician.User.LastName}".Trim() : "Unknown Technician"));
 
         }
     }

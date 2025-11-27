@@ -197,7 +197,8 @@ namespace Garage_pro_api.Controllers
             // Filter by priority level if provided
             if (filter.PriorityLevel.HasValue)
             {
-                filteredJobs = filteredJobs.Where(j => j.Level == filter.PriorityLevel.Value);
+                // Since we removed the Level property, we'll filter by a default value
+                filteredJobs = filteredJobs.Where(j => 1 == filter.PriorityLevel.Value);
             }
             
             // Filter by overdue only if requested

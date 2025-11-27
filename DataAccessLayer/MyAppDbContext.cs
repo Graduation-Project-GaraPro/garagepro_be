@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -272,7 +272,6 @@ namespace DataAccessLayer
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
-                b.Property(u => u.FullName).HasMaxLength(100).IsRequired();
                 b.Property(u => u.Email).HasMaxLength(100).IsRequired();
                 b.Property(u => u.PhoneNumber).HasMaxLength(20);
                 b.Property(u => u.AvatarUrl).HasMaxLength(200);
@@ -866,6 +865,32 @@ namespace DataAccessLayer
                 .WithMany(os => os.Labels)
                 .HasForeignKey(l => l.OrderStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Many-to-many RepairOrder <-> Label relationship
+            modelBuilder.Entity<RepairOrder>()
+                .HasMany(ro => ro.Labels)
+                .WithMany(l => l.RepairOrders)
+                .UsingEntity<Dictionary<string, object>>(
+                    "RepairOrderLabels",
+                    j => j
+                        .HasOne<Label>()
+                        .WithMany()
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j => j
+                        .HasOne<RepairOrder>()
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j =>
+                    {
+                        j.HasKey("RepairOrderId", "LabelId");
+                        j.ToTable("RepairOrderLabels");
+                        j.Property<DateTime>("AssignedAt")
+                            .HasDefaultValueSql("GETUTCDATE()");
+                        j.HasIndex("RepairOrderId");
+                        j.HasIndex("LabelId");
+                    });
 
             // Configure OrderStatus to use identity
             modelBuilder.Entity<OrderStatus>(entity =>

@@ -53,7 +53,7 @@ namespace Dtos.Quotations
         public Guid QuotationServicePartId { get; set; }
         public Guid QuotationServiceId { get; set; }
         public Guid PartId { get; set; }
-        public bool IsSelected { get; set; }
+        public bool IsSelected { get; set; } // Customer's selection (what they approved/chose)
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
@@ -96,7 +96,9 @@ namespace Dtos.Quotations
         [Required]
         public Guid PartId { get; set; }
 
-        public bool IsSelected { get; set; } = true; // Parts are automatically selected when service is selected
+        // IsSelected = true means this part is pre-selected (recommended by technician or manager)
+        // Customer can change selection via ProcessCustomerResponseAsync
+        public bool IsSelected { get; set; } = false;
         
         public decimal Quantity { get; set; } = 1;
     }
@@ -134,7 +136,48 @@ namespace Dtos.Quotations
         [Required]
         public Guid QuotationServiceId { get; set; }
         
-        // For required services, customer cannot deselect
-        // For optional services, customer can choose to select or deselect
+        // Customer can select which parts they want for this service
+        public ICollection<CustomerSelectedPartDto> SelectedParts { get; set; }
+    }
+
+    public class CustomerSelectedPartDto
+    {
+        [Required]
+        public Guid QuotationServicePartId { get; set; }
+        
+        public bool IsSelected { get; set; } // Customer's choice
+    }
+
+    public class UpdateQuotationDetailsDto
+    {
+        public string Note { get; set; }
+        public DateTime? ExpiresAt { get; set; }
+        public decimal? DiscountAmount { get; set; }
+        
+        // Services to update/add/remove
+        public ICollection<UpdateQuotationServiceDto> QuotationServices { get; set; }
+    }
+
+    public class UpdateQuotationServiceDto
+    {
+        public Guid? QuotationServiceId { get; set; } // Null if adding new service
+        public Guid ServiceId { get; set; }
+        public bool IsSelected { get; set; }
+        // Note: IsRequired is NOT included - it's set during inspection and cannot be changed by manager
+        public bool ShouldDelete { get; set; } = false; // Flag to delete this service
+        
+        // Parts to update/add/remove
+        public ICollection<UpdateQuotationServicePartDto> QuotationServiceParts { get; set; }
+    }
+
+    public class UpdateQuotationServicePartDto
+    {
+        public Guid? QuotationServicePartId { get; set; } // Null if adding new part
+        public Guid PartId { get; set; }
+        // Manager can pre-select parts (recommend to customer)
+        // Customer can change selection via ProcessCustomerResponseAsync
+        public bool IsSelected { get; set; } = false;
+        public decimal Quantity { get; set; }
+        public bool ShouldDelete { get; set; } = false; // Flag to delete this part
     }
 }

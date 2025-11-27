@@ -31,6 +31,9 @@ namespace Repositories
         // Status update operations for drag-drop
         Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string changeNote = null);
         Task<IEnumerable<RepairOrder>> BatchUpdateStatusAsync(List<UpdateRoBoardStatusDto> updates);
+        
+        // Label management for repair orders
+        Task<bool> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds);
 
         // List view specific queries with optimized projections
         Task<(IEnumerable<RepairOrder> Items, int TotalCount)> GetRepairOrdersForListViewAsync(

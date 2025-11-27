@@ -353,7 +353,13 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
 builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
-builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
+{
+    var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+});
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 builder.Services.AddScoped<IRepairRepository, RepairRepository>();
@@ -415,17 +421,23 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     var serviceRepository = provider.GetRequiredService<Repositories.ServiceRepositories.IServiceRepository>();
     var partRepository = provider.GetRequiredService<Repositories.PartRepositories.IPartRepository>();
     var repairOrderRepository = provider.GetRequiredService<Repositories.IRepairOrderRepository>();
-    var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
+    var jobService = provider.GetRequiredService<Services.IJobService>();
+    var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
+    var userService = provider.GetRequiredService<IUserService>(); // Add this
     var mapper = provider.GetRequiredService<IMapper>();
-    
+    var hubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
+
     return new Services.QuotationServices.QuotationManagementService(
         quotationRepository,
         quotationServiceRepository,
         quotationServicePartRepository,
         serviceRepository,
         partRepository,
+        hubContext,
         repairOrderRepository,
-        jobService, // Add this parameter
+        jobService,
+        fcmService, // Add this
+        userService, // Add this
         mapper);
 });
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
@@ -672,9 +684,10 @@ app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
 app.MapHub<PermissionHub>("/hubs/permissions");
 app.MapHub<InspectionHub>("/hubs/inspection");
-app.MapHub<JobHub>("/hubs/job");
+app.MapHub<JobHub>("/hubs/job");            
 app.MapHub<NotificationHub>("/notificationHub");
-
+app.MapHub<QuotationHub>("/hubs/quotation");
+                                 
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();

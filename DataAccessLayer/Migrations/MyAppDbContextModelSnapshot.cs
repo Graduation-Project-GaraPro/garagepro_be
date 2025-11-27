@@ -236,11 +236,6 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<bool?>("Gender")
                         .HasColumnType("bit");
 
@@ -954,16 +949,10 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("Deadline")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime?>("EstimateExpiresAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("JobName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Level")
-                        .HasColumnType("int");
 
                     b.Property<string>("Note")
                         .IsRequired()
@@ -1060,6 +1049,9 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("nvarchar(7)");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
 
                     b.Property<string>("LabelName")
                         .IsRequired()
@@ -1635,6 +1627,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("CancelReason")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("CompletionDate")
                         .HasColumnType("datetime2");
 
@@ -1660,6 +1658,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsCancelled")
                         .HasColumnType("bit");
 
                     b.Property<string>("Note")
@@ -2466,6 +2467,28 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
+                });
+
+            modelBuilder.Entity("RepairOrderLabels", b =>
+                {
+                    b.Property<Guid>("RepairOrderId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("LabelId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
+                    b.HasKey("RepairOrderId", "LabelId");
+
+                    b.HasIndex("LabelId");
+
+                    b.HasIndex("RepairOrderId");
+
+                    b.ToTable("RepairOrderLabels", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
@@ -3404,6 +3427,21 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("RepairOrderLabels", b =>
+                {
+                    b.HasOne("BusinessObject.Label", null)
+                        .WithMany()
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.RepairOrder", null)
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

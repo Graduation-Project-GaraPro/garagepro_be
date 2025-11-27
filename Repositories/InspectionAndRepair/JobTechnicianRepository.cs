@@ -47,7 +47,6 @@ namespace Repositories.InspectionAndRepair
                             Note = j.Note,
                             CreatedAt = j.CreatedAt,
                             UpdatedAt = j.UpdatedAt,
-                            Level = j.Level,
                             RepairOrderId = j.RepairOrderId,
 
                             Service = new Service
@@ -178,7 +177,7 @@ namespace Repositories.InspectionAndRepair
             try
             {
                 // Update Job
-                var job = await _context.Jobs.FirstOrDefaultAsync(j => j.JobId == jobId);
+                var job = await _context.Jobs.Include(j=>j.RepairOrder).FirstOrDefaultAsync(j => j.JobId == jobId);
                 if (job == null)
                     throw new Exception("Job không tồn tại");
 

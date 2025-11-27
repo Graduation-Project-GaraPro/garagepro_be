@@ -99,6 +99,16 @@ namespace Repositories
 
         #endregion
 
+        #region Service Methods
+
+        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
+        {
+            return await _context.Services
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+        }
+
+        #endregion
+
         #region Job-specific Queries
 
         public async Task<IEnumerable<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId)
@@ -110,8 +120,7 @@ namespace Repositories
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
                 .Where(j => j.RepairOrderId == repairOrderId)
-                .OrderBy(j => j.Level)
-                .ThenBy(j => j.CreatedAt)
+                .OrderBy(j => j.CreatedAt)
                 .ToListAsync();
         }
 
@@ -137,7 +146,6 @@ namespace Repositories
                     .ThenInclude(jt => jt.Technician)
                 .Where(j => j.Status == status)
                 .OrderBy(j => j.Deadline ?? DateTime.MaxValue)
-                .ThenBy(j => j.Level)
                 .ToListAsync();
         }
 
@@ -285,7 +293,7 @@ namespace Repositories
             var existingAssignment = await _context.JobTechnicians
                 .FirstOrDefaultAsync(jt => jt.JobId == jobId && jt.TechnicianId == technicianId);
 
-            if (existingAssignment != null) return true; // Already assigned
+            if (existingAssignment != null) return true;
 
             var jobTechnician = new JobTechnician
             {
@@ -302,10 +310,6 @@ namespace Repositories
                 job.Status = JobStatus.New;
                 job.UpdatedAt = DateTime.UtcNow;
                 
-                // Add note about assignment
-                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                var noteText = $"[{timestamp}] Job assigned to technician, status changed to New";
-                job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
 
             try
@@ -345,8 +349,7 @@ namespace Repositories
                 .Include(j => j.Service)
                 .Include(j => j.RepairOrder)
                 .Where(j => !j.JobTechnicians.Any())
-                .OrderBy(j => j.Level)
-                .ThenBy(j => j.CreatedAt)
+                .OrderBy(j => j.CreatedAt)
                 .ToListAsync();
         }
 
@@ -656,7 +659,7 @@ namespace Repositories
                 .Include(j => j.RepairOrder)
                 .Include(j => j.JobParts)
                     .ThenInclude(jp => jp.Part)
-                .Where(j => j.Status == JobStatus.Pending);
+                .Where(j => j.Status == JobStatus.Pending || j.Status == JobStatus.New);
 
             if (repairOrderId.HasValue)
             {
@@ -712,7 +715,7 @@ namespace Repositories
             if (jobIds == null || !jobIds.Any()) return false;
 
             var jobs = await _context.Jobs
-                .Where(j => jobIds.Contains(j.JobId) && j.Status == JobStatus.Pending)
+                .Where(j => jobIds.Contains(j.JobId) && (j.Status == JobStatus.Pending || j.Status == JobStatus.New))
                 .ToListAsync();
 
             if (!jobs.Any()) return false;
@@ -740,10 +743,6 @@ namespace Repositories
                     };
                     _context.JobTechnicians.Add(jobTechnician);
                 }
-
-                // Add note about assignment
-                var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job assigned to technician by manager {managerId}, status changed to New";
-                job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
             }
 
             try
@@ -793,9 +792,9 @@ namespace Repositories
             // Update job status to New when reassigned
             job.Status = JobStatus.New;
 
-            // Add note about reassignment
-            var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}, status changed to New";
-            job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
+            // Do not add note about reassignment (as per requirement)
+            // var noteText = $"[{timestamp:yyyy-MM-dd HH:mm:ss}] Job reassigned to technician {newTechnicianId} by manager {managerId}, status changed to New";
+            // job.Note = string.IsNullOrEmpty(job.Note) ? noteText : $"{job.Note}\n{noteText}";
 
             try
             {
@@ -833,10 +832,8 @@ namespace Repositories
                 Deadline = originalJob.Deadline,
                 TotalAmount = originalJob.TotalAmount,
                 Note = $"Revision of job {originalJob.JobId}. Reason: {revisionReason}",
-                Level = originalJob.Level,
                 AssignedByManagerId = null, // Reset assignment
                 AssignedAt = null, // Reset assignment
-                EstimateExpiresAt = originalJob.EstimateExpiresAt,
                 RevisionCount = originalJob.RevisionCount + 1,
                 OriginalJobId = originalJob.OriginalJobId ?? originalJobId, // Point to the very first job
                 RevisionReason = revisionReason,
@@ -878,19 +875,17 @@ namespace Repositories
             {
                 Console.WriteLine($"Creating job with ServiceId: {job.ServiceId}, RepairOrderId: {job.RepairOrderId}");
                 
-                // Add the job
                 _context.Jobs.Add(job);
                 await _context.SaveChangesAsync();
                 
                 Console.WriteLine($"Created job with ID: {job.JobId}");
                 
-                // Add all job parts
                 if (jobParts != null && jobParts.Any())
                 {
                     Console.WriteLine($"Adding {jobParts.Count} parts to job");
                     foreach (var jobPart in jobParts)
                     {
-                        jobPart.JobId = job.JobId; // Ensure job ID is set
+                        jobPart.JobId = job.JobId;
                         _context.JobParts.Add(jobPart);
                         Console.WriteLine($"Added part with PartId: {jobPart.PartId}, Quantity: {jobPart.Quantity}, UnitPrice: {jobPart.UnitPrice}");
                     }

@@ -13,6 +13,7 @@ using Repositories.LogRepositories;
 using System.Text.Json;
 using Dtos.Logs;
 using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
 namespace Services.LogServices
 {
     public class LogService : ILogService

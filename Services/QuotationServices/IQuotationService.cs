@@ -24,6 +24,7 @@ namespace Services.QuotationServices
             QuotationStatus? status);
         Task<QuotationDto> UpdateQuotationAsync(Guid quotationId, UpdateQuotationDto updateQuotationDto);
         Task<QuotationDto> UpdateQuotationStatusAsync(Guid quotationId, UpdateQuotationStatusDto updateStatusDto);
+        Task<QuotationDetailDto> UpdateQuotationDetailsAsync(Guid quotationId, UpdateQuotationDetailsDto updateDto);
         Task<bool> DeleteQuotationAsync(Guid quotationId);
         Task<bool> QuotationExistsAsync(Guid quotationId);
         Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto);

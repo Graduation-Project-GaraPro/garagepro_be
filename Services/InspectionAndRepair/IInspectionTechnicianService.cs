@@ -1,4 +1,4 @@
-﻿using BusinessObject;
+﻿using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
 using System;
 using System.Collections.Generic;

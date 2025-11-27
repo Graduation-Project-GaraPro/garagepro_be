@@ -292,7 +292,6 @@ namespace Services.ExcelImportSerivces
                         UserName = userName,
                         Email = email,
                         PhoneNumber = phone,
-                        FullName = fullName ?? string.Empty,
                         FirstName = fullName ?? string.Empty,
                         LastName = string.Empty,
                         BranchId = branchId,
@@ -320,7 +319,6 @@ namespace Services.ExcelImportSerivces
                     // 2️⃣ Nếu user đã tồn tại → cập nhật
                     user.Email = email ?? user.Email;
                     user.PhoneNumber = phone ?? user.PhoneNumber;
-                    user.FullName = fullName ?? user.FullName;
                     user.BranchId = branchId;
                     user.IsActive = isActive;
                     user.UpdatedAt = DateTime.UtcNow;

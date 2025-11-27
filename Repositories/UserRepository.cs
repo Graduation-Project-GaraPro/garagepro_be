@@ -197,7 +197,7 @@ namespace Repositories
             }
             
             return await _context.Users
-                .Where(u => u.FullName.Contains(searchTerm) || 
+                .Where(u => (u.FirstName + " " + u.LastName).Contains(searchTerm) || 
                             u.PhoneNumber.Contains(searchTerm) || 
                             u.Email.Contains(searchTerm))
                 .ToListAsync();
