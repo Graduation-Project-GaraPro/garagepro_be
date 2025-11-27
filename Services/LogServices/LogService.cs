@@ -38,10 +38,7 @@ namespace Services.LogServices
                 [LogSource.System] = Path.Combine(env.ContentRootPath, "Logs", "system.log"),
                 [LogSource.Security] = Path.Combine(env.ContentRootPath, "Logs", "security.log"),
                 [LogSource.UserActivity] = Path.Combine(env.ContentRootPath, "Logs", "user-activity.log"),
-                //[LogSource.Middleware] = Path.Combine(env.ContentRootPath, "Logs", "middleware.log"),
-                //[LogSource.Authentication] = Path.Combine(env.ContentRootPath, "Logs", "authentication.log"),
-                //[LogSource.ApiController] = Path.Combine(env.ContentRootPath, "Logs", "api.log"),
-                //[LogSource.Database] = Path.Combine(env.ContentRootPath, "Logs", "database.log")
+               
             };
 
             Directory.CreateDirectory(Path.Combine(env.ContentRootPath, "Logs"));
@@ -57,11 +54,6 @@ namespace Services.LogServices
         public async Task LogUserActivityAsync(string action, string userId, string userName)
             => await WriteLogAsync(LogSource.UserActivity, LogLevel.Information, action, userId);
 
-        //public async Task LogApiAsync(string controller, string action, string? userId = null)
-        //    => await WriteLogAsync(LogSource.ApiController, LogLevel.Information, $"{controller}.{action}", userId);
-
-        //public async Task LogDatabaseAsync(string operation, string? table = null, LogLevel level = LogLevel.Information, string? details = null)
-        //    => await WriteLogAsync(LogSource.Database, level, table != null ? $"{operation} on {table}" : operation, details: details);
 
         public async Task LogErrorAsync(Exception ex, string? message = null)
             => await WriteLogAsync(LogSource.System, LogLevel.Error, message ?? ex.Message, details: ex.StackTrace);
@@ -94,7 +86,7 @@ namespace Services.LogServices
             {
                 await WriteToFileAsync(source, logEntry);
             }
-            // Gửi realtime notification qua SignalR
+           
             await SendLogNotificationAsync(logEntry);
         }
         private async Task SendLogNotificationAsync(SystemLog log)
@@ -103,21 +95,21 @@ namespace Services.LogServices
             {
                 var logDto = MapToDto(log);
 
-                // Gửi đến tất cả clients đang kết nối
+               
                 await _hubContext.Clients.All.SendAsync("ReceiveNewLog", logDto);
 
-                // Gửi đến group cụ thể theo level (tuỳ chọn)
+                
                 await _hubContext.Clients.Group($"level-{log.Level}").SendAsync("ReceiveNewLog", logDto);
 
-                // Gửi đến group cụ thể theo source (tuỳ chọn)
+               
                 await _hubContext.Clients.Group($"source-{log.Source}").SendAsync("ReceiveNewLog", logDto);
 
-                // Gửi thông báo cập nhật thống kê
+                
                 await _hubContext.Clients.All.SendAsync("UpdateStats");
             }
             catch (Exception ex)
             {
-                // Log lỗi nhưng không làm gián đoạn quá trình ghi log
+                
                 await WriteToFileAsync(LogSource.System, new SystemLog
                 {
                     Timestamp = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(7)),
@@ -129,7 +121,7 @@ namespace Services.LogServices
                 });
             }
         }
-        // Ghi file
+        
         private async Task WriteToFileAsync(LogSource source, SystemLog log)
         {
             var filePath = _logFilePaths[source];
@@ -176,16 +168,16 @@ namespace Services.LogServices
         }
 
         // Đọc log
-        public async Task<IEnumerable<SystemLog>> GetUserActivityLogsAsync()
-            => await _logRepository.GetBySourceAsync(LogSource.UserActivity);
+        //public async Task<IEnumerable<SystemLog>> GetUserActivityLogsAsync()
+        //    => await _logRepository.GetBySourceAsync(LogSource.UserActivity);
 
-        public async Task<IEnumerable<SystemLogDto
-            
-            >> GetAllSystemLogsAsync()
-            => (await _logRepository.GetAllAsync()).Select(MapToDto);
+        //public async Task<IEnumerable<SystemLogDto
 
-        public async Task<IEnumerable<SystemLogDto>> GetLogsBySourceAsync(LogSource source)
-            => (await _logRepository.GetBySourceAsync(source)).Select(MapToDto);
+        //    >> GetAllSystemLogsAsync()
+        //    => (await _logRepository.GetAllAsync()).Select(MapToDto);
+
+        //public async Task<IEnumerable<SystemLogDto>> GetLogsBySourceAsync(LogSource source)
+        //    => (await _logRepository.GetBySourceAsync(source)).Select(MapToDto);
 
         public async Task<IEnumerable<SystemLogDto>> GetLogsFromFileAsync(LogSource source, int days = 7)
         {

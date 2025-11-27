@@ -43,8 +43,7 @@ namespace Services.BranchServices
             _mapper = mapper;
         }
 
-        // CREATE
-        // CREATE
+        
         public async Task<BranchReadDto?> CreateBranchAsync(BranchCreateDto dto)
         {
             using var tx = await _context.Database.BeginTransactionAsync();
@@ -56,7 +55,7 @@ namespace Services.BranchServices
                     throw new ApplicationException("Arrival window minutes must be in increments of 30 minutes (30, 60, 90, etc.).");
                 }
 
-                // === Check duplicate when CREATE ===
+                
                 bool isNameDuplicate = await _branchRepo.ExistsAsync(
                     b => b.BranchName.ToLower().Trim() == dto.BranchName.ToLower().Trim()
                 );
@@ -79,7 +78,7 @@ namespace Services.BranchServices
                 var fullAddress = $"{dto.Street}, {dto.Commune}, {dto.Province}";
                 var (lat, lng, formattedAddress) = await _geocodingService.GetCoordinatesAsync(fullAddress);
 
-                // === Validate operating hours ===
+                
                 var days = dto.OperatingHours
                  .Select(o => o.DayOfWeek)
                  .ToList();
@@ -96,7 +95,7 @@ namespace Services.BranchServices
                         throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday) with no duplicates.");
                     }
 
-                    // Must have at least one day open
+                    
                     if (!dto.OperatingHours.Any(o => o.IsOpen))
                     {
                         throw new ApplicationException("At least one day must be open (IsOpen = true).");
@@ -111,7 +110,7 @@ namespace Services.BranchServices
                         }
                     }
 
-                    // Optional: ensure only Monday → Sunday
+                    // ensure only Monday -> Sunday
                     if (dto.OperatingHours.Any(o => (int)o.DayOfWeek < 1 || (int)o.DayOfWeek > 7))
                     {
                         throw new ApplicationException("Operating hours can only be set from Monday to Sunday.");
@@ -145,7 +144,7 @@ namespace Services.BranchServices
                 }
 
 
-                // === Create branch ===
+                
                 var branchId = Guid.NewGuid();
 
                 var branch = new Branch
@@ -256,13 +255,13 @@ namespace Services.BranchServices
                     throw new ApplicationException("Operating hours must cover all 7 days (Monday to Sunday) with no duplicates.");
                 }
 
-                // Must have at least one day open
+                
                 if (!dto.OperatingHours.Any(o => o.IsOpen))
                 {
                     throw new ApplicationException("At least one day must be open (IsOpen = true).");
                 }
 
-                // Validate Open/Close time
+                
                 foreach (var op in dto.OperatingHours)
                 {
                     if (op.IsOpen && (!op.OpenTime.HasValue || !op.CloseTime.HasValue))
@@ -271,13 +270,13 @@ namespace Services.BranchServices
                     }
                 }
 
-                // Optional: ensure only Monday → Sunday
+                //  ensure only Monday -> Sunday
                 if (dto.OperatingHours.Any(o => (int)o.DayOfWeek < 1 || (int)o.DayOfWeek > 7))
                 {
                     throw new ApplicationException("Operating hours can only be set from Monday to Sunday.");
                 }
 
-                // === Validate services exist ===
+                
                 var existingServiceIds = await _serviceRepo.Query()
                     .Where(s => dto.ServiceIds.Contains(s.ServiceId))
                     .Select(s => s.ServiceId)
@@ -287,7 +286,7 @@ namespace Services.BranchServices
                 if (missingServices.Any())
                     throw new ApplicationException($"Some service IDs do not exist: {string.Join(", ", missingServices)}");
 
-                // === Validate staffs exist and are Managers/Technicians ===
+                
                 var allowedUsers = await _userRepository.GetManagersAndTechniciansAsync();
                 var validStaffs = allowedUsers.Where(u => dto.StaffIds != null && dto.StaffIds.Contains(u.Id)).ToList();
                 if (dto.StaffIds != null && dto.StaffIds.Any() && validStaffs.Count != dto.StaffIds.Count)
@@ -403,14 +402,14 @@ namespace Services.BranchServices
             using var tx = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Lấy tất cả branch theo ID
+               
                 var branches = await _branchRepo.Query()
                     .Include(b => b.RepairOrders)
                     .Include(b => b.RepairRequests)
                     .Where(b => branchIds.Contains(b.BranchId))
                     .ToListAsync();
 
-                // Check branch ID tồn tại
+                
                 var notFoundIds = branchIds.Except(branches.Select(b => b.BranchId)).ToList();
                 if (notFoundIds.Any())
                 {
@@ -429,7 +428,7 @@ namespace Services.BranchServices
                     throw new ApplicationException($"Cannot delete branches because they have associated Repair Orders or Repair Requests: {string.Join(", ", blockedIds)}");
                 }
 
-                // Xóa những branch hợp lệ
+                
                 await _branchRepo.DeleteManyAsync(branchIds);
                 await _branchRepo.SaveChangesAsync();
                 await tx.CommitAsync();
@@ -485,7 +484,7 @@ namespace Services.BranchServices
             return branch == null ? null : _mapper.Map<BranchReadDto>(branch);
         }
 
-        // GET ALL
+        
         public async Task<IEnumerable<BranchReadDto>> GetAllBranchesAsync()
         {
             var branches = await _branchRepo.GetAllAsync();
