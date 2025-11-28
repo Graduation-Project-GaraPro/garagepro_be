@@ -433,11 +433,25 @@ namespace Garage_pro_api.DbInit
                                 { 
                                     "BOOKING_MANAGE",
 
-                                    "INSPECTION_TECHNICIAN_VIEW", "INSPECTION_TECHNICIAN_UPDATE", "INSPECTION_TECHNICIAN_DELETE","INSPECTION_ADD_SERVICE",
-                                    "JOB_TECHNICIAN_VIEW", "JOB_TECHNICIAN_UPDATE",
+                                    "INSPECTION_TECHNICIAN_VIEW", 
+                                    "INSPECTION_TECHNICIAN_UPDATE", 
+                                    "INSPECTION_TECHNICIAN_DELETE",
+                                    "INSPECTION_ADD_SERVICE",
+
+                                    "JOB_TECHNICIAN_VIEW", 
+                                    "JOB_TECHNICIAN_UPDATE",
+
+
                                     "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
-                                    "REPAIR_HISTORY_VIEW", "REPAIR_UPDATE", "REPAIR_CREATE", "REPAIR_VIEW",
-                                    "SPECIFICATION_MANAGE", "STATISTICAL_VIEW"
+                                    "REPAIR_HISTORY_VIEW",
+                                    
+                                    "REPAIR_UPDATE",
+                                    "REPAIR_CREATE",
+                                    "REPAIR_VIEW",
+
+                                    "SPECIFICATION_MANAGE",
+
+                                    "STATISTICAL_VIEW"
 
 
 
