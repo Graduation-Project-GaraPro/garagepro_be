@@ -43,6 +43,13 @@ namespace Dtos.RoBoard
         
         public string ArchivedBy { get; set; }
         
+        // Cancellation Management
+        public bool IsCancelled { get; set; }
+        
+        public DateTime? CancelledAt { get; set; }
+        
+        public string CancelReason { get; set; }
+        
         // Current status information
         public int StatusId { get; set; }
         
@@ -125,7 +132,8 @@ namespace Dtos.RoBoard
         
         public DateTime? Birthday { get; set; }
         
-        public string FullName { get; set; }
+        // Computed property for FullName based on FirstName and LastName
+        public string FullName => $"{FirstName} {LastName}".Trim();
         
         public string Email { get; set; }
         
@@ -133,6 +141,31 @@ namespace Dtos.RoBoard
     }
     
     public class CreateCustomerDto
+    {
+        [Required(ErrorMessage = "First name is required")]
+        [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
+        public string FirstName { get; set; }
+        
+        [Required(ErrorMessage = "Last name is required")]
+        [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
+        public string LastName { get; set; }
+        
+        public DateTime? Birthday { get; set; }
+        
+        [Required(ErrorMessage = "Phone number is required")]
+        [Phone(ErrorMessage = "Invalid phone number format")]
+        [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        public string PhoneNumber { get; set; }
+        
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [MaxLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        public string Email { get; set; }
+        
+        // Computed property for FullName
+        public string FullName => $"{FirstName} {LastName}";
+    }
+
+    public class UpdateCustomerDto
     {
         [Required(ErrorMessage = "First name is required")]
         [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters")]

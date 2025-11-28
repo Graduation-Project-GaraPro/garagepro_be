@@ -99,12 +99,13 @@ namespace Services.CampaignServices
                 .GroupBy(qs => new
                 {
                     qs.Quotation.UserId,
-                    Name = qs.Quotation.User.FullName 
+                    FirstName = qs.Quotation.User.FirstName,
+                    LastName = qs.Quotation.User.LastName
                 })
                 .Select(g => new TopCustomerDto
                 {
                     CustomerId = g.Key.UserId,
-                    CustomerName = g.Key.Name ?? "Unknown",
+                    CustomerName = $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
                     UsageCount = g.Count()
                 })
                 .OrderByDescending(x => x.UsageCount)

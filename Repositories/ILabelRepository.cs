@@ -5,8 +5,10 @@ namespace Repositories
     public interface ILabelRepository
     {
         Task<IEnumerable<Label>> GetAllAsync();
-        Task<IEnumerable<Label>> GetByOrderStatusIdAsync(int orderStatusId); // Changed from Guid to int
+        Task<IEnumerable<Label>> GetByOrderStatusIdAsync(int orderStatusId);
         Task<Label?> GetByIdAsync(Guid id);
+        Task<IEnumerable<Label>> GetByIdsAsync(List<Guid> ids);
+        Task<Label?> GetDefaultLabelByStatusIdAsync(int orderStatusId);
         Task<Label> CreateAsync(Label label);
         Task<Label> UpdateAsync(Label label);
         Task<bool> DeleteAsync(Guid id);

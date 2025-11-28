@@ -14,7 +14,8 @@ namespace Dtos.Branches
 
         public string FirstName { get; set; }
         public string LastName { get; set; }
-        public string FullName { get; set; }
+        // Computed property for FullName based on FirstName and LastName
+        public string FullName => $"{FirstName} {LastName}".Trim();
 
         public string? AvatarUrl { get; set; }
         public bool IsActive { get; set; }

@@ -10,13 +10,15 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Services;
 
 public class InspectionTechnicianService : IInspectionTechnicianService
 {
     private readonly IInspectionTechnicianRepository _repo;
     private readonly IMapper _mapper;
+    private readonly IRepairOrderService _repairOrderService;
 
-    public InspectionTechnicianService(IInspectionTechnicianRepository repo, IMapper mapper)
+    public InspectionTechnicianService(IInspectionTechnicianRepository repo, IMapper mapper, IRepairOrderService repairOrderService)
     {
         _repo = repo;
         _mapper = mapper;
@@ -84,6 +86,9 @@ public class InspectionTechnicianService : IInspectionTechnicianService
 
         var inspection = await _repo.GetInspectionByIdAndTechnicianIdAsync(id, technician.TechnicianId);
         if (inspection == null) throw new InvalidOperationException("Inspection not found or you do not have update permission.");
+
+        // Store the previous status to check if inspection was just completed
+        var previousStatus = inspection.Status;
 
         if (inspection.Status != InspectionStatus.New &&
             inspection.Status != InspectionStatus.Pending &&
@@ -290,6 +295,13 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         }
 
         await _repo.SaveChangesAsync();
+
+        // neu inspect xong ma khach khong lam thi lay gia cua inspection luu vao cost cua RO
+        if (previousStatus != InspectionStatus.Completed && inspection.Status == InspectionStatus.Completed)
+        {
+            // ham cap nhat cost
+            await _repairOrderService.UpdateCostFromInspectionAsync(inspection.RepairOrderId);
+        }
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);

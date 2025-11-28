@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Services;
 using BusinessObject;
+using BusinessObject.Enums;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using System.Linq;
@@ -57,7 +58,6 @@ namespace Garage_pro_api.Controllers
                     Note = job.Note,
                     CreatedAt = job.CreatedAt,
                     UpdatedAt = job.UpdatedAt,
-                    Level = job.Level,
                     AssignedByManagerId = job.AssignedByManagerId,
                     AssignedAt = job.AssignedAt,
                     Parts = jobPartDtos.ToList()
@@ -105,7 +105,6 @@ namespace Garage_pro_api.Controllers
                 Note = job.Note,
                 CreatedAt = job.CreatedAt,
                 UpdatedAt = job.UpdatedAt,
-                Level = job.Level,
                 AssignedByManagerId = job.AssignedByManagerId,
                 AssignedAt = job.AssignedAt,
                 Parts = jobPartDtos.ToList()
@@ -150,7 +149,6 @@ namespace Garage_pro_api.Controllers
                     Note = job.Note,
                     CreatedAt = job.CreatedAt,
                     UpdatedAt = job.UpdatedAt,
-                    Level = job.Level,
                     AssignedByManagerId = job.AssignedByManagerId,
                     AssignedAt = job.AssignedAt,
                     Parts = jobPartDtos.ToList()
@@ -172,7 +170,6 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Implementation would go here
             return CreatedAtAction(nameof(GetJob), new { id = Guid.NewGuid() }, createJobDto);
         }
 
@@ -186,8 +183,61 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // Implementation would go here
-            return NoContent();
+            var job = await _jobService.GetJobByIdAsync(id);
+            if (job == null)
+            {
+                return NotFound();
+            }
+
+            // Only update the allowed fields: Status, Note, and Deadline
+            if (updateJobDto.Status.HasValue && updateJobDto.Status != job.Status)
+            {
+                // Validate status transition - only allow Pending <-> New
+                var isValidTransition = (job.Status == JobStatus.Pending && updateJobDto.Status == JobStatus.New) ||
+                                       (job.Status == JobStatus.New && updateJobDto.Status == JobStatus.Pending) ||
+                                       (job.Status == updateJobDto.Status); // Allow same status
+                
+                if (!isValidTransition)
+                {
+                    return BadRequest("Only transitions between Pending and New statuses are allowed.");
+                }
+                
+                job.Status = updateJobDto.Status.Value;
+            }
+
+            // Update note if provided
+            if (updateJobDto.Note != null)
+            {
+                job.Note = updateJobDto.Note;
+            }
+
+            // Update deadline if provided
+            if (updateJobDto.Deadline.HasValue)
+            {
+                job.Deadline = updateJobDto.Deadline.Value;
+            }
+            // If status is being set to New and no deadline is provided, calculate it
+            else if (updateJobDto.Status == JobStatus.New && job.Deadline == null)
+            {
+                // Get the service to calculate deadline from EstimatedDuration
+                var service = await _jobService.GetServiceByIdAsync(job.ServiceId);
+                if (service != null && service.EstimatedDuration > 0)
+                {
+                    job.Deadline = DateTime.UtcNow.AddHours((double)service.EstimatedDuration);
+                }
+            }
+
+            job.UpdatedAt = DateTime.UtcNow;
+
+            try
+            {
+                var updatedJob = await _jobService.UpdateJobAsync(job);
+                return Ok(updatedJob);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"An error occurred while updating the job: {ex.Message}");
+            }
         }
 
         // DELETE: api/Job/5
@@ -216,6 +266,7 @@ namespace Garage_pro_api.Controllers
             }
 
             var result = await _jobService.UpdateJobStatusAsync(id, jobStatus);
+            
             if (!result)
             {
                 return NotFound();

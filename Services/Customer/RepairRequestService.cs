@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using AutoMapper;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using AutoMapper;
 using BusinessObject;
 using BusinessObject.Customers;
 using BusinessObject.Enums;
@@ -143,7 +143,7 @@ namespace Services.Customer
                     RequestID = request.RepairRequestID,
                     VehicleID = request.VehicleID,
                     CustomerID = request.UserID,
-                    CustomerName = customer?.FullName ?? "Unknown Customer",
+                    CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
                     VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
                     Description = request.Description,
                     RequestDate = request.RequestDate,
@@ -178,7 +178,7 @@ namespace Services.Customer
                     RequestID = request.RepairRequestID,
                     VehicleID = request.VehicleID,
                     CustomerID = request.UserID,
-                    CustomerName = customer?.FullName ?? "Unknown Customer",
+                    CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
                     VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
                     Description = request.Description,
                     RequestDate = request.RequestDate,
@@ -212,7 +212,7 @@ namespace Services.Customer
                 RequestID = request.RepairRequestID,
                 VehicleID = request.VehicleID,
                 CustomerID = request.UserID,
-                CustomerName = customer?.FullName ?? "Unknown Customer",
+                CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
                 VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
                 Description = request.Description,
                 RequestDate = request.RequestDate,
@@ -765,7 +765,8 @@ namespace Services.Customer
             // Đếm số RO của chi nhánh có trạng thái chiếm WIP
             return await _unitOfWork.RepairOrders.CountAsync(ro =>
                 ro.BranchId == branchId &&
-                ActiveOrderStatusIds.Contains(ro.StatusId));
+                ActiveOrderStatusIds.Contains(ro.StatusId) &&
+                !ro.IsArchived);
         }
         private async Task EnsureWithinOperatingHoursAsync(Guid branchId, DateTimeOffset windowStartLocal, int windowMinutes)
         {

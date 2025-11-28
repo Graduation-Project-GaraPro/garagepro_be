@@ -214,6 +214,7 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" },
@@ -250,6 +251,7 @@ namespace Garage_pro_api.DbInit
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
+            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
             var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
@@ -313,6 +315,9 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
                     
+                    // ✅ Booking Management (Inspections & Jobs)
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view inspections and jobs", CategoryId = bookingCatId, IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can create, update, and manage inspections and jobs", CategoryId = bookingCatId },
 
                      //Technician
                      //Inspections Technician
@@ -402,9 +407,22 @@ namespace Garage_pro_api.DbInit
                             {
                                 "Manager", new[]
                                 {
-                                    "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
-                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
-                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
+                                    // User Management
+                                    "USER_VIEW",
+                                    // Branch Management
+                                    "BRANCH_VIEW",
+                                    // Service Management
+                                    "SERVICE_VIEW",
+                                    // Promotional Management
+                                    "PROMO_VIEW",
+                                    // Part Management
+                                    "PART_VIEW",
+                                    // Booking Management (Inspections & Jobs)
+                                    "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    // Vehicle Management
+                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DELETE", "VEHICLE_SCHEDULE",
+                                    // Repair Management
+                                    "REPAIR_VIEW", "REPAIR_CREATE", "REPAIR_UPDATE", "REPAIR_HISTORY_VIEW"
                                 }
                             },
                             {
@@ -1791,7 +1809,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Standard oil change completed successfully",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1807,7 +1824,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Tire rotation completed - even wear achieved",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1825,7 +1841,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Waiting for customer approval of brake repair",
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedByManagerId = userId
             },
 
@@ -1842,7 +1857,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Urgent brake system repair in progress",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 3,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1858,7 +1872,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Engine performance optimization",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1876,7 +1889,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Scheduled tire rotation service",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                Level = 1,
                 AssignedByManagerId = userId
             }
         };
@@ -2401,7 +2413,6 @@ namespace Garage_pro_api.DbInit
                         Note = "Auto-generated job",
                         CreatedAt = receiveDate,
                         UpdatedAt = receiveDate,
-                        Level = rand.Next(1, 4),
                         AssignedAt = rand.Next(0, 2) == 0 ? (DateTime?)receiveDate.AddHours(rand.Next(1, 48)) : null,
                         AssignedByManagerId = customer.Id
                     };

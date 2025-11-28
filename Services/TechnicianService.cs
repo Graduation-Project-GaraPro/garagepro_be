@@ -100,8 +100,7 @@ namespace Services
                                 EndTime = job.UpdatedAt,
                                 Deadline = job.Deadline,
                                 EstimatedDuration = TimeSpan.FromHours(2), // This would come from the service
-                                ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null,
-                                PriorityLevel = job.Level
+                                ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null
                             };
                             
                             scheduleDtos.Add(scheduleDto);
@@ -124,8 +123,7 @@ namespace Services
                         EndTime = job.UpdatedAt,
                         Deadline = job.Deadline,
                         EstimatedDuration = TimeSpan.FromHours(2), // This would come from the service
-                        ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null,
-                        PriorityLevel = job.Level
+                        ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null
                     };
                     
                     scheduleDtos.Add(scheduleDto);
@@ -175,8 +173,7 @@ namespace Services
                             EndTime = job.UpdatedAt,
                             Deadline = job.Deadline,
                             EstimatedDuration = TimeSpan.FromHours(2), // This would come from the service
-                            ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null,
-                            PriorityLevel = job.Level
+                            ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null
                         };
                         
                         scheduleDtos.Add(scheduleDto);
@@ -237,8 +234,7 @@ namespace Services
                     EndTime = job.UpdatedAt,
                     Deadline = job.Deadline,
                     EstimatedDuration = TimeSpan.FromHours(2), // This would come from the service
-                    ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null,
-                    PriorityLevel = job.Level
+                    ActualDuration = job.UpdatedAt.HasValue ? job.UpdatedAt.Value - job.CreatedAt : null
                 })
                 .ToList();
 
@@ -275,11 +271,6 @@ namespace Services
                 filteredJobs = filteredJobs.Where(j => j.CreatedAt <= filter.ToDate.Value);
             }
             
-            // Filter by priority level if provided
-            if (filter.PriorityLevel.HasValue)
-            {
-                filteredJobs = filteredJobs.Where(j => j.Level == filter.PriorityLevel.Value);
-            }
             
             // Filter by overdue only if requested
             if (filter.IsOverdueOnly.HasValue && filter.IsOverdueOnly.Value)
@@ -317,11 +308,6 @@ namespace Services
                 filteredDtos = filteredDtos.Where(s => s.StartTime <= filter.ToDate.Value);
             }
             
-            // Filter by priority level if provided
-            if (filter.PriorityLevel.HasValue)
-            {
-                filteredDtos = filteredDtos.Where(s => s.PriorityLevel == filter.PriorityLevel.Value);
-            }
             
             // Filter by overdue only if requested
             if (filter.IsOverdueOnly.HasValue && filter.IsOverdueOnly.Value)

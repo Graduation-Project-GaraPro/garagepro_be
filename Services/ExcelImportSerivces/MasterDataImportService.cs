@@ -748,8 +748,7 @@ namespace Services.ExcelImportSerivces
                         UserName = userName!,
                         Email = email,
                         PhoneNumber = phone,
-                        FullName = fullName!,
-                        FirstName = firstName!,
+                        FirstName = firstName,
                         LastName = lastName,
                         BranchId = branchId,
                         IsActive = isActive,
@@ -776,7 +775,7 @@ namespace Services.ExcelImportSerivces
                         emailJobs.Add(new StaffWelcomeEmailInfo
                         {
                             Email = user.Email,
-                            FullName = user.FullName!,
+                            FullName = $"{user.FirstName} {user.LastName}".Trim(),
                             UserName = user.UserName!
                         });
                     }

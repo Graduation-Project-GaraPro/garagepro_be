@@ -50,7 +50,8 @@ namespace Services.VehicleServices
                 Customer = user != null ? new RoBoardCustomerDto
                 {
                     UserId = user.Id,
-                    FullName = user.FullName,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber
                 } : null,
@@ -60,7 +61,7 @@ namespace Services.VehicleServices
                     ReceiveDate = ro.ReceiveDate,
                     StatusName = ro.OrderStatus?.StatusName ?? "Unknown",
                     BranchName = ro.Branch?.BranchName ?? "Unknown",
-                    CustomerName = ro.User?.FullName ?? "Unknown",
+                    CustomerName = ro.User != null ? $"{ro.User.FirstName} {ro.User.LastName}".Trim() : "Unknown",
                     EstimatedAmount = ro.EstimatedAmount,
                     PaidAmount = ro.PaidAmount,
                     PaidStatus = ro.PaidStatus.ToString()
@@ -86,7 +87,8 @@ namespace Services.VehicleServices
                 Customer = user != null ? new RoBoardCustomerDto
                 {
                     UserId = user.Id,
-                    FullName = user.FullName,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
                     Email = user.Email,
                     PhoneNumber = user.PhoneNumber
                 } : null

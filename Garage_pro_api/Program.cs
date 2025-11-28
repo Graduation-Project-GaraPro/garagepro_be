@@ -359,7 +359,13 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
 builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
-builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
+{
+    var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+});
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 builder.Services.AddScoped<IRepairRepository, RepairRepository>();
@@ -509,6 +515,8 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>(); // Add QR code service
+
 //Notifiaction 
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
@@ -526,7 +534,6 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
-
 
 
 // Job repository and service
