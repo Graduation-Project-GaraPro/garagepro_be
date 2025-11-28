@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251128044326_newdb")]
-    partial class newdb
+    [Migration("20251128115429_isSystemPermission")]
+    partial class isSystemPermission
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1899,6 +1899,9 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("nvarchar(255)");
 
                     b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSystem")
                         .HasColumnType("bit");
 
                     b.Property<string>("Name")

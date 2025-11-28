@@ -64,7 +64,8 @@ namespace Services.RoleServices
                     Code = p.Code,
                     Description = p.Description,
                     Deprecated = p.Deprecated,
-                    IsDefault = p.IsDefault
+                    IsDefault = p.IsDefault,
+                    IsSystem = p.IsSystem
                 }).ToList()
             }).ToList();
         }
