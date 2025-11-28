@@ -79,19 +79,26 @@ namespace Repositories
                 .Distinct()
                 .ToListAsync();
 
-            
+
             // KHÔNG có JobTechnician nào mà Job.Status != Completed
             var technicianUserIds = await (
-                from t in _context.Technicians
-                join ur in _context.UserRoles on t.UserId equals ur.UserId
-                where ur.RoleId == technicianRoleId
-                      && !t.JobTechnicians.Any(jt => jt.Job.Status != JobStatus.Completed)
-                select t.UserId
-            )
-            .Distinct()
-            .ToListAsync();
+                 from t in _context.Technicians
+                 join ur in _context.UserRoles on t.UserId equals ur.UserId
+                 join u in _context.Users on t.UserId equals u.Id
+                 where ur.RoleId == technicianRoleId
+                       && (
+                            // Case 1: technician rảnh - không có job nào chưa complete
+                            !t.JobTechnicians.Any(jt => jt.Job.Status != JobStatus.Completed)
 
-           
+                            // Case 2: technician chưa thuộc branch nào và chưa có job nào
+                            || (u.BranchId == null)
+                       )
+                 select t.UserId
+             )
+             .Distinct()
+             .ToListAsync();
+
+
             var allUserIds = managerUserIds
                 .Union(technicianUserIds)
                 .ToList();
@@ -106,17 +113,21 @@ namespace Repositories
         public async Task<List<ApplicationUser>> GetTechniciansAsync()
         {
             var technicianRole = await _context.Roles
-                .FirstOrDefaultAsync(r => r.Name == "Technician");
+            .FirstOrDefaultAsync(r => r.Name == "Technician");
 
             if (technicianRole == null) return new List<ApplicationUser>();
 
-            var userIds = await _context.UserRoles
+            // Lấy UserId của các technician
+            var allTechIds = await _context.UserRoles
                 .Where(ur => ur.RoleId == technicianRole.Id)
                 .Select(ur => ur.UserId)
+                .Distinct()
                 .ToListAsync();
 
+           
+
             return await _context.Users
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => allTechIds.Contains(u.Id))
                 .ToListAsync();
         }
 

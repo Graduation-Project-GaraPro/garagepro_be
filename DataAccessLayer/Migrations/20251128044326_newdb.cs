@@ -69,8 +69,7 @@ namespace DataAccessLayer.Migrations
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     ArrivalWindowMinutes = table.Column<int>(type: "int", nullable: false),
-                    MaxBookingsPerWindow = table.Column<int>(type: "int", nullable: false),
-                    MaxConcurrentWip = table.Column<int>(type: "int", nullable: false)
+                    MaxBookingsPerWindow = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {

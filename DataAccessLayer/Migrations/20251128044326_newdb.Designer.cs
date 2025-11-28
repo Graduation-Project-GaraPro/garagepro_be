@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251127140431_newdb")]
+    [Migration("20251128044326_newdb")]
     partial class newdb
     {
         /// <inheritdoc />
@@ -354,9 +354,6 @@ namespace DataAccessLayer.Migrations
                         .HasColumnType("float");
 
                     b.Property<int>("MaxBookingsPerWindow")
-                        .HasColumnType("int");
-
-                    b.Property<int>("MaxConcurrentWip")
                         .HasColumnType("int");
 
                     b.Property<string>("PhoneNumber")
