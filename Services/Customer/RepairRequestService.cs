@@ -571,8 +571,7 @@ namespace Services.Customer
 
                 // Đếm WIP đang trong xưởng
                 var activeWip = await GetActiveWipCountAsync(rr.BranchId);
-                //if (activeWip >= branch.MaxConcurrentWip)
-                //    throw new Exception("Xưởng đang đầy, vui lòng chờ gọi theo thứ tự.");
+              
 
                 // Cho vào xưởng
                 rr.Status = RepairRequestStatus.Arrived;
