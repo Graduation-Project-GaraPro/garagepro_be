@@ -9,7 +9,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Technician")]
+    [Authorize("STATISTICAL_VIEW")]
     public class StatisticalsController : ODataController
     {
         private readonly IStatisticalService _service;

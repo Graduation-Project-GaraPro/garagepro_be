@@ -11,12 +11,18 @@ namespace Services.Customer
 {
     public interface IRepairRequestService
     {
-        Task<IEnumerable<RepairRequestDto>> GetAllAsync();
-        Task<IEnumerable<RepairRequestDto>> GetByUserIdAsync(string userId);
-        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); 
+
+        Task<IEnumerable<RepairRequest>> GetAllAsync();
+        Task<IEnumerable<RepairRequest>> GetByUserIdAsync(string userId);
+        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); // New method for managers
+        Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id); // New method for getting single request for manager        
+       
         Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId); 
-        Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id);        
+              
+
         Task<RPDetailDto> GetByIdDetailsAsync(Guid id);
+
+        Task<bool> CustomerCancelRepairRequestAsync(Guid requestId, string userId);
 
         Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date);
 

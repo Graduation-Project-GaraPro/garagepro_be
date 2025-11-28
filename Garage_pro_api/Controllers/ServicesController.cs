@@ -17,7 +17,7 @@ namespace Garage_pro_api.Controllers
         {
             _service = service;
         }
-        [Authorize(Policy = "SERVICE_VIEW")]
+        //[Authorize(Policy = "SERVICE_VIEW")]
 
         // GET: api/service
         [HttpGet]

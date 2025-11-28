@@ -25,7 +25,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet("my-inspections")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_VIEW")]
         public async Task<IActionResult> GetMyInspections()
         {
             var user = await _userManager.GetUserAsync(User);
@@ -39,7 +39,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet("{id}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_VIEW")]
         public async Task<IActionResult> GetInspectionById(Guid id)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -52,7 +52,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPut("{id}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_UPDATE")]
         public async Task<IActionResult> UpdateInspection(Guid id, [FromBody] UpdateInspectionRequest request)
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
@@ -78,7 +78,7 @@ namespace Garage_pro_api.Controllers
             }
         }
         [HttpDelete("{inspectionId}/services/{serviceId}/part-inspections/{partInspectionId}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_DELETE")]
         public async Task<IActionResult> RemovePartFromInspection(Guid inspectionId, Guid serviceId, Guid partInspectionId)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -100,10 +100,8 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // Thêm vào InspectionsTechnicianController
-
         [HttpDelete("{inspectionId}/services/{serviceInspectionId}/part-categories/{partCategoryId}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_DELETE")]
         public async Task<IActionResult> RemovePartCategoryFromService(
             Guid inspectionId,
             Guid serviceInspectionId,
@@ -143,7 +141,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPost("{id}/start")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_UPDATE")]
         public async Task<IActionResult> StartInspection(Guid id)
         {
             var user = await _userManager.GetUserAsync(User);
@@ -165,7 +163,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet("services")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_VIEW")]
         public async Task<IActionResult> GetAllServices()
         {
             try
@@ -180,7 +178,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPost("{inspectionId}/services")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_ADD_SERVICE")]
         public async Task<IActionResult> AddServiceToInspection(Guid inspectionId, [FromBody] AddServiceToInspectionRequest request)
         {
             if (!ModelState.IsValid)
@@ -210,7 +208,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpDelete("{inspectionId}/services/{serviceInspectionId}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("INSPECTION_TECHNICIAN_DELETE")]
         public async Task<IActionResult> RemoveServiceFromInspection(Guid inspectionId, Guid serviceInspectionId)
         {
             var user = await _userManager.GetUserAsync(User);

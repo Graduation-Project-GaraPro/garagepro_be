@@ -9,6 +9,8 @@ using Services.PayOsClients;
 using Repositories;
 using Microsoft.Extensions.Configuration;
 using BusinessObject.Enums;
+using Repositories.UnitOfWork;
+using System.Security.Cryptography;
 
 namespace Services.PaymentServices
 {
@@ -18,14 +20,16 @@ namespace Services.PaymentServices
 
         private readonly IRepairOrderRepository _repoRepairOrder;
         private readonly IPayOsClient _payos;
+        private readonly IUnitOfWork _unitOfWork;
         private readonly MyAppDbContext _db;
         private readonly string _baseUrl;
 
-        public PaymentService(IPaymentRepository repo, IPayOsClient payos, MyAppDbContext db, IRepairOrderRepository repoRepairOrder, IConfiguration config)
+        public PaymentService(IPaymentRepository repo, IPayOsClient payos, MyAppDbContext db, IRepairOrderRepository repoRepairOrder, IConfiguration config, IUnitOfWork unitOfWork)
         {
             _repo = repo;
             _payos = payos;
             _db = db;
+            _unitOfWork = unitOfWork;
             _repoRepairOrder = repoRepairOrder;
             _baseUrl = config["App:BaseUrl"] ?? throw new ArgumentNullException("App:BaseUrl not configured");
         }
@@ -81,53 +85,70 @@ namespace Services.PaymentServices
         #endregion
 
         #region Luồng PayOS
-        public async Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(CreatePaymentRequest input, string userId, CancellationToken ct = default)
+        public async Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(
+    CreatePaymentRequest input,
+    string userId,
+    CancellationToken ct = default)
         {
-            
+            // Bắt đầu Transaction từ MyAppDbContext
+            await using var trx = await _db.Database.BeginTransactionAsync(ct);
+
+            try
+            {
                 // 1. Validate input
                 if (input == null)
-                {
                     throw new ArgumentNullException(nameof(input));
-                }
-                if (input.Amount <= 0) throw new ArgumentOutOfRangeException(nameof(input.Amount), "Amount must be > 0");
-                // 2. Get repair order and validate ownership
-                var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(input.RepairOrderId);
 
+                if (input.Amount <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(input.Amount), "Amount must be > 0");
+
+                // 2. Get repair order
+                var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(input.RepairOrderId);
                 if (repairOrder == null)
-                {
                     throw new Exception($"Repair order with ID {input.RepairOrderId} not found");
-                }
 
                 if (repairOrder.UserId != userId)
-                {
                     throw new UnauthorizedAccessException("User does not have permission to access this repair order");
-                }
-                if (!repairOrder.OrderStatus.StatusName.Equals("Completed"))
-                {
-                    throw new Exception($"Repair order with ID {input.RepairOrderId} is not Complete");
-                }
 
-                if (repairOrder.PaidAmount != input.Amount)
+                if (!repairOrder.OrderStatus.StatusName.Equals("Completed"))
+                    throw new Exception($"Repair order with ID {input.RepairOrderId} is not Complete");
+
+                if (repairOrder.Cost != input.Amount)
                     throw new Exception("Amount does not match order total");
 
-
+                // 3. Check paid payment
                 var paidPayment = await _repo.GetByConditionAsync(
-                 p => p.UserId == userId && p.RepairOrderId == input.RepairOrderId && p.Status == PaymentStatus.Paid, ct);
-                if (paidPayment != null) throw new Exception($"Payment {paidPayment.PaymentId} already paid");
+                    p => p.UserId == userId &&
+                         p.RepairOrderId == input.RepairOrderId &&
+                         p.Status == PaymentStatus.Paid, ct);
 
+                if (paidPayment != null)
+                    throw new Exception($"Payment {paidPayment.PaymentId} already paid");
+
+                // 4. Existing unpaid?
                 var existingOpen = await _repo.GetByConditionAsync(
-                    p => p.UserId == userId && p.RepairOrderId == input.RepairOrderId &&
-                         (p.Status == PaymentStatus.Unpaid ), ct);
+                    p => p.UserId == userId &&
+                         p.RepairOrderId == input.RepairOrderId &&
+                         p.Status == PaymentStatus.Unpaid, ct);
+
                 if (existingOpen != null)
-                    return new CreatePaymentLinkResult { PaymentId = existingOpen.PaymentId, OrderCode = existingOpen.PaymentId, CheckoutUrl = existingOpen.CheckoutUrl };
+                {
+                    await trx.CommitAsync(ct);
+                    return new CreatePaymentLinkResult
+                    {
+                        PaymentId = existingOpen.PaymentId,
+                        OrderCode = existingOpen.PaymentId,
+                        CheckoutUrl = existingOpen.CheckoutUrl
+                    };
+                }
 
-
-
+                // 5. Create new payment
                 var payment = new Payment
                 {
+                    PaymentId= GeneratePaymentId(),
                     RepairOrderId = input.RepairOrderId,
                     UserId = userId,
-                    Amount = input.Amount,               
+                    Amount = input.Amount,
                     Method = PaymentMethod.PayOs,
                     Status = PaymentStatus.Unpaid,
                     PaymentDate = DateTime.UtcNow,
@@ -135,16 +156,12 @@ namespace Services.PaymentServices
                 };
 
                 await _repo.AddAsync(payment);
-                await _repo.SaveChangesAsync(ct); 
+                await _db.SaveChangesAsync(ct);
 
-
-                // 4. Ensure payment is saved and has ID
                 if (payment.PaymentId <= 0)
-                {
                     throw new InvalidOperationException("Payment ID is not generated properly");
-                }
 
-                // 5. Prepare URLs for PayOS - FIXED: swapped returnUrl and cancelUrl
+                // 6. Build return/cancel URLs
                 var returnUrl = BuildMyAppUrl(
                     hostPath: "success",
                     orderCode: payment.PaymentId,
@@ -154,70 +171,78 @@ namespace Services.PaymentServices
                         ["transactionId"] = "TX_BE_123"
                     });
 
-                //var cancelUrl = BuildMyAppUrl(
-                //    hostPath: "cancel",
-                //    orderCode: payment.PaymentId,
-                //    extra: new Dictionary<string, string>
-                //    {
-                //        ["reason"] = "user_cancel"
-                //    });
-
                 var cancelUrl = $"{_baseUrl}/api/payments/cancel?orderCode={payment.PaymentId}&reason=user_cancel";
 
-                // 6. Create PayOS payment link
+                // 7. PayOS request
                 var payOsRequest = new CreatePaymentLinkRequest(
                     orderCode: payment.PaymentId,
                     amount: (int)Math.Round(input.Amount, MidpointRounding.AwayFromZero),
                     description: input.Description ?? $"Payment for repair order {input.RepairOrderId}",
-                    cancelUrl: cancelUrl,    // Fixed: user cancels -> go to cancelUrl
-                    returnUrl: returnUrl     // Fixed: payment success -> go to returnUrl
+                    cancelUrl: cancelUrl,
+                    returnUrl: returnUrl
                 );
 
-
                 PayOsResponse<CreatePaymentLinkResponse> payOsResponse;
+
                 try
                 {
                     payOsResponse = await _payos.CreatePaymentLinkAsync(payOsRequest, ct);
                 }
                 catch (Exception ex)
                 {
-                    // log
+                    await trx.RollbackAsync(ct);
                     throw new Exception("PayOS error when creating link", ex);
                 }
 
-                // 7. Validate PayOS response
-                if (payOsResponse?.data == null || string.IsNullOrEmpty(payOsResponse.data.checkoutUrl))
+                // 8. Validate response
+                if (payOsResponse?.data == null ||
+                    string.IsNullOrEmpty(payOsResponse.data.checkoutUrl))
                 {
-                    // Optionally update payment status to failed
                     payment.Status = PaymentStatus.Failed;
                     payment.UpdatedAt = DateTime.UtcNow;
                     await _repo.UpdateAsync(payment, ct);
-                    await _repo.SaveChangesAsync(ct);
+                    await _db.SaveChangesAsync(ct);
 
-                    throw new InvalidOperationException($"PayOS returned invalid response: code={payOsResponse?.code}, desc={payOsResponse?.desc}");
+                    await trx.CommitAsync(ct);
+
+                    throw new InvalidOperationException(
+                        $"PayOS returned invalid response: code={payOsResponse?.code}, desc={payOsResponse?.desc}"
+                    );
                 }
 
-
-                payment.Status = PaymentStatus.Unpaid;
+                // 9. Save checkout URL
                 payment.CheckoutUrl = payOsResponse.data.checkoutUrl;
-                //payment.ExternalOrderCode = payOsResponse.data.orderCode?.ToString();
                 payment.UpdatedAt = DateTime.UtcNow;
-                await _repo.UpdateAsync(payment, ct);
-                await _repo.SaveChangesAsync(ct);
 
-                // 8. Return result
+                await _repo.UpdateAsync(payment, ct);
+                await _db.SaveChangesAsync(ct);
+
+                // Transaction OK → Commit
+                await trx.CommitAsync(ct);
+
                 return new CreatePaymentLinkResult
                 {
                     PaymentId = payment.PaymentId,
                     OrderCode = payOsResponse.data.orderCode,
                     CheckoutUrl = payOsResponse.data.checkoutUrl
-
                 };
-           
-
+            }
+            catch
+            {
+                await trx.RollbackAsync(ct);
+                throw;
+            }
         }
 
-       
+        private long GeneratePaymentId()
+        {
+            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(); // 10 digits
+            int random = RandomNumberGenerator.GetInt32(10000, 99999);  // 5 digits
+
+            return long.Parse($"{timestamp}{random}"); // total: 15 digits => OK
+        }
+
+
 
         private static string BuildMyAppUrl(
             string hostPath,              // "payment/success" hoặc "payment/cancel"

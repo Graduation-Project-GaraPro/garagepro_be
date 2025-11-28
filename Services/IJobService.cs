@@ -28,7 +28,7 @@ namespace Services
 
         // Manager Assignment Workflow
         Task<bool> AssignJobsToTechnicianAsync(List<Guid> jobIds, Guid technicianId, string managerId);
-        Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
+       // Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId);
         // NEW: Create revision jobs from existing jobs
         Task<Job> CreateRevisionJobAsync(Guid originalJobId, string revisionReason);
 

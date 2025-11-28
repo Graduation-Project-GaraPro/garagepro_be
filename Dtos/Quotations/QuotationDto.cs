@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using BusinessObject.Campaigns;
+using System.ComponentModel.DataAnnotations.Schema;
+using Dtos.Campaigns;
 
 namespace Dtos.Quotations
 {
@@ -40,7 +43,14 @@ namespace Dtos.Quotations
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
         public DateTime CreatedAt { get; set; }
+        public decimal DiscountValue { get; set; } = 0;
 
+        
+        public decimal FinalPrice => Price - DiscountValue;
+
+        public Guid? AppliedPromotionId { get; set; }
+
+        public virtual PromotionalCampaignDto? AppliedPromotion { get; set; }
         // Service details
         public string ServiceName { get; set; }
         public string ServiceDescription { get; set; }
@@ -127,7 +137,6 @@ namespace Dtos.Quotations
 
         public string? CustomerNote { get; set; }
         
-        // Customer selects services they agree with
         public ICollection<CustomerQuotationServiceDto> SelectedServices { get; set; }
     }
 
@@ -136,16 +145,11 @@ namespace Dtos.Quotations
         [Required]
         public Guid QuotationServiceId { get; set; }
         
-        // Customer can select which parts they want for this service
-        public ICollection<CustomerSelectedPartDto> SelectedParts { get; set; }
-    }
-
-    public class CustomerSelectedPartDto
-    {
-        [Required]
-        public Guid QuotationServicePartId { get; set; }
+        // Simple list of selected part IDs - more efficient than sending full objects
+        public List<Guid>? SelectedPartIds { get; set; }
         
-        public bool IsSelected { get; set; } // Customer's choice
+        // Optional: Promotion applied to this service
+        public Guid? AppliedPromotionId { get; set; }
     }
 
     public class UpdateQuotationDetailsDto

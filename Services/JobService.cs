@@ -204,61 +204,61 @@ namespace Services
             return result;
         }
 
-        public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
-        {
-            if (jobId == Guid.Empty)
-                throw new ArgumentException("Job ID is required", nameof(jobId));
+        //public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
+        //{
+        //    if (jobId == Guid.Empty)
+        //        throw new ArgumentException("Job ID is required", nameof(jobId));
 
-            if (newTechnicianId == Guid.Empty)
-                throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
+        //    if (newTechnicianId == Guid.Empty)
+        //        throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
 
-            if (string.IsNullOrWhiteSpace(managerId))
-                throw new ArgumentException("Manager ID is required", nameof(managerId));
+        //    if (string.IsNullOrWhiteSpace(managerId))
+        //        throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
-                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
+        //    if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
+        //        throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
 
-            var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+        //    var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
 
-            if (result)
-            {
-                var job = await _jobRepository.GetJobByIdAsync(jobId);
-                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
+        //    if (result)
+        //    {
+        //        var job = await _jobRepository.GetJobByIdAsync(jobId);
+        //        var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
 
-                if (job != null)
-                {
-                    // SignalR JobHub
-                    await _jobHubContext.Clients
-                        .Group($"Technician_{newTechnicianId}")
-                        .SendAsync("JobReassigned", new
-                        {
-                            JobId = jobId,
-                            TechnicianId = newTechnicianId,
-                            JobName = job.JobName,
-                            ServiceName = job.Service?.ServiceName,
-                            RepairOrderId = job.RepairOrderId,
-                            Status = job.Status.ToString(),
-                            ReassignedAt = DateTime.UtcNow,
-                            Message = "A job has been reassigned to you"
-                        });
+        //        if (job != null)
+        //        {
+        //            // SignalR JobHub
+        //            await _jobHubContext.Clients
+        //                .Group($"Technician_{newTechnicianId}")
+        //                .SendAsync("JobReassigned", new
+        //                {
+        //                    JobId = jobId,
+        //                    TechnicianId = newTechnicianId,
+        //                    JobName = job.JobName,
+        //                    ServiceName = job.Service?.ServiceName,
+        //                    RepairOrderId = job.RepairOrderId,
+        //                    Status = job.Status.ToString(),
+        //                    ReassignedAt = DateTime.UtcNow,
+        //                    Message = "A job has been reassigned to you"
+        //                });
 
-                    // GỬI NOTIFICATION
-                    if (!string.IsNullOrEmpty(userId))
-                    {
-                        await _notificationService.SendJobReassignedNotificationAsync(
-                            userId,
-                            jobId,
-                            job.JobName,
-                            job.Service?.ServiceName ?? "N/A"
-                        );
-                    }
+        //            // GỬI NOTIFICATION
+        //            if (!string.IsNullOrEmpty(userId))
+        //            {
+        //                await _notificationService.SendJobReassignedNotificationAsync(
+        //                    userId,
+        //                    jobId,
+        //                    job.JobName,
+        //                    job.Service?.ServiceName ?? "N/A"
+        //                );
+        //            }
 
-                    Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
-                }
-            }
+        //            Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
+        //        }
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
         {

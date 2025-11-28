@@ -48,19 +48,19 @@ namespace Garage_pro_api.Controllers
         }
 
         // GET: api/parts/service/{serviceId}
-        [HttpGet("service/{serviceId}")]
-        public async Task<ActionResult<IEnumerable<PartByServiceDto>>> GetPartsByServiceId(Guid serviceId)
-        {
-            try
-            {
-                var parts = await _partService.GetPartsByServiceIdAsync(serviceId);
-                return Ok(parts);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving parts by service ID", detail = ex.Message });
-            }
-        }
+        //[HttpGet("service/{serviceId}")]
+        //public async Task<ActionResult<IEnumerable<PartByServiceDto>>> GetPartsByServiceId(Guid serviceId)
+        //{
+        //    try
+        //    {
+        //        var parts = await _partService.GetPartsByServiceIdAsync(serviceId);
+        //        return Ok(parts);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return StatusCode(500, new { message = "Error retrieving parts by service ID", detail = ex.Message });
+        //    }
+        //}
 
         // POST: api/parts
         [HttpPost]

@@ -29,14 +29,16 @@ namespace Utils.RepairRequests
         return list;
     }
 
-    public static void EnsureInsideOpenHours(
-        DateTimeOffset localStart, int windowMinutes,
-        DateTimeOffset openLocal, DateTimeOffset closeLocal,
-        string errorMessage = "Thời gian chọn nằm ngoài giờ làm việc của chi nhánh.")
-    {
-        var localEnd = localStart.AddMinutes(windowMinutes);
-        if (localStart < openLocal || localEnd > closeLocal)
-            throw new Exception(errorMessage);
+        public static void EnsureInsideOpenHours(
+        DateTimeOffset localStart,
+        int windowMinutes,
+        DateTimeOffset openLocal,
+        DateTimeOffset closeLocal,
+        string errorMessage = "The selected time is outside the branch's operating hours.")
+        {
+            var localEnd = localStart.AddMinutes(windowMinutes);
+            if (localStart < openLocal || localEnd > closeLocal)
+                throw new Exception(errorMessage);
+        }
     }
-}
 }

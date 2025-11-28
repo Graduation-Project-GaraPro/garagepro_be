@@ -16,6 +16,8 @@ namespace Services.RoleServices
         Task<RoleDto?> GetRoleByIdAsync(string roleId);
         Task<RoleDto> UpdateRoleAsync(UpdateRoleDto dto);
         Task<RoleDto> CreateRoleAsync(CreateRoleDto dto);
+
+        Task AssignRoleToUsersAsync(AssignRoleToUsersDto dto);
         Task DeleteRoleAsync(string roleId);
 
         Task<List<Permission>> GetPermissionsForRoleAsync(string roleId);

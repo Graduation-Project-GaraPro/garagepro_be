@@ -88,12 +88,7 @@ namespace Garage_pro_api.Controllers
         [HttpPut]
         public async Task<IActionResult> UpdateSecurityPolicy(UpdateSecurityPolicyRequest request)
         {
-            // Lấy AdminId từ người dùng hiện tại
-            //var adminUser = await _userManager.GetUserAsync(User);
-            //if (adminUser == null)
-            //    return Unauthorized();
-
-            //var adminId = adminUser.Id;
+           
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             try
             {

@@ -292,6 +292,8 @@ namespace Services
 
             var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
 
+
+
             // Create RepairOrderService entries for selected services
             if (selectedServiceIds != null && selectedServiceIds.Any())
             {
@@ -851,6 +853,22 @@ namespace Services
                 return false;
             }
 
+            // Business rule: Can't complete RO if it has incomplete jobs
+            if (targetStatus.StatusName == "Completed")
+            {
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        return false;
+                    }
+                }
+            }
+
             return true;
         }
 
@@ -859,6 +877,21 @@ namespace Services
             if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
             {
                 return "Cannot move completed orders back to previous statuses";
+            }
+
+            if (targetStatus.StatusName == "Completed")
+            {
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        return $"Cannot complete repair order: {incompleteJobs.Count} job(s) are not completed";
+                    }
+                }
             }
 
             return "Business rule validation failed";
@@ -874,6 +907,25 @@ namespace Services
             //     var outstanding = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
             //     requirements.Add($"Complete payment of ${outstanding:F2} required");
             // }
+
+            // Requirement: All jobs must be completed before completing RO
+            if (targetStatus.StatusName == "Completed")
+            {
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        foreach (var job in incompleteJobs)
+                        {
+                            requirements.Add($"Job '{job.JobName}' must be completed (Current status: {job.Status})");
+                        }
+                    }
+                }
+            }
 
             return requirements;
         }

@@ -82,8 +82,8 @@ namespace Garage_pro_api.Controllers.Customer
                 
             try
             {
-                var updatedQuotation = await _quotationService.ProcessCustomerResponseAsync(responseDto);
-                return Ok(updatedQuotation);
+                //var updatedQuotation = await _quotationService.ProcessCustomerResponseAsync(responseDto);
+                return Ok();
             }
             catch (ArgumentException ex)
             {

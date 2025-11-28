@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BusinessObject;
 using BusinessObject.Campaigns;
 
 namespace Repositories.CampaignRepositories
@@ -13,8 +14,24 @@ namespace Repositories.CampaignRepositories
         IQueryable<PromotionalCampaign> Query();
         Task<PromotionalCampaign?> GetByIdAsync(Guid id);
         Task<PromotionalCampaign?> GetWithServicesAsync(Guid id);
+        Task<List<QuotationService>> GetQuotationServicesByCampaignAsync(Guid campaignId);
+
+        Task<PromotionalCampaign?> GetBestPromotionForServiceAsync(
+            Guid serviceId,
+            decimal orderValue = 0);
+        Task<List<PromotionalCampaign>> GetAvailablePromotionsForServiceAsync(Guid serviceId);
+
+        decimal CalculateActualDiscountValue(PromotionalCampaign promotion, decimal orderValue);
+        Task<bool> IsPromotionApplicableForServiceAsync(
+            Guid promotionId,
+            Guid serviceId,
+            decimal orderValue = 0);
+
+        Task<bool> ExistsAsync(Guid id);
 
         Task UpdateStatusAsync(Guid id, bool isActive);
+
+
 
         Task UpdateStatusRangeAsync(IEnumerable<Guid> ids, bool isActive);
 

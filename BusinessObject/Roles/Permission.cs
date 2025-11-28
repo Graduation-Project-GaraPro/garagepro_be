@@ -21,6 +21,7 @@ namespace BusinessObject.Roles
 
         public bool Deprecated { get; set; } = false;
 
+        public bool IsDefault { get; set; } = false;
         public Guid CategoryId { get; set; }
         public PermissionCategory Category { get; set; } = null!;
 

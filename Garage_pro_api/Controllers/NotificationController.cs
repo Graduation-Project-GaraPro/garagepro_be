@@ -60,7 +60,7 @@ namespace Garage_pro_api.Controllers
         }
         //      
         [HttpGet]
-        [Authorize(Roles = "Technician")] 
+        [Authorize("NOTIFICATION_VIEW")] 
         public async Task<IActionResult> GetMyNotifications()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -72,7 +72,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet("unread")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("NOTIFICATION_VIEW")]
         public async Task<IActionResult> GetUnreadNotifications()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -84,7 +84,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpGet("unread-count")]
-        [Authorize(Roles = "Technician")] 
+        [Authorize("NOTIFICATION_VIEW")] 
         public async Task<IActionResult> GetUnreadCount()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -96,7 +96,7 @@ namespace Garage_pro_api.Controllers
         }
         
         [HttpPut("{id}/read")]
-        [Authorize(Roles = "Technician")] 
+        [Authorize("NOTIFICATION_MARK")] 
         public async Task<IActionResult> MarkAsRead(Guid id)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -112,7 +112,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPut("read-all")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("NOTIFICATION_MARK")]
         public async Task<IActionResult> MarkAllAsRead()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -124,7 +124,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("NOTIFICATION_DELETE")]
         public async Task<IActionResult> DeleteNotification(Guid id)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

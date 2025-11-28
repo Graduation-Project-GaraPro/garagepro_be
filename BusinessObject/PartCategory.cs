@@ -17,6 +17,8 @@ namespace BusinessObject
         [MaxLength(100)]
         public string CategoryName { get; set; }
 
+        public string Description { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

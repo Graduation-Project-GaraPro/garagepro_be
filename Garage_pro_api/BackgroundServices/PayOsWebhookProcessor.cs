@@ -9,6 +9,11 @@ using Microsoft.EntityFrameworkCore;
 using Repositories.PaymentRepositories;
 using Repositories.WebhookInboxRepositories;
 using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
+using Microsoft.AspNetCore.SignalR;
+using Services.FCMServices;
+using Services;
+using Services.Hubs;
 
 namespace Garage_pro_api.BackgroundServices
 {
@@ -81,6 +86,11 @@ namespace Garage_pro_api.BackgroundServices
                 var db = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
                 var repo = scope.ServiceProvider.GetRequiredService<IPaymentRepository>();
 
+                // Thêm các service cần cho notify
+                var hubContext = scope.ServiceProvider.GetRequiredService<IHubContext<RepairOrderHub>>();
+                var userService = scope.ServiceProvider.GetRequiredService<IUserService>();
+                var fcmService = scope.ServiceProvider.GetRequiredService<IFcmService>();
+
                 item.Attempts++;
 
                 var root = JsonDocument.Parse(item.Payload).RootElement;
@@ -93,40 +103,89 @@ namespace Garage_pro_api.BackgroundServices
                     Desc = dataEl.TryGetProperty("desc", out var ds) ? ds.GetString() : null,
                     RawJson = item.Payload,
                     TransactionDateTime = dataEl.TryGetProperty("transactionDateTime", out var dtEl) &&
-                        DateTime.TryParse(dtEl.GetString(), out var transactionDate) ?
-                        transactionDate : DateTime.Now // hoặc parse từ payload nếu có
+                        DateTime.TryParse(dtEl.GetString(), out var transactionDate)
+                            ? transactionDate
+                            : DateTime.Now
                 };
 
                 // Idempotent core
                 var payment = await repo.GetByConditionAsync(p => p.PaymentId == data.OrderCode, ct);
-                var repairOrder = await db.RepairOrders.FirstOrDefaultAsync(r => r.RepairOrderId == payment.RepairOrderId);
 
-                if (payment != null && payment.Status is not (PaymentStatus.Paid or PaymentStatus.Cancelled))
+                if (payment == null)
                 {
-                    payment.Status = data.Code == "00" ? PaymentStatus.Paid : PaymentStatus.Cancelled;
+                    // không thấy payment => tùy bạn đánh Failed hay bỏ qua
+                    item.Status = WebhookStatus.Failed;
+                    item.LastError = "Payment not found";
+                    return;
+                }
+
+                var repairOrder = await db.RepairOrders
+                    .FirstOrDefaultAsync(r => r.RepairOrderId == payment.RepairOrderId, ct);
+
+                if (payment.Status is not (PaymentStatus.Paid or PaymentStatus.Cancelled))
+                {
+                    payment.Status = (data.Desc == "success" && data.Code == "00")
+                        ? PaymentStatus.Paid
+                        : PaymentStatus.Cancelled;
+
                     if (payment.Status == PaymentStatus.Paid)
                     {
                         payment.PaymentDate = data.TransactionDateTime;
-                        repairOrder.PaidStatus = PaidStatus.Paid;
+                        if (repairOrder != null)
+                        {
+                            repairOrder.PaidStatus = PaidStatus.Paid;
+                        }
+
+                        // ================== SIGNALR: thông báo thanh toán thành công ==================
+                        if (repairOrder != null)
+                        {
+                            // Nếu bạn group theo RepairOrderId:
+                            await hubContext.Clients.All
+                                .SendAsync("RepairOrderPaid", repairOrder.RepairOrderId, cancellationToken: ct);
+
+                            // hoặc theo user:
+                            // await hubContext.Clients.User(repairOrder.UserId.ToString())
+                            //     .SendAsync("RepairOrderPaid", repairOrder.RepairOrderId, cancellationToken: ct);
+                        }
+
+                        // ================== FCM: thông báo Payment thành công ==================
+                        if (repairOrder != null)
+                        {
+                            var user = await userService.GetUserByIdAsync(repairOrder.UserId);
+
+                            var fcmNotification = new FcmDataPayload
+                            {
+                                Type = NotificationType.Order,
+                                Title = "Payment Successful",
+                                Body = $"Payment for order  is successful.",
+                                EntityKey = EntityKeyType.repairOrderId,
+                                EntityId = repairOrder.RepairOrderId,
+                                Screen = AppScreen.RepairProgressDetailFragment   // hoặc màn hình detail payment
+                            };
+
+                            await fcmService.SendFcmMessageAsync(user?.DeviceId, fcmNotification);
+                        }
                     }
 
                     payment.ProviderCode = data.Code;
                     payment.ProviderDesc = data.Desc;
                     payment.UpdatedAt = DateTime.UtcNow;
+
                     await repo.UpdateAsync(payment, ct);
+
+                    if (repairOrder != null)
+                    {
+                        db.RepairOrders.Update(repairOrder);
+                        await db.SaveChangesAsync(ct);
+                    }
                 }
 
                 item.Status = WebhookStatus.Processed;
                 item.ProcessedAt = DateTime.UtcNow;
                 item.LastError = null;
-
-
-
             }
             catch (Exception ex)
             {
-                // exponential backoff “mềm”: đẩy Failed, lần sau lên lịch tự nhiên theo Attempts
-                // (có thể thêm cột NextVisibleAt để backoff chính xác hơn)
                 item.Status = WebhookStatus.Failed;
                 item.LastError = ex.ToString();
             }
@@ -135,5 +194,6 @@ namespace Garage_pro_api.BackgroundServices
                 gate.Release();
             }
         }
+    
     }
 }

@@ -23,6 +23,8 @@ using BusinessObject.Campaigns;
 using Dtos.Roles;
 using Dtos.Services;
 using Dtos.Vehicles;
+using Dtos.Emergency;
+using BusinessObject.RequestEmergency;
 
 namespace Garage_pro_api.Mapper
 {
@@ -115,7 +117,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
                 .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
                 .ForMember(dest => dest.NextServiceDate, opt => opt.MapFrom(src => src.NextServiceDate))
-                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
+                // .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.Brand, opt => opt.Ignore())
@@ -209,7 +211,7 @@ namespace Garage_pro_api.Mapper
 
 
             // Service -> ServiceDto
-
+            CreateMap<FeedBack, Dtos.RepairProgressDto.FeedbackDto>();
             CreateMap<Service, Dtos.Branches.ServiceDto>();
             CreateMap<Service, Dtos.Services.ServiceDto>();
             CreateMap<Service, CreateServiceDto>().ReverseMap();
@@ -218,8 +220,8 @@ namespace Garage_pro_api.Mapper
             CreateMap<Service, Dtos.Services.ServiceDto>()
                 .ForMember(dest => dest.Branches,
                            opt => opt.MapFrom(src => src.BranchServices.Select(bs => bs.Branch)))
-                .ForMember(dest => dest.Parts,
-                           opt => opt.MapFrom(src => src.ServiceParts.Select(bs => bs.Part)))
+                .ForMember(dest => dest.PartCategories,
+                           opt => opt.MapFrom(src => src.ServicePartCategories.Select(bs => bs.PartCategoryId)))
                 .ForMember(dest => dest.PartCategories,
                                opt => opt.MapFrom(src => src.ServicePartCategories.Select(bs => bs.PartCategory)));
 
@@ -258,7 +260,7 @@ namespace Garage_pro_api.Mapper
             CreateMap<PromotionalCampaign, PromotionalCampaignDto>().ForMember(dest => dest.Services, opt => opt.MapFrom(src => src.PromotionalCampaignServices.Select(bs => bs.Service)));
             CreateMap<CreatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
             CreateMap<UpdatePromotionalCampaignDto, PromotionalCampaign>().ReverseMap();
-
+            CreateMap<PromotionalCampaign, CustomerPromotionDto>();
 
             CreateMap<VoucherUsageDto, VoucherUsage>().ReverseMap();
 
@@ -304,7 +306,9 @@ namespace Garage_pro_api.Mapper
                .ForMember(dest => dest.Status, opt => opt.MapFrom(src => src.Status.ToString()))
                .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src =>
                    src.RepairImages.Select(img => img.ImageUrl).ToList()))
-               .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
+               .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices))
+               .ForMember(dest => dest.IsArchived, opt => opt.MapFrom(src => src.RepairOrder != null && src.RepairOrder.IsArchived))
+               .ForMember(dest => dest.ArchivedAt, opt => opt.MapFrom(src => src.RepairOrder.ArchivedAt));
 
             CreateMap<RepairRequest, RepairRequestDto>()
 
@@ -319,8 +323,8 @@ namespace Garage_pro_api.Mapper
             //   .ForMember(dest => dest.RequestServices, opt => opt.MapFrom(src => src.RequestServices));
             // Map reuqest Servcie
             CreateMap<RequestService, RequestServiceDto>()
-     .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId))
-     .ForMember(dest => dest.Parts, opt => opt.MapFrom(src => src.RequestParts));
+     .ForMember(dest => dest.ServiceId, opt => opt.MapFrom(src => src.ServiceId));
+     
 
             CreateMap<RequestPart, RequestPartDto>()
                 .ForMember(dest => dest.PartId, opt => opt.MapFrom(src => src.PartId));
@@ -340,7 +344,8 @@ namespace Garage_pro_api.Mapper
 
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
-     .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => 
+                    src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : "Unknown"));
 
             //CreateMap<PartSpecification, PartSpecificationDto>();
 
@@ -356,6 +361,27 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
                 .ForMember(dest => dest.TechnicianName, opt => opt.MapFrom(src => src.Technician.User != null ? $"{src.Technician.User.FirstName} {src.Technician.User.LastName}".Trim() : "Unknown Technician"));
 
+
+
+
+            // Emergency: CreateEmergencyRequestDto -> RequestEmergency
+            CreateMap<CreateEmergencyRequestDto, RequestEmergency>()
+                    .ForMember(dest => dest.EmergencyRequestId, opt => opt.MapFrom(src => Guid.NewGuid()))
+                    .ForMember(dest => dest.CustomerId, opt => opt.Ignore())
+                    .ForMember(dest => dest.Status, opt => opt.Ignore())
+                    .ForMember(dest => dest.RequestTime, opt => opt.Ignore())
+                    .ForMember(dest => dest.ResponseDeadline, opt => opt.Ignore())
+                    .ForMember(dest => dest.Address, opt => opt.Ignore())
+                    .ForMember(dest => dest.RepairRequestId, opt => opt.Ignore())
+                    .ForMember(dest => dest.RejectReason, opt => opt.Ignore())
+                    .ForMember(dest => dest.EstimatedCost, opt => opt.Ignore())
+                    .ForMember(dest => dest.DistanceToGarageKm, opt => opt.Ignore())
+                    .ForMember(dest => dest.MediaFiles, opt => opt.Ignore())
+                    .ForMember(dest => dest.Customer, opt => opt.Ignore())
+                    .ForMember(dest => dest.Branch, opt => opt.Ignore())
+                    .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
+                    .ForMember(dest => dest.RespondedAt, opt => opt.Ignore())
+                    .ForMember(dest => dest.AutoCanceledAt, opt => opt.Ignore());
         }
     }
 }

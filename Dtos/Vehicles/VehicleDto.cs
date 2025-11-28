@@ -46,11 +46,11 @@ namespace Dtos.Vehicles
             ErrorMessage = "Invalid license plate format")]
         public string LicensePlate { get; set; }
 
-        [Required]
+
         [StringLength(17, MinimumLength = 17)]
         [RegularExpression(@"^[A-HJ-NPR-Z0-9]{17}$",
             ErrorMessage = "VIN must be 17 characters, excluding I, O, Q")]
-        public string VIN { get; set; }
+        public string? VIN { get; set; }
         
         [Required]
         [Range(1886, 2030)]
@@ -76,11 +76,11 @@ namespace Dtos.Vehicles
             ErrorMessage = "Invalid license plate format")]
         public string LicensePlate { get; set; }
 
-        [Required]
+       
         [StringLength(17, MinimumLength = 17)]
         [RegularExpression(@"^[A-HJ-NPR-Z0-9]{17}$",
             ErrorMessage = "VIN must be 17 characters, excluding I, O, Q")]
-        public string VIN { get; set; }
+        public string? VIN { get; set; }
         
         [Required]
         [Range(1886, 2030)]
@@ -90,7 +90,6 @@ namespace Dtos.Vehicles
         
         public DateTime? NextServiceDate { get; set; }
         
-        [MaxLength(100)]
-        public string WarrantyStatus { get; set; }
+        
     }
 }

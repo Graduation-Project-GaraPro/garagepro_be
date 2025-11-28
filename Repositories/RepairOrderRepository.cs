@@ -8,6 +8,7 @@ using BusinessObject.Authentication;
 using BusinessObject.Customers;
 using BusinessObject.Enums;
 using DataAccessLayer;
+using Dtos.Quotations;
 using Dtos.RoBoard;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,7 @@ namespace Repositories
         public RepairOrderRepository(MyAppDbContext context)
         {
             _context = context;
+            _context.Database.SetCommandTimeout(180);
         }
 
         // Add public property to access the context
@@ -38,12 +40,47 @@ namespace Repositories
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
+        public async Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId)
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                .Where(ro => ro.RepairOrderId == repairOrderId
+                          && ro.UserId == userId
+                          && ro.OrderStatus.StatusName == "Completed")
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                // Approved quotations
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    // Only selected services
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.Service)
+                // Approved quotations + selected services + selected parts
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.QuotationServiceParts
+                            .Where(p => p.IsSelected))
+                            .ThenInclude(qsp => qsp.Part)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate)
         {
             return await _context.RepairOrders
                 .Where(predicate)
                 .Where(ro => !ro.IsArchived)
                 .CountAsync();
+        }
+        public async Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate)
+        {
+            return await _context.RepairOrders
+                .AnyAsync(predicate);
+                
         }
 
         public async Task<RepairOrder> CreateAsync(RepairOrder repairOrder)
@@ -139,6 +176,7 @@ namespace Repositories
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
                 .Include(ro => ro.Labels) // Include assigned labels for this repair order

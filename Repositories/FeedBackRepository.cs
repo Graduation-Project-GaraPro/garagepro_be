@@ -19,7 +19,19 @@ namespace Repositories
 
         public async Task AddAsync(FeedBack feedback)
         {
+            // 1) Add feedback trước để có FeedbackId
             _context.FeedBacks.Add(feedback);
+            await _context.SaveChangesAsync();
+
+            // 2) Lấy RepairOrder và update FK
+            var order = await _context.RepairOrders
+                .FirstOrDefaultAsync(o => o.RepairOrderId == feedback.RepairOrderId);
+
+            if (order == null)
+                throw new Exception("Repair order not found");
+
+            order.FeedBackId = feedback.FeedBackId;
+
             await _context.SaveChangesAsync();
         }
 

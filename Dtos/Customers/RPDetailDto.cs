@@ -19,7 +19,9 @@ namespace Dtos.Customers
         public string? Description { get; set; }
         public DateTime RequestDate { get; set; }
         public RepairRequestStatus Status { get; set; }
-
+        public bool IsArchived { get; set; } = false;
+        public Guid RepairOrderId { get; set; }
+        public DateTime? ArchivedAt { get; set; }
         public decimal? EstimatedCost { get; set; }   // Tổng tiền ước tính
         public List<string>? ImageUrls { get; set; }  // URL ảnh
         public virtual VehicleDto Vehicle { get; set; }

@@ -14,6 +14,8 @@ using BussinessObject;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject;
 using BusinessObject.Authentication;
+using Services.BillServices;
+using Dtos.Bills;
 
 namespace Garage_pro_api.Controllers
 {
@@ -26,6 +28,7 @@ namespace Garage_pro_api.Controllers
         private readonly IWebhookInboxRepository _webhookInboxRepo;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IQrCodeService _qrCodeService;
+        private readonly IRepairOrderPaymentService _paymentService;
 
         public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
         {
@@ -35,7 +38,22 @@ namespace Garage_pro_api.Controllers
             _userManager = userManager;
             _qrCodeService = qrCodeService;
         }
-        
+
+        [HttpGet("{repairOrderId:guid}/payment")]
+        public async Task<ActionResult<RepairOrderPaymentDto>> GetPaymentInfo(Guid repairOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? User.FindFirstValue("sub"); 
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+            var result = await _paymentService.GetRepairOrderPaymentInfoAsync(repairOrderId, userId);
+
+            if (result == null)
+                return NotFound(new { message = "RepairOrder không tồn tại." });
+
+            return Ok(result);
+        }
+
         [Authorize]
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreatePaymentRequest req, CancellationToken ct)

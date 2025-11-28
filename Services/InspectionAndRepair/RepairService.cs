@@ -31,26 +31,26 @@ namespace Services.InspectionAndRepair
         {
             var job = await _repairRepository.GetJobByIdAsync(dto.JobId);
             if (job == null)
-                throw new KeyNotFoundException("Không tìm thấy Job.");
+                throw new KeyNotFoundException("Job not found.");
 
             bool isAssigned = await _repairRepository.TechnicianHasJobAsync(technicianId, dto.JobId);
             if (!isAssigned)
-                throw new UnauthorizedAccessException("Technician không có quyền thực hiện Job này.");
+                throw new UnauthorizedAccessException("Technician does not have permission to perform this job.");
 
             if (job.Status == JobStatus.Completed)
-                throw new InvalidOperationException("Job đã hoàn thành, không thể tạo Repair mới.");
+                throw new InvalidOperationException("Job is already completed, cannot create new repair.");
 
             if (job.Repair != null)
-                throw new InvalidOperationException("Job này đã có Repair, không thể tạo thêm.");
+                throw new InvalidOperationException("Job already has a repair, cannot create another one.");
 
             if (string.IsNullOrWhiteSpace(dto.EstimatedTime))
-                throw new ArgumentException("EstimatedTime không được để trống.");
+                throw new ArgumentException("EstimatedTime cannot be empty.");
 
             if (!TryParseHoursMinutes(dto.EstimatedTime, out var estimatedTime, out var errorMessage))
                 throw new ArgumentException(errorMessage);
 
             var repair = _mapper.Map<Repair>(dto);
-            repair.EstimatedTime = estimatedTime; // Set vào NotMapped property, nó sẽ tự động set EstimatedTimeTicks
+            repair.EstimatedTime = estimatedTime;
             repair.StartTime = DateTime.UtcNow;
 
             await _repairRepository.AddRepairAsync(repair);
@@ -59,7 +59,7 @@ namespace Services.InspectionAndRepair
 
             var response = _mapper.Map<RepairResponseDto>(repair);
 
-            // SignalR: Thông báo tạo repair thành công
+            // SignalR
             await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairCreated", new
             {
                 repair.RepairId,
@@ -84,50 +84,40 @@ namespace Services.InspectionAndRepair
 
             if (string.IsNullOrWhiteSpace(input))
             {
-                errorMessage = "Thời gian không được để trống.";
+                errorMessage = "Time cannot be empty.";
                 return false;
             }
             var parts = input.Split(':');
             if (parts.Length != 2)
             {
-                errorMessage = "Format phải là 'HH:mm' (ví dụ: 25:30, 02:15, 00:45).";
+                errorMessage = "Format must be 'HH:mm' (example: 25:30, 02:15, 00:45).";
                 return false;
             }
             if (!int.TryParse(parts[0], out int hours))
             {
-                errorMessage = "Giờ phải là số nguyên hợp lệ.";
+                errorMessage = "Hours must be a valid integer.";
                 return false;
             }
-            if (hours < 0)
+            if (hours < 0 || hours > 200)
             {
-                errorMessage = "Giờ không được là số âm.";
+                errorMessage = "Hours must be between 0 and 200.";
                 return false;
             }
             if (!int.TryParse(parts[1], out int minutes))
             {
-                errorMessage = "Phút phải là số nguyên hợp lệ.";
+                errorMessage = "Minutes must be a valid integer.";
                 return false;
             }
 
-            if (minutes < 0)
+            if (minutes < 0 || minutes >= 60)
             {
-                errorMessage = "Phút không được là số âm.";
+                errorMessage = "Minutes must be between 0 and 59.";
                 return false;
             }
 
-            if (minutes >= 60)
-            {
-                errorMessage = "Phút phải từ 0 đến 59.";
-                return false;
-            }
-            if (parts[1].Length != 2)
-            {
-                errorMessage = "Phút phải có đúng 2 chữ số (ví dụ: 05, 30, không phải 5 hoặc 030).";
-                return false;
-            }
             if (hours == 0 && minutes == 0)
             {
-                errorMessage = "Thời gian phải lớn hơn 0 (không được nhập 00:00).";
+                errorMessage = "Time must be greater than 0 (00:00 is not allowed).";
                 return false;
             }
 
@@ -139,18 +129,18 @@ namespace Services.InspectionAndRepair
         {
             var repair = await _repairRepository.GetRepairByIdAsync(repairId);
             if (repair == null)
-                throw new KeyNotFoundException("Không tìm thấy Repair.");
+                throw new KeyNotFoundException("Repair not found.");
 
             var job = await _repairRepository.GetJobByIdAsync(repair.JobId);
             if (job == null)
-                throw new KeyNotFoundException("Không tìm thấy Job liên quan.");
+                throw new KeyNotFoundException("Related job not found.");
 
             bool isAssigned = await _repairRepository.TechnicianHasJobAsync(technicianId, job.JobId);
             if (!isAssigned)
-                throw new UnauthorizedAccessException("Technician không có quyền cập nhật Job này.");
+                throw new UnauthorizedAccessException("Technician does not have permission to update this job.");
 
             if (job.Status != JobStatus.InProgress && job.Status != JobStatus.OnHold)
-                throw new InvalidOperationException("Chỉ được cập nhật khi Job đang InProgress hoặc OnHold.");
+                throw new InvalidOperationException("Can only update when job is InProgress or OnHold.");
 
             var oldDescription = repair.Description;
             var oldNotes = repair.Notes;
@@ -160,7 +150,7 @@ namespace Services.InspectionAndRepair
             await _repairRepository.UpdateRepairAsync(repair);
             await _repairRepository.SaveChangesAsync();
 
-            // SignalR: Thông báo cập nhật repair
+            // SignalR
             await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairUpdated", new
             {
                 repair.RepairId,
@@ -180,17 +170,17 @@ namespace Services.InspectionAndRepair
         {
             var repairOrder = await _repairRepository.GetRepairOrderWithJobsAsync(repairOrderId);
             if (repairOrder == null)
-                throw new KeyNotFoundException("Không tìm thấy Repair Order.");
+                throw new KeyNotFoundException("Repair Order not found.");
 
             bool isAssigned = repairOrder.Jobs
                 .Any(j => j.JobTechnicians.Any(t => t.TechnicianId == technicianId));
 
             if (!isAssigned)
-                throw new UnauthorizedAccessException("Bạn không được phân công bất kỳ Job nào trong Repair Order này.");
+                throw new UnauthorizedAccessException("You are not assigned to any job in this Repair Order.");
 
             var result = _mapper.Map<RepairDetailDto>(repairOrder);
 
-            // SignalR: Thông báo đang xem (optional)
+            // SignalR
             await _hubContext.Clients.Group($"RepairOrder_{repairOrderId}").SendAsync("RepairOrderViewed", new
             {
                 RepairOrderId = repairOrderId,

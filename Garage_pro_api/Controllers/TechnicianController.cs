@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Authorization;
 using Repositories;
 using System.Security.Claims;
 using Dtos.Quotations;
+using Dtos.Emergency;
+using Services.EmergencyRequestService;
 
 namespace Garage_pro_api.Controllers
 {
@@ -23,13 +25,15 @@ namespace Garage_pro_api.Controllers
         private readonly IInspectionService _inspectionService;
         private readonly IUserRepository _userRepository;
         private readonly ITechnicianService _technicianService;
+        private readonly IEmergencyRequestService _emergencyService;
 
-        public TechnicianController(IJobService jobService, IInspectionService inspectionService, IUserRepository userRepository, ITechnicianService technicianService)
+        public TechnicianController(IJobService jobService, IInspectionService inspectionService, IUserRepository userRepository, ITechnicianService technicianService, IEmergencyRequestService emergencyService)
         {
             _jobService = jobService;
             _inspectionService = inspectionService;
             _userRepository = userRepository;
             _technicianService = technicianService;
+            _emergencyService = emergencyService;
         }
 
         // GET: api/Technician/schedule
@@ -211,5 +215,26 @@ namespace Garage_pro_api.Controllers
         }
 
         #endregion
+    
+        [HttpPost("location/update")]
+        [Authorize(Roles = "Technician")]
+        public async Task<IActionResult> UpdateLocation([FromBody] TechnicianLocationDto dto)
+        {
+            try
+            {
+                var techUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(techUserId)) return Unauthorized();
+                var ok = await _emergencyService.UpdateTechnicianLocationAsync(techUserId, dto);
+                return Ok(new { Success = ok });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
     }
 }
