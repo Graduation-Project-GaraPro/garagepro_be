@@ -220,6 +220,8 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Job Repair" },
 
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Inspection Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Quotation Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Inspection Technician" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Job Technician" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Notification" },
@@ -256,6 +258,8 @@ namespace Garage_pro_api.DbInit
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
             var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
             var jobCatId = categories.First(c => c.Name == "Job Repair").Id;
+            var inspectionMgmtId = categories.First(c => c.Name == "Inspection Management").Id;
+            var quotationMgmtId = categories.First(c => c.Name == "Quotation Management").Id;
 
             var inspectionTechnicianId = categories.First(c => c.Name == "Inspection Technician").Id;
             var jobTechnicianId = categories.First(c => c.Name == "Job Technician").Id;
@@ -271,6 +275,9 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "TECHNICIAN_VIEW", Name = "View Technicians", Description = "Can view technician list by branch", CategoryId = userCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "TECHNICIAN_ASSIGN", Name = "Assign Technicians", Description = "Can assign technicians to inspections/jobs", CategoryId = userCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "TECHNICIAN_SCHEDULE", Name = "View Technician Schedule", Description = "Can view technician schedules and availability", CategoryId = userCatId },
 
                     // Role Management
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Create Role", Description = "Can create roles", CategoryId = roleCatId },
@@ -318,6 +325,27 @@ namespace Garage_pro_api.DbInit
                     // ✅ Booking Management (Inspections & Jobs)
                     new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view inspections and jobs", CategoryId = bookingCatId, IsDefault=true },
                     new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can create, update, and manage inspections and jobs", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "REPAIR_REQUEST_VIEW", Name = "View Repair Requests", Description = "Can view customer repair requests", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "REPAIR_REQUEST_CANCEL", Name = "Cancel Repair Requests", Description = "Can cancel repair requests on behalf of customers", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "EMERGENCY_REQUEST_VIEW", Name = "View Emergency Requests", Description = "Can view emergency repair requests", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "EMERGENCY_REQUEST_MANAGE", Name = "Manage Emergency Requests", Description = "Can approve/reject emergency requests", CategoryId = bookingCatId },
+
+                    // ✅ Inspection Management (Manager)
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_VIEW", Name = "View Inspections", Description = "Can view all inspections", CategoryId = inspectionMgmtId, IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_CREATE", Name = "Create Inspection", Description = "Can create new inspections", CategoryId = inspectionMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_UPDATE", Name = "Update Inspection", Description = "Can update inspection details", CategoryId = inspectionMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_DELETE", Name = "Delete Inspection", Description = "Can delete inspections", CategoryId = inspectionMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ASSIGN", Name = "Assign Inspection", Description = "Can assign inspections to technicians", CategoryId = inspectionMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_CONVERT", Name = "Convert to Quotation", Description = "Can convert completed inspections to quotations", CategoryId = inspectionMgmtId },
+
+                    // ✅ Quotation Management (Manager)
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_VIEW", Name = "View Quotations", Description = "Can view all quotations", CategoryId = quotationMgmtId, IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_CREATE", Name = "Create Quotation", Description = "Can create new quotations", CategoryId = quotationMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_UPDATE", Name = "Update Quotation", Description = "Can update quotation details", CategoryId = quotationMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_DELETE", Name = "Delete Quotation", Description = "Can delete quotations", CategoryId = quotationMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_SEND", Name = "Send Quotation", Description = "Can send quotations to customers", CategoryId = quotationMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_APPROVE", Name = "Approve Quotation", Description = "Can approve/reject quotations", CategoryId = quotationMgmtId },
+                    new Permission { Id = Guid.NewGuid(), Code = "QUOTATION_COPY_TO_JOBS", Name = "Copy to Jobs", Description = "Can copy approved quotations to jobs", CategoryId = quotationMgmtId },
 
                      //Technician
                      //Inspections Technician
@@ -409,6 +437,8 @@ namespace Garage_pro_api.DbInit
                                 {
                                     // User Management
                                     "USER_VIEW",
+                                    // Technician Management
+                                    "TECHNICIAN_VIEW", "TECHNICIAN_ASSIGN", "TECHNICIAN_SCHEDULE",
                                     // Branch Management
                                     "BRANCH_VIEW",
                                     // Service Management
@@ -419,6 +449,14 @@ namespace Garage_pro_api.DbInit
                                     "PART_VIEW",
                                     // Booking Management (Inspections & Jobs)
                                     "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    // Inspection Management
+                                    "INSPECTION_VIEW", "INSPECTION_CREATE", "INSPECTION_UPDATE", "INSPECTION_DELETE", "INSPECTION_ASSIGN", "INSPECTION_CONVERT",
+                                    // Quotation Management
+                                    "QUOTATION_VIEW", "QUOTATION_CREATE", "QUOTATION_UPDATE", "QUOTATION_DELETE", "QUOTATION_SEND", "QUOTATION_APPROVE", "QUOTATION_COPY_TO_JOBS",
+                                    // Repair Request Management
+                                    "REPAIR_REQUEST_VIEW", "REPAIR_REQUEST_CANCEL",
+                                    // Emergency Request Management
+                                    "EMERGENCY_REQUEST_VIEW", "EMERGENCY_REQUEST_MANAGE",
                                     // Vehicle Management
                                     "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DELETE", "VEHICLE_SCHEDULE",
                                     // Repair Management
