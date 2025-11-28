@@ -788,18 +788,32 @@ namespace Services.Customer
             SlotWindowUtil.EnsureInsideOpenHours(windowStartLocal, windowMinutes, openLocal, closeLocal);
         }
 
-        public async Task<bool> ApproveRepairRequestAsync(Guid requestId)
+        // Manager can cancel repair request on behalf of customer (within 30 minutes before RequestDate)
+        public async Task<bool> ManagerCancelRepairRequestAsync(Guid requestId, string managerId)
         {
-            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId);
-            if (repairRequest == null)
-                return false;
+            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId)
+                ?? throw new Exception("Repair request not found.");
 
-            // Only pending requests can be approved
-            if (repairRequest.Status != RepairRequestStatus.Pending)
-                return false;
+            // Cannot cancel completed requests
+            if (repairRequest.Status == RepairRequestStatus.Completed)
+                throw new Exception("Cannot cancel a completed repair request.");
 
-            repairRequest.Status = RepairRequestStatus.Accept;
+            // Cannot cancel already cancelled requests
+            if (repairRequest.Status == RepairRequestStatus.Cancelled)
+                throw new Exception("This repair request is already cancelled.");
+
+            // Check if within 30 minutes before scheduled arrival time
+            var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+            var cutoff = repairRequest.ArrivalWindowStart.AddMinutes(-30);
+
+            if (nowLocal > cutoff)
+                throw new Exception("Can only cancel a request at least 30 minutes before the scheduled arrival time.");
+
+            // Cancel the request on behalf of customer
+            repairRequest.Status = RepairRequestStatus.Cancelled;
             repairRequest.UpdatedAt = DateTime.UtcNow;
+            // Optional: Add a note field to track who cancelled it
+            // repairRequest.CancelledBy = managerId;
 
             await _unitOfWork.SaveChangesAsync();
             return true;
@@ -839,22 +853,7 @@ namespace Services.Customer
 
 
 
-        public async Task<bool> RejectRepairRequestAsync(Guid requestId)
-        {
-            var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId);
-            if (repairRequest == null)
-                return false;
 
-            // Only pending requests can be rejected
-            if (repairRequest.Status != RepairRequestStatus.Pending)
-                return false;
-
-            repairRequest.Status = RepairRequestStatus.Cancelled;
-            repairRequest.UpdatedAt = DateTime.UtcNow;
-
-            await _unitOfWork.SaveChangesAsync();
-            return true;
-        }
 
         public async Task<RepairOrderDto> ConvertToRepairOrderAsync(Guid requestId, CreateRoFromRequestDto dto)
         {
@@ -868,7 +867,9 @@ namespace Services.Customer
                 throw new Exception("Only approved repair requests can be converted to repair orders");
 
             // Check if repair request has already been converted to a repair order
-            if (repairRequest.RepairOrder != null)
+            // Since RepairOrder navigation is ignored in DbContext, check directly in RepairOrders table
+            var existingRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(ro => ro.RepairRequestId == requestId);
+            if (existingRepairOrder)
                 throw new Exception("This repair request has already been converted to a repair order");
 
             // Get the customer (user) information
@@ -920,10 +921,8 @@ namespace Services.Customer
             // Create the repair order
             var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, dto.SelectedServiceIds);
             
-            // Set the navigation property relationship
-            repairRequest.RepairOrder = createdRepairOrder;
-            
             // Update the repair request status to indicate it has been converted
+            // Note: RepairOrder navigation is ignored in DbContext, but the FK RepairRequestId is set in the RepairOrder
             repairRequest.Status = RepairRequestStatus.Completed;
             repairRequest.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync();

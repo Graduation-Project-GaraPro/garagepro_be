@@ -53,29 +53,6 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(request);
         }
 
-        // PUT: api/ManagerRepairRequest/{id}/approve
-        [HttpPut("{id}/approve")]
-        public async Task<IActionResult> ApproveRepairRequest(Guid id)
-        {
-            var result = await _repairRequestService.ApproveRepairRequestAsync(id);
-            
-            if (!result)
-                return BadRequest("Failed to approve repair request. Request may not exist or is not in pending status.");
-
-            return Ok(new { Message = "Repair request approved successfully" });
-        }
-
-        // PUT: api/ManagerRepairRequest/{id}/reject
-        [HttpPut("{id}/reject")]
-        public async Task<IActionResult> RejectRepairRequest(Guid id)
-        {
-            var result = await _repairRequestService.RejectRepairRequestAsync(id);
-            
-            if (!result)
-                return BadRequest("Failed to reject repair request. Request may not exist or is not in pending status.");
-
-            return Ok(new { Message = "Repair request rejected successfully" });
-        }
 
         // POST: api/ManagerRepairRequest/{id}/convert-to-ro
         [HttpPost("{id}/convert-to-ro")]
