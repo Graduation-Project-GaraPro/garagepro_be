@@ -649,7 +649,8 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
                 "http://10.224.41.46:5117",
-                "http://10.0.2.2:7113" // Android emulator
+                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113" 
             )
             .AllowAnyHeader()
             .AllowAnyMethod()

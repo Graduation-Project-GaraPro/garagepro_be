@@ -12,6 +12,8 @@ using Repositories;
 using Microsoft.Extensions.Configuration;
 using Repositories.UnitOfWork;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
+using Azure.Core;
 
 namespace Services.PaymentServices
 {
@@ -23,16 +25,31 @@ namespace Services.PaymentServices
         private readonly IPayOsClient _payos;
         private readonly IUnitOfWork _unitOfWork;
         private readonly MyAppDbContext _db;
+
+        private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _baseUrl;
 
-        public PaymentService(IPaymentRepository repo, IPayOsClient payos, MyAppDbContext db, IRepairOrderRepository repoRepairOrder, IConfiguration config, IUnitOfWork unitOfWork)
+        public PaymentService(
+                IPaymentRepository repo,
+                IPayOsClient payos,
+                MyAppDbContext db,
+                IRepairOrderRepository repoRepairOrder,
+                IConfiguration config,
+                IUnitOfWork unitOfWork,
+                IHttpContextAccessor httpContextAccessor)
         {
             _repo = repo;
             _payos = payos;
             _db = db;
             _unitOfWork = unitOfWork;
             _repoRepairOrder = repoRepairOrder;
-            _baseUrl = config["App:BaseUrl"] ?? throw new ArgumentNullException("App:BaseUrl not configured");
+            _httpContextAccessor = httpContextAccessor;
+
+            var request = _httpContextAccessor.HttpContext?.Request;
+
+            _baseUrl = request is null
+                ? config["App:BaseUrl"]                               
+                : $"{request.Scheme}://{request.Host}";              
         }
         #region CRUD cơ bản
         public Task<Payment?> GetByIdAsync(long paymentId) => _repo.GetByIdAsync(paymentId);
@@ -82,11 +99,11 @@ namespace Services.PaymentServices
 
         #region Luồng PayOS
         public async Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(
-    CreatePaymentRequest input,
-    string userId,
-    CancellationToken ct = default)
+            CreatePaymentRequest input,
+            string userId,
+            CancellationToken ct = default)
         {
-            // Bắt đầu Transaction từ MyAppDbContext
+            
             await using var trx = await _db.Database.BeginTransactionAsync(ct);
 
             try
@@ -213,7 +230,7 @@ namespace Services.PaymentServices
                 await _repo.UpdateAsync(payment, ct);
                 await _db.SaveChangesAsync(ct);
 
-                // Transaction OK → Commit
+                
                 await trx.CommitAsync(ct);
 
                 return new CreatePaymentLinkResult

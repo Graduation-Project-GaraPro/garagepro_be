@@ -47,8 +47,7 @@ namespace Dtos.Branches
         [Range(1, int.MaxValue, ErrorMessage = "Must be at least 1")]
         public int MaxBookingsPerWindow { get; set; } = 6;
 
-        [Range(1, int.MaxValue, ErrorMessage = "Must be at least 1")]
-        public int MaxConcurrentWip { get; set; } = 8;
+       
 
 
         [MinLength(1, ErrorMessage = "At least one service must be assigned to the branch")]

@@ -425,7 +425,7 @@ namespace Services.ExcelImportSerivces
                         IsActive = isActive,
                         ArrivalWindowMinutes = arrival,
                         MaxBookingsPerWindow = maxBooking,
-                        MaxConcurrentWip = 2,
+                        
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -446,7 +446,7 @@ namespace Services.ExcelImportSerivces
                     branch.IsActive = isActive;
                     branch.ArrivalWindowMinutes = arrival;
                     branch.MaxBookingsPerWindow = maxBooking;
-                    branch.MaxConcurrentWip = 2;
+                   
                     branch.UpdatedAt = DateTime.UtcNow;
 
                     _context.Branches.Update(branch);
@@ -784,29 +784,15 @@ namespace Services.ExcelImportSerivces
                     _staffCache[uKey] = user;
                 }
                 else
-                {
-                    user.FirstName = firstName;
-                    user.LastName = lastName;
-                    user.Email = email ?? user.Email;
-                    user.PhoneNumber = phone ?? user.PhoneNumber;
-                    user.FullName = fullName ?? user.FullName;
-                    user.FirstName = fullName ?? user.FirstName;
-                    user.BranchId = branchId;
-                    user.IsActive = isActive;
-                    user.UpdatedAt = DateTime.UtcNow;
-
-                    var updateResult = await _userManager.UpdateAsync(user);
-                    if (!updateResult.Succeeded)
-                    {
+                {                 
                         AddError(
                             sheetName,
-                            $"Failed to update user '{userName}': {string.Join("; ", updateResult.Errors.Select(e => e.Description))}.",
+                            $"User '{userName}' already exists.",
                             row,
                             null,
                             "STAFF_UPDATE_USER_FAILED"
                         );
-                        continue;
-                    }
+                        continue;                   
                 }
 
                 // Assign role

@@ -358,9 +358,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("MaxBookingsPerWindow")
                         .HasColumnType("int");
 
-                    b.Property<int>("MaxConcurrentWip")
-                        .HasColumnType("int");
-
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
                         .HasMaxLength(20)
