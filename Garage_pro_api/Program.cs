@@ -89,6 +89,7 @@ using BusinessObject.PayOsModels;
 using Services.PayOsClients;
 using Services.BillServices;
 using Services.DeadlineServices;
+using BusinessObject.Customers;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -576,7 +577,11 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
     var userRepository = provider.GetRequiredService<IUserRepository>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
     var vehicleService = provider.GetRequiredService<IVehicleService>();
-    
+    var requestHub = provider.GetRequiredService<IHubContext<RepairRequestHub>>();
+    var iFcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+
     return new Services.Customer.RepairRequestService(
         unitOfWork,
         cloudinaryService,
@@ -584,7 +589,10 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
         repairRequestRepository,
         userRepository,
         repairOrderService,
-        vehicleService
+        vehicleService,
+        requestHub,
+        iFcmService,
+        userService
     );
 });
 
@@ -713,7 +721,7 @@ app.MapHub<JobHub>("/hubs/job");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
 app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
-
+app.MapHub<RepairRequestHub>("/hubs/repairRequest");
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();

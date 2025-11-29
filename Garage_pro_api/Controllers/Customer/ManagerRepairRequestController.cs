@@ -32,6 +32,36 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(requests);
         }
 
+
+
+
+        [HttpGet("branches/{branchId:guid}/arrival-time-slots")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetArrivalTimeSlotsAsync(
+        Guid branchId,
+        [FromQuery] DateOnly? date)
+        {
+            var targetDate = date ?? DateOnly.FromDateTime(DateTime.Now);
+
+            try
+            {
+                var slots = await _repairRequestService.GetArrivalTimeSlotsAsync(branchId, targetDate);
+                return Ok(slots);
+            }
+            catch (Exception ex)
+            {
+                // Ví d?: service ?ang throw "Branch not found"
+                if (ex.Message.Contains("Branch not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(new { message = ex.Message });
+
+                // N?u mu?n custom more thì b?t riêng t?ng lo?i exception
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Error when getting arrival time slots",
+                    detail = ex.Message
+                });
+            }
+        }
+
         // GET: api/ManagerRepairRequest/branch/{branchId}
         [HttpGet("branch/{branchId}")]
         [EnableQuery] // Enable OData query support
@@ -62,6 +92,26 @@ namespace Garage_pro_api.Controllers.Customer
             {
                 var repairOrderDto = await _repairRequestService.ConvertToRepairOrderAsync(id, dto);
                 return Ok(repairOrderDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        // POST: api/ManagerRepairRequest/{id}/cancel
+        [HttpPost("{id}/cancel-on-behalf")]
+        public async Task<IActionResult> CancelRepairRequest(Guid id)
+        {
+            try
+            {
+                var managerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(managerId))
+                    return Unauthorized(new { Message = "Manager ID not found in token" });
+
+                var result = await _repairRequestService.ManagerCancelRepairRequestAsync(id, managerId);
+                return Ok(new { Message = "Repair request cancelled successfully", Success = result });
+                //return Ok(new { Message = "Repair request cancelled successfully"});
             }
             catch (Exception ex)
             {

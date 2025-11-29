@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251128115429_isSystemPermission")]
+    [Migration("20251129114416_isSystemPermission")]
     partial class isSystemPermission
     {
         /// <inheritdoc />

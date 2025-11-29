@@ -17,8 +17,9 @@ namespace Services.Customer
         Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); // New method for managers
         Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id); // New method for getting single request for manager        
        
-        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId); 
-              
+        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId);
+
+        Task<IReadOnlyList<string>> GetArrivalTimeSlotsAsync(Guid branchId, DateOnly date);
 
         Task<RPDetailDto> GetByIdDetailsAsync(Guid id);
 
@@ -29,8 +30,8 @@ namespace Services.Customer
 
         Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date);
 
-        Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId);
-        Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto,string userId);
+       
+       
         Task<bool> DeleteRepairRequestAsync(Guid id);
 
         // Conversion method

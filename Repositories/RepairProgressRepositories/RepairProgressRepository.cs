@@ -91,7 +91,7 @@ namespace Repositories.RepairProgressRepositories
                 .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
                 .Include(rp => rp.User)
                 .Include(rp => rp.FeedBack)
-                .AsSplitQuery(); // EF Core 5+ – VERY helpful for this graph
+                .AsSplitQuery(); 
 
             var items = await itemsQuery
                 .OrderByDescending(ro => ro.CreatedAt) // keep ordering

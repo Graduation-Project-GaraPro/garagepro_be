@@ -17,8 +17,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Utils.RepairRequests;
 using Dtos.RepairOrder; // Add this
-using Services; // Add this for IRepairOrderService
-
+using Services;
+using Services.Hubs;
+using Microsoft.AspNetCore.SignalR;
+using Services.FCMServices;
+using BusinessObject.FcmDataModels; // Add this for IRepairOrderService
+using System.Globalization;
 
 
 namespace Services.Customer
@@ -32,7 +36,9 @@ namespace Services.Customer
         private readonly IUserRepository _userRepository;
         private readonly IRepairOrderService _repairOrderService; // Add this
         private readonly IVehicleService _vehicleService; // Add this
-
+        private readonly IHubContext<RepairRequestHub> _hubContext;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
 
         private static readonly RepairRequestStatus[] ActiveStatuses =
             { RepairRequestStatus.Pending, RepairRequestStatus.Accept };
@@ -44,7 +50,11 @@ namespace Services.Customer
             IRepairRequestRepository repairRequestRepository, 
             IUserRepository userRepository, 
             IRepairOrderService repairOrderService,
-            IVehicleService vehicleService) 
+            IVehicleService vehicleService,
+            IHubContext<RepairRequestHub> hubContext,
+            IFcmService fcmService,
+            IUserService userService
+            ) 
         {
             _unitOfWork = unitOfWork;
             _cloudinaryService = cloudinaryService;
@@ -53,6 +63,9 @@ namespace Services.Customer
             _userRepository = userRepository; 
             _repairOrderService = repairOrderService; 
             _vehicleService = vehicleService;
+            _hubContext = hubContext;
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
         public async Task<IEnumerable<RepairRequest>> GetAllAsync()
@@ -219,7 +232,14 @@ namespace Services.Customer
                 ArrivalWindowStart = request.ArrivalWindowStart,
                 CompletedDate = request.CompletedDate,
                 ImageUrls = request.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
-                Services = _mapper.Map<List<RequestServiceDto>>(request.RequestServices?.ToList() ?? new List<RequestService>()),
+                Services = request.RequestServices?
+                    .Select(s => new RequestServiceDto
+                    {
+                        ServiceId = s.ServiceId,
+                        ServiceName = s.Service?.ServiceName,
+                        Price = s.Service?.Price ?? 0
+                    })
+                    .ToList() ?? new List<RequestServiceDto>(),
                 CreatedAt = request.CreatedAt,
                 UpdatedAt = request.UpdatedAt,
                 Status = request.Status.ToString()
@@ -234,189 +254,9 @@ namespace Services.Customer
             return _mapper.Map<RPDetailDto>(request);
         }
 
-        public async Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId)
-        {
-            var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
-            if (vehicle == null || vehicle.UserId != userId)
-                throw new Exception("This vehicle does not belong to the current user");
+       
 
-            // Get branch to determine window minutes
-            var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
-                ?? throw new Exception("Branch not found");
-            
-            var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
-            var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
-
-
-
-            var repairRequest = new RepairRequest
-            {
-                VehicleID = dto.VehicleID,
-                UserID = userId,
-                BranchId = dto.BranchId,
-                Description = dto.Description,
-                RequestDate = dto.RequestDate,
-                ArrivalWindowStart = winStart, // Set the proper arrival window start
-                EstimatedCost = 0,
-                RequestServices = new List<RequestService>()
-            };
-
-            decimal totalServiceFee = 0;
-            decimal totalPartsFee = 0;
-
-            foreach (var serviceDto in dto.Services)
-            {
-                var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
-                              ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
-
-                var requestService = new RequestService
-                {
-                    ServiceId = service.ServiceId,
-                    ServiceFee = service.Price,
-                    RequestParts = new List<RequestPart>()
-                };
-
-                totalServiceFee += service.Price;
-
-              
-
-                repairRequest.RequestServices.Add(requestService);
-            }
-
-            repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
-
-            if (dto.ImageUrls != null && dto.ImageUrls.Any())
-            {
-                foreach (var imageUrl in dto.ImageUrls)
-                {
-                    repairRequest.RepairImages.Add(new RepairImage
-                    {
-                        ImageId = Guid.NewGuid(),
-                        ImageUrl = imageUrl,
-                        RepairRequestId = repairRequest.RepairRequestID
-                    });
-                }
-            }
-
-            await _unitOfWork.RepairRequests.AddAsync(repairRequest);
-            await _unitOfWork.SaveChangesAsync();
-
-            return _mapper.Map<RepairRequestDto>(repairRequest);
-        }
-
-        public async Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto, string userId)
-        {
-            var repairRequest = await _unitOfWork.RepairRequests.GetTrackingByIdAsync(requestId)
-                ?? throw new Exception("Repair request not found");
-
-            if (repairRequest.UserID != userId)
-                throw new Exception("You are not allowed to update this request");
-
-            if (repairRequest.Status != RepairRequestStatus.Pending)
-                throw new Exception("Cannot update a request that is already being processed.");
-
-            // --- Cập nhật các trường cơ bản ---
-            if (!string.IsNullOrEmpty(dto.Description))
-                repairRequest.Description = dto.Description;
-
-            if (dto.RequestDate.HasValue)
-                repairRequest.RequestDate = dto.RequestDate.Value;
-
-            // --- Cập nhật hình ảnh ---
-            if (dto.ImageUrls != null)
-            {
-                // Lấy danh sách image hiện tại từ DB
-                var currentImages = await _unitOfWork.RepairImages
-                    .GetByRepairRequestIdAsync(repairRequest.RepairRequestID);
-
-                // Xóa những image không còn trong DTO
-                var imagesToRemove = currentImages
-                    .Where(img => !dto.ImageUrls.Contains(img.ImageUrl))
-                    .ToList();
-
-                foreach (var img in imagesToRemove)
-                    _unitOfWork.RepairImages.Remove(img);
-
-                // Thêm những image mới mà chưa có
-                var existingUrls = currentImages.Select(img => img.ImageUrl).ToHashSet();
-                foreach (var url in dto.ImageUrls.Where(url => !existingUrls.Contains(url)))
-                {
-                    var newImage = new RepairImage
-                    {
-                        ImageId = Guid.NewGuid(),
-                        ImageUrl = url,
-                        RepairRequestId = repairRequest.RepairRequestID
-                    };
-                    await _unitOfWork.RepairImages.AddAsync(newImage);
-                }
-            }
-
-
-            // --- Cập nhật services và parts ---
-            if (dto.Services != null)
-            {
-                var currentServices = repairRequest.RequestServices.ToList();
-                var dtoServiceIds = dto.Services.Select(s => s.ServiceId).ToHashSet();
-
-                // 2a. Xóa service không còn trong DTO
-                foreach (var rs in currentServices.Where(s => !dtoServiceIds.Contains(s.ServiceId)))
-                {
-                    repairRequest.RequestServices.Remove(rs);
-                    await _unitOfWork.RequestServices.DeleteAsync(rs.RequestServiceId);
-                }
-
-                decimal totalServiceFee = 0;
-                decimal totalPartsFee = 0;
-
-                // 2b. Update hoặc thêm service mới
-                foreach (var serviceDto in dto.Services)
-                {
-                    var existingService = repairRequest.RequestServices
-                        .FirstOrDefault(s => s.ServiceId == serviceDto.ServiceId);
-
-                    if (existingService == null)
-                    {
-                        // Thêm service mới
-                        var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
-                                      ?? throw new Exception($"Service {serviceDto.ServiceId} not found");
-
-                        var requestService = new RequestService
-                        {
-                            RequestServiceId = Guid.NewGuid(),
-                            ServiceId = service.ServiceId,
-                            ServiceFee = service.Price,
-                            RepairRequestId = repairRequest.RepairRequestID,
-                            RequestParts = new List<RequestPart>()
-                        };
-
-                        totalServiceFee += service.Price;
-
-                       
-
-                        repairRequest.RequestServices.Add(requestService);
-                    }
-                    else
-                    {
-                        
-                        
-
-                        totalServiceFee += existingService.ServiceFee;
-                        totalPartsFee += existingService.RequestParts.Sum(p => p.UnitPrice);
-                    }
-                }
-
-                repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
-            }
-
-
-
-            repairRequest.UpdatedAt = DateTime.UtcNow;
-
-            await _unitOfWork.SaveChangesAsync();
-
-            return _mapper.Map<RepairRequestDto>(repairRequest);
-        }
-
+       
         public async Task<RepairRequestDto> CreateRepairWithImageRequestAsync(CreateRepairRequestWithImageDto dto, string userId)
         {
             // Validate vehicle ownership
@@ -456,24 +296,24 @@ namespace Services.Customer
             var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
                 x.UserID == userId && ActiveStatuses.Contains(x.Status));
 
-            if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
-                throw new Exception("You have reached the maximum number of active repair requests. Please complete or cancel existing requests before creating a new one.");
+            //if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
+            //    throw new Exception("You have reached the maximum number of active repair requests. Please complete or cancel existing requests before creating a new one.");
 
             // Prevent multiple active repairs for the same vehicle
             var hasActiveVehicleRequest = await _unitOfWork.RepairRequests.AnyAsync(x =>
                 x.VehicleID == dto.VehicleID &&
                 ActiveStatuses.Contains(x.Status));
 
-            if (hasActiveVehicleRequest)
-                throw new Exception("This vehicle already has an active repair request. Please complete the previous request before creating a new one.");
+            //if (hasActiveVehicleRequest)
+            //    throw new Exception("This vehicle already has an active repair request. Please complete the previous request before creating a new one.");
 
             // Check if the vehicle is currently under repair (existing RepairOrder)
             var hasActiveRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(x =>
                 x.VehicleId == dto.VehicleID &&
                 !x.IsArchived);
 
-            if (hasActiveRepairOrder)
-                throw new Exception("This vehicle is currently being repaired in the garage. Please wait until the repair is completed before booking another request.");
+            //if (hasActiveRepairOrder)
+            //    throw new Exception("This vehicle is currently being repaired in the garage. Please wait until the repair is completed before booking another request.");
 
             // Limit number of requests per vehicle per day
             var dayStart = new DateTimeOffset(winStart.Year, winStart.Month, winStart.Day, 0, 0, 0, VietnamTime.VN_OFFSET);
@@ -484,8 +324,8 @@ namespace Services.Customer
                 x.ArrivalWindowStart >= dayStart &&
                 x.ArrivalWindowStart < dayEnd);
 
-            if (vehicleDaily >= RepairRequestAppConfig.MaxRequestsPerVehiclePerDay)
-                throw new Exception("This vehicle has reached the maximum number of requests allowed for today. Please choose another date.");
+            //if (vehicleDaily >= RepairRequestAppConfig.MaxRequestsPerVehiclePerDay)
+            //    throw new Exception("This vehicle has reached the maximum number of requests allowed for today. Please choose another date.");
 
             // Prevent duplicate requests for the same time window
             var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
@@ -513,7 +353,7 @@ namespace Services.Customer
             };
 
             decimal totalServiceFee = 0;
-            decimal totalPartsFee = 0;
+            
 
             // Process requested services
             foreach (var serviceDto in dto.Services)
@@ -532,8 +372,8 @@ namespace Services.Customer
                 repairRequest.RequestServices.Add(requestService);
             }
 
-            
-            repairRequest.EstimatedCost = totalServiceFee + totalPartsFee;
+
+            repairRequest.EstimatedCost = totalServiceFee;
 
             // Upload images
             if (dto.Images != null && dto.Images.Any())
@@ -554,110 +394,44 @@ namespace Services.Customer
             await _unitOfWork.RepairRequests.AddAsync(repairRequest);
             await _unitOfWork.SaveChangesAsync();
 
-            
+            var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
+            var sigdto = new ManagerRepairRequestDto
+            {
+                RequestID = repairRequest.RepairRequestID,
+                VehicleID = repairRequest.VehicleID,
+                CustomerID = repairRequest.UserID,
+                CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
+                VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                Description = repairRequest.Description,
+                RequestDate = repairRequest.RequestDate,
+                ArrivalWindowStart = repairRequest.ArrivalWindowStart,
+                CompletedDate = repairRequest.CompletedDate,
+                ImageUrls = repairRequest.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                Services = repairRequest.RequestServices?
+                    .Select(s => new RequestServiceDto
+                    {
+                        ServiceId = s.ServiceId,
+                        ServiceName = s.Service?.ServiceName,
+                        Price = s.Service?.Price ?? 0
+                    })
+                    .ToList() ?? new List<RequestServiceDto>(),
+                CreatedAt = repairRequest.CreatedAt,
+                UpdatedAt = repairRequest.UpdatedAt,
+                Status = repairRequest.Status.ToString()
+            };
+            var branchGroup = $"branch_{repairRequest.BranchId}";
+            await _hubContext.Clients
+            .Group(branchGroup)
+            .SendAsync("NewRepairRequest", sigdto );
+
             return _mapper.Map<RepairRequestDto>(repairRequest);
         }
 
 
 
-        public async Task CheckInAsync(Guid repairRequestId)
-        {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var rr = await _unitOfWork.RepairRequests.GetByIdAsync(repairRequestId)
-                         ?? throw new Exception("RepairRequest not found");
+        
 
-                // Idempotent: nếu đã Arrived thì coi như xong
-                if (rr.Status == RepairRequestStatus.Arrived)
-                {
-                    await _unitOfWork.CommitAsync();
-                    return;
-                }
-
-                if (rr.Status != RepairRequestStatus.Accept)
-                    throw new Exception("Chỉ check-in các yêu cầu đã được duyệt (Accept).");
-
-                var branch = await _unitOfWork.Branches.GetByIdAsync(rr.BranchId)
-                             ?? throw new Exception("Branch not found");
-
-                // Đếm WIP đang trong xưởng
-                var activeWip = await GetActiveWipCountAsync(rr.BranchId);
-              
-
-                // Cho vào xưởng
-                rr.Status = RepairRequestStatus.Arrived;
-                rr.UpdatedAt = DateTime.UtcNow;
-
-                // (tuỳ chọn) tạo RepairOrder skeleton
-                // var ro = new RepairOrder { RepairRequestId = rr.RepairRequestID, BranchId = rr.BranchId, ... };
-                // await _unitOfWork.RepairOrders.AddAsync(ro);
-
-                await _unitOfWork.RepairRequests.UpdateAsync(rr);
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitAsync();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackAsync();
-                throw;
-            }
-        }
-
-        public async Task AcceptAsync(Guid repairRequestId)
-        {
-            await _unitOfWork.BeginTransactionAsync();
-            try
-            {
-                var rr = await _unitOfWork.RepairRequests.GetByIdAsync(repairRequestId)
-                         ?? throw new Exception("RepairRequest not found");
-
-                if (rr.Status == RepairRequestStatus.Accept)
-                {
-                    await _unitOfWork.CommitAsync(); // idempotent
-                    return;
-                }
-                if (rr.Status == RepairRequestStatus.Cancelled)
-                    throw new Exception("Request was cancelled.");
-
-                var branch = await _unitOfWork.Branches.GetByIdAsync(rr.BranchId)
-                             ?? throw new Exception("Branch not found");
-                if (!branch.IsActive) throw new Exception("Branch inactive.");
-
-                var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
-
-                // Chuẩn hoá mốc slot (VN-only, rr.ArrivalWindowStart luôn +07:00)
-                var slotStart = VietnamTime.NormalizeWindow(rr.ArrivalWindowStart, windowMin);
-                var slotEnd = slotStart.AddMinutes(windowMin);
-
-                // Bảo đảm nằm trong giờ làm việc của chi nhánh cho NGÀY đó
-                await EnsureWithinOperatingHoursAsync(rr.BranchId, slotStart, windowMin);
-
-                // Đếm số Accept trong cùng slot và chi nhánh
-                var approvedCount = await _unitOfWork.RepairRequests.CountAsync(x =>
-                    x.BranchId == rr.BranchId
-                    && x.Status == RepairRequestStatus.Accept
-                    && x.ArrivalWindowStart >= slotStart
-                    && x.ArrivalWindowStart < slotEnd);
-
-                if (approvedCount >= branch.MaxBookingsPerWindow)
-                    throw new Exception("Cửa sổ đến đã đủ lượt duyệt.");
-
-                // Cập nhật trạng thái & chuẩn hoá lại ArrivalWindowStart về đầu slot
-                rr.Status = RepairRequestStatus.Accept;
-                rr.ArrivalWindowStart = slotStart;
-                rr.UpdatedAt = DateTime.UtcNow;
-
-                await _unitOfWork.RepairRequests.UpdateAsync(rr);
-                await _unitOfWork.SaveChangesAsync();
-                await _unitOfWork.CommitAsync();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackAsync();
-                throw;
-            }
-        }
+        
 
         public async Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date)
         {
@@ -709,10 +483,50 @@ namespace Services.Customer
             return AvailabilityUtil.Build(windows, usedMap, branch.MaxBookingsPerWindow);
         }
 
+       
+
+        public async Task<IReadOnlyList<string>> GetArrivalTimeSlotsAsync(Guid branchId, DateOnly date)
+            {
+                // Lấy branch
+                var branch = await _unitOfWork.Branches.GetByIdAsync(branchId)
+                             ?? throw new Exception("Branch not found");
+
+                if (!branch.IsActive)
+                    return Array.Empty<string>();
+
+                // Số phút mỗi slot
+                var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+
+                // Xác định OperatingHours cho ngày đó
+                var dow = DowUtil.ToCustomDow((DayOfWeek)date.DayOfWeek);
+                var oh = await _unitOfWork.OperatingHours.SingleOrDefaultAsync(o =>
+                    o.BranchId == branchId && o.DayOfWeek == dow);
+
+                if (oh == null || !oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
+                    return Array.Empty<string>();
+
+                // Build open/close DateTime local từ date + opentime/closetime
+                var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(
+                    date, oh.OpenTime.Value, oh.CloseTime.Value);
+
+                // Sinh các mốc giờ: 7:00, 7:30, ..., 17:00 (bao gồm cả giờ đóng cửa)
+                var slots = new List<string>();
+                var cursor = openLocal;
+
+                var culture = CultureInfo.GetCultureInfo("en-US"); 
+
+                while (cursor <= closeLocal)
+                {
+                    slots.Add(cursor.ToString("h:mm tt", culture));
+                    cursor = cursor.AddMinutes(windowMin);
+                }
+
+                return slots;
+            }
 
 
 
-        public async Task<bool> DeleteRepairRequestAsync(Guid id)
+    public async Task<bool> DeleteRepairRequestAsync(Guid id)
         {
             var result = await _unitOfWork.RepairRequests.DeleteAsync(id);
             await _unitOfWork.SaveChangesAsync();
@@ -806,8 +620,7 @@ namespace Services.Customer
             var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
             var cutoff = repairRequest.ArrivalWindowStart.AddMinutes(-30);
 
-            if (nowLocal > cutoff)
-                throw new Exception("Can only cancel a request at least 30 minutes before the scheduled arrival time.");
+           
 
             // Cancel the request on behalf of customer
             repairRequest.Status = RepairRequestStatus.Cancelled;
@@ -816,6 +629,37 @@ namespace Services.Customer
             // repairRequest.CancelledBy = managerId;
 
             await _unitOfWork.SaveChangesAsync();
+
+            await _hubContext.Clients
+            .Group($"RepairRequestUser_{repairRequest.UserID}")
+            .SendAsync("RepairUpdated", new
+            {
+                repairRequestId = repairRequest.RepairRequestID,
+
+            });
+            await _hubContext.Clients.Group($"RepairRequest_{repairRequest.RepairRequestID}")
+                    .SendAsync("CompletedRepairRequest", new
+                    {
+                        repairRequestId = repairRequest.RepairRequestID,
+
+                    });
+
+            var user = await _userService.GetUserByIdAsync(repairRequest.UserID);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "Repair Request Canceled",
+                    Body = "Your repair request has been canceled.",
+                    EntityKey = EntityKeyType.repairRequestId,
+                    EntityId = repairRequest.RepairRequestID,
+                    Screen = AppScreen.RepairRequestDetailFragment
+                };
+
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
             return true;
         }
 
@@ -847,7 +691,47 @@ namespace Services.Customer
             repairRequest.Status = RepairRequestStatus.Cancelled;
             repairRequest.UpdatedAt = DateTime.UtcNow;
 
+            await _hubContext.Clients.Group($"RepairRequest_{repairRequest.RepairRequestID}")
+                    .SendAsync("CompletedRepairRequest", new
+                    {
+                        repairRequestId = repairRequest.RepairRequestID,
+
+                    });
+
             await _unitOfWork.SaveChangesAsync();
+
+            var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(repairRequest.VehicleID);
+
+            var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
+            var sigdto = new ManagerRepairRequestDto
+            {
+                RequestID = repairRequest.RepairRequestID,
+                VehicleID = repairRequest.VehicleID,
+                CustomerID = repairRequest.UserID,
+                CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
+                VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                Description = repairRequest.Description,
+                RequestDate = repairRequest.RequestDate,
+                ArrivalWindowStart = repairRequest.ArrivalWindowStart,
+                CompletedDate = repairRequest.CompletedDate,
+                ImageUrls = repairRequest.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                Services = repairRequest.RequestServices?
+                    .Select(s => new RequestServiceDto
+                    {
+                        ServiceId = s.ServiceId,
+                        ServiceName = s.Service?.ServiceName,
+                        Price = s.Service?.Price ?? 0
+                    })
+                    .ToList() ?? new List<RequestServiceDto>(),
+                CreatedAt = repairRequest.CreatedAt,
+                UpdatedAt = repairRequest.UpdatedAt,
+                Status = repairRequest.Status.ToString()
+            };
+            var branchGroup = $"branch_{repairRequest.BranchId}";
+            await _hubContext.Clients
+            .Group(branchGroup)
+            .SendAsync("CancelRepairRequest", sigdto);
+
             return true;
         }
 
@@ -861,13 +745,65 @@ namespace Services.Customer
             var repairRequest = await _unitOfWork.RepairRequests.GetByIdWithDetailsAsync(requestId);
             if (repairRequest == null)
                 throw new Exception("Repair request not found");
-                
-            // Check if request is approved
+
+
+
+
+            //  Convert request date về giờ VN
+            var requestVn = new DateTimeOffset(repairRequest.RequestDate, VietnamTime.VN_OFFSET);
+
+            //  Lấy thời điểm hiện tại theo giờ VN
+            var nowVn = DateTimeOffset.UtcNow.ToOffset(VietnamTime.VN_OFFSET);
+
+            // So sánh theo ngày VN
+            var todayVn = DateOnly.FromDateTime(nowVn.DateTime);
+            var requestDateVn = DateOnly.FromDateTime(requestVn.DateTime);
+
+            
+            if (todayVn < requestDateVn)
+            {
+                throw new Exception("Repair request appointment date has not been reached yet.");
+            }
+
+            //Lấy branch giờ VN
+            var branch = await _unitOfWork.Branches.GetByIdAsync(repairRequest.BranchId)
+                         ?? throw new Exception("Branch not found");
+
+            if (!branch.IsActive)
+                throw new Exception("Branch is not active.");
+
+            var dow = DowUtil.ToCustomDow((DayOfWeek)requestDateVn.DayOfWeek);
+
+            var oh = await _unitOfWork.OperatingHours.SingleOrDefaultAsync(o =>
+                o.BranchId == repairRequest.BranchId && o.DayOfWeek == dow);
+
+            if (oh == null || !oh.IsOpen || !oh.OpenTime.HasValue || !oh.CloseTime.HasValue)
+                throw new Exception("Branch is closed on the appointment date.");
+
+            // NEW: Build giờ mở/đóng theo giờ VN
+            var (openLocal, closeLocal) = SlotWindowUtil.BuildOpenCloseLocal(
+                requestDateVn,
+                oh.OpenTime.Value,
+                oh.CloseTime.Value
+            );
+
+            // Vì BuildOpenCloseLocal trả DateTime ⇒ convert về DateTimeOffset VN
+            var openVn = openLocal;
+            var closeVn = closeLocal;
+
+            // Nếu hôm nay đúng ngày hẹn thì check giờ làm việc
+            if (todayVn == requestDateVn)
+            {
+                if (nowVn < openVn)
+                    throw new Exception("Branch has not started working hours yet.");               
+            }
+
+
+
+            
             if (repairRequest.Status != RepairRequestStatus.Accept)
                 throw new Exception("Only approved repair requests can be converted to repair orders");
 
-            // Check if repair request has already been converted to a repair order
-            // Since RepairOrder navigation is ignored in DbContext, check directly in RepairOrders table
             var existingRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(ro => ro.RepairRequestId == requestId);
             if (existingRepairOrder)
                 throw new Exception("This repair request has already been converted to a repair order");
@@ -881,7 +817,7 @@ namespace Services.Customer
             var vehicle = await _vehicleService.GetVehicleByIdAsync(repairRequest.VehicleID);
             if (vehicle == null)
                 throw new Exception("Vehicle not found");
-
+            
             // Calculate estimated time and amount based on selected services
             decimal totalEstimatedAmount = 0;
             long totalEstimatedTime = 0;
@@ -921,16 +857,50 @@ namespace Services.Customer
             // Create the repair order
             var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, dto.SelectedServiceIds);
             
-            // Update the repair request status to indicate it has been converted
-            // Note: RepairOrder navigation is ignored in DbContext, but the FK RepairRequestId is set in the RepairOrder
+            
             repairRequest.Status = RepairRequestStatus.Completed;
             repairRequest.UpdatedAt = DateTime.UtcNow;
             await _unitOfWork.SaveChangesAsync();
 
-            // Return the created repair order DTO
+           
             var fullRepairOrder = await _repairOrderService.GetRepairOrderWithFullDetailsAsync(createdRepairOrder.RepairOrderId);
             var repairOrderDto = _repairOrderService.MapToRepairOrderDto(fullRepairOrder);
             
+
+
+            
+
+            await _hubContext.Clients.Group($"RepairRequest_{repairRequest.RepairRequestID}")
+                    .SendAsync("CompletedRepairRequest", new
+                    {
+                        repairRequestId = repairRequest.RepairRequestID,
+                       
+                    });
+
+            await _hubContext.Clients
+            .Group($"RepairRequestUser_{repairRequest.UserID}")
+            .SendAsync("RepairUpdated", new
+            {
+                repairRequestId = repairRequest.RepairRequestID,
+               
+            });
+
+            var user = await _userService.GetUserByIdAsync(repairRequest.UserID);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "Repair Order Created",
+                    Body = "Your repair order has been Created. Thank you for using our service.",
+                    EntityKey = EntityKeyType.repairOrderId,
+                    EntityId = repairOrder.RepairOrderId,
+                    Screen = AppScreen.RepairProgressDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
+
             return repairOrderDto;
         }
     }

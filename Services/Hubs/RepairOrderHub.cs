@@ -27,7 +27,10 @@ namespace Services.Hubs // Update namespace
             // Notify all clients about the updated repair order
             await Clients.All.SendAsync("RepairOrderUpdated", repairOrder);
         }
-
+        public async Task ArchiveRepairOrder(string repairOrderId)
+        {
+            await Clients.All.SendAsync("RepairOrderArchived", repairOrderId);
+        }
         public async Task PayRepairOrder(string repairOrderId )
         {
             // Notify all clients about the updated repair order

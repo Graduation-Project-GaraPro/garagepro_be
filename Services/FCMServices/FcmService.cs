@@ -23,8 +23,7 @@ namespace Services.FCMServices
         {
             _projectId = configuration["Firebase:ProjectId"]
                 ?? throw new ArgumentNullException("Firebase:ProjectId");
-            _credentialsPath = configuration["Firebase:CredentialsPath"]
-                ?? throw new ArgumentNullException("Firebase:CredentialsPath");
+            _credentialsPath = Path.Combine(AppContext.BaseDirectory, "Keys", "garapro-firebase-firebase-adminsdk-fbsvc-292a41367b.json");
         }
 
       
@@ -33,11 +32,40 @@ namespace Services.FCMServices
             if (string.IsNullOrEmpty(deviceToken))
                 throw new ArgumentNullException(nameof(deviceToken));
 
-            // 1️⃣ Lấy Access Token từ file JSON
-            var credential = GoogleCredential.FromFile(_credentialsPath)
-                .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
+            Console.WriteLine("[FCM] Using credentials at: " + _credentialsPath);
 
-            var accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+            if (!File.Exists(_credentialsPath))
+                throw new FileNotFoundException("Credentials file not found", _credentialsPath);
+
+            GoogleCredential credential;
+
+            try
+            {
+                using var stream = new FileStream(_credentialsPath, FileMode.Open, FileAccess.Read);
+                credential = GoogleCredential.FromStream(stream)
+                    .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
+                Console.WriteLine("[FCM] GoogleCredential created.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[FCM] Failed to create GoogleCredential:");
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
+
+            string accessToken;
+            try
+            {
+                Console.WriteLine("[FCM] Requesting access token...");
+                accessToken = await credential.UnderlyingCredential.GetAccessTokenForRequestAsync();
+                Console.WriteLine("[FCM] Access token acquired.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[FCM] Failed to get access token:");
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
 
             // 2️⃣ Tạo payload JSON (notification + data)
             var message = new
@@ -72,7 +100,7 @@ namespace Services.FCMServices
                 throw new Exception($"FCM Error: {response.StatusCode} - {error}");
             }
 
-            Console.WriteLine("✅ Notification sent successfully.");
+            Console.WriteLine(" Notification sent successfully.");
         }
     }
 }

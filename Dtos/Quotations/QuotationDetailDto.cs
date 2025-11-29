@@ -55,7 +55,7 @@ namespace Dtos.Quotations
         public decimal DiscountValue { get; set; } = 0;
 
 
-        public decimal FinalPrice => Price - DiscountValue;
+        public decimal FinalPrice { get; set; }
 
         public Guid? AppliedPromotionId { get; set; }
 

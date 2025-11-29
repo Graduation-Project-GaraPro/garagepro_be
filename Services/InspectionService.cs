@@ -247,12 +247,12 @@ namespace Services
                     // Skip if service is null
                     if (serviceInspection.Service == null)
                         continue;
-
+                    var isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace ? true : false;
                     var quotationService = new CreateQuotationServiceDto
                     {
                         ServiceId = serviceInspection.ServiceId,
                         IsSelected = true,
-                        IsRequired = true,
+                        IsRequired = isRequired,
                         QuotationServiceParts = new List<CreateQuotationServicePartDto>()
                     };
                     
@@ -265,8 +265,8 @@ namespace Services
                         quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
                         {
                             PartId = partInspection.PartId,
-                            IsSelected = true, // Pre-select technician's suggested parts
-                            Quantity = 1
+                            IsSelected = true, 
+                            Quantity = partInspection.Quantity
                         });
                     }
                     
