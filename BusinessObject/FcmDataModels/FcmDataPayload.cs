@@ -12,11 +12,11 @@ namespace BusinessObject.FcmDataModels
         public NotificationType Type { get; set; }
         public AppScreen? Screen { get; set; }
 
-        public EntityKeyType? EntityKey { get; set; }  // ✅ Enum an toàn
-        public Guid? EntityId { get; set; }            // ✅ ID thực tế
+        public EntityKeyType? EntityKey { get; set; } 
+        public Guid? EntityId { get; set; }            
         public Dictionary<string, string>? ExtraData { get; set; } // tuỳ chọn
 
-        // ✅ Thêm hai trường này để gửi nội dung hiển thị notification
+        
         public string? Title { get; set; }
         public string? Body { get; set; }
 

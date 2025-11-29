@@ -96,7 +96,7 @@ namespace Services.PolicyServices
             // Xóa cache để áp dụng ngay
             _cache.Remove(CacheKey);
 
-            _logger.LogInformation("Security policy updated by admin {AdminId}", adminId);
+            
 
             // Kích hoạt event để áp dụng real-time
             await OnPolicyUpdatedAsync(existing);

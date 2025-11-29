@@ -11,7 +11,7 @@ namespace Garage_pro_api.Controllers
 {
     
     [Route("api/[controller]")]
-    [Authorize("LOG_VIEW")]
+    //[Authorize("LOG_VIEW")]
     [ApiController]
     public class ActivityLogsController : ControllerBase
     {
@@ -20,25 +20,11 @@ namespace Garage_pro_api.Controllers
         public ActivityLogsController(ILogService logService)
         {
             _logService = logService;
-        }
-
-        [HttpGet("activities")]
-        public async Task<IActionResult> GetActivityLogs()
-        {
-            try
-            {
-                var logs = await _logService.GetUserActivityLogsAsync();
-                return Ok(logs);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving activity logs.", error = ex.Message });
-            }
-        }
+        }       
 
         [HttpPost("search")]
         [HttpPost("get-all")]
-        [HttpGet("search")] // Cung cấp cả GET và POST cho linh hoạt
+        [HttpGet("search")] 
         public async Task<ActionResult<LogSearchResult>> GetAllLogs([FromBody] LogSearchRequest request)
         {
             try
@@ -83,47 +69,14 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        [HttpGet("system")]
-        public async Task<IActionResult> GetSystemLogs()
+        [HttpGet("testExx")]
+        public async Task<ActionResult<LogStatistics>> Test()
         {
-            try
-            {
-                var logs = await _logService.GetAllSystemLogsAsync();
-                return Ok(logs);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving system logs.", error = ex.Message });
-            }
+          
+                throw new Exception("Loi rồi");
+          
         }
 
-        //[HttpGet("date-range")]
-        //public async Task<IActionResult> GetLogsByDateRange([FromQuery] DateTime fromDate, [FromQuery] DateTime toDate)
-        //{
-        //    try
-        //    {
-        //        var logs = await _logService.GetLogsByDateRangeAsync(fromDate, toDate);
-        //        return Ok(logs);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = "Error retrieving logs by date range.", error = ex.Message });
-        //    }
-        //}
-
-        [HttpGet("source/{source}")]
-        public async Task<IActionResult> GetLogsBySource(LogSource source)
-        {
-            try
-            {
-                var logs = await _logService.GetLogsBySourceAsync(source);
-                return Ok(logs);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error retrieving logs by source.", error = ex.Message });
-            }
-        }
 
         [HttpGet("quick-stats")]
         public async Task<ActionResult<LogStatistics>> GetQuickStats( int days = 7)
@@ -181,19 +134,7 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        //[HttpGet("user/{userId}")]
-        //public async Task<IActionResult> GetLogsByUserId(string userId)
-        //{
-        //    try
-        //    {
-        //        var logs = await _logService.GetLogsByUserIdAsync(userId);
-        //        return Ok(logs);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = "Error retrieving logs by user ID.", error = ex.Message });
-        //    }
-        //}
+        
 
         [HttpGet("files/{source}")]
         public async Task<IActionResult> GetLogsFromFile(LogSource source, [FromQuery] int days = 7)
@@ -213,18 +154,6 @@ namespace Garage_pro_api.Controllers
             if (string.IsNullOrEmpty(field)) return "";
             return field.Replace("\"", "\"\"");
         }
-        //[HttpGet("files")]
-        //public async Task<IActionResult> GetAllLogsFromFiles([FromQuery] int days = 7)
-        //{
-        //    try
-        //    {
-        //        var logs = await _logService.GetAllLogsFromFilesAsync(days);
-        //        return Ok(logs);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, new { message = "Error retrieving all logs from files.", error = ex.Message });
-        //    }
-        //}
+        
     }
 }

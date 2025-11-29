@@ -1,42 +1,43 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BusinessObject;
+﻿using BusinessObject;
 using BussinessObject;
 using Dtos.PayOsDtos;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Services.PaymentServices
 {
     public interface IPaymentService
     {
-
-        // CRUD cơ bản
+        #region CRUD cơ bản
         Task<Payment?> GetByIdAsync(long paymentId);
         Task<IEnumerable<Payment>> GetAllAsync();
-        //Task AddAsync(Payment payment);
         Task UpdateAsync(Payment payment, CancellationToken ct);
-        //Task DeleteAsync(Guid paymentId);
+        #endregion
 
-        // Truy vấn tiện ích
+        #region Truy vấn tiện ích
         Task<IEnumerable<Payment>> GetByUserIdAsync(string userId);
         Task<IEnumerable<Payment>> GetByRepairOrderIdAsync(Guid repairOrderId);
         Task<IEnumerable<Payment>> GetByStatusAsync(PaymentStatus status);
+        Task<RepairOrder> GetRepairOrderByIdAsync(Guid repairOrderId);
+        #endregion
 
+        #region Luồng PayOS
+        Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(CreatePaymentRequest input, string userId, CancellationToken ct = default);
         Task<PaymentStatusDto> GetStatusByOrderCodeAsync(long orderCode, CancellationToken ct);
+        #endregion
 
+        #region Luồng thanh toán thủ công bởi manager
+        Task<Payment> CreateManualPaymentAsync(Guid repairOrderId, string managerId, decimal amount, PaymentMethod method, CancellationToken ct = default);
+        Task<CreatePaymentLinkResult> CreateManagerPayOsPaymentAsync(Guid repairOrderId, string managerId, string? description = null, CancellationToken ct = default);
+        Task<PaymentPreviewDto> GetPaymentPreviewAsync(Guid repairOrderId, CancellationToken ct = default);
+        Task<PaymentSummaryDto> GetPaymentSummaryAsync(Guid repairOrderId, CancellationToken ct = default);
+        #endregion
 
-        // Luồng thanh toán PayOS
-        Task<CreatePaymentLinkResult> CreatePaymentAndLinkAsync(CreatePaymentRequest input, string userId,  CancellationToken ct = default);
-
-        // Xử lý webhook từ PayOS (đã verify chữ ký ở controller)
-        //Task HandlePayOsWebhookAsync(PayOsWebhookData data, CancellationToken ct = default);
-
-
-        // Đổi trạng thái (nếu muốn dùng riêng)
+        #region Đổi trạng thái thủ công
         Task MarkPaidAsync(long paymentId, decimal? amount = null, CancellationToken ct = default);
         Task MarkCancelledAsync(long paymentId, CancellationToken ct = default);
-
+        #endregion
     }
 }

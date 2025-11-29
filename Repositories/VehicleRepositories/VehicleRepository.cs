@@ -104,5 +104,25 @@ namespace Repositories.VehicleRepositories
         {
             return await _context.Vehicles.AnyAsync(v => v.LicensePlate == licensePlate);
         }
+
+        public async Task<bool> HasRepairRequestsAsync(Guid vehicleId)
+        {
+            return await _context.RepairRequests.AnyAsync(r => r.VehicleID == vehicleId);
+        }
+
+        public async Task<bool> HasRepairOrdersAsync(Guid vehicleId)
+        {
+            return await _context.RepairOrders.AnyAsync(ro => ro.VehicleId == vehicleId);
+        }
+
+        public async Task<bool> HasQuotationsAsync(Guid vehicleId)
+        {
+            return await _context.Quotations.AnyAsync(q => q.VehicleId == vehicleId);
+        }
+
+        public async Task<bool> HasEmergencyRequestsAsync(Guid vehicleId)
+        {
+            return await _context.RequestEmergencies.AnyAsync(e => e.VehicleId == vehicleId);
+        }
     }
 }

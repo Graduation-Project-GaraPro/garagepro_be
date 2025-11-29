@@ -63,8 +63,18 @@ namespace Garage_pro_api.Controllers.Vehicle
                 return Unauthorized();
 
 
-            var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto, UserId);
-            return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
+            try
+            {
+                var createdVehicle = await _vehicleService.CreateVehicleAsync(vehicleDto, UserId);
+                return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message ?? string.Empty;
+                if (msg.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = msg });
+                return StatusCode(500, new { message = msg });
+            }
         }
 
         [HttpPut("{id}")]
@@ -72,22 +82,45 @@ namespace Garage_pro_api.Controllers.Vehicle
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
+            try
+            {
+                var updatedVehicle = await _vehicleService.UpdateVehicleAsync(id, vehicleDto);
+                if (updatedVehicle == null)
+                    return NotFound();
 
-            var updatedVehicle = await _vehicleService.UpdateVehicleAsync(id, vehicleDto);
-            if (updatedVehicle == null)
-                return NotFound();
-
-            return Ok(updatedVehicle);
+                return Ok(updatedVehicle);
+            }
+            catch (ApplicationException ex)
+            {
+                return Conflict(new { message = ex.Message, actionable = true });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Có lỗi xảy ra khi cập nhật xe.", detail = ex.Message });
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(Guid id)
         {
-            var result = await _vehicleService.DeleteVehicleAsync(id);
-            if (!result)
-                return NotFound();
-
-            return NoContent();
+            try
+            {
+                var result = await _vehicleService.DeleteVehicleAsync(id);
+                if (!result)
+                    return NotFound();
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message ?? string.Empty;
+                if (msg.Contains("Cannot delete vehicle", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = msg });
+                return StatusCode(500, new { message = msg });
+            }
         }
     }
 }

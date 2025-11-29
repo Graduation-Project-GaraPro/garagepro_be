@@ -10,7 +10,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Technician")]
+    [Authorize("REPAIR_HISTORY_VIEW")]
     public class RepairHistoriesController : ODataController
     {
         private readonly IRepairHistoryService _service;

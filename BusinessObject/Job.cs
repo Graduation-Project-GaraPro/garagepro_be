@@ -41,22 +41,18 @@ namespace BusinessObject
 
         public DateTime? UpdatedAt { get; set; }
 
-        public int Level { get; set; }
-
-        public string? AssignedByManagerId { get; set; }  // UserId of manager who assigned
+        public string? AssignedByManagerId { get; set; } 
         public DateTime? AssignedAt { get; set; }
 
-        // Estimate expiration and revision properties
-        public DateTime? EstimateExpiresAt { get; set; }
-        public int RevisionCount { get; set; } = 0;  // Track how many times estimate was revised
-        public Guid? OriginalJobId { get; set; }  // Link to original job if this is a revision
-        public string? RevisionReason { get; set; }  // Why the estimate was revised
+        public int RevisionCount { get; set; } = 0; 
+        public Guid? OriginalJobId { get; set; } 
+        public string? RevisionReason { get; set; }
 
-        // Navigation properties
+        // navigation
         public virtual Service Service { get; set; }
         public virtual RepairOrder RepairOrder { get; set; }
         public virtual ICollection<JobPart> JobParts { get; set; }
-        public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); // Thêm quan hệ với JobTechnician
+        public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); 
         public virtual Repair Repair { get; set; }
         public virtual Job OriginalJob { get; set; } // Navigation property for the original job
     }

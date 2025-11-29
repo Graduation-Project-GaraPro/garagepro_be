@@ -15,6 +15,6 @@ namespace Dtos.FeedBacks
         public int? Rating { get; set; }
         public Guid RepairOrderId { get; set; }
         public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
+        public DateTime? UpdatedAt { get; set; }
     }
 }

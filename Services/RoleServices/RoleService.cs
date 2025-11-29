@@ -120,7 +120,7 @@ namespace Services.RoleServices
                 if (createdRole == null)
                     throw new InvalidOperationException($"Failed to create role {dto.Name}");
 
-                // B1: validate danh sách permission client gửi lên
+                // B1: validate permission IDs sent from client
                 var existingPermissions = await _permissionService.Query()
                     .Where(p => dto.PermissionIds.Contains(p.Id))
                     .Select(p => p.Id)
@@ -133,10 +133,23 @@ namespace Services.RoleServices
                         $"The following permissions do not exist: {string.Join(", ", invalidPermissions)}");
                 }
 
-                // B2: tự động bổ sung các default permission theo Category
+                // B2: auto-append default permissions by category
                 var normalizedPermissionIds = await NormalizePermissionIdsWithDefaultsAsync(existingPermissions);
 
-                // B3: Gán permission hợp lệ + đã bổ sung default
+                // NEW: do not allow assigning system permissions through this API
+                var systemPermissionIds = await _permissionService.Query()
+                    .Where(p => normalizedPermissionIds.Contains(p.Id) && p.IsSystem)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                if (systemPermissionIds.Any())
+                {
+                    // Bạn có thể log thêm list ID nếu muốn debug
+                    throw new InvalidOperationException(
+                        "System permissions cannot be assigned through this API.");
+                }
+
+                // B3: assign valid + normalized permissions
                 foreach (var permissionId in normalizedPermissionIds)
                 {
                     await _rolePermissionRepo.AssignPermissionAsync(
@@ -160,6 +173,7 @@ namespace Services.RoleServices
             }
         }
 
+
         public async Task<RoleDto> UpdateRoleAsync(UpdateRoleDto dto)
         {
             using var tx = await _context.Database.BeginTransactionAsync();
@@ -173,6 +187,22 @@ namespace Services.RoleServices
                 {
                     throw new InvalidOperationException("Customer role is system role and cannot be updated.");
                 }
+                if (string.Equals(role.Name, "Admin", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("Admin role is system role and cannot be updated.");
+                }
+
+                // Lấy các permission hiện có của role, để check system
+                var currentPermissions = await _permissionService.Query()
+                    .Where(p => p.RolePermissions.Any(rp => rp.RoleId == role.Id))
+                    .Select(p => new { p.Id, p.IsSystem })
+                    .ToListAsync();
+
+                var currentSystemPermissionIds = currentPermissions
+                    .Where(x => x.IsSystem)
+                    .Select(x => x.Id)
+                    .ToHashSet();
+
                 if (!role.IsDefault)
                 {
                     role.Name = dto.Name;
@@ -198,13 +228,40 @@ namespace Services.RoleServices
                         $"The following permissions do not exist: {string.Join(", ", invalidPermissions)}");
                 }
 
-                //  bổ sung default permission theo Category
+                // B2: bổ sung default permission theo Category
                 var normalizedPermissionIds = await NormalizePermissionIdsWithDefaultsAsync(existingPermissions);
 
-                //  Xóa toàn bộ permission cũ
+                // B3: check System permissions không bị thay đổi
+                var targetSystemPermissionIds = await _permissionService.Query()
+                    .Where(p => normalizedPermissionIds.Contains(p.Id) && p.IsSystem)
+                    .Select(p => p.Id)
+                    .ToListAsync();
+
+                var removedSystemPermissions = currentSystemPermissionIds
+                    .Except(targetSystemPermissionIds)
+                    .ToList();
+
+                if (removedSystemPermissions.Any())
+                {
+                    throw new InvalidOperationException(
+                                 "System permissions cannot be removed from this role."
+                             );
+                }
+
+                var addedSystemPermissions = targetSystemPermissionIds
+                    .Except(currentSystemPermissionIds)
+                    .ToList();
+
+                if (addedSystemPermissions.Any())
+                {
+                    throw new InvalidOperationException(
+                            "System permissions cannot be assigned to this role."
+                        );
+                }
+
+                
                 await _rolePermissionRepo.RemoveAllPermissionsAsync(role.Id);
 
-                //  Gán lại toàn bộ permission (bao gồm default)
                 foreach (var permissionId in normalizedPermissionIds)
                 {
                     await _rolePermissionRepo.AssignPermissionAsync(
@@ -234,6 +291,7 @@ namespace Services.RoleServices
                 throw;
             }
         }
+
 
         public async Task AssignRoleToUsersAsync(AssignRoleToUsersDto dto)
         {

@@ -173,7 +173,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = ex });
+                return BadRequest(new { message = ex.Message });
             }
         }
         [Authorize(Policy = "BRANCH_STATUS_TOGGLE")]

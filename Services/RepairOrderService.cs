@@ -156,12 +156,26 @@ namespace Services
                 result.OldStatusId = currentRepairOrder.StatusId;
                 result.NewStatusId = updateDto.NewStatusId;
 
-                // Update the status (without change note)
+                // Update the status
                 var updateSuccess = await _repairOrderRepository.UpdateRepairOrderStatusAsync(
-                    updateDto.RepairOrderId, updateDto.NewStatusId, null); // Pass null for changeNote
+                    updateDto.RepairOrderId, updateDto.NewStatusId, null);
 
                 if (updateSuccess)
                 {
+                    // Auto-assign default label for the new status
+                    var defaultLabel = await _labelRepository.GetDefaultLabelByStatusIdAsync(updateDto.NewStatusId);
+                    if (defaultLabel != null)
+                    {
+                        await _repairOrderRepository.UpdateRepairOrderLabelsAsync(
+                            updateDto.RepairOrderId, 
+                            new List<Guid> { defaultLabel.LabelId });
+                    }
+                    else
+                    {
+                        // No default label, clear all labels
+                        await _repairOrderRepository.UpdateRepairOrderLabelsAsync(updateDto.RepairOrderId, new List<Guid>());
+                    }
+
                     // Get updated repair order for response
                     var updatedRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(updateDto.RepairOrderId);
                     result.UpdatedCard = MapToRoBoardCardDto(updatedRepairOrder);
@@ -232,8 +246,6 @@ namespace Services
                 else
                 {
                     validation.ValidationMessage = "Move is valid";
-                    // Get available labels for new status
-                    validation.AvailableLabelsInNewStatus = (await GetAvailableLabelsForStatusAsync(toStatusId)).ToList();
                 }
             }
             catch (Exception ex)
@@ -279,6 +291,8 @@ namespace Services
             }
 
             var createdRepairOrder = await _repairOrderRepository.CreateAsync(repairOrder);
+
+
 
             // Create RepairOrderService entries for selected services
             if (selectedServiceIds != null && selectedServiceIds.Any())
@@ -486,6 +500,136 @@ namespace Services
             };
         }
 
+        public async Task<RepairOrder> UpdateRepairOrderStatusNoteServicesAsync(Guid repairOrderId, UpdateRepairOrderDto updateDto)
+        {
+            // First, get the existing repair order with its services
+            var existingRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            if (existingRepairOrder == null)
+            {
+                throw new ArgumentException($"Repair order with ID {repairOrderId} not found.");
+            }
+
+            // Update status and note
+            existingRepairOrder.StatusId = updateDto.StatusId;
+            existingRepairOrder.Note = updateDto.Note;
+            existingRepairOrder.UpdatedAt = DateTime.UtcNow;
+
+            // Update services if provided
+            if (updateDto.SelectedServiceIds != null)
+            {
+                // Remove existing services
+                if (existingRepairOrder.RepairOrderServices != null)
+                {
+                    _repairOrderRepository.Context.RepairOrderServices.RemoveRange(existingRepairOrder.RepairOrderServices);
+                }
+
+                // Add new services
+                var services = await _serviceRepository.Query()
+                    .Where(s => updateDto.SelectedServiceIds.Contains(s.ServiceId))
+                    .ToListAsync();
+
+                var repairOrderServices = new List<BusinessObject.RepairOrderService>();
+                decimal totalEstimatedAmount = 0;
+                long totalEstimatedTime = 0;
+
+                foreach (var service in services)
+                {
+                    var repairOrderService = new BusinessObject.RepairOrderService
+                    {
+                        RepairOrderId = existingRepairOrder.RepairOrderId,
+                        ServiceId = service.ServiceId,
+                        ActualDuration = service.EstimatedDuration,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    repairOrderServices.Add(repairOrderService);
+
+                    totalEstimatedAmount += service.Price;
+                    totalEstimatedTime += (long)(service.EstimatedDuration * 60); // Convert hours to minutes
+                }
+
+                // Update the calculated fields
+                existingRepairOrder.EstimatedAmount = totalEstimatedAmount;
+                existingRepairOrder.EstimatedRepairTime = totalEstimatedTime;
+
+                // Add new services to context
+                _repairOrderRepository.Context.RepairOrderServices.AddRange(repairOrderServices);
+            }
+
+            // Save changes
+            await _repairOrderRepository.Context.SaveChangesAsync();
+
+            // Return updated repair order
+            return await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+        }
+
+        #endregion
+
+        #region Cost Calculation Methods
+
+        /// <summary>
+        /// Updates the RepairOrder cost based on completed inspection services
+        /// This method is called when an inspection is completed but no quotation is created
+        /// </summary>
+        /// <param name="repairOrderId">The ID of the repair order to update</param>
+        /// <returns>The updated repair order</returns>
+        public async Task<RepairOrder> UpdateCostFromInspectionAsync(Guid repairOrderId)
+        {
+            // Get the repair order with inspections and service inspections
+            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            if (repairOrder == null)
+                throw new ArgumentException("Repair order not found");
+
+            // Check if there are any completed inspections without approved quotations
+            var completedInspections = repairOrder.Inspections?.Where(i => i.Status == BusinessObject.Enums.InspectionStatus.Completed).ToList();
+            if (completedInspections == null || !completedInspections.Any())
+                return repairOrder;
+
+            // Check if any of these inspections have approved quotations
+            var inspectionsWithApprovedQuotes = completedInspections
+                .Where(i => i.Quotations?.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Approved) == true)
+                .ToList();
+
+            // If all completed inspections have approved quotations, don't update the cost
+            // The cost should already be updated through the quotation approval process
+            if (inspectionsWithApprovedQuotes.Count == completedInspections.Count)
+                return repairOrder;
+
+            // Calculate cost from inspection services for inspections without approved quotations
+            decimal totalCost = 0;
+
+            foreach (var inspection in completedInspections)
+            {
+                // Skip inspections that have approved quotations
+                if (inspection.Quotations?.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Approved) == true)
+                    continue;
+
+                // Add cost of services in this inspection
+                if (inspection.ServiceInspections != null)
+                {
+                    foreach (var serviceInspection in inspection.ServiceInspections)
+                    {
+                        if (serviceInspection.Service != null)
+                        {
+                            totalCost += serviceInspection.Service.Price;
+                        }
+                    }
+                }
+            }
+
+            // Update the repair order cost only if it's different
+            if (repairOrder.Cost != totalCost)
+            {
+                repairOrder.Cost = totalCost;
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+
+                // Save changes
+                var updatedRepairOrder = await _repairOrderRepository.UpdateAsync(repairOrder);
+                return updatedRepairOrder;
+            }
+
+            return repairOrder;
+        }
+
         #endregion
 
         #region DTO Mapping Methods
@@ -510,12 +654,17 @@ namespace Services
                 Vehicle = MapToRoBoardVehicleDto(repairOrder.Vehicle),
                 Customer = MapToRoBoardCustomerDto(repairOrder.User),
                 Branch = MapToRoBoardBranchDto(repairOrder.Branch),
-                AssignedLabels = repairOrder.OrderStatus?.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                AssignedLabels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 UpdatedAt = repairOrder.UpdatedAt,
+                // Archive Management
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
-                ArchivedBy = repairOrder.ArchivedByUserId
+                ArchivedBy = repairOrder.ArchivedByUserId,
+                // Cancellation Management
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason
             };
         }
 
@@ -531,7 +680,6 @@ namespace Services
                 CompletionDate = repairOrder.CompletionDate,
                 Cost = repairOrder.Cost,
                 EstimatedAmount = repairOrder.EstimatedAmount,
-                PaidAmount = repairOrder.PaidAmount,
                 PaidStatus = repairOrder.PaidStatus,
                 EstimatedRepairTime = repairOrder.EstimatedRepairTime,
                 Note = repairOrder.Note,
@@ -545,8 +693,12 @@ namespace Services
                 VehicleId = repairOrder.VehicleId,
                 UserId = repairOrder.UserId,
                 RepairRequestId = repairOrder.RepairRequestId,
-                CustomerName = repairOrder.User?.FullName ?? "Unknown Customer",
+                CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
+                CustomerEmail = repairOrder.User?.Email ?? "",
                 CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason
             };
 
             // Add technician names (from jobs)
@@ -559,10 +711,7 @@ namespace Services
                     {
                         foreach (var jobTech in job.JobTechnicians)
                         {
-                            if (jobTech.Technician?.User != null)
-                            {
-                                technicianNames.Add(jobTech.Technician.User.FullName ?? "Unknown Technician");
-                            }
+                            technicianNames.Add(jobTech.Technician.User != null ? $"{jobTech.Technician.User.FirstName} {jobTech.Technician.User.LastName}".Trim() : "Unknown Technician");
                         }
                     }
                 }
@@ -592,8 +741,8 @@ namespace Services
                 StatusId = repairOrder.StatusId,
                 StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
                 StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
-                Labels = repairOrder.OrderStatus?.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
-                CustomerName = repairOrder.User?.FullName ?? "Unknown Customer",
+                Labels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
                 CustomerEmail = repairOrder.User?.Email ?? "",
                 CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
                 VehicleLicensePlate = repairOrder.Vehicle?.LicensePlate ?? "",
@@ -641,7 +790,8 @@ namespace Services
             return new RoBoardCustomerDto
             {
                 UserId = user.Id,
-                FullName = user.FullName ?? "Unknown Customer",
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 Email = user.Email ?? "",
                 PhoneNumber = user.PhoneNumber ?? ""
             };
@@ -669,6 +819,9 @@ namespace Services
                 LabelId = label.LabelId,
                 LabelName = label.LabelName,
                 Description = label.Description,
+                ColorName = label.ColorName ?? "Default",
+                HexCode = label.HexCode ?? "#808080",
+                OrderStatusId = label.OrderStatusId,
                 Color = new RoBoardColorDto
                 {
                     ColorName = label.ColorName ?? "Default",
@@ -694,19 +847,26 @@ namespace Services
 
         private async Task<bool> ApplyBusinessRules(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            // Business rule: Can't move to "Completed" if there are unpaid amounts
-            if (targetStatus.StatusName == "Completed")
-            {
-                if (repairOrder.PaidAmount < repairOrder.EstimatedAmount)
-                {
-                    return false;
-                }
-            }
-
             // Business rule: Can't move from "Completed" back to other statuses
             if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
             {
                 return false;
+            }
+
+            // Business rule: Can't complete RO if it has incomplete jobs
+            if (targetStatus.StatusName == "Completed")
+            {
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        return false;
+                    }
+                }
             }
 
             return true;
@@ -714,14 +874,24 @@ namespace Services
 
         private string GetBusinessRuleMessage(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            if (targetStatus.StatusName == "Completed" && repairOrder.PaidAmount < repairOrder.EstimatedAmount)
-            {
-                return "Cannot complete order with outstanding payments";
-            }
-
             if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
             {
                 return "Cannot move completed orders back to previous statuses";
+            }
+
+            if (targetStatus.StatusName == "Completed")
+            {
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        return $"Cannot complete repair order: {incompleteJobs.Count} job(s) are not completed";
+                    }
+                }
             }
 
             return "Business rule validation failed";
@@ -731,10 +901,30 @@ namespace Services
         {
             var requirements = new List<string>();
 
-            if (targetStatus.StatusName == "Completed" && repairOrder.PaidAmount < repairOrder.EstimatedAmount)
+            // REMOVED: Payment requirement - now allowing completion with outstanding payments
+            // if (targetStatus.StatusName == "Completed" && repairOrder.PaidAmount < repairOrder.EstimatedAmount)
+            // {
+            //     var outstanding = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+            //     requirements.Add($"Complete payment of ${outstanding:F2} required");
+            // }
+
+            // Requirement: All jobs must be completed before completing RO
+            if (targetStatus.StatusName == "Completed")
             {
-                var outstanding = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
-                requirements.Add($"Complete payment of ${outstanding:F2} required");
+                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                {
+                    var incompleteJobs = repairOrder.Jobs
+                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                        .ToList();
+
+                    if (incompleteJobs.Any())
+                    {
+                        foreach (var job in incompleteJobs)
+                        {
+                            requirements.Add($"Job '{job.JobName}' must be completed (Current status: {job.Status})");
+                        }
+                    }
+                }
             }
 
             return requirements;
@@ -937,6 +1127,138 @@ namespace Services
         public async Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId)
         {
             return await _repairOrderRepository.IsRepairOrderArchivedAsync(repairOrderId);
+        }
+
+        #endregion
+
+        #region Cancel Management Operations
+
+        public async Task<ArchiveOperationResultDto> CancelRepairOrderAsync(CancelRepairOrderDto cancelDto)
+        {
+            var result = new ArchiveOperationResultDto
+            {
+                RepairOrderId = cancelDto.RepairOrderId
+            };
+
+            try
+            {
+                // Check if repair order exists and is not already cancelled
+                var repairOrder = await _repairOrderRepository.GetByIdAsync(cancelDto.RepairOrderId);
+                if (repairOrder == null)
+                {
+                    result.Success = false;
+                    result.Message = "Repair order not found";
+                    result.Errors.Add("Invalid repair order ID");
+                    return result;
+                }
+
+                if (repairOrder.IsCancelled)
+                {
+                    result.Success = false;
+                    result.Message = "Repair order is already cancelled";
+                    result.Warnings.Add("Order was previously cancelled");
+                    return result;
+                }
+
+                // Cancel the repair order
+                repairOrder.IsCancelled = true;
+                repairOrder.CancelledAt = DateTime.UtcNow;
+                repairOrder.CancelReason = cancelDto.CancelReason;
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+
+                var updateResult = await _repairOrderRepository.UpdateAsync(repairOrder);
+
+                if (updateResult != null)
+                {
+                    result.Success = true;
+                    result.IsArchived = true; // Using IsArchived property to indicate cancellation
+                    result.ArchivedAt = DateTime.UtcNow;
+                    result.Message = "Repair order cancelled successfully";
+                }
+                else
+                {
+                    result.Success = false;
+                    result.Message = "Failed to cancel repair order";
+                    result.Errors.Add("Database update failed");
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = "An error occurred while cancelling repair order";
+                result.Errors.Add(ex.Message);
+            }
+
+            return result;
+        }
+
+        #endregion
+
+        #region Label Management
+
+        public async Task<RoBoardStatusUpdateResultDto> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds)
+        {
+            var result = new RoBoardStatusUpdateResultDto
+            {
+                RepairOrderId = repairOrderId,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            try
+            {
+                // Get the repair order
+                var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+                if (repairOrder == null)
+                {
+                    result.Success = false;
+                    result.Message = "Repair order not found";
+                    result.Errors.Add("Invalid repair order ID");
+                    return result;
+                }
+
+                // Validate that all labels belong to the current status
+                if (labelIds != null && labelIds.Any())
+                {
+                    var labels = await _labelRepository.GetByIdsAsync(labelIds);
+                    var invalidLabels = labels.Where(l => l.OrderStatusId != repairOrder.StatusId).ToList();
+
+                    if (invalidLabels.Any())
+                    {
+                        result.Success = false;
+                        result.Message = "Some labels do not belong to the current status";
+                        result.Errors.Add($"Invalid labels: {string.Join(", ", invalidLabels.Select(l => l.LabelName))}");
+                        return result;
+                    }
+
+                    // Update labels
+                    await _repairOrderRepository.UpdateRepairOrderLabelsAsync(repairOrderId, labelIds);
+                }
+                else
+                {
+                    // Clear all labels
+                    await _repairOrderRepository.UpdateRepairOrderLabelsAsync(repairOrderId, new List<Guid>());
+                }
+
+                // Get updated repair order
+                var updatedRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+                result.UpdatedCard = MapToRoBoardCardDto(updatedRepairOrder);
+                result.Success = true;
+                result.Message = "Labels updated successfully";
+
+                // Send real-time update via SignalR
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("RepairOrderLabelsUpdated", repairOrderId, result.UpdatedCard);
+                }
+            }
+            catch (Exception ex)
+            {
+                result.Success = false;
+                result.Message = "An error occurred while updating labels";
+                result.Errors.Add(ex.Message);
+            }
+
+            return result;
         }
 
         #endregion

@@ -10,7 +10,6 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Technician")]
     public class JobTechnicianController : ODataController
     {
         private readonly IJobTechnicianService _technicianService;
@@ -21,7 +20,7 @@ namespace Garage_pro_api.Controllers
             _userManager = userManager;
         }
         [HttpGet("my-jobs")]
-        [Authorize]
+        [Authorize("JOB_TECHNICIAN_VIEW")]
         [EnableQuery(MaxTop = 100, AllowedQueryOptions = AllowedQueryOptions.All)]
         public async Task<IActionResult> GetMyJobs()
         {
@@ -38,7 +37,7 @@ namespace Garage_pro_api.Controllers
             return Ok(jobDtos.AsQueryable());
         }
         [HttpGet("my-jobs/{jobId}")]
-        [Authorize]
+        [Authorize("JOB_TECHNICIAN_VIEW")]
         [EnableQuery]
         public async Task<IActionResult> GetJobById(Guid jobId)
         {
@@ -54,7 +53,7 @@ namespace Garage_pro_api.Controllers
             return Ok(jobDto);
         }
         [HttpPut("update-status")]
-        [Authorize(Roles = "Technician")]
+        [Authorize("JOB_TECHNICIAN_UPDATE")]
         public async Task<IActionResult> UpdateJobStatus([FromBody] JobStatusUpdateDto dto)
         {
             var user = await _userManager.GetUserAsync(User);
