@@ -42,6 +42,7 @@ namespace Dtos.Quotations
         public Guid PartInspectionId { get; set; }
         public Guid PartId { get; set; }
         public string PartName { get; set; }
+        public int Quantity { get; set; }
         public string Status { get; set; }
         public DateTime CreatedAt { get; set; }
     }

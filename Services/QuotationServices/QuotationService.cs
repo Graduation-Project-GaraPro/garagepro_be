@@ -117,6 +117,8 @@ namespace Services.QuotationServices
 
             // Create quotation services and calculate total
             decimal totalAmount = 0;
+            bool allServicesGood = true; // Track if all services are Good
+            
             if (createQuotationDto.QuotationServices != null)
             {
                 foreach (var serviceDto in createQuotationDto.QuotationServices)
@@ -128,9 +130,19 @@ namespace Services.QuotationServices
                         throw new ArgumentException($"Service with ID {serviceDto.ServiceId} not found.");
                     }
 
-                    // Calculate service total (price * quantity) - using default quantity of 1
-                    decimal serviceTotal = service.Price * 1;
-                    totalAmount += serviceTotal;
+                    // Track if any service is NOT Good
+                    if (!serviceDto.IsGood)
+                    {
+                        allServicesGood = false;
+                    }
+
+                    // Only add to total if service is NOT Good
+                    if (!serviceDto.IsGood)
+                    {
+                        // Calculate service total (price * quantity) - using default quantity of 1
+                        decimal serviceTotal = service.Price * 1;
+                        totalAmount += serviceTotal;
+                    }
 
                     var quotationService = new QuotationService // This is the entity
                     {
@@ -138,14 +150,15 @@ namespace Services.QuotationServices
                         ServiceId = serviceDto.ServiceId,
                         IsSelected = serviceDto.IsSelected,
                         IsRequired = serviceDto.IsRequired, // Set the IsRequired flag
+                        IsGood = serviceDto.IsGood, // Set IsGood flag
                         Price = service.Price // Store the actual service price at the time of quotation creation
                     };
 
                     await _quotationServiceRepository.CreateAsync(quotationService);
                     // Don't add to the collection directly, let the repository handle the relationship
 
-                    // Create quotation service parts for this service
-                    if (serviceDto.QuotationServiceParts != null)
+                    // Create quotation service parts for this service (only if service is NOT Good)
+                    if (!serviceDto.IsGood && serviceDto.QuotationServiceParts != null)
                     {
                         foreach (var partDto in serviceDto.QuotationServiceParts)
                         {
@@ -176,8 +189,15 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Update the quotation with the calculated total amount
+            // Update the quotation with the calculated total amount and status
             createdQuotation.TotalAmount = totalAmount;
+            
+            // If all services are Good, set quotation status to Good (view-only, no payment)
+            if (allServicesGood && createQuotationDto.QuotationServices.Any())
+            {
+                createdQuotation.Status = QuotationStatus.Good;
+            }
+            
             await _quotationRepository.UpdateAsync(createdQuotation);
 
 

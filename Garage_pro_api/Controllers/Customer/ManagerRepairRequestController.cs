@@ -49,11 +49,11 @@ namespace Garage_pro_api.Controllers.Customer
             }
             catch (Exception ex)
             {
-                // Ví d?: service ?ang throw "Branch not found"
+                // Vï¿½ d?: service ?ang throw "Branch not found"
                 if (ex.Message.Contains("Branch not found", StringComparison.OrdinalIgnoreCase))
                     return NotFound(new { message = ex.Message });
 
-                // N?u mu?n custom more thì b?t riêng t?ng lo?i exception
+                // N?u mu?n custom more thï¿½ b?t riï¿½ng t?ng lo?i exception
                 return StatusCode(StatusCodes.Status500InternalServerError, new
                 {
                     message = "Error when getting arrival time slots",

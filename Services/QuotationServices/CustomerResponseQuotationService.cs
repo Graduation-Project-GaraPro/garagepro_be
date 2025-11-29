@@ -210,7 +210,8 @@ namespace Services.QuotationServices
         {
             decimal totalAmount = 0;
 
-            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected))
+            // Only calculate for selected services that are NOT Good
+            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected && !qs.IsGood))
             {
                 // Tính giá dịch vụ sau discount
                 //var servicePrice = quotationService.Price - quotationService.DiscountValue;

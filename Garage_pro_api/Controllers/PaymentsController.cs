@@ -159,8 +159,8 @@ namespace Garage_pro_api.Controllers
                 if (paidPayment != null) 
                     return BadRequest($"Payment {paidPayment.PaymentId} already paid");
 
-                // Calculate the amount to pay (estimated amount minus already paid amount)
-                var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+                // Calculate the amount to pay (actual cost from approved quotations minus already paid amount)
+                var amountToPay = repairOrder.Cost - repairOrder.PaidAmount;
 
                 // Create the payment record
                 var payment = await _service.CreateManualPaymentAsync(repairOrderId, userId, amountToPay, dto.Method, ct);

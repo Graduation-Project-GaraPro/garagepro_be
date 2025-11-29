@@ -223,16 +223,13 @@ namespace Services
 
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
         {
-            // Get the completed inspection with details
             var inspection = await _inspectionRepository.GetByIdAsync(convertDto.InspectionId);
             if (inspection == null)
                 throw new ArgumentException("Inspection not found");
 
-            // Check if inspection is completed
             if (inspection.Status != InspectionStatus.Completed)
                 throw new InvalidOperationException("Only completed inspections can be converted to quotations");
 
-            // Validate required relationships
             if (inspection.RepairOrder == null)
                 throw new InvalidOperationException("Inspection must have a valid repair order");
 
@@ -247,27 +244,36 @@ namespace Services
                     // Skip if service is null
                     if (serviceInspection.Service == null)
                         continue;
-                    var isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace ? true : false;
+
+                    // Determine service flags based on condition status
+                    bool isGood = serviceInspection.ConditionStatus == ConditionStatus.Good;
+                    bool isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace;
+                    
+
                     var quotationService = new CreateQuotationServiceDto
                     {
                         ServiceId = serviceInspection.ServiceId,
-                        IsSelected = true,
-                        IsRequired = isRequired,
+                        IsSelected = false, 
+                        IsRequired = isRequired, 
+                        IsGood = isGood, 
                         QuotationServiceParts = new List<CreateQuotationServicePartDto>()
                     };
                     
-                    // Add parts for this service based on ServicePartCategories
-                    var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
-                    var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
-                    
-                    foreach (var partInspection in partInspections)
+                    if (!isGood)
                     {
-                        quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
+                        // Add parts for this service based on ServicePartCategories
+                        var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
+                        var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
+                        
+                        foreach (var partInspection in partInspections)
                         {
-                            PartId = partInspection.PartId,
-                            IsSelected = true, 
-                            Quantity = partInspection.Quantity
-                        });
+                            quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
+                            {
+                                PartId = partInspection.PartId,
+                                IsSelected = false,
+                                Quantity = partInspection.Quantity
+                            });
+                        }
                     }
                     
                     quotationServices.Add(quotationService);
@@ -318,6 +324,7 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
+                            Quantity = pi.Quantity,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()
@@ -353,6 +360,7 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
+                            Quantity = pi.Quantity,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()

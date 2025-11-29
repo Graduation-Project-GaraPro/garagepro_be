@@ -22,6 +22,8 @@ namespace BusinessObject
 
         public bool IsRequired { get; set; } = false; // Indicates if this is a required service
 
+        public bool IsGood { get; set; } = false; // Service condition is Good - view only, no payment needed
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
         [Column(TypeName = "decimal(18,2)")]
