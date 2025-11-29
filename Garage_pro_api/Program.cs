@@ -421,6 +421,9 @@ builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 
 builder.Services.AddScoped<ICustomerResponseQuotationService, CustomerResponseQuotationService>();
 
+// Quotation tree selection service for hierarchical navigation
+builder.Services.AddScoped<IQuotationTreeSelectionService, QuotationTreeSelectionService>();
+
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
 // Update to use the new QuotationServicePartRepository

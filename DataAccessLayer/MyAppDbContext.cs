@@ -42,6 +42,7 @@ namespace DataAccessLayer
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
         public DbSet<Inspection> Inspections { get; set; }
+        public DbSet<InspectionType> InspectionTypes { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }

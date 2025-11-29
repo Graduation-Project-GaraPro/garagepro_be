@@ -68,5 +68,24 @@ namespace Garage_pro_api.Controllers.Customer
                 return BadRequest(new { Message = ex.Message });
             }
         }
+
+        // POST: api/ManagerRepairRequest/{id}/cancel
+        [HttpPost("{id}/cancel")]
+        public async Task<IActionResult> CancelRepairRequest(Guid id)
+        {
+            try
+            {
+                var managerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(managerId))
+                    return Unauthorized(new { Message = "Manager ID not found in token" });
+
+                var result = await _repairRequestService.ManagerCancelRepairRequestAsync(id, managerId);
+                return Ok(new { Message = "Repair request cancelled successfully", Success = result });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
     }
 }

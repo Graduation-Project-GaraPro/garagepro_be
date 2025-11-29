@@ -783,7 +783,7 @@ namespace Services.Customer
             var repairRequest = await _unitOfWork.RepairRequests.GetByIdAsync(requestId)
                 ?? throw new Exception("Repair request not found.");
 
-            // Cannot cancel completed requests
+            // cannot cancel completed requests
             if (repairRequest.Status == RepairRequestStatus.Completed)
                 throw new Exception("Cannot cancel a completed repair request.");
 
@@ -791,18 +791,15 @@ namespace Services.Customer
             if (repairRequest.Status == RepairRequestStatus.Cancelled)
                 throw new Exception("This repair request is already cancelled.");
 
-            // Check if within 30 minutes before scheduled arrival time
+            // Check 30 minutes before arrival time
             var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
             var cutoff = repairRequest.ArrivalWindowStart.AddMinutes(-30);
 
             if (nowLocal > cutoff)
                 throw new Exception("Can only cancel a request at least 30 minutes before the scheduled arrival time.");
 
-            // Cancel the request on behalf of customer
             repairRequest.Status = RepairRequestStatus.Cancelled;
             repairRequest.UpdatedAt = DateTime.UtcNow;
-            // Optional: Add a note field to track who cancelled it
-            // repairRequest.CancelledBy = managerId;
 
             await _unitOfWork.SaveChangesAsync();
             return true;
@@ -856,7 +853,6 @@ namespace Services.Customer
                 throw new Exception("Only approved repair requests can be converted to repair orders");
 
             // Check if repair request has already been converted to a repair order
-            // Since RepairOrder navigation is ignored in DbContext, check directly in RepairOrders table
             var existingRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(ro => ro.RepairRequestId == requestId);
             if (existingRepairOrder)
                 throw new Exception("This repair request has already been converted to a repair order");

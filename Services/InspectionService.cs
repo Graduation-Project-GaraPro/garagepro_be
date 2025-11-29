@@ -248,26 +248,35 @@ namespace Services
                     if (serviceInspection.Service == null)
                         continue;
 
+                    // Determine service flags based on condition status
+                    bool isGood = serviceInspection.ConditionStatus == ConditionStatus.Good;
+                    bool isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace;
+                    
+
                     var quotationService = new CreateQuotationServiceDto
                     {
                         ServiceId = serviceInspection.ServiceId,
-                        IsSelected = true,
-                        IsRequired = true,
+                        IsSelected = false, 
+                        IsRequired = isRequired, 
+                        IsGood = isGood, 
                         QuotationServiceParts = new List<CreateQuotationServicePartDto>()
                     };
                     
-                    // Add parts for this service based on ServicePartCategories
-                    var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
-                    var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
-                    
-                    foreach (var partInspection in partInspections)
+                    if (!isGood)
                     {
-                        quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
+                        // Add parts for this service based on ServicePartCategories
+                        var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
+                        var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
+                        
+                        foreach (var partInspection in partInspections)
                         {
-                            PartId = partInspection.PartId,
-                            IsSelected = true, // Pre-select technician's suggested parts
-                            Quantity = 1
-                        });
+                            quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
+                            {
+                                PartId = partInspection.PartId,
+                                IsSelected = false,
+                                Quantity = partInspection.Quantity
+                            });
+                        }
                     }
                     
                     quotationServices.Add(quotationService);
@@ -318,6 +327,7 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
+                            Quantity = pi.Quantity,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()
@@ -353,6 +363,7 @@ namespace Services
                             PartInspectionId = pi.PartInspectionId,
                             PartId = pi.PartId,
                             PartName = pi.Part?.Name ?? "Unknown Part",
+                            Quantity = pi.Quantity,
                             CreatedAt = pi.CreatedAt
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()
