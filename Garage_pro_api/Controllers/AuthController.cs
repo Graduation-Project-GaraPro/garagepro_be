@@ -82,6 +82,13 @@ namespace Garage_pro_api.Controllers
 
             // Gửi SMS (Fake)
             await _smsSender.SendSmsAsync(model.PhoneNumber, otp);
+            if (!string.IsNullOrEmpty(model.Email))
+                await _emailSender.SendEmailAsync(
+                model.Email,
+                "Confirm your phone number",
+                $@"<p>{otp}</p>
+           <p>Use this otp for verify your phone number</p>"
+            );
 
             return Ok(new { Message = "OTP sent successfully (dev/fake)" });
         }
@@ -160,7 +167,8 @@ namespace Garage_pro_api.Controllers
 
             var user = new ApplicationUser
             {
-                UserName = model.Email,
+                UserName = model.PhoneNumber,
+                PhoneNumber = model.PhoneNumber,
                 Email = model.Email,
                 FirstName = model.FirstName,
                 LastName = model.LastName,
