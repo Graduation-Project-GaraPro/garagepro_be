@@ -349,10 +349,10 @@ namespace Garage_pro_api.DbInit
 
                      //Technician
                      //Inspections Technician
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_VIEW", Name = "View Inspection Technician", Description = "Can view assigned inspection and all servivice", CategoryId = inspectionTechnicianId, IsDefault= true },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_UPDATE", Name = "Update Inspection Technician", Description = "Can update assigned inspection", CategoryId = inspectionTechnicianId },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_DELETE", Name = "Delete Inspection Technician", Description = "Can delete service or part to assigned inspection", CategoryId = inspectionTechnicianId },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ADD_SERVICE", Name = "Add Service Inspection ", Description = "Can add service to assigned inspection", CategoryId = inspectionTechnicianId },
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_VIEW", Name = "View Inspection Technician", Description = "Can view assigned inspection and all servivice", CategoryId = inspectionTechnicianId, IsDefault= true ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_UPDATE", Name = "Update Inspection Technician", Description = "Can update assigned inspection", CategoryId = inspectionTechnicianId , IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_DELETE", Name = "Delete Inspection Technician", Description = "Can delete service or part to assigned inspection", CategoryId = inspectionTechnicianId ,IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ADD_SERVICE", Name = "Add Service Inspection ", Description = "Can add service to assigned inspection", CategoryId = inspectionTechnicianId,IsSystem = true },
                     // Job Technician 
                      new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_VIEW", Name = "View Job Technician", Description = "Can view assigned job", CategoryId = jobTechnicianId , IsDefault= true },
                      new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_UPDATE", Name = "Update Job Technician", Description = "Can update status assigned job", CategoryId = jobTechnicianId },
@@ -363,13 +363,13 @@ namespace Garage_pro_api.DbInit
                      // Repair History
                      new Permission { Id = Guid.NewGuid(), Code = "REPAIR_HISTORY_VIEW", Name = "View Repair History", Description = "Can view repair history", CategoryId = repairHistoryId , IsDefault= true },
                      // Repair
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_VIEW", Name = "View Repair", Description = "Can view repair", CategoryId = repairId, IsDefault= true },
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_CREATE", Name = "Create Repair", Description = "Can create repair", CategoryId = repairId },
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_UPDATE", Name = "Update Repair", Description = "Can update repair", CategoryId = repairId },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_VIEW", Name = "View Repair", Description = "Can view repair", CategoryId = repairId, IsDefault= true, IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_CREATE", Name = "Create Repair", Description = "Can create repair", CategoryId = repairId ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_UPDATE", Name = "Update Repair", Description = "Can update repair", CategoryId = repairId ,IsSystem = true},
                      // Specification
-                     new Permission { Id = Guid.NewGuid(), Code = "SPECIFICATION_MANAGE", Name = "Manage Specification", Description = "Can view  and search specification of vehicle", CategoryId = specificationId },
+                     new Permission { Id = Guid.NewGuid(), Code = "SPECIFICATION_MANAGE", Name = "Manage Specification", Description = "Can view  and search specification of vehicle",IsSystem = true, CategoryId = specificationId },
                      // Statistical
-                     new Permission { Id = Guid.NewGuid(), Code = "STATISTICAL_VIEW", Name = "View Statistical", Description = "Can view Statistical page", CategoryId = statisticalId , IsDefault = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "STATISTICAL_VIEW", Name = "View Statistical", Description = "Can view Statistical page", CategoryId = statisticalId , IsDefault = true, IsSystem = true},
             
                     // ✅ Vehicle Management
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = basicCatId,IsDefault=true },
@@ -471,11 +471,25 @@ namespace Garage_pro_api.DbInit
                                 { 
                                     "BOOKING_MANAGE",
 
-                                    "INSPECTION_TECHNICIAN_VIEW", "INSPECTION_TECHNICIAN_UPDATE", "INSPECTION_TECHNICIAN_DELETE","INSPECTION_ADD_SERVICE",
-                                    "JOB_TECHNICIAN_VIEW", "JOB_TECHNICIAN_UPDATE",
+                                    "INSPECTION_TECHNICIAN_VIEW", 
+                                    "INSPECTION_TECHNICIAN_UPDATE", 
+                                    "INSPECTION_TECHNICIAN_DELETE",
+                                    "INSPECTION_ADD_SERVICE",
+
+                                    "JOB_TECHNICIAN_VIEW", 
+                                    "JOB_TECHNICIAN_UPDATE",
+
+
                                     "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
-                                    "REPAIR_HISTORY_VIEW", "REPAIR_UPDATE", "REPAIR_CREATE", "REPAIR_VIEW",
-                                    "SPECIFICATION_MANAGE", "STATISTICAL_VIEW"
+                                    "REPAIR_HISTORY_VIEW",
+                                    
+                                    "REPAIR_UPDATE",
+                                    "REPAIR_CREATE",
+                                    "REPAIR_VIEW",
+
+                                    "SPECIFICATION_MANAGE",
+
+                                    "STATISTICAL_VIEW"
 
 
 

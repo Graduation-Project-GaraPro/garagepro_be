@@ -12,7 +12,8 @@ namespace Dtos.Roles
         public string Name { get; set; } = null!;
         public string Code { get; set; } = null!;
         public string? Description { get; set; }
-        public bool IsDefault { get; set; } = false;
+        public bool IsDefault { get; set; } 
+        public bool IsSystem { get; set; } 
         public bool Deprecated { get; set; }
     }
 }

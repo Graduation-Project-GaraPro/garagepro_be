@@ -223,16 +223,13 @@ namespace Services
 
         public async Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto)
         {
-            // Get the completed inspection with details
             var inspection = await _inspectionRepository.GetByIdAsync(convertDto.InspectionId);
             if (inspection == null)
                 throw new ArgumentException("Inspection not found");
 
-            // Check if inspection is completed
             if (inspection.Status != InspectionStatus.Completed)
                 throw new InvalidOperationException("Only completed inspections can be converted to quotations");
 
-            // Validate required relationships
             if (inspection.RepairOrder == null)
                 throw new InvalidOperationException("Inspection must have a valid repair order");
 

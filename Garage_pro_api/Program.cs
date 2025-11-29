@@ -733,38 +733,38 @@ app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
 ////Initialize database
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
-    Console.WriteLine("Applying pending migrations...");
-    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+//    Console.WriteLine("Applying pending migrations...");
+//    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
-    if (!dbContext.SecurityPolicies.Any())
-    {
-        dbContext.SecurityPolicies.Add(new SecurityPolicy
-        {
-            Id = Guid.NewGuid(),
-            MinPasswordLength = 8,
-            RequireSpecialChar = true,
-            RequireNumber = true,
-            RequireUppercase = true,
-            SessionTimeout = 30,
-            MaxLoginAttempts = 5,
-            AccountLockoutTime = 15,
-            PasswordExpiryDays = 90,
-            EnableBruteForceProtection = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+//    if (!dbContext.SecurityPolicies.Any())
+//    {
+//        dbContext.SecurityPolicies.Add(new SecurityPolicy
+//        {
+//            Id = Guid.NewGuid(),
+//            MinPasswordLength = 8,
+//            RequireSpecialChar = true,
+//            RequireNumber = true,
+//            RequireUppercase = true,
+//            SessionTimeout = 30,
+//            MaxLoginAttempts = 5,
+//            AccountLockoutTime = 15,
+//            PasswordExpiryDays = 90,
+//            EnableBruteForceProtection = true,
+//            CreatedAt = DateTime.UtcNow,
+//            UpdatedAt = DateTime.UtcNow
+//        });
 
-        dbContext.SaveChanges();
-    }
-}
+//        dbContext.SaveChanges();
+//    }
+//}
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+//    await dbInitializer.Initialize();
+//}
 
 app.Run();

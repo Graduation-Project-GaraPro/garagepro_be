@@ -429,11 +429,23 @@ namespace Services.Customer
             if (!branch.IsActive)
                 throw new Exception("This branch is currently inactive.");
 
+            var requestVn = new DateTimeOffset(dto.RequestDate, VietnamTime.VN_OFFSET);
+
             var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
-            var (winStart, _) = WindowRange(dto.RequestDate, windowMin);
+            var (winStart, winEnd) = WindowRange(requestVn, windowMin);
+
             var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
-            if (winStart <= nowLocal)
-                throw new Exception("The selected time slot is in the past. Please choose a future time slot.");
+
+            const int cutoffMinutes = 15; // chỉ được đặt trước 15p khung end
+
+            var latestAllowed = winEnd.AddMinutes(-cutoffMinutes);
+
+            if (nowLocal >= latestAllowed)
+            {
+                throw new Exception($"You must book this time slot at least {cutoffMinutes} minutes before it ends.");
+            }
+
+
             await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
 
             // User cooldown throttling
@@ -571,8 +583,7 @@ namespace Services.Customer
 
                 // Đếm WIP đang trong xưởng
                 var activeWip = await GetActiveWipCountAsync(rr.BranchId);
-                //if (activeWip >= branch.MaxConcurrentWip)
-                //    throw new Exception("Xưởng đang đầy, vui lòng chờ gọi theo thứ tự.");
+              
 
                 // Cho vào xưởng
                 rr.Status = RepairRequestStatus.Arrived;
