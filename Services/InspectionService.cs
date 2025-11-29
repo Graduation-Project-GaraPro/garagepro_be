@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +8,7 @@ using Dtos.Quotations;
 using Microsoft.AspNetCore.SignalR;
 using Repositories;
 using Services.Hubs;
+using Services.Notifications;
 using Services.QuotationServices;
 
 namespace Services
@@ -20,18 +21,21 @@ namespace Services
         private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
 
         private readonly IHubContext<InspectionHub> _inspectionHubContext;
+        private readonly INotificationService _notificationService;
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
             IQuotationService quotationService,
             IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
-            IHubContext<InspectionHub> inspectionHubContext)
+            IHubContext<InspectionHub> inspectionHubContext,
+            INotificationService notificationService)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
             _quotationService = quotationService;
             _technicianAssignmentHubContext = technicianAssignmentHubContext;
             _inspectionHubContext = inspectionHubContext;
+            _notificationService = notificationService;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -128,8 +132,6 @@ namespace Services
             if (updateInspectionDto.Note != null)
                 inspection.Note = updateInspectionDto.Note;
                 
-            if (updateInspectionDto.ImageUrl != null)
-                inspection.ImageUrl = updateInspectionDto.ImageUrl;
                 
             inspection.UpdatedAt = DateTime.UtcNow;
 
@@ -167,23 +169,53 @@ namespace Services
 
         public async Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId)
         {
-            // Get inspection details for notification
+            // 1. Get inspection details
             var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
             if (inspection == null)
                 throw new ArgumentException("Inspection not found", nameof(inspectionId));
 
-            // We need to get the technician from the database context directly since it's not in IInspectionRepository
-            // Get technician details for notification
             var technician = await _inspectionRepository.GetTechnicianByIdAsync(technicianId);
-            var technicianName = technician?.User?.FullName ?? "Unknown Technician";
+            var technicianName = technician?.User != null ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() : "Unknown Technician";
 
-            // Perform the assignment
             var result = await _inspectionRepository.AssignInspectionToTechnicianAsync(inspectionId, technicianId);
 
-            // Send real-time notification if assignment was successful
             if (result)
             {
-                await _technicianAssignmentHubContext.Clients.All.SendAsync("InspectionAssigned", technicianId, technicianName, 1, new[] { inspection.CustomerConcern ?? "Unnamed Inspection" });
+                await _technicianAssignmentHubContext.Clients.All.SendAsync(
+                    "InspectionAssigned",
+                    technicianId,
+                    technicianName,
+                    1,
+                    new[] { inspection.CustomerConcern ?? "Unnamed Inspection" }
+                );
+
+                await _inspectionHubContext.Clients
+                    .Group($"Technician_{technicianId}")
+                    .SendAsync("InspectionAssigned", new
+                    {
+                        InspectionId = inspectionId,
+                        TechnicianId = technicianId,
+                        TechnicianName = technicianName,
+                        CustomerConcern = inspection.CustomerConcern ?? "No concern specified",
+                        RepairOrderId = inspection.RepairOrderId,
+                        Status = inspection.Status.ToString(),
+                        AssignedAt = DateTime.UtcNow,
+                        Message = "You have been assigned a new inspection"
+                    });
+
+                var userId = await _inspectionRepository.GetUserIdByTechnicianIdAsync(technicianId);
+
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    await _notificationService.SendInspectionAssignedNotificationAsync(
+                        userId,
+                        inspectionId,
+                        inspection.CustomerConcern ?? "New Inspection",
+                        inspection.RepairOrderId
+                    );
+
+                    Console.WriteLine($"[InspectionService] Inspection {inspectionId} assigned and notification sent to User {userId}");
+                }
             }
 
             return result;
@@ -224,16 +256,16 @@ namespace Services
                         QuotationServiceParts = new List<CreateQuotationServicePartDto>()
                     };
                     
-                    // Add parts for this service
-                    var servicePartIds = serviceInspection.Service.ServiceParts?.Select(sp => sp.PartId).ToList() ?? new List<Guid>();
-                    var partInspections = inspection.PartInspections?.Where(pi => servicePartIds.Contains(pi.PartId)).ToList() ?? new List<PartInspection>();
+                    // Add parts for this service based on ServicePartCategories
+                    var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
+                    var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
                     
                     foreach (var partInspection in partInspections)
                     {
                         quotationService.QuotationServiceParts.Add(new CreateQuotationServicePartDto
                         {
                             PartId = partInspection.PartId,
-                            IsSelected = true,
+                            IsSelected = true, // Pre-select technician's suggested parts
                             Quantity = 1
                         });
                     }
@@ -269,10 +301,9 @@ namespace Services
                 Finding = inspection.Finding,
                 IssueRating = inspection.IssueRating,
                 Note = inspection.Note,
-                ImageUrl = inspection.ImageUrl,
                 CreatedAt = inspection.CreatedAt,
                 UpdatedAt = inspection.UpdatedAt,
-                TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
+                TechnicianName = inspection.Technician?.User != null ? $"{inspection.Technician.User.FirstName} {inspection.Technician.User.LastName}".Trim() : "Unknown Technician",
                 Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
                 {
                     ServiceInspectionId = si.ServiceInspectionId,
@@ -281,7 +312,7 @@ namespace Services
                     ConditionStatus = si.ConditionStatus,
                     CreatedAt = si.CreatedAt,
                     Parts = inspection.PartInspections?
-                        .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
+                        .Where(pi => si.Service?.ServicePartCategories?.Any(spc => spc.PartCategoryId == pi.PartCategoryId) == true)
                         .Select(pi => new InspectionPartDto
                         {
                             PartInspectionId = pi.PartInspectionId,
@@ -305,10 +336,9 @@ namespace Services
                 Finding = inspection.Finding,
                 IssueRating = inspection.IssueRating,
                 Note = inspection.Note,
-                ImageUrl = inspection.ImageUrl,
                 CreatedAt = inspection.CreatedAt,
                 UpdatedAt = inspection.UpdatedAt,
-                TechnicianName = inspection.Technician?.User?.FullName ?? "Unknown Technician",
+                TechnicianName = inspection.Technician?.User != null ? $"{inspection.Technician.User.FirstName} {inspection.Technician.User.LastName}".Trim() : "Unknown Technician",
                 Services = inspection.ServiceInspections?.Select(si => new InspectionServiceDto
                 {
                     ServiceInspectionId = si.ServiceInspectionId,
@@ -317,7 +347,7 @@ namespace Services
                     ConditionStatus = si.ConditionStatus,
                     CreatedAt = si.CreatedAt,
                     Parts = inspection.PartInspections?
-                        .Where(pi => si.Service?.ServiceParts?.Any(sp => sp.PartId == pi.PartId) == true)
+                        .Where(pi => si.Service?.ServicePartCategories?.Any(spc => spc.PartCategoryId == pi.PartCategoryId) == true)
                         .Select(pi => new InspectionPartDto
                         {
                             PartInspectionId = pi.PartInspectionId,

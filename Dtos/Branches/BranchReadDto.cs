@@ -27,7 +27,6 @@ namespace Dtos.Branches
 
         public int MaxBookingsPerWindow { get; set; } = 6;
 
-        public int MaxConcurrentWip { get; set; } = 8;
         public string Description { get; set; }
         public bool IsActive { get; set; }
 

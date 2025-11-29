@@ -21,6 +21,9 @@ using BusinessObject.Authentication;
 using Microsoft.AspNetCore.Identity;
 using BusinessObject.Roles;
 using BusinessObject.InspectionAndRepair;
+using Services.GeocodingServices;
+using System.Text.RegularExpressions;
+using Services.EmailSenders;
 
 
 namespace Services.ExcelImportSerivces
@@ -32,8 +35,8 @@ namespace Services.ExcelImportSerivces
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly List<ImportErrorDetail> _errors = new();
-
-
+        private readonly IGeocodingService _geocodingService;
+        private readonly IEmailSender _emailSender;
         // Caches
         private Dictionary<string, ServiceCategory> _categoryCache = null!;
         private Dictionary<string, Service> _serviceCache = null!;
@@ -45,17 +48,25 @@ namespace Services.ExcelImportSerivces
         private Dictionary<string, OperatingHour> _operatingHourCache = null!;
         private Dictionary<string, ApplicationUser> _staffCache = null!;
 
+
+        private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
+
+        private static readonly Regex PhoneRegex = new(@"^[0-9]{8,15}$", RegexOptions.Compiled);
         public MasterDataImportService(
             MyAppDbContext context,
             ILogger<MasterDataImportService> logger,
             UserManager<ApplicationUser> userManager,
-            RoleManager<ApplicationRole> roleManager
+            RoleManager<ApplicationRole> roleManager,
+            IGeocodingService geocodingService,
+            IEmailSender emailSender
             )
         {
             _context = context;
             _logger = logger;
             _userManager = userManager;
             _roleManager = roleManager;
+            _geocodingService = geocodingService;
+            _emailSender = emailSender;
         }
 
         public async Task<ImportResult> ImportFromExcelAsync(IFormFile file)
@@ -82,18 +93,17 @@ namespace Services.ExcelImportSerivces
                         "Excel template is invalid. Please fix the template and try again.",
                         templateErrors);
                 }
+                var staffWelcomeEmails = new List<StaffWelcomeEmailInfo>();
 
-                // Thứ tự xử lý
                 await ImportBranchesAsync(package);
                 await ImportOperatingHoursAsync(package);
-                await ImportStaffAsync(package);
+                await ImportStaffAsync(package, staffWelcomeEmails);
                 await ImportParentCategoriesAsync(package);
                 await ImportServiceCategoriesAsync(package);
                 await ImportServicesAsync(package);
                 await ImportPartCategoriesAsync(package);
                 await ImportPartsAsync(package);
 
-                await _context.SaveChangesAsync();
 
                 if (_errors.Any())
                 {
@@ -101,14 +111,16 @@ namespace Services.ExcelImportSerivces
                         "Import failed because one or more errors were found. No data has been saved.",
                         _errors);
                 }
+                await _context.SaveChangesAsync();
 
+                await SendStaffWelcomeEmailsAsync(staffWelcomeEmails);
 
-                return ImportResult.Ok("Import master data thành công.");
+                return ImportResult.Ok("Import master data Success.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Lỗi khi import Excel master data");
-                return ImportResult.Fail($"Lỗi khi import Excel: {ex.Message}");
+                return ImportResult.Fail($"Import Excel Fail: {ex.Message}");
             }
         }
 
@@ -165,62 +177,255 @@ namespace Services.ExcelImportSerivces
         #region Import Sheets
 
 
+
+
         private async Task ImportBranchesAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["Branch"];
+            const string sheetName = "Branch";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
+            // === Pre-scan duplicates ===
+            var nameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             for (int row = 2; row <= rowCount; row++)
             {
-                var branchName = ws.Cells[row, 1].Text?.Trim();
-                var phone = ws.Cells[row, 2].Text?.Trim();
-                var email = ws.Cells[row, 3].Text?.Trim();
-                var street = ws.Cells[row, 4].Text?.Trim();
-                var commune = ws.Cells[row, 5].Text?.Trim();
-                var province = ws.Cells[row, 6].Text?.Trim();
-                var latText = ws.Cells[row, 7].Text?.Trim();
-                var lonText = ws.Cells[row, 8].Text?.Trim();
-                var description = ws.Cells[row, 9].Text?.Trim();
-                var isActiveTxt = ws.Cells[row, 10].Text?.Trim();
-                var arrivalTxt = ws.Cells[row, 11].Text?.Trim();
-                var maxBookTxt = ws.Cells[row, 12].Text?.Trim();
-                var maxWipTxt = ws.Cells[row, 13].Text?.Trim();
+                if (IsRowEmpty(ws, row, 10)) continue;
 
-                if (string.IsNullOrWhiteSpace(branchName))
+                var name = ws.Cells[row, 1].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(name)) continue;
+
+                var keyScan = Normalize(name);
+                if (nameCounts.ContainsKey(keyScan))
+                    nameCounts[keyScan]++;
+                else
+                    nameCounts[keyScan] = 1;
+            }
+
+            // === Main import ===
+            for (int row = 2; row <= rowCount; row++)
+            {
+                if (IsRowEmpty(ws, row, 10))
                     continue;
 
-                double.TryParse(latText, NumberStyles.Any, CultureInfo.InvariantCulture, out var lat);
-                double.TryParse(lonText, NumberStyles.Any, CultureInfo.InvariantCulture, out var lon);
-                int.TryParse(arrivalTxt, out var arrival);
-                int.TryParse(maxBookTxt, out var maxBooking);
-                int.TryParse(maxWipTxt, out var maxWip);
+                bool hasError = false;
 
+                var branchName = ws.Cells[row, 1].Text?.Trim(); // A
+                var phone = ws.Cells[row, 2].Text?.Trim(); // B
+                var email = ws.Cells[row, 3].Text?.Trim(); // C
+                var street = ws.Cells[row, 4].Text?.Trim(); // D
+                var commune = ws.Cells[row, 5].Text?.Trim(); // E
+                var province = ws.Cells[row, 6].Text?.Trim(); // F
+                var description = ws.Cells[row, 7].Text?.Trim(); // G
+                var isActiveTxt = ws.Cells[row, 8].Text?.Trim(); // H
+                var arrivalTxt = ws.Cells[row, 9].Text?.Trim(); // I
+                var maxBookTxt = ws.Cells[row, 10].Text?.Trim(); // J
+
+               
+
+                if (string.IsNullOrWhiteSpace(branchName))
+                {
+                    AddError(sheetName, "Branch Name is required.", row, "A", "BRANCH_NAME_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(phone))
+                {
+                    AddError(sheetName, "Phone Number is required.", row, "B", "BRANCH_PHONE_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    AddError(sheetName, "Email is required.", row, "C", "BRANCH_EMAIL_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(street))
+                {
+                    AddError(sheetName, "Street is required.", row, "D", "BRANCH_STREET_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(commune))
+                {
+                    AddError(sheetName, "Commune is required.", row, "E", "BRANCH_COMMUNE_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(province))
+                {
+                    AddError(sheetName, "Province is required.", row, "F", "BRANCH_PROVINCE_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    AddError(sheetName, "Description is required.", row, "G", "BRANCH_DESCRIPTION_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(isActiveTxt))
+                {
+                    AddError(sheetName, "'Is Active' is required.", row, "H", "BRANCH_IS_ACTIVE_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(arrivalTxt))
+                {
+                    AddError(sheetName, "'Arrival Window Minutes' is required.", row, "I", "BRANCH_ARRIVAL_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(maxBookTxt))
+                {
+                    AddError(sheetName, "'Max Bookings Per Window' is required.", row, "J", "BRANCH_MAX_BOOKINGS_REQUIRED");
+                    hasError = true;
+                }
+
+                // Nếu thiếu required field thì khỏi check tiếp
+                if (hasError)
+                    continue;
+
+                var key = Normalize(branchName!);
+
+                // Duplicate check
+                if (nameCounts.TryGetValue(key, out var count) && count > 1)
+                {
+                    AddError(
+                        sheetName,
+                        $"Duplicate branch name '{branchName}' found in the sheet.",
+                        row,
+                        "A",
+                        "BRANCH_DUPLICATE_NAME"
+                    );
+                    hasError = true;
+                }
+
+               
+
+                int arrival = 0;
+                if (!int.TryParse(arrivalTxt, out arrival))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid integer for 'Arrival Window Minutes': '{arrivalTxt}'.",
+                        row,
+                        "I",
+                        "BRANCH_INVALID_ARRIVAL_WINDOW"
+                    );
+                    hasError = true;
+                }
+
+                int maxBooking = 0;
+                if (!int.TryParse(maxBookTxt, out maxBooking))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid integer for 'Max Bookings Per Window': '{maxBookTxt}'.",
+                        row,
+                        "J",
+                        "BRANCH_INVALID_MAX_BOOKINGS"
+                    );
+                    hasError = true;
+                }
+
+                // === Boolean validation ===
                 bool isActive = true;
-                if (!string.IsNullOrEmpty(isActiveTxt))
-                    bool.TryParse(isActiveTxt, out isActive);
+                if (!bool.TryParse(isActiveTxt, out isActive))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid boolean value for 'Is Active': '{isActiveTxt}'. Expected 'true' or 'false'.",
+                        row,
+                        "H",
+                        "BRANCH_INVALID_IS_ACTIVE"
+                    );
+                    hasError = true;
+                }
 
-                var key = Normalize(branchName);
+                // Phone format
+                if (!PhoneRegex.IsMatch(phone!))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid phone number format: '{phone}'. Only digits allowed (8–15 digits).",
+                        row,
+                        "B",
+                        "BRANCH_INVALID_PHONE"
+                    );
+                    hasError = true;
+                }
 
+                // Email format
+                if (!EmailRegex.IsMatch(email!))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid email format: '{email}'.",
+                        row,
+                        "C",
+                        "BRANCH_INVALID_EMAIL"
+                    );
+                    hasError = true;
+                }
+
+                if (hasError)
+                    continue;
+
+                // === Build address for geocoding ===
+                var address = $"{street} {commune} {province}".Trim();
+
+                double latitude = 0;
+                double longitude = 0;
+                string formattedAddress = address;
+
+                // === Call geocoding API ===
+                try
+                {
+                    var geo = await _geocodingService.GetCoordinatesAsync(address);
+                    latitude = geo.lat;
+                    longitude = geo.lng;
+                    formattedAddress = geo.formattedAddress;
+                }
+                catch (Exception ex)
+                {
+                    AddError(
+                        sheetName,
+                        $"Failed to geocode address '{address}': {ex.Message}",
+                        row,
+                        "D-F",
+                        "BRANCH_GEOCODING_FAILED"
+                    );
+                    continue;
+                }
+
+                // Default values if 0
+                if (arrival == 0) arrival = 30;
+                if (maxBooking == 0) maxBooking = 6;
+
+               
                 if (!_branchCache.TryGetValue(key, out var branch))
                 {
                     branch = new Branch
                     {
                         BranchId = Guid.NewGuid(),
-                        BranchName = branchName,
+                        BranchName = branchName!,
                         PhoneNumber = phone,
                         Email = email,
                         Street = street,
                         Commune = commune,
                         Province = province,
-                        Latitude = lat,
-                        Longitude = lon,
+                        Latitude = latitude,
+                        Longitude = longitude,
+                       
                         Description = description,
                         IsActive = isActive,
-                        ArrivalWindowMinutes = arrival == 0 ? 30 : arrival,
-                        MaxBookingsPerWindow = maxBooking == 0 ? 6 : maxBooking,
-                        MaxConcurrentWip = maxWip == 0 ? 8 : maxWip,
+                        ArrivalWindowMinutes = arrival,
+                        MaxBookingsPerWindow = maxBooking,
+                        
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -234,13 +439,14 @@ namespace Services.ExcelImportSerivces
                     branch.Street = street ?? branch.Street;
                     branch.Commune = commune ?? branch.Commune;
                     branch.Province = province ?? branch.Province;
-                    branch.Latitude = lat;
-                    branch.Longitude = lon;
+                    branch.Latitude = latitude;
+                    branch.Longitude = longitude;
+                    
                     branch.Description = description ?? branch.Description;
                     branch.IsActive = isActive;
-                    branch.ArrivalWindowMinutes = arrival == 0 ? branch.ArrivalWindowMinutes : arrival;
-                    branch.MaxBookingsPerWindow = maxBooking == 0 ? branch.MaxBookingsPerWindow : maxBooking;
-                    branch.MaxConcurrentWip = maxWip == 0 ? branch.MaxConcurrentWip : maxWip;
+                    branch.ArrivalWindowMinutes = arrival;
+                    branch.MaxBookingsPerWindow = maxBooking;
+                   
                     branch.UpdatedAt = DateTime.UtcNow;
 
                     _context.Branches.Update(branch);
@@ -248,15 +454,69 @@ namespace Services.ExcelImportSerivces
             }
         }
 
-        private async Task ImportStaffAsync(ExcelPackage package)
+
+
+
+        private async Task ImportStaffAsync(ExcelPackage package, List<StaffWelcomeEmailInfo> emailJobs)
         {
-            var ws = package.Workbook.Worksheets["Staff"];
+            const string sheetName = "Staff";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
+            // Pre-scan duplicate usernames (normalized)
+            // Count username occurrences
+            var userNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            // Count email occurrences
+            var emailCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             for (int row = 2; row <= rowCount; row++)
             {
+                if (IsRowEmpty(ws, row, 7)) continue;
+
+                
+                var userNameScan = ws.Cells[row, 1].Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(userNameScan))
+                {
+                    var key = Normalize(userNameScan);
+                    if (userNameCounts.ContainsKey(key))
+                        userNameCounts[key]++;
+                    else
+                        userNameCounts[key] = 1;
+                }
+
+                
+                var emailScan = ws.Cells[row, 2].Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(emailScan))
+                {
+                    var emailKey = Normalize(emailScan);
+                    if (emailCounts.ContainsKey(emailKey))
+                        emailCounts[emailKey]++;
+                    else
+                        emailCounts[emailKey] = 1;
+                }
+            }
+
+            
+            var duplicateUserNames = new HashSet<string>(
+                userNameCounts.Where(x => x.Value > 1).Select(x => x.Key),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            var duplicateEmails = new HashSet<string>(
+                emailCounts.Where(x => x.Value > 1).Select(x => x.Key),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                if (IsRowEmpty(ws, row, 7))
+                    continue;
+
+                bool hasError = false;
+
                 var userName = ws.Cells[row, 1].Text?.Trim();
                 var email = ws.Cells[row, 2].Text?.Trim();
                 var phone = ws.Cells[row, 3].Text?.Trim();
@@ -265,36 +525,231 @@ namespace Services.ExcelImportSerivces
                 var branchName = ws.Cells[row, 6].Text?.Trim();
                 var isActiveTx = ws.Cells[row, 7].Text?.Trim();
 
-                if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrWhiteSpace(roleName))
-                    continue;
+                // ===== Required fields (no field can be empty) =====
 
+                
+                if (string.IsNullOrWhiteSpace(userName))
+                {
+                    AddError(
+                        sheetName,
+                        "User Name is required.",
+                        row,
+                        "A",
+                        "STAFF_USERNAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    AddError(
+                        sheetName,
+                        "Email is required.",
+                        row,
+                        "B",
+                        "STAFF_EMAIL_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                
+                if (string.IsNullOrWhiteSpace(phone))
+                {
+                    AddError(
+                        sheetName,
+                        "Phone Number is required.",
+                        row,
+                        "C",
+                        "STAFF_PHONE_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                
+                if (string.IsNullOrWhiteSpace(fullName))
+                {
+                    AddError(
+                        sheetName,
+                        "Full Name is required.",
+                        row,
+                        "D",
+                        "STAFF_FULLNAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                // Role required
+                if (string.IsNullOrWhiteSpace(roleName))
+                {
+                    AddError(
+                        sheetName,
+                        "Role is required.",
+                        row,
+                        "E",
+                        "STAFF_ROLE_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                // Branch required
+                if (string.IsNullOrWhiteSpace(branchName))
+                {
+                    AddError(
+                        sheetName,
+                        "Branch is required.",
+                        row,
+                        "F",
+                        "STAFF_BRANCH_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                // IsActive required
+                if (string.IsNullOrWhiteSpace(isActiveTx))
+                {
+                    AddError(
+                        sheetName,
+                        "'Is Active' is required.",
+                        row,
+                        "G",
+                        "STAFF_IS_ACTIVE_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                // Role must be Manager or Technician
+                if (!string.IsNullOrWhiteSpace(roleName) &&
+                    !string.Equals(roleName, "Manager", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(roleName, "Technician", StringComparison.OrdinalIgnoreCase))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid role '{roleName}'. Only 'Manager' and 'Technician' are allowed.",
+                        row,
+                        "E",
+                        "STAFF_INVALID_ROLE"
+                    );
+                    hasError = true;
+                }
+
+                string uKey = null!;
+                if (!string.IsNullOrWhiteSpace(userName))
+                {
+                    uKey = Normalize(userName);
+
+                    // Duplicate username in sheet (pre-calculated)
+                    if (duplicateUserNames.Contains(uKey))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Duplicate user name '{userName}' found in the sheet.",
+                            row,
+                            "A",
+                            "STAFF_DUPLICATE_USERNAME"
+                        );
+                        hasError = true;
+                    }
+                }
+                if (!string.IsNullOrWhiteSpace(email))
+                {
+                    var eKey = Normalize(email);
+                    if (duplicateEmails.Contains(eKey))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Duplicate email '{email}' found in the sheet.",
+                            row,
+                            "B",
+                            "STAFF_DUPLICATE_EMAIL"
+                        );
+                        hasError = true;
+                    }
+                }
+
+                // Email format
+                if (!string.IsNullOrWhiteSpace(email) && !EmailRegex.IsMatch(email))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid email format: '{email}'.",
+                        row,
+                        "B",
+                        "STAFF_INVALID_EMAIL"
+                    );
+                    hasError = true;
+                }
+
+                // Phone format
+                if (!string.IsNullOrWhiteSpace(phone) && !PhoneRegex.IsMatch(phone))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid phone number format: '{phone}'. Only digits allowed (8–15 digits).",
+                        row,
+                        "C",
+                        "STAFF_INVALID_PHONE"
+                    );
+                    hasError = true;
+                }
+
+                // Parse IsActive
                 bool isActive = true;
-                if (!string.IsNullOrEmpty(isActiveTx))
-                    bool.TryParse(isActiveTx, out isActive);
+                if (!string.IsNullOrWhiteSpace(isActiveTx))
+                {
+                    if (!bool.TryParse(isActiveTx, out isActive))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Invalid boolean value for 'Is Active': '{isActiveTx}'. Expected 'true' or 'false'.",
+                            row,
+                            "G",
+                            "STAFF_INVALID_IS_ACTIVE"
+                        );
+                        hasError = true;
+                    }
+                }
 
-                // Tìm Branch nếu có
+                // Resolve Branch (branchName is required, already checked above)
                 Guid? branchId = null;
                 if (!string.IsNullOrWhiteSpace(branchName))
                 {
                     var bKey = Normalize(branchName);
                     if (_branchCache.TryGetValue(bKey, out var branch))
+                    {
                         branchId = branch.BranchId;
+                    }
+                    else
+                    {
+                        AddError(
+                            sheetName,
+                            $"Branch '{branchName}' does not exist in the Branch sheet.",
+                            row,
+                            "F",
+                            "STAFF_BRANCH_NOT_FOUND"
+                        );
+                        hasError = true;
+                    }
                 }
 
-                var uKey = Normalize(userName);
+                if (hasError)
+                    continue;
+
                 ApplicationUser user;
 
-                // 1️⃣ Nếu user chưa tồn tại → tạo mới
-                if (!_staffCache.TryGetValue(uKey, out user))
+                var (firstName, lastName) = SplitFullName(fullName!);
+                
+
+                // Create or update user
+                if (!_staffCache.TryGetValue(uKey, out user!))
                 {
                     user = new ApplicationUser
                     {
-                        UserName = userName,
+                        UserName = userName!,
                         Email = email,
                         PhoneNumber = phone,
-                        FullName = fullName ?? string.Empty,
-                        FirstName = fullName ?? string.Empty,
-                        LastName = string.Empty,
+                        FirstName = firstName,
+                        LastName = lastName,
                         BranchId = branchId,
                         IsActive = isActive,
                         EmailConfirmed = false,
@@ -302,55 +757,75 @@ namespace Services.ExcelImportSerivces
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    // Password mặc định (nhớ đổi sau)
                     var createResult = await _userManager.CreateAsync(user, "Password123!");
 
                     if (!createResult.Succeeded)
                     {
-                        _logger.LogWarning("Không tạo được user {UserName}: {Errors}",
-                            userName,
-                            string.Join(", ", createResult.Errors.Select(e => e.Description)));
+                        AddError(
+                            sheetName,
+                            $"Failed to create user '{userName}': {string.Join("; ", createResult.Errors.Select(e => e.Description))}.",
+                            row,
+                            null,
+                            "STAFF_CREATE_USER_FAILED"
+                        );
                         continue;
+                    }
+                    if (!string.IsNullOrWhiteSpace(user.Email))
+                    {
+                        emailJobs.Add(new StaffWelcomeEmailInfo
+                        {
+                            Email = user.Email,
+                            FullName = $"{user.FirstName} {user.LastName}".Trim(),
+                            UserName = user.UserName!
+                        });
                     }
 
                     _staffCache[uKey] = user;
                 }
                 else
-                {
-                    // 2️⃣ Nếu user đã tồn tại → cập nhật
-                    user.Email = email ?? user.Email;
-                    user.PhoneNumber = phone ?? user.PhoneNumber;
-                    user.FullName = fullName ?? user.FullName;
-                    user.BranchId = branchId;
-                    user.IsActive = isActive;
-                    user.UpdatedAt = DateTime.UtcNow;
-
-                    await _userManager.UpdateAsync(user);
+                {                 
+                        AddError(
+                            sheetName,
+                            $"User '{userName}' already exists.",
+                            row,
+                            null,
+                            "STAFF_UPDATE_USER_FAILED"
+                        );
+                        continue;                   
                 }
 
-                // 3️⃣ Gán Role (Technician / Manager)
-                if (!await _roleManager.RoleExistsAsync(roleName))
+                // Assign role
+                if (!await _roleManager.RoleExistsAsync(roleName!))
                 {
-                    _logger.LogWarning("Role {RoleName} chưa tồn tại, bỏ qua gán role cho {UserName}", roleName, userName);
+                    AddError(
+                        sheetName,
+                        $"Role '{roleName}' does not exist.",
+                        row,
+                        "E",
+                        "STAFF_ROLE_NOT_FOUND"
+                    );
                 }
                 else
                 {
-                    if (!await _userManager.IsInRoleAsync(user, roleName))
+                    if (!await _userManager.IsInRoleAsync(user, roleName!))
                     {
-                        var roleResult = await _userManager.AddToRoleAsync(user, roleName);
+                        var roleResult = await _userManager.AddToRoleAsync(user, roleName!);
                         if (!roleResult.Succeeded)
                         {
-                            _logger.LogWarning("Không gán được role {RoleName} cho user {UserName}: {Errors}",
-                                roleName, userName,
-                                string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                            AddError(
+                                sheetName,
+                                $"Failed to assign role '{roleName}' to user '{userName}': {string.Join("; ", roleResult.Errors.Select(e => e.Description))}.",
+                                row,
+                                "E",
+                                "STAFF_ASSIGN_ROLE_FAILED"
+                            );
                         }
                     }
                 }
 
-                // 4️⃣ Nếu role = Technician → tạo/ update Technician record
+                // Technician record
                 if (string.Equals(roleName, "Technician", StringComparison.OrdinalIgnoreCase))
                 {
-                    // Kiểm tra đã có Technician chưa
                     var tech = await _context.Technicians
                         .FirstOrDefaultAsync(t => t.UserId == user.Id);
 
@@ -368,20 +843,24 @@ namespace Services.ExcelImportSerivces
 
                         _context.Technicians.Add(tech);
                     }
-                    else
-                    {
-                        // Nếu muốn update gì thêm (vd. reset điểm) thì xử lý tại đây
-                    }
+                    // else: update logic if needed
                 }
             }
         }
 
+
+
         private async Task ImportOperatingHoursAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["BranchOperatingHour"];
+            const string sheetName = "BranchOperatingHour";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
+
+            // Track which days each branch has operating hours for.
+            // Only branches that exist in _branchCache and appear in this sheet will be added.
+            var branchDays = new Dictionary<Guid, HashSet<DayOfWeekEnum>>();
 
             for (int row = 2; row <= rowCount; row++)
             {
@@ -391,38 +870,124 @@ namespace Services.ExcelImportSerivces
                 var openTime = ws.Cells[row, 4].Text?.Trim();
                 var closeTime = ws.Cells[row, 5].Text?.Trim();
 
-                if (string.IsNullOrWhiteSpace(branchName) ||
-                    string.IsNullOrWhiteSpace(dayName))
+                // Branch name required
+                if (string.IsNullOrWhiteSpace(branchName))
+                {
+                    AddError(
+                        sheetName,
+                        "Branch Name cannot be empty.",
+                        row,
+                        "A",
+                        "OPERATING_HOUR_BRANCH_NAME_REQUIRED"
+                    );
                     continue;
+                }
+
+                // Day of week required
+                if (string.IsNullOrWhiteSpace(dayName))
+                {
+                    AddError(
+                        sheetName,
+                        "Day of week cannot be empty.",
+                        row,
+                        "B",
+                        "OPERATING_HOUR_DAY_REQUIRED"
+                    );
+                    continue;
+                }
 
                 var branchKey = Normalize(branchName);
 
                 if (!_branchCache.TryGetValue(branchKey, out var branch))
                 {
-                    // Nếu branch chưa import được → bỏ qua hoặc log warning
-                    _logger.LogWarning("Branch '{BranchName}' chưa tồn tại khi import OperatingHour", branchName);
+                    // Ignore branches that do not exist in the Branch sheet
+                    AddError(
+                        sheetName,
+                        $"Branch '{branchName}' does not exist in the Branch sheet.",
+                        row,
+                        "A",
+                        "OPERATING_HOUR_BRANCH_NOT_FOUND"
+                    );
                     continue;
                 }
 
+                // Parse day of week
                 if (!Enum.TryParse(dayName, true, out DayOfWeekEnum dayOfWeek))
                 {
-                    _logger.LogWarning("DayOfWeek không hợp lệ ở row {Row}: {Value}", row, dayName);
+                    AddError(
+                        sheetName,
+                        $"Invalid day of week: '{dayName}'.",
+                        row,
+                        "B",
+                        "OPERATING_HOUR_INVALID_DAY"
+                    );
                     continue;
                 }
 
+                // Parse IsOpen
                 bool isOpen = false;
-                bool.TryParse(isOpenText, out isOpen);
+                if (!string.IsNullOrWhiteSpace(isOpenText))
+                {
+                    if (!bool.TryParse(isOpenText, out isOpen))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Invalid boolean value for 'Is Open': '{isOpenText}'. Expected 'true' or 'false'.",
+                            row,
+                            "C",
+                            "OPERATING_HOUR_INVALID_IS_OPEN"
+                        );
+                        continue;
+                    }
+                }
 
                 TimeSpan? ot = null;
                 TimeSpan? ct = null;
 
                 if (isOpen)
                 {
-                    if (TimeSpan.TryParse(openTime, out var t1))
-                        ot = t1;
+                    // Open time required and must be a valid TimeSpan
+                    if (string.IsNullOrWhiteSpace(openTime) ||
+                        !TimeSpan.TryParse(openTime, out var t1))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Invalid time format for 'Open Time': '{openTime}'. Expected HH:mm.",
+                            row,
+                            "D",
+                            "OPERATING_HOUR_INVALID_OPEN_TIME"
+                        );
+                        continue;
+                    }
 
-                    if (TimeSpan.TryParse(closeTime, out var t2))
-                        ct = t2;
+                    // Close time required and must be a valid TimeSpan
+                    if (string.IsNullOrWhiteSpace(closeTime) ||
+                        !TimeSpan.TryParse(closeTime, out var t2))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Invalid time format for 'Close Time': '{closeTime}'. Expected HH:mm.",
+                            row,
+                            "E",
+                            "OPERATING_HOUR_INVALID_CLOSE_TIME"
+                        );
+                        continue;
+                    }
+
+                    if (t2 <= t1)
+                    {
+                        AddError(
+                            sheetName,
+                            "Close Time must be later than Open Time.",
+                            row,
+                            "E",
+                            "OPERATING_HOUR_INVALID_TIME_RANGE"
+                        );
+                        continue;
+                    }
+
+                    ot = t1;
+                    ct = t2;
                 }
 
                 var key = GetOperatingHourKey(branch.BranchId, dayOfWeek);
@@ -450,33 +1015,149 @@ namespace Services.ExcelImportSerivces
 
                     _context.OperatingHours.Update(hour);
                 }
+
+                // Mark that this branch has this day configured
+                if (!branchDays.TryGetValue(branch.BranchId, out var days))
+                {
+                    days = new HashSet<DayOfWeekEnum>();
+                    branchDays[branch.BranchId] = days;
+                }
+
+                days.Add(dayOfWeek);
+            }
+
+            // Required 7 days: Monday to Sunday
+            var requiredDays = new[]
+            {
+                DayOfWeekEnum.Monday,
+                DayOfWeekEnum.Tuesday,
+                DayOfWeekEnum.Wednesday,
+                DayOfWeekEnum.Thursday,
+                DayOfWeekEnum.Friday,
+                DayOfWeekEnum.Saturday,
+                DayOfWeekEnum.Sunday
+            };
+
+            // Only check branches that appear in this OperatingHour sheet (branchDays keys)
+            foreach (var kvp in branchDays)
+            {
+                var branchId = kvp.Key;
+                var daysForBranch = kvp.Value;
+
+                var missingDays = requiredDays
+                    .Where(d => !daysForBranch.Contains(d))
+                    .ToList();
+
+                if (missingDays.Count == 0)
+                    continue;
+
+                // Find the branch object to get the name (from _branchCache values)
+                var branch = _branchCache.Values.FirstOrDefault(b => b.BranchId == branchId);
+                var branchName = branch?.BranchName ?? branchId.ToString();
+
+                var missingDaysText = string.Join(", ", missingDays);
+
+                // Single aggregated error per branch
+                AddError(
+                    sheetName,
+                    $"Branch '{branchName}' is missing operating hours for the following days: {missingDaysText}.",
+                    null,
+                    null,
+                    "OPERATING_HOUR_MISSING_DAYS"
+                );
             }
         }
 
 
 
+
         private async Task ImportParentCategoriesAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["ParentCategory"];
+            const string sheetName = "ParentCategory";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
+            // Pre-scan duplicate parent category names
+            var nameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             for (int row = 2; row <= rowCount; row++)
             {
-                var parentName = ws.Cells[row, 1].Text?.Trim();
-                var description = ws.Cells[row, 2].Text?.Trim();
-                var isActiveTxt = ws.Cells[row, 3].Text?.Trim();
-
-                if (string.IsNullOrWhiteSpace(parentName))
+                if (IsRowEmpty(ws, row, 3))
                     continue;
 
-                bool isActive = true;
-                if (!string.IsNullOrEmpty(isActiveTxt))
-                    bool.TryParse(isActiveTxt, out isActive);
+                var parentNameScan = ws.Cells[row, 1].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(parentNameScan))
+                    continue;
+
+                var keyScan = GetCategoryKey(parentNameScan, null);
+                if (nameCounts.ContainsKey(keyScan))
+                    nameCounts[keyScan]++;
+                else
+                    nameCounts[keyScan] = 1;
+            }
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                if (IsRowEmpty(ws, row, 3))
+                    continue;
+
+                bool hasError = false;
+
+                var parentName = ws.Cells[row, 1].Text?.Trim(); // A
+                var description = ws.Cells[row, 2].Text?.Trim(); // B
+                var isActiveTxt = ws.Cells[row, 3].Text?.Trim(); // C
+
+                // Parent name required
+                if (string.IsNullOrWhiteSpace(parentName))
+                {
+                    AddError(
+                        sheetName,
+                        "Parent Category Name is required.",
+                        row,
+                        "A",
+                        "PARENT_CATEGORY_NAME_REQUIRED"
+                    );
+                    continue; // không cần xử lý thêm row này
+                }
 
                 var key = GetCategoryKey(parentName, null);
 
+                // Duplicate name check
+                if (nameCounts.TryGetValue(key, out var count) && count > 1)
+                {
+                    AddError(
+                        sheetName,
+                        $"Duplicate parent category name '{parentName}' found in the sheet.",
+                        row,
+                        "A",
+                        "PARENT_CATEGORY_DUPLICATE_NAME"
+                    );
+                    hasError = true;
+                }
+
+                // Parse IsActive
+                bool isActive = true;
+                if (!string.IsNullOrWhiteSpace(isActiveTxt))
+                {
+                    if (!bool.TryParse(isActiveTxt, out isActive))
+                    {
+                        AddError(
+                            sheetName,
+                            $"Invalid boolean value for 'Is Active': '{isActiveTxt}'. Expected 'true' or 'false'.",
+                            row,
+                            "C",
+                            "PARENT_CATEGORY_INVALID_IS_ACTIVE"
+                        );
+                        hasError = true;
+                    }
+                }
+
+                if (hasError)
+                    continue;
+
+               
                 if (!_categoryCache.TryGetValue(key, out var parentCat))
                 {
                     parentCat = new ServiceCategory
@@ -503,66 +1184,135 @@ namespace Services.ExcelImportSerivces
             }
         }
 
+
         private async Task ImportServiceCategoriesAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["ServiceCategory"];
+            const string sheetName = "ServiceCategory";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
+            // === Pre-scan duplicate CategoryName ===
+            var categoryNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             for (int row = 2; row <= rowCount; row++)
             {
-                var parentName = ws.Cells[row, 1].Text?.Trim();
-                var categoryName = ws.Cells[row, 2].Text?.Trim();
-                var description = ws.Cells[row, 3].Text?.Trim();
-                var isActiveTxt = ws.Cells[row, 4].Text?.Trim();
-
-                if (string.IsNullOrWhiteSpace(categoryName) &&
-                    string.IsNullOrWhiteSpace(parentName))
+                if (IsRowEmpty(ws, row, 4))
                     continue;
 
-                bool isActive = true;
-                if (!string.IsNullOrEmpty(isActiveTxt))
-                    bool.TryParse(isActiveTxt, out isActive);
+                var categoryNameScan = ws.Cells[row, 2].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(categoryNameScan))
+                    continue;
 
-                // Xử lý cha
-                ServiceCategory? parentCat = null;
-                Guid? parentId = null;
+                var keyScan = Normalize(categoryNameScan);
+                if (categoryNameCounts.ContainsKey(keyScan))
+                    categoryNameCounts[keyScan]++;
+                else
+                    categoryNameCounts[keyScan] = 1;
+            }
 
-                if (!string.IsNullOrWhiteSpace(parentName))
+            var duplicateCategoryNames = new HashSet<string>(
+                categoryNameCounts.Where(x => x.Value > 1).Select(x => x.Key),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            // === MAIN IMPORT ===
+            for (int row = 2; row <= rowCount; row++)
+            {
+                if (IsRowEmpty(ws, row, 4))
+                    continue;
+
+                bool hasError = false;
+
+                var parentName = ws.Cells[row, 1].Text?.Trim(); // A
+                var categoryName = ws.Cells[row, 2].Text?.Trim(); // B
+                var description = ws.Cells[row, 3].Text?.Trim(); // C
+                var isActiveTxt = ws.Cells[row, 4].Text?.Trim(); // D
+
+                // ==== REQUIRED FIELDS ====
+                if (string.IsNullOrWhiteSpace(parentName))
                 {
-                    var parentKey = GetCategoryKey(parentName, null);
-                    if (!_categoryCache.TryGetValue(parentKey, out parentCat))
-                    {
-                        parentCat = new ServiceCategory
-                        {
-                            ServiceCategoryId = Guid.NewGuid(),
-                            CategoryName = parentName,
-                            ParentServiceCategoryId = null,
-                            Description = null,
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        _context.ServiceCategories.Add(parentCat);
-                        _categoryCache[parentKey] = parentCat;
-                    }
-
-                    parentId = parentCat.ServiceCategoryId;
+                    AddError(sheetName, "Parent Category Name is required.", row, "A", "SERVICE_CAT_PARENT_REQUIRED");
+                    hasError = true;
                 }
 
-                if (string.IsNullOrWhiteSpace(parentName))
-                    parentId = null;
+                if (string.IsNullOrWhiteSpace(categoryName))
+                {
+                    AddError(sheetName, "Category Name is required.", row, "B", "SERVICE_CAT_NAME_REQUIRED");
+                    hasError = true;
+                }
 
-                var finalName = categoryName ?? parentName!;
-                var key = GetCategoryKey(finalName, parentId);
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    AddError(sheetName, "Description is required.", row, "C", "SERVICE_CAT_DESC_REQUIRED");
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(isActiveTxt))
+                {
+                    AddError(sheetName, "'Is Active' is required.", row, "D", "SERVICE_CAT_IS_ACTIVE_REQUIRED");
+                    hasError = true;
+                }
+
+                if (hasError) continue;
+
+                // ==== DUPLICATE CHECK ====
+                var normalizedKey = Normalize(categoryName!);
+                if (duplicateCategoryNames.Contains(normalizedKey))
+                {
+                    AddError(
+                        sheetName,
+                        $"Duplicate category name '{categoryName}' found in the sheet.",
+                        row,
+                        "B",
+                        "SERVICE_CAT_DUPLICATE"
+                    );
+                    hasError = true;
+                }
+
+               
+                bool isActive = true;
+                if (!bool.TryParse(isActiveTxt, out isActive))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid boolean value for 'Is Active': '{isActiveTxt}'. Expected 'true' or 'false'.",
+                        row,
+                        "D",
+                        "SERVICE_CAT_INVALID_IS_ACTIVE"
+                    );
+                    hasError = true;
+                }
+
+                if (hasError) continue;
+
+                // ==== VALIDATE Parent Category exists in system ====
+                var parentKey = GetCategoryKey(parentName!, null);
+
+                if (!_categoryCache.TryGetValue(parentKey, out var parentCat))
+                {
+                    AddError(
+                        sheetName,
+                        $"Parent Category '{parentName}' does not exist in the system.",
+                        row,
+                        "A",
+                        "SERVICE_CAT_PARENT_NOT_FOUND"
+                    );
+                    continue;
+                }
+
+                var parentId = parentCat.ServiceCategoryId;
+
+                // ==== CHILD CATEGORY PROCESS ====
+                var key = GetCategoryKey(categoryName!, parentId);
 
                 if (!_categoryCache.TryGetValue(key, out var cat))
                 {
                     cat = new ServiceCategory
                     {
                         ServiceCategoryId = Guid.NewGuid(),
-                        CategoryName = finalName,
+                        CategoryName = categoryName!,
                         ParentServiceCategoryId = parentId,
                         Description = description,
                         IsActive = isActive,
@@ -585,75 +1335,205 @@ namespace Services.ExcelImportSerivces
 
         private async Task ImportServicesAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["Service"];
+            const string sheetName = "Service";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
             for (int row = 2; row <= rowCount; row++)
             {
-                var categoryName = ws.Cells[row, 1].Text?.Trim();
-                var serviceName = ws.Cells[row, 2].Text?.Trim();
-                var description = ws.Cells[row, 3].Text?.Trim();
-                var priceText = ws.Cells[row, 4].Text?.Trim();
-                var durationText = ws.Cells[row, 5].Text?.Trim();
-                var isAdvText = ws.Cells[row, 6].Text?.Trim();
-                var branchName = ws.Cells[row, 7].Text?.Trim();
-
-                if (string.IsNullOrWhiteSpace(serviceName))
+                if (IsRowEmpty(ws, row, 7))
                     continue;
 
-                decimal price = 0;
-                decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out price);
+                bool hasError = false;
 
-                decimal duration = 0;
-                decimal.TryParse(durationText, NumberStyles.Any, CultureInfo.InvariantCulture, out duration);
+                var categoryName = ws.Cells[row, 1].Text?.Trim(); // A
+                var serviceName = ws.Cells[row, 2].Text?.Trim(); // B
+                var description = ws.Cells[row, 3].Text?.Trim(); // C
+                var priceText = ws.Cells[row, 4].Text?.Trim(); // D
+                var durationText = ws.Cells[row, 5].Text?.Trim(); // E
+                var isAdvText = ws.Cells[row, 6].Text?.Trim(); // F
+                var branchName = ws.Cells[row, 7].Text?.Trim(); // G
+
+                // ===== Required fields =====
+                if (string.IsNullOrWhiteSpace(categoryName))
+                {
+                    AddError(
+                        sheetName,
+                        "Service Category Name is required.",
+                        row,
+                        "A",
+                        "SERVICE_CATEGORY_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(serviceName))
+                {
+                    AddError(
+                        sheetName,
+                        "Service Name is required.",
+                        row,
+                        "B",
+                        "SERVICE_NAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    AddError(
+                        sheetName,
+                        "Description is required.",
+                        row,
+                        "C",
+                        "SERVICE_DESCRIPTION_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(priceText))
+                {
+                    AddError(
+                        sheetName,
+                        "Price is required.",
+                        row,
+                        "D",
+                        "SERVICE_PRICE_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(durationText))
+                {
+                    AddError(
+                        sheetName,
+                        "Estimated Duration is required.",
+                        row,
+                        "E",
+                        "SERVICE_DURATION_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(isAdvText))
+                {
+                    AddError(
+                        sheetName,
+                        "'Is Advanced' is required.",
+                        row,
+                        "F",
+                        "SERVICE_IS_ADVANCED_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (hasError)
+                    continue;
+
+                // ===== Parse numeric & boolean =====
+                if (!decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid number format for 'Price': '{priceText}'.",
+                        row,
+                        "D",
+                        "SERVICE_INVALID_PRICE"
+                    );
+                    hasError = true;
+                }
+
+                if (!decimal.TryParse(durationText, NumberStyles.Any, CultureInfo.InvariantCulture, out var duration))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid number format for 'Estimated Duration': '{durationText}'.",
+                        row,
+                        "E",
+                        "SERVICE_INVALID_DURATION"
+                    );
+                    hasError = true;
+                }
 
                 bool isAdvanced = false;
-                if (!string.IsNullOrEmpty(isAdvText))
-                    bool.TryParse(isAdvText, out isAdvanced);
+                if (!bool.TryParse(isAdvText, out isAdvanced))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid boolean value for 'Is Advanced': '{isAdvText}'. Expected 'true' or 'false'.",
+                        row,
+                        "F",
+                        "SERVICE_INVALID_IS_ADVANCED"
+                    );
+                    hasError = true;
+                }
 
-                // Tìm ServiceCategory
+                // ===== Check ServiceCategory exists in system =====
                 Guid serviceCategoryId = Guid.Empty;
+
                 if (!string.IsNullOrWhiteSpace(categoryName))
                 {
+                    var normCatName = Normalize(categoryName);
                     var cat = _categoryCache.Values
-                        .FirstOrDefault(c => Normalize(c.CategoryName) == Normalize(categoryName));
+                        .FirstOrDefault(c => Normalize(c.CategoryName) == normCatName);
 
                     if (cat == null)
                     {
-                        cat = new ServiceCategory
-                        {
-                            ServiceCategoryId = Guid.NewGuid(),
-                            CategoryName = categoryName,
-                            ParentServiceCategoryId = null,
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        var key = GetCategoryKey(cat.CategoryName, cat.ParentServiceCategoryId);
-                        _categoryCache[key] = cat;
-                        _context.ServiceCategories.Add(cat);
+                        AddError(
+                            sheetName,
+                            $"Service Category '{categoryName}' does not exist in the system.",
+                            row,
+                            "A",
+                            "SERVICE_CATEGORY_NOT_FOUND"
+                        );
+                        hasError = true;
                     }
-
-                    serviceCategoryId = cat.ServiceCategoryId;
+                    else
+                    {
+                        serviceCategoryId = cat.ServiceCategoryId;
+                    }
                 }
 
-               
+                // ===== Check Branch exists if provided =====
+                Guid? branchId = null;
+                if (!string.IsNullOrWhiteSpace(branchName))
+                {
+                    var bKey = Normalize(branchName);
+                    if (_branchCache.TryGetValue(bKey, out var branch))
+                    {
+                        branchId = branch.BranchId;
+                    }
+                    else
+                    {
+                        AddError(
+                            sheetName,
+                            $"Branch '{branchName}' does not exist in the system.",
+                            row,
+                            "G",
+                            "SERVICE_BRANCH_NOT_FOUND"
+                        );
+                        hasError = true;
+                    }
+                }
 
+                if (hasError)
+                    continue;
 
-                var sKey = Normalize(serviceName);
+                // ===== Create / Update Service =====
+                var sKey = Normalize(serviceName!);
                 if (!_serviceCache.TryGetValue(sKey, out var service))
                 {
                     service = new Service
                     {
                         ServiceId = Guid.NewGuid(),
                         ServiceCategoryId = serviceCategoryId,
-                        ServiceName = serviceName,
+                        ServiceName = serviceName!,
                         Description = description,
                         Price = price,
                         EstimatedDuration = duration,
-                        IsAdvanced = isAdvanced,                      
+                        IsAdvanced = isAdvanced,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     };
@@ -673,67 +1553,162 @@ namespace Services.ExcelImportSerivces
                     _context.Services.Update(service);
                 }
 
-                // Branch (nếu có)
-
-                if (!string.IsNullOrWhiteSpace(branchName))
+                // ===== Branch mapping (if branchId != null) =====
+                if (branchId.HasValue)
                 {
-                    var bKey = Normalize(branchName);
+                    var bsKey = GetBranchServiceKey(branchId.Value, service.ServiceId);
 
-                    if (_branchCache.TryGetValue(bKey, out var branch))
+                    if (!_branchServiceCache.ContainsKey(bsKey))
                     {
-                        var bsKey = GetBranchServiceKey(branch.BranchId, service.ServiceId);
-
-                        if (!_branchServiceCache.ContainsKey(bsKey))
+                        var branchService = new BranchService
                         {
-                            var branchService = new BranchService
-                            {
-                                BranchId = branch.BranchId,
-                                ServiceId = service.ServiceId
-                            };
+                            BranchId = branchId.Value,
+                            ServiceId = service.ServiceId
+                        };
 
-                            _context.BranchServices.Add(branchService);
-                            _branchServiceCache[bsKey] = branchService;
-                        }
-                        // nếu đã có rồi thì bỏ qua, tránh duplicate
+                        _context.BranchServices.Add(branchService);
+                        _branchServiceCache[bsKey] = branchService;
                     }
-                    else
-                    {
-                        // Tuỳ bạn: log warning hoặc tạo branch mới
-                        _logger.LogWarning(
-                            "Không tìm thấy Branch '{BranchName}' khi gán cho Service '{ServiceName}'",
-                            branchName, serviceName);
-                    }
+                    
                 }
-
-
-
             }
         }
 
+
         private async Task ImportPartCategoriesAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["PartCategory"];
+            const string sheetName = "PartCategory";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
+            // === Pre-scan duplicate PartCategoryName ===
+            var partCategoryNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             for (int row = 2; row <= rowCount; row++)
             {
-                var partCategoryName = ws.Cells[row, 1].Text?.Trim();
-                var description = ws.Cells[row, 2].Text?.Trim();
-                var serviceName = ws.Cells[row, 3].Text?.Trim();
-
-                if (string.IsNullOrWhiteSpace(partCategoryName))
+                if (IsRowEmpty(ws, row, 3))
                     continue;
 
-                var pcKey = Normalize(partCategoryName);
+                var nameScan = ws.Cells[row, 1].Text?.Trim();
+                if (string.IsNullOrWhiteSpace(nameScan))
+                    continue;
 
+                var keyScan = Normalize(nameScan);
+                if (partCategoryNameCounts.ContainsKey(keyScan))
+                    partCategoryNameCounts[keyScan]++;
+                else
+                    partCategoryNameCounts[keyScan] = 1;
+            }
+
+            var duplicatePartCategoryNames = new HashSet<string>(
+                partCategoryNameCounts.Where(x => x.Value > 1).Select(x => x.Key),
+                StringComparer.OrdinalIgnoreCase
+            );
+
+            // === Main import ===
+            for (int row = 2; row <= rowCount; row++)
+            {
+                if (IsRowEmpty(ws, row, 3))
+                    continue;
+
+                bool hasError = false;
+
+                var partCategoryName = ws.Cells[row, 1].Text?.Trim(); // A
+                var description = ws.Cells[row, 2].Text?.Trim(); // B
+                var serviceName = ws.Cells[row, 3].Text?.Trim(); // C
+
+                // ===== Required fields =====
+                if (string.IsNullOrWhiteSpace(partCategoryName))
+                {
+                    AddError(
+                        sheetName,
+                        "Part Category Name is required.",
+                        row,
+                        "A",
+                        "PART_CATEGORY_NAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(description))
+                {
+                    AddError(
+                        sheetName,
+                        "Description is required.",
+                        row,
+                        "B",
+                        "PART_CATEGORY_DESCRIPTION_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (string.IsNullOrWhiteSpace(serviceName))
+                {
+                    AddError(
+                        sheetName,
+                        "Service Name is required.",
+                        row,
+                        "C",
+                        "PART_CATEGORY_SERVICE_NAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (hasError)
+                    continue;
+
+                var pcKey = Normalize(partCategoryName!);
+
+                // Duplicate PartCategoryName in sheet
+                if (duplicatePartCategoryNames.Contains(pcKey))
+                {
+                    AddError(
+                        sheetName,
+                        $"Duplicate part category name '{partCategoryName}' found in the sheet.",
+                        row,
+                        "A",
+                        "PART_CATEGORY_DUPLICATE_NAME"
+                    );
+                    hasError = true;
+                }
+
+                // Check ServiceName exists in system
+                Service? svc = null;
+                Guid? serviceId = null;
+
+                if (!string.IsNullOrWhiteSpace(serviceName))
+                {
+                    var sKey = Normalize(serviceName);
+                    if (_serviceCache.TryGetValue(sKey, out svc))
+                    {
+                        serviceId = svc.ServiceId;
+                    }
+                    else
+                    {
+                        AddError(
+                            sheetName,
+                            $"Service '{serviceName}' does not exist in the system but is referenced by Part Category '{partCategoryName}'.",
+                            row,
+                            "C",
+                            "PART_CATEGORY_SERVICE_NOT_FOUND"
+                        );
+                        hasError = true;
+                    }
+                }
+
+                if (hasError)
+                    continue;
+
+                // Create / update PartCategory
                 if (!_partCategoryCache.TryGetValue(pcKey, out var partCategory))
                 {
                     partCategory = new PartCategory
                     {
                         LaborCategoryId = Guid.NewGuid(),
-                        CategoryName = partCategoryName,
+                        CategoryName = partCategoryName!,
+                        Description = description,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -742,148 +1717,179 @@ namespace Services.ExcelImportSerivces
                 }
                 else
                 {
+                    partCategory.Description = description ?? partCategory.Description;
                     partCategory.UpdatedAt = DateTime.UtcNow;
                     _context.PartCategories.Update(partCategory);
                 }
 
-                // Nối với Service (ServicePartCategory)
-                if (!string.IsNullOrWhiteSpace(serviceName))
+                // Link with Service (ServicePartCategory) – only if service exists
+                if (svc != null && serviceId.HasValue)
                 {
-                    var sKey = Normalize(serviceName);
-                    if (_serviceCache.TryGetValue(sKey, out var svc))
+                    // Current PartCategories of this Service
+                    var existingPartCategoryIds = _spcCache.Values
+                        .Where(x => x.ServiceId == serviceId.Value)
+                        .Select(x => x.PartCategoryId)
+                        .Distinct()
+                        .ToList();
+
+                    var currentCount = existingPartCategoryIds.Count;
+
+                    // Rule: if IsAdvanced = false => only one PartCategory is allowed
+                    if (!svc.IsAdvanced && currentCount >= 1)
                     {
-
-                        // Lấy tất cả PartCategory hiện có của Service này
-                        var existingPartCategoryIds = _spcCache.Values
-                            .Where(x => x.ServiceId == svc.ServiceId)
-                            .Select(x => x.PartCategoryId)
-                            .Distinct()
-                            .ToList();
-
-                        // Count how many PartCategories are already linked to this Service
-                        var currentCount = _spcCache.Values.Count(x => x.ServiceId == svc.ServiceId);
-
-                        // Rule: if IsAdvanced = false => only one PartCategory is allowed
-                        if (!svc.IsAdvanced && currentCount >= 1)
+                        // If current PartCategory already linked -> ensure link exists in cache/db, but do not create duplicate
+                        if (existingPartCategoryIds.Contains(partCategory.LaborCategoryId))
                         {
-                            // Nếu PartCategory hiện tại TRÙNG với cái đã có -> cho qua, không tạo mới, không báo lỗi
-                            if (existingPartCategoryIds.Contains(partCategory.LaborCategoryId))
+                            var spcKeyExisting = GetSpcKey(serviceId.Value, partCategory.LaborCategoryId);
+                            if (!_spcCache.ContainsKey(spcKeyExisting))
                             {
-                                // Đảm bảo record cụ thể trong cache tồn tại, nếu DB hơi lệch
-                                var spcKeyExisting = GetSpcKey(svc.ServiceId, partCategory.LaborCategoryId);
-                                if (!_spcCache.ContainsKey(spcKeyExisting))
+                                var spcExisting = new ServicePartCategory
                                 {
-                                    var spcExisting = new ServicePartCategory
-                                    {
-                                        ServicePartCategoryId = Guid.NewGuid(),
-                                        ServiceId = svc.ServiceId,
-                                        PartCategoryId = partCategory.LaborCategoryId,
-                                        CreatedAt = DateTime.UtcNow
-                                    };
-                                    _context.ServicePartCategories.Add(spcExisting);
-                                    _spcCache[spcKeyExisting] = spcExisting;
-                                }
-
-                                // Không báo lỗi, không tạo thêm record mới
-                                continue;
+                                    ServicePartCategoryId = Guid.NewGuid(),
+                                    ServiceId = serviceId.Value,
+                                    PartCategoryId = partCategory.LaborCategoryId,
+                                    CreatedAt = DateTime.UtcNow
+                                };
+                                _context.ServicePartCategories.Add(spcExisting);
+                                _spcCache[spcKeyExisting] = spcExisting;
                             }
 
-                            // Nếu đến đây nghĩa là Service non-advanced đã có PartCategory khác rồi
-                            AddError(
-                                "PartCategory",
-                                $"Service '{serviceName}' has IsAdvanced = false and can only be linked to one PartCategory. Existing PartCategory cannot be replaced by '{partCategoryName}'.",
-                                row,
-                                "ServiceName",
-                                "TooManyPartCategoriesForNonAdvancedService");
-
-                            // Không tạo thêm ServicePartCategory
+                            // Do not report error, do not create new record
                             continue;
                         }
 
-                        var spcKey = GetSpcKey(svc.ServiceId, partCategory.LaborCategoryId);
-
-                        if (!_spcCache.ContainsKey(spcKey))
-                        {
-                            var spc = new ServicePartCategory
-                            {
-                                ServicePartCategoryId = Guid.NewGuid(),
-                                ServiceId = svc.ServiceId,
-                                PartCategoryId = partCategory.LaborCategoryId,
-                                CreatedAt = DateTime.UtcNow
-                            };
-
-                            _context.ServicePartCategories.Add(spc);
-                            _spcCache[spcKey] = spc;
-                        }
-                    }
-                    else
-                    {
+                        // Non-advanced service already has another PartCategory linked
                         AddError(
-                        "PartCategory",
-                        $"Service '{serviceName}' does not exist but is referenced by PartCategory '{partCategoryName}'.",
-                        row,
-                        "ServiceName",
-                        "ServiceNotFound");
+                            sheetName,
+                            $"Service '{serviceName}' has IsAdvanced = false and can only be linked to one Part Category. Existing Part Category cannot be replaced by '{partCategoryName}'.",
+                            row,
+                            "C",
+                            "PART_CATEGORY_TOO_MANY_FOR_NON_ADVANCED_SERVICE"
+                        );
+
+                        continue;
+                    }
+
+                    var spcKey = GetSpcKey(serviceId.Value, partCategory.LaborCategoryId);
+
+                    if (!_spcCache.ContainsKey(spcKey))
+                    {
+                        var spc = new ServicePartCategory
+                        {
+                            ServicePartCategoryId = Guid.NewGuid(),
+                            ServiceId = serviceId.Value,
+                            PartCategoryId = partCategory.LaborCategoryId,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.ServicePartCategories.Add(spc);
+                        _spcCache[spcKey] = spc;
                     }
                 }
             }
         }
 
+
         private async Task ImportPartsAsync(ExcelPackage package)
         {
-            var ws = package.Workbook.Worksheets["Part"];
+            const string sheetName = "Part";
+            var ws = package.Workbook.Worksheets[sheetName];
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
 
             for (int row = 2; row <= rowCount; row++)
             {
-                var partCategoryName = ws.Cells[row, 1].Text?.Trim();
-                var partName = ws.Cells[row, 2].Text?.Trim();
-                var priceText = ws.Cells[row, 3].Text?.Trim();
-                var stockText = ws.Cells[row, 4].Text?.Trim();
-                //var branchName = ws.Cells[row, 5].Text?.Trim();
-
-                if (string.IsNullOrWhiteSpace(partName))
+                // Bỏ qua dòng trống hoàn toàn
+                if (IsRowEmpty(ws, row, 3))
                     continue;
 
-                decimal price = 0;
-                decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out price);
+                bool hasError = false;
 
-                int stock = 0;
-                int.TryParse(stockText, out stock);
+                var partCategoryName = ws.Cells[row, 1].Text?.Trim(); // A
+                var partName = ws.Cells[row, 2].Text?.Trim(); // B
+                var priceText = ws.Cells[row, 3].Text?.Trim(); // C
 
-                PartCategory? partCategory = null;
-                if (!string.IsNullOrWhiteSpace(partCategoryName))
+                // ===== Required fields =====
+                if (string.IsNullOrWhiteSpace(partCategoryName))
                 {
-                    var pcKey = Normalize(partCategoryName);
-                    if (!_partCategoryCache.TryGetValue(pcKey, out partCategory))
-                    {
-                        partCategory = new PartCategory
-                        {
-                            LaborCategoryId = Guid.NewGuid(),
-                            CategoryName = partCategoryName,
-                            CreatedAt = DateTime.UtcNow
-                        };
-
-                        _context.PartCategories.Add(partCategory);
-                        _partCategoryCache[pcKey] = partCategory;
-                    }
+                    AddError(
+                        sheetName,
+                        "Part Category Name is required.",
+                        row,
+                        "A",
+                        "PART_CATEGORY_NAME_REQUIRED"
+                    );
+                    hasError = true;
                 }
 
-                
+                if (string.IsNullOrWhiteSpace(partName))
+                {
+                    AddError(
+                        sheetName,
+                        "Part Name is required.",
+                        row,
+                        "B",
+                        "PART_NAME_REQUIRED"
+                    );
+                    hasError = true;
+                }
 
-                var pKey = Normalize(partName);
+                if (string.IsNullOrWhiteSpace(priceText))
+                {
+                    AddError(
+                        sheetName,
+                        "Price is required.",
+                        row,
+                        "C",
+                        "PART_PRICE_REQUIRED"
+                    );
+                    hasError = true;
+                }
+
+                if (hasError)
+                    continue;
+
+                // ===== Parse price =====
+                if (!decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
+                {
+                    AddError(
+                        sheetName,
+                        $"Invalid number format for 'Price': '{priceText}'.",
+                        row,
+                        "C",
+                        "PART_INVALID_PRICE"
+                    );
+                    continue;
+                }
+
+                // ===== Check PartCategory exists in system =====
+                PartCategory? partCategory = null;
+                var pcKey = Normalize(partCategoryName!);
+
+                if (!_partCategoryCache.TryGetValue(pcKey, out partCategory))
+                {
+                    AddError(
+                        sheetName,
+                        $"Part Category '{partCategoryName}' does not exist in the system.",
+                        row,
+                        "A",
+                        "PART_CATEGORY_NOT_FOUND"
+                    );
+                    continue;
+                }
+
+                // ===== Create / Update Part =====
+                var pKey = Normalize(partName!);
+
                 if (!_partCache.TryGetValue(pKey, out var part))
                 {
                     part = new Part
                     {
                         PartId = Guid.NewGuid(),
-                        PartCategoryId = partCategory?.LaborCategoryId ?? Guid.Empty,
-                        
-                        Name = partName,
+                        PartCategoryId = partCategory.LaborCategoryId,
+                        Name = partName!,
                         Price = price,
-                        Stock = stock,
                         CreatedAt = DateTime.UtcNow
                     };
 
@@ -892,16 +1898,15 @@ namespace Services.ExcelImportSerivces
                 }
                 else
                 {
-                    part.PartCategoryId = partCategory?.LaborCategoryId ?? part.PartCategoryId;
-                    
+                    part.PartCategoryId = partCategory.LaborCategoryId;
                     part.Price = price;
-                    part.Stock = stock;
                     part.UpdatedAt = DateTime.UtcNow;
 
                     _context.Parts.Update(part);
                 }
             }
         }
+
 
 
         private List<ImportErrorDetail> ValidateTemplate(ExcelPackage package)
@@ -913,8 +1918,8 @@ namespace Services.ExcelImportSerivces
                 ["Branch"] = new[]
                 {
                         "BranchName","PhoneNumber","Email","Street","Commune",
-                        "Province","Latitude","Longitude","Description",
-                        "IsActive","ArrivalWindowMinutes","MaxBookingsPerWindow","MaxConcurrentWip"
+                        "Province","Description",
+                        "IsActive","ArrivalWindowMinutes","MaxBookingsPerWindow"
                     },
                 ["BranchOperatingHour"] = new[]
                             {
@@ -943,7 +1948,7 @@ namespace Services.ExcelImportSerivces
                     },
                 ["Part"] = new[]
                             {
-                        "PartCategoryName","PartName","Price","Stock"
+                        "PartCategoryName","PartName","Price"
                     }
             };
 
@@ -999,6 +2004,35 @@ namespace Services.ExcelImportSerivces
 
         #region Helpers
 
+
+        private (string FirstName, string LastName) SplitFullName(string fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+                return (string.Empty, string.Empty);
+
+            var parts = fullName
+                .Trim()
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length == 1)
+                return (parts[0], string.Empty);
+
+            var firstName = parts[^1]; // từ cuối
+            var lastName = string.Join(" ", parts[..^1]); // từ đầu đến trước từ cuối
+
+            return (firstName, lastName);
+        }
+
+        private bool IsRowEmpty(ExcelWorksheet ws, int row, int colCount)
+        {
+            for (int col = 1; col <= colCount; col++)
+            {
+                if (!string.IsNullOrWhiteSpace(ws.Cells[row, col].Text?.Trim()))
+                    return false;
+            }
+            return true; 
+        }
+
         private static string Normalize(string? input)
             => input?.Trim().ToLowerInvariant() ?? string.Empty;
 
@@ -1014,11 +2048,45 @@ namespace Services.ExcelImportSerivces
         private static string GetOperatingHourKey(Guid branchId, DayOfWeekEnum day)
          => $"{branchId:N}|{(int)day}";
 
+
+        private async Task SendStaffWelcomeEmailsAsync(IEnumerable<StaffWelcomeEmailInfo> staffEmails)
+        {
+            foreach (var staff in staffEmails)
+            {
+                try
+                {
+                    var subject = "Your staff account has been created";
+                    var body = $@"
+                <p>Hi {staff.FullName},</p>
+                <p>Your staff account has been created in the system.</p>
+                <p>
+                    <b>Username:</b> {staff.UserName}<br/>
+                    <b>Email:</b> {staff.Email}
+                    <b>Password:</b> Admin123!
+                </p>
+                <p>Please log in and change your password as soon as possible.</p>";
+
+                    await _emailSender.SendEmailAsync(staff.Email, subject, body);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send welcome email to {Email}", staff.Email);
+                    // Không throw, tránh làm fail import sau khi đã thành công
+                }
+            }
+        }
         private void AddError(string sheetName, string message, int? row = null, string? column = null, string? errorCode = null)
         {
             var error = new ImportErrorDetail(sheetName, message, row, column, errorCode);
             _errors.Add(error);
             _logger.LogWarning(error.ToString());
+        }
+
+        private class StaffWelcomeEmailInfo
+        {
+            public string Email { get; set; } = null!;
+            public string FullName { get; set; } = null!;
+            public string UserName { get; set; } = null!;
         }
 
         #endregion

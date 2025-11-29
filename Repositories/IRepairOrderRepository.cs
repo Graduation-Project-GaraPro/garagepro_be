@@ -13,11 +13,12 @@ namespace Repositories
     {
         // Add Context property
         MyAppDbContext Context { get; }
-
+        Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId);
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
+        Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);
         Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate);
@@ -31,6 +32,9 @@ namespace Repositories
         // Status update operations for drag-drop
         Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string changeNote = null);
         Task<IEnumerable<RepairOrder>> BatchUpdateStatusAsync(List<UpdateRoBoardStatusDto> updates);
+        
+        // Label management for repair orders
+        Task<bool> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds);
 
         // List view specific queries with optimized projections
         Task<(IEnumerable<RepairOrder> Items, int TotalCount)> GetRepairOrdersForListViewAsync(

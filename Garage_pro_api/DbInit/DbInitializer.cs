@@ -9,7 +9,6 @@ using BusinessObject.Vehicles;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore;
 using BusinessObject.Customers;
 
 namespace Garage_pro_api.DbInit
@@ -50,7 +49,7 @@ namespace Garage_pro_api.DbInit
             await SeedPartsAsync();
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
-            await SeedServicePartsAsync();
+            await SeedServicePartCategoriesAsync();
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
@@ -59,7 +58,10 @@ namespace Garage_pro_api.DbInit
             await SeedRepairOrdersAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
+            await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
+            await SeedPromotionalCampaignsWithServicesAsync();
+            await SeedRepairOrdersAsync();
             // await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
         }
@@ -206,15 +208,28 @@ namespace Garage_pro_api.DbInit
             var categories = new List<PermissionCategory>
     {
         new PermissionCategory { Id = Guid.NewGuid(), Name = "User Management" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Basic Permission" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Role Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Branch Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
-        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" }
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Job Repair" },
+
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Inspection Technician" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Job Technician" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Notification" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Repair History" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Repair" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Specification" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistical" }
+
     };
+
 
             foreach (var cat in categories)
             {
@@ -230,76 +245,123 @@ namespace Garage_pro_api.DbInit
         {
             var categories = await _context.PermissionCategories.ToListAsync();
             var userCatId = categories.First(c => c.Name == "User Management").Id;
-            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
+            var basicCatId = categories.First(c => c.Name == "Basic Permission").Id;
             var roleCatId = categories.First(c => c.Name == "Role Management").Id;
             var branchCatId = categories.First(c => c.Name == "Branch Management").Id;
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
+            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
+            var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
+            var jobCatId = categories.First(c => c.Name == "Job Repair").Id;
+
+            var inspectionTechnicianId = categories.First(c => c.Name == "Inspection Technician").Id;
+            var jobTechnicianId = categories.First(c => c.Name == "Job Technician").Id;
+            var notificationId = categories.First(c => c.Name == "Notification").Id;
+            var repairHistoryId = categories.First(c => c.Name == "Repair History").Id;
+            var repairId = categories.First(c => c.Name == "Repair").Id;
+            var specificationId = categories.First(c => c.Name == "Specification").Id;
+            var statisticalId = categories.First(c => c.Name == "Statistical").Id;
 
             var defaultPermissions = new List<Permission>
                 {
-                    // ✅ User Management
+                    // User Management
                     new Permission { Id = Guid.NewGuid(), Code = "USER_VIEW", Name = "View Users", Description = "Can view user list", CategoryId = userCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "USER_EDIT", Name = "Edit Users", Description = "Can edit user info", CategoryId = userCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "USER_DELETE", Name = "Delete Users", Description = "Can delete users", CategoryId = userCatId },
 
-                    // ✅ Role Management
+                    // Role Management
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_CREATE", Name = "Create Role", Description = "Can create roles", CategoryId = roleCatId },
+
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_UPDATE", Name = "Update Role", Description = "Can update roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_DELETE", Name = "Delete Role", Description = "Can delete roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "ROLE_VIEW", Name = "View Roles", Description = "Can view roles", CategoryId = roleCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PERMISSION_ASSIGN", Name = "Assign Permissions", Description = "Can assign permissions to roles", CategoryId = roleCatId },
+                     // ✅ Statistic Monitoring
+                     new Permission { Id = Guid.NewGuid(), Code = "VIEW_STAT", Name = "View Statistic", Description = "Can view stats in the system", CategoryId = statCatId },
 
-                    // ✅ Booking Management
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view booking records", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can manage booking details", CategoryId = bookingCatId },
+
+                    // ✅ Basic permission
+                    new Permission { Id = Guid.NewGuid(), Code = "BASIC_ACCESS", Name = "Basic Access", Description = "Can do action as a customer role", CategoryId = basicCatId },
 
                     // ✅ Branch Management
-                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_VIEW", Name = "View Branches", Description = "Can view branch list", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_VIEW", Name = "View Branches", Description = "Can view branch list", CategoryId = branchCatId ,IsDefault=true },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_CREATE", Name = "Create Branch", Description = "Can create branches", CategoryId = branchCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_UPDATE", Name = "Update Branch", Description = "Can update branch info", CategoryId = branchCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_DELETE", Name = "Delete Branch", Description = "Can delete branches", CategoryId = branchCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_STATUS_TOGGLE", Name = "Toggle Branch Status", Description = "Can activate/deactivate branches", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_IMPORT_EXCEL", Name = "Import Branches From Excel", Description = "Can import branch data via Excel files", CategoryId = branchCatId },
 
                     // ✅ Service Management
-                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_VIEW", Name = "View Services", Description = "Can view services", CategoryId = serviceCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "SERVICE_VIEW", Name = "View Services", Description = "Can view services", CategoryId = serviceCatId,IsDefault=true },
                     new Permission { Id = Guid.NewGuid(), Code = "SERVICE_CREATE", Name = "Create Service", Description = "Can create new services", CategoryId = serviceCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "SERVICE_UPDATE", Name = "Update Service", Description = "Can update service information", CategoryId = serviceCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "SERVICE_DELETE", Name = "Delete Service", Description = "Can delete services", CategoryId = serviceCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "SERVICE_STATUS_TOGGLE", Name = "Toggle Service Status", Description = "Can activate/deactivate services", CategoryId = serviceCatId },
 
                     // ✅ Promotional Management
-                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_VIEW", Name = "View Promotions", Description = "Can view promotional campaigns", CategoryId = promotionalCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PROMO_VIEW", Name = "View Promotions", Description = "Can view promotional campaigns", CategoryId = promotionalCatId,IsDefault=true },
                     new Permission { Id = Guid.NewGuid(), Code = "PROMO_CREATE", Name = "Create Promotion", Description = "Can create promotional campaigns", CategoryId = promotionalCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PROMO_UPDATE", Name = "Update Promotion", Description = "Can update promotional campaigns", CategoryId = promotionalCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PROMO_DELETE", Name = "Delete Promotion", Description = "Can delete promotional campaigns", CategoryId = promotionalCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PROMO_TOGGLE", Name = "Toggle Promotion Status", Description = "Can activate/deactivate promotions", CategoryId = promotionalCatId },
 
                     // ✅ Part Management
-                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId,IsDefault=true },
+
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
                     
+                    // ✅ Booking Management (Inspections & Jobs)
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view inspections and jobs", CategoryId = bookingCatId, IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can create, update, and manage inspections and jobs", CategoryId = bookingCatId },
+
+                     //Technician
+                     //Inspections Technician
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_VIEW", Name = "View Inspection Technician", Description = "Can view assigned inspection and all servivice", CategoryId = inspectionTechnicianId, IsDefault= true ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_UPDATE", Name = "Update Inspection Technician", Description = "Can update assigned inspection", CategoryId = inspectionTechnicianId , IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_DELETE", Name = "Delete Inspection Technician", Description = "Can delete service or part to assigned inspection", CategoryId = inspectionTechnicianId ,IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ADD_SERVICE", Name = "Add Service Inspection ", Description = "Can add service to assigned inspection", CategoryId = inspectionTechnicianId,IsSystem = true },
+                    // Job Technician 
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_VIEW", Name = "View Job Technician", Description = "Can view assigned job", CategoryId = jobTechnicianId , IsDefault= true },
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_UPDATE", Name = "Update Job Technician", Description = "Can update status assigned job", CategoryId = jobTechnicianId },
+                    // Notification
+                     new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_VIEW", Name = "View Notifications", Description = "Can view notifications", CategoryId = notificationId , IsDefault = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_MARK", Name = "Mark Notifications", Description = "Can mark notifications", CategoryId = notificationId },
+                     new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_DELETE", Name = "Delete Notifications", Description = "Can delete notifications", CategoryId = notificationId },
+                     // Repair History
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_HISTORY_VIEW", Name = "View Repair History", Description = "Can view repair history", CategoryId = repairHistoryId , IsDefault= true },
+                     // Repair
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_VIEW", Name = "View Repair", Description = "Can view repair", CategoryId = repairId, IsDefault= true, IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_CREATE", Name = "Create Repair", Description = "Can create repair", CategoryId = repairId ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_UPDATE", Name = "Update Repair", Description = "Can update repair", CategoryId = repairId ,IsSystem = true},
+                     // Specification
+                     new Permission { Id = Guid.NewGuid(), Code = "SPECIFICATION_MANAGE", Name = "Manage Specification", Description = "Can view  and search specification of vehicle",IsSystem = true, CategoryId = specificationId },
+                     // Statistical
+                     new Permission { Id = Guid.NewGuid(), Code = "STATISTICAL_VIEW", Name = "View Statistical", Description = "Can view Statistical page", CategoryId = statisticalId , IsDefault = true, IsSystem = true},
+            
                     // ✅ Vehicle Management
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = bookingCatId },
-                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = bookingCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = basicCatId,IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_CREATE", Name = "Create Vehicle", Description = "Can create new vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_UPDATE", Name = "Update Vehicle", Description = "Can update vehicle information", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_DELETE", Name = "Delete Vehicle", Description = "Can delete vehicles", CategoryId = basicCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_SCHEDULE", Name = "Schedule Vehicle Service", Description = "Can schedule vehicle services", CategoryId = basicCatId },
 
                      // ✅ Log View
 
-                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId },
+                     new Permission { Id = Guid.NewGuid(), Code = "LOG_VIEW", Name = "View Logs", Description = "Can view Logs page", CategoryId = logCatId,IsDefault=true },
 
+                     // ✅ JobRepair
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_UPDATE", Name = "Job Update", Description = "Can view Logs page", CategoryId = jobCatId },
                      // ✅ PolicySecurity
 
                      new Permission { Id = Guid.NewGuid(), Code = "POLICY_MANAGEMENT", Name = "Policy Management", Description = "Can view and update, revert Policy,Policy history.", CategoryId = policyCatId }
 
-                };
+     };
+
 
             foreach (var perm in defaultPermissions)
             {
@@ -322,42 +384,80 @@ namespace Garage_pro_api.DbInit
                                 "Admin", new[]
                                 {
                                     // User
-                                    "USER_VIEW", "USER_EDIT", "USER_DELETE",
-            
-                                    // Booking
-                                    "BOOKING_VIEW", "BOOKING_MANAGE",
-            
+                                    "USER_VIEW", "USER_EDIT", "USER_DELETE",          
+                                    //Stat
+                                    "VIEW_STAT",
                                     // Role
                                     "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
             
                                     // ✅ Branch Management
-                                    "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE",
+                                    "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE","BRANCH_IMPORT_EXCEL",
             
                                     // ✅ Service Management
                                     "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",
             
                                     // ✅ Promotional Management
                                     "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE",
-                                    // ✅ LOG MONITORING
-                                    "LOG_VIEW" , 
-                                    
-                                    // ✅ Security Policy
+                                    // LOG MONITORING
+                                    "LOG_VIEW" ,                                    
+                                    // Security Policy
                                     "POLICY_MANAGEMENT"
                                 }
                             },
                             {
                                 "Manager", new[]
                                 {
-                                    "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
-                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
-                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
+                                    // User Management
+                                    "USER_VIEW",
+                                    // Branch Management
+                                    "BRANCH_VIEW",
+                                    // Service Management
+                                    "SERVICE_VIEW",
+                                    // Promotional Management
+                                    "PROMO_VIEW",
+                                    // Part Management
+                                    "PART_VIEW",
+                                    // Booking Management (Inspections & Jobs)
+                                    "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    // Vehicle Management
+                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DELETE", "VEHICLE_SCHEDULE",
+                                    // Repair Management
+                                    "REPAIR_VIEW", "REPAIR_CREATE", "REPAIR_UPDATE", "REPAIR_HISTORY_VIEW"
                                 }
                             },
                             {
-                                "Customer", new[] { "BOOKING_VIEW" }
+                                "Customer", new[] { "BASIC_ACCESS" }
                             },
                             {
-                                "Technician", new[] { "BOOKING_MANAGE" }
+                                "Technician", new[] 
+                                { 
+                                    "BOOKING_MANAGE",
+
+                                    "INSPECTION_TECHNICIAN_VIEW", 
+                                    "INSPECTION_TECHNICIAN_UPDATE", 
+                                    "INSPECTION_TECHNICIAN_DELETE",
+                                    "INSPECTION_ADD_SERVICE",
+
+                                    "JOB_TECHNICIAN_VIEW", 
+                                    "JOB_TECHNICIAN_UPDATE",
+
+
+                                    "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
+                                    "REPAIR_HISTORY_VIEW",
+                                    
+                                    "REPAIR_UPDATE",
+                                    "REPAIR_CREATE",
+                                    "REPAIR_VIEW",
+
+                                    "SPECIFICATION_MANAGE",
+
+                                    "STATISTICAL_VIEW"
+
+
+
+
+                                }
+
                             }
                         };
 
@@ -399,22 +499,63 @@ namespace Garage_pro_api.DbInit
             {
                 var categories = new List<PartCategory>
         {
-            new PartCategory { CategoryName = "Front - Engine" },
-            new PartCategory { CategoryName = "Rear - Engine" },
-            new PartCategory { CategoryName = "Front - Brakes" },
-            new PartCategory { CategoryName = "Rear - Brakes" },
-            new PartCategory { CategoryName = "Front - Electrical System" },
-            new PartCategory { CategoryName = "Rear - Electrical System" },
-            new PartCategory { CategoryName = "Front - Suspension" },
-            new PartCategory { CategoryName = "Rear - Suspension" },
-            new PartCategory { CategoryName = "Front - Cooling System" },
-            new PartCategory { CategoryName = "Rear - Cooling System" }
+            new PartCategory
+            {
+                CategoryName = "Front - Engine",
+                Description = "Components related to the front engine area."
+            },
+            new PartCategory
+            {
+                CategoryName = "Rear - Engine",
+                Description = "Components related to the rear engine area."
+            },
+            new PartCategory
+            {
+                CategoryName = "Front - Brakes",
+                Description = "Brake components located at the front of the vehicle."
+            },
+            new PartCategory
+            {
+                CategoryName = "Rear - Brakes",
+                Description = "Brake components located at the rear of the vehicle."
+            },
+            new PartCategory
+            {
+                CategoryName = "Front - Electrical System",
+                Description = "Electrical system components located at the front section."
+            },
+            new PartCategory
+            {
+                CategoryName = "Rear - Electrical System",
+                Description = "Electrical system components located at the rear section."
+            },
+            new PartCategory
+            {
+                CategoryName = "Front - Suspension",
+                Description = "Suspension components located in the front area."
+            },
+            new PartCategory
+            {
+                CategoryName = "Rear - Suspension",
+                Description = "Suspension components located in the rear area."
+            },
+            new PartCategory
+            {
+                CategoryName = "Front - Cooling System",
+                Description = "Cooling system components at the front of the vehicle."
+            },
+            new PartCategory
+            {
+                CategoryName = "Rear - Cooling System",
+                Description = "Cooling system components at the rear of the vehicle."
+            }
         };
 
                 _context.PartCategories.AddRange(categories);
                 await _context.SaveChangesAsync();
             }
         }
+
 
 
         private async Task SeedPartsAsync()
@@ -714,11 +855,11 @@ namespace Garage_pro_api.DbInit
             }
         }
 
-        private async Task SeedServicePartsAsync()
+        private async Task SeedServicePartCategoriesAsync()
         {
-            if (!_context.ServiceParts.Any())
+            if (!_context.ServicePartCategories.Any())
             {
-                // Lấy các service từ database - sửa tên service cho khớp với dữ liệu đã seed
+                // Lấy service
                 var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
                 var premiumOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Premium Oil Change");
                 var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
@@ -726,52 +867,52 @@ namespace Garage_pro_api.DbInit
                 var shockAbsorberReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Shock Absorber Replacement");
                 var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
 
-                // Lấy các parts từ database - sửa tên part cho khớp với dữ liệu đã seed
-                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
-                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
-                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
-                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
-                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
-                var batteryCheap = await _context.Parts.FirstAsync(p => p.Name == "Battery (Cheap)");
-                var alternatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Alternator (Medium)");
-                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
-                var controlArmMedium = await _context.Parts.FirstAsync(p => p.Name == "Control Arm (Medium)");
-                var radiatorMedium = await _context.Parts.FirstAsync(p => p.Name == "Radiator (Medium)");
-                var coolantHoseCheap = await _context.Parts.FirstAsync(p => p.Name == "Coolant Hose (Cheap)");
+                // Lấy Part Category (đã seed trước đó)
+                var frontEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Engine");
+                var rearEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Engine");
+                var frontBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Brakes");
+                var rearBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Brakes");
+                var frontElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Electrical System");
+                var rearElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Electrical System");
+                var frontSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Suspension");
+                var rearSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Suspension");
+                var frontCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Cooling System");
+                var rearCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Cooling System");
 
-                var mappings = new List<ServicePart>
+                var mappings = new List<ServicePartCategory>
         {
-            // 🔧 Basic Oil Change Service
-            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = basicOilChange.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
+            // Basic Oil Change
+            new ServicePartCategory { ServiceId = basicOilChange.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = basicOilChange.ServiceId, PartCategoryId = rearEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔧 Premium Oil Change Service - dùng linh kiện cao cấp hơn
-            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = oilFilterMedium.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = premiumOilChange.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
+            // Premium Oil Change
+            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = rearEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🚗 Brake Pad Replacement
-            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakePadCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = brakePadReplacement.ServiceId, PartId = brakeDiscMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Brake Pad Replacement
+            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = frontBrakes.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = rearBrakes.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔋 Battery Health Check - có thể cần thay thế
-            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = batteryCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = batteryHealthCheck.ServiceId, PartId = alternatorMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Battery Health Check
+            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = rearElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🛞 Shock Absorber Replacement
-            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = shockAbsorberCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = shockAbsorberReplacement.ServiceId, PartId = controlArmMedium.PartId, CreatedAt = DateTime.UtcNow },
+            // Shock Absorber Replacement
+            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = frontSuspension.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = rearSuspension.LaborCategoryId, CreatedAt = DateTime.UtcNow },
 
-            // 🔍 Full Engine Diagnostic - các linh kiện cần kiểm tra
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = sparkPlugExpensive.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = airFilterCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = coolantHoseCheap.PartId, CreatedAt = DateTime.UtcNow },
-            new ServicePart { ServiceId = fullEngineDiagnostic.ServiceId, PartId = radiatorMedium.PartId, CreatedAt = DateTime.UtcNow }
+            // Full Engine Diagnostic
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontCooling.LaborCategoryId, CreatedAt = DateTime.UtcNow },
+            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = rearCooling.LaborCategoryId, CreatedAt = DateTime.UtcNow }
         };
 
-                _context.ServiceParts.AddRange(mappings);
+                _context.ServicePartCategories.AddRange(mappings);
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedBranchesAsync()
         {
@@ -1323,7 +1464,7 @@ namespace Garage_pro_api.DbInit
                 Name = "Year-End Free Checkup",
                 Description = "Get a free maintenance check for any service above 1,000,000₫.",
                 Type = CampaignType.Discount,
-                DiscountType = DiscountType.FreeService,
+                DiscountType = DiscountType.Fixed,
                 DiscountValue = 0,
                 StartDate = new DateTime(DateTime.UtcNow.Year, 12, 1),
                 EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31),
@@ -1682,7 +1823,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Standard oil change completed successfully",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1698,7 +1838,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Tire rotation completed - even wear achieved",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1716,7 +1855,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Waiting for customer approval of brake repair",
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedByManagerId = userId
             },
 
@@ -1733,7 +1871,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Urgent brake system repair in progress",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 3,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1749,7 +1886,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Engine performance optimization",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1767,7 +1903,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Scheduled tire rotation service",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                Level = 1,
                 AssignedByManagerId = userId
             }
         };
@@ -2075,164 +2210,407 @@ namespace Garage_pro_api.DbInit
                 Console.WriteLine("Repair Orders and related data seeded successfully!");
             }
         }
+        // Thêm using nếu cần:
+        // using System.Globalization;
 
-        private async Task SeedInspectionsAsync()
+        private async Task SeedManyCustomersAndRepairOrdersAsync(int customerCount = 10, int totalOrdersTarget = 500)
         {
-            // Check if there are already inspections seeded
-            if (!_context.Inspections.Any())
+            // Nếu đã có nhiều dữ liệu thì không seed nữa (bảo vệ)
+            if (_context.RepairOrders.Any() || _context.Users.Count() > 50) // adjust thresholds as needed
             {
-                using var transaction = await _context.Database.BeginTransactionAsync();
+                Console.WriteLine("Already have RepairOrders or plenty of users - skipping bulk seeding.");
+                return;
+            }
 
-                try
+            var rand = new Random();
+
+            // Ensure we have required pools
+            var services = await _context.Services.ToListAsync();
+            var parts = await _context.Parts.ToListAsync();
+            var branches = await _context.Branches.ToListAsync();
+            var statuses = await _context.OrderStatuses.ToListAsync();
+            var technicians = await _context.Technicians.ToListAsync();
+            var vehicleBrands = await _context.VehicleBrands.ToListAsync();
+            var vehicleColors = await _context.VehicleColors.ToListAsync();
+            var vehicleModels = await _context.VehicleModels.ToListAsync();
+
+            if (!services.Any() || !parts.Any() || !branches.Any() || !statuses.Any() || !technicians.Any() || !vehicleBrands.Any())
+            {
+                throw new Exception("Missing required seed data (services/parts/branches/technicians/etc.). Run other seeders first.");
+            }
+
+            var createdCustomerIds = new List<string>();
+            var createdVehicleIds = new List<Guid>();
+
+            // 1. Create customers
+            for (int i = 0; i < customerCount; i++)
+            {
+                var phone = $"0910000{100 + i}";
+                var existing = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phone);
+                ApplicationUser user;
+                if (existing == null)
                 {
-                    // Get the repair order with the specified ID
-                    var repairOrderId = Guid.Parse("6c062742-e2d5-4f11-953f-eee173fcfa79");
-                    var repairOrder = await _context.RepairOrders.FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
-                    
-                    // If the repair order doesn't exist, we'll create one
-                    if (repairOrder == null)
+                    user = new ApplicationUser
                     {
-                        // Get required entities for creating a repair order
-                        var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
-                        var vehicle = await _context.Vehicles.FirstOrDefaultAsync();
-                        var branch = await _context.Branches.FirstOrDefaultAsync();
-                        var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Pending");
-                        
-                        if (customerUser != null && vehicle != null && branch != null && pendingStatus != null)
-                        {
-                            // Create a RepairRequest first
-                            var repairRequest = new RepairRequest
-                            {
-                                RepairRequestID = Guid.NewGuid(),
-                                VehicleID = vehicle.VehicleId,
-                                UserID = customerUser.Id,
-                                Description = "Inspection repair order",
-                                BranchId = branch.BranchId,
-                                RequestDate = DateTime.UtcNow,
-                                Status = RepairRequestStatus.Pending,
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow,
-                                EstimatedCost = 0,
-                                ArrivalWindowStart = DateTimeOffset.UtcNow
-                            };
+                        UserName = phone,
+                        PhoneNumber = phone,
+                        PhoneNumberConfirmed = true,
+                        FirstName = $"Customer{i + 1}",
+                        LastName = "Demo",
+                        Email = $"{phone}@demo.local",
+                        EmailConfirmed = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
 
-                            _context.RepairRequests.Add(repairRequest);
-                            await _context.SaveChangesAsync();
-
-                            repairOrder = new RepairOrder
-                            {
-                                RepairOrderId = repairOrderId,
-                                ReceiveDate = DateTime.UtcNow,
-                                RoType = RoType.WalkIn,
-                                EstimatedCompletionDate = DateTime.UtcNow.AddDays(3),
-                                Cost = 0,
-                                EstimatedAmount = 0,
-                                PaidAmount = 0,
-                                PaidStatus = PaidStatus.Unpaid,
-                                EstimatedRepairTime = 2,
-                                Note = "Inspection repair order",
-                                BranchId = branch.BranchId,
-                                StatusId = pendingStatus.OrderStatusId,
-                                VehicleId = vehicle.VehicleId,
-                                UserId = customerUser.Id,
-                                RepairRequestId = repairRequest.RepairRequestID, // Use actual RepairRequest ID
-                                CreatedAt = DateTime.UtcNow,
-                                UpdatedAt = DateTime.UtcNow
-                            };
-                            
-                            _context.RepairOrders.Add(repairOrder);
-                            await _context.SaveChangesAsync();
-                        }
-                        else
-                        {
-                            throw new Exception("Required entities for creating repair order not found");
-                        }
+                    var password = _configuration["AdminUser:Password"] ?? "String@1";
+                    var result = await _userManager.CreateAsync(user, password);
+                    if (!result.Succeeded)
+                    {
+                        Console.WriteLine($"Create customer {phone} failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                        continue;
                     }
 
-                    // Get two services and two parts for the inspection
-                    var services = await _context.Services.Take(2).ToListAsync();
-                    var parts = await _context.Parts.Take(2).ToListAsync();
-                    
-                    if (services.Count < 2 || parts.Count < 2)
-                    {
-                        throw new Exception("Not enough services or parts available for seeding");
-                    }
-
-                    // Create the inspection
-                    var inspection = new Inspection
-                    {
-                        InspectionId = Guid.NewGuid(),
-                        RepairOrderId = repairOrderId,
-                        TechnicianId = null,
-                        Status = InspectionStatus.New,
-                        CustomerConcern = "Vehicle inspection for maintenance services",
-                        Finding = "Initial inspection findings",
-                        IssueRating = IssueRating.Good,
-                        Note = "Initial inspection note",
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-
-                    _context.Inspections.Add(inspection);
-                    await _context.SaveChangesAsync();
-
-                    // Create ServiceInspection entries (2 services)
-                    var serviceInspections = new List<ServiceInspection>
-                    {
-                        new ServiceInspection
-                        {
-                            ServiceInspectionId = Guid.NewGuid(),
-                            ServiceId = services[0].ServiceId,
-                            InspectionId = inspection.InspectionId,
-                            ConditionStatus = ConditionStatus.Good,
-                            CreatedAt = DateTime.UtcNow
-                        },
-                        new ServiceInspection
-                        {
-                            ServiceInspectionId = Guid.NewGuid(),
-                            ServiceId = services[1].ServiceId,
-                            InspectionId = inspection.InspectionId,
-                            ConditionStatus = ConditionStatus.Replace,
-                            CreatedAt = DateTime.UtcNow
-                        }
-                    };
-
-                    _context.ServiceInspections.AddRange(serviceInspections);
-                    await _context.SaveChangesAsync();
-
-                    // Create PartInspection entries (1 part for each service)
-                    var partInspections = new List<PartInspection>
-                    {
-                        new PartInspection
-                        {
-                            PartInspectionId = Guid.NewGuid(),
-                            PartId = parts[0].PartId,
-                            InspectionId = inspection.InspectionId,
-                            CreatedAt = DateTime.UtcNow
-                        },
-                        new PartInspection
-                        {
-                            PartInspectionId = Guid.NewGuid(),
-                            PartId = parts[1].PartId,
-                            InspectionId = inspection.InspectionId,
-                            CreatedAt = DateTime.UtcNow
-                        }
-                    };
-
-                    _context.PartInspections.AddRange(partInspections);
-                    await _context.SaveChangesAsync();
-
-                    await transaction.CommitAsync();
-                    Console.WriteLine("Inspection data seeded successfully!");
+                    await _userManager.AddToRoleAsync(user, "Customer");
                 }
-                catch (Exception ex)
+                else
                 {
-                    await transaction.RollbackAsync();
-                    Console.WriteLine($"Error seeding inspection data: {ex.Message}");
-                    throw;
+                    user = existing;
+                }
+
+                createdCustomerIds.Add(user.Id);
+
+                // 1.a Create 1-3 vehicles for this customer
+                int vehiclePerCust = rand.Next(1, 4);
+                for (int v = 0; v < vehiclePerCust; v++)
+                {
+                    var brand = vehicleBrands[rand.Next(vehicleBrands.Count)];
+                    var modelsForBrand = vehicleModels.Where(m => m.BrandID == brand.BrandID).ToList();
+                    var model = modelsForBrand.Any() ? modelsForBrand[rand.Next(modelsForBrand.Count)] : vehicleModels[rand.Next(vehicleModels.Count)];
+                    var color = vehicleColors[rand.Next(vehicleColors.Count)];
+
+                    var vehicle = new Vehicle
+                    {
+                        BrandId = brand.BrandID,
+                        UserId = user.Id,
+                        ModelId = model.ModelID,
+                        ColorId = color.ColorID,
+                        LicensePlate = $"{rand.Next(10, 99)}A{rand.Next(10000, 99999)}",
+                        VIN = Guid.NewGuid().ToString().Substring(0, 17),
+                        Year = 2015 + rand.Next(0, 8),
+                        Odometer = rand.Next(0, 200000),
+                        LastServiceDate = DateTime.UtcNow.AddDays(-rand.Next(0, 400)),
+                        NextServiceDate = DateTime.UtcNow.AddDays(rand.Next(1, 180)),
+                        WarrantyStatus = rand.Next(0, 2) == 0 ? "Expired" : "Active",
+                        CreatedAt = DateTime.UtcNow.AddDays(-rand.Next(0, 400))
+                    };
+
+                    _context.Vehicles.Add(vehicle);
+                    await _context.SaveChangesAsync(); // need id
+                    createdVehicleIds.Add(vehicle.VehicleId);
                 }
             }
+
+            // 2. Create many RepairOrders distributed over last 24 months
+            var startDate = DateTime.UtcNow.AddMonths(-24);
+            int createdOrders = 0;
+            var batchSaveInterval = 100;
+
+            var allCustomers = await _userManager.Users.Where(u => createdCustomerIds.Contains(u.Id)).ToListAsync();
+            var allVehicles = await _context.Vehicles.Where(v => createdVehicleIds.Contains(v.VehicleId)).ToListAsync();
+
+            var jobList = new List<Job>();
+            var repairList = new List<Repair>();
+            var jobPartsList = new List<JobPart>();
+            var jobTechniciansList = new List<JobTechnician>();
+            var repairOrdersList = new List<RepairOrder>();
+            var repairOrderServicesList = new List<RepairOrderService>();
+            var quotationsList = new List<Quotation>();
+            var quotationServicesList = new List<QuotationService>();
+            var quotationServicePartsList = new List<QuotationServicePart>();
+
+            while (createdOrders < totalOrdersTarget)
+            {
+                // pick random date between startDate and now
+                var span = (DateTime.UtcNow - startDate).TotalDays;
+                var randDays = rand.NextDouble() * span;
+                var receiveDate = startDate.AddDays(randDays);
+
+                var customer = allCustomers[rand.Next(allCustomers.Count)];
+                var vehicle = allVehicles[rand.Next(allVehicles.Count)];
+                var branch = branches[rand.Next(branches.Count)];
+                var status = statuses[rand.Next(statuses.Count)];
+                var roType = (RoType)(rand.Next(Enum.GetNames(typeof(RoType)).Length)); // assume enum exists
+
+                var estimatedRepairTime = rand.Next(1, 8);
+                var estAmount = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).Sum(s => s.Price);
+
+                // Create per-order temporary lists so we can decide paid/completed after jobs are created
+                var currentJobs = new List<Job>();
+                var currentRepairs = new List<Repair>();
+                var currentJobParts = new List<JobPart>();
+                var currentJobTechnicians = new List<JobTechnician>();
+                var currentRepairOrderServices = new List<RepairOrderService>();
+                var currentQuotations = new List<Quotation>();
+                var currentQuotationServices = new List<QuotationService>();
+                var currentQuotationServiceParts = new List<QuotationServicePart>();
+
+                //  --- CREATE REPAIR REQUEST FIRST (to satisfy FK) ---
+                var repairRequest = new RepairRequest
+                {
+                    RepairRequestID = Guid.NewGuid(),
+                    BranchId = Guid.Parse("8B1CEB17-019E-41FD-A4F0-7E91941007C8"),
+                    UserID = customer.Id,
+                    VehicleID = vehicle.VehicleId,
+                    Description = $"Auto-generated repair request for {customer.FirstName}",
+                    CreatedAt = receiveDate,
+                    UpdatedAt = receiveDate.AddHours(rand.Next(0, 48)),
+                    Status = RepairRequestStatus.Accept  // hoặc cột status bạn đang dùng
+                };
+
+                // add to batch list
+                _context.RepairRequests.Add(repairRequest);
+                // không SaveChanges đây, để batch flush cùng RepairOrder
+
+
+                var ro = new RepairOrder
+                {
+
+                    RepairOrderId = Guid.NewGuid(),
+                    ReceiveDate = receiveDate,
+                    RoType = roType,
+                    EstimatedCompletionDate = receiveDate.AddDays(rand.Next(1, 10)),
+                    // CompletionDate will be set later if all jobs completed
+                    Cost = 0, // set later if paid
+                    EstimatedAmount = estAmount,
+                    PaidAmount = 0, // set later if paid
+                    PaidStatus = PaidStatus.Pending, // default, may change after job creation
+                    EstimatedRepairTime = estimatedRepairTime,
+                    Note = $"Auto-generated order for stats ({receiveDate.ToString("yyyy-MM-dd")})",
+                    BranchId = branch.BranchId,
+                    StatusId = status.OrderStatusId,
+                    VehicleId = vehicle.VehicleId,
+                    UserId = customer.Id,
+                    RepairRequestId = repairRequest.RepairRequestID,
+                    CreatedAt = receiveDate,
+                    UpdatedAt = receiveDate.AddDays(rand.Next(0, 5))
+                };
+
+                repairOrdersList.Add(ro);
+
+                // pick 1-3 services for this RO
+                var chosenServices = services.OrderBy(s => rand.Next()).Take(rand.Next(1, 4)).ToList();
+                foreach (var s in chosenServices)
+                {
+                    var ros = new RepairOrderService
+                    {
+                        RepairOrderServiceId = Guid.NewGuid(),
+                        RepairOrderId = ro.RepairOrderId,
+                        ServiceId = s.ServiceId,
+                        CreatedAt = receiveDate
+                    };
+                    repairOrderServicesList.Add(ros);
+                    currentRepairOrderServices.Add(ros);
+                }
+
+                // create 1-3 jobs corresponding to services (and also related repairs, parts, technicians)
+                foreach (var s in chosenServices)
+                {
+                    var job = new Job
+                    {
+                        JobId = Guid.NewGuid(),
+                        ServiceId = s.ServiceId,
+                        RepairOrderId = ro.RepairOrderId,
+                        JobName = s.ServiceName,
+                        Status = (JobStatus)rand.Next(Enum.GetNames(typeof(JobStatus)).Length),
+                        Deadline = receiveDate.AddDays(rand.Next(0, 10)),
+                        TotalAmount = s.Price,
+                        Note = "Auto-generated job",
+                        CreatedAt = receiveDate,
+                        UpdatedAt = receiveDate,
+                        AssignedAt = rand.Next(0, 2) == 0 ? (DateTime?)receiveDate.AddHours(rand.Next(1, 48)) : null,
+                        AssignedByManagerId = customer.Id
+                    };
+
+                    currentJobs.Add(job);
+                    jobList.Add(job);
+
+                    // attach parts 0-3 per job
+                    var partsForJob = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 3)).ToList();
+                    foreach (var p in partsForJob)
+                    {
+                        var jp = new JobPart
+                        {
+                            JobPartId = Guid.NewGuid(),
+                            JobId = job.JobId,
+                            PartId = p.PartId,
+                            Quantity = rand.Next(1, 4),
+                            UnitPrice = p.Price,
+                            CreatedAt = receiveDate
+                        };
+                        jobPartsList.Add(jp);
+                        currentJobParts.Add(jp);
+                    }
+
+                    // assign 1-2 technicians
+                    var techsForJob = technicians.OrderBy(t => rand.Next()).Take(rand.Next(1, Math.Min(3, technicians.Count))).ToList();
+                    foreach (var t in techsForJob)
+                    {
+                        var jt = new JobTechnician
+                        {
+                            JobTechnicianId = Guid.NewGuid(),
+                            JobId = job.JobId,
+                            TechnicianId = t.TechnicianId,
+                            CreatedAt = receiveDate
+                        };
+                        jobTechniciansList.Add(jt);
+                        currentJobTechnicians.Add(jt);
+                    }
+
+                    // some jobs create Repairs entries (completed/in-progress)
+                    var repair = new Repair
+                    {
+                        RepairId = Guid.NewGuid(),
+                        JobId = job.JobId,
+                        Description = $"Repair record for {job.JobName}",
+                        StartTime = job.AssignedAt ?? receiveDate,
+                        EndTime = job.Status == JobStatus.Completed ? (DateTime?)(job.AssignedAt?.AddHours(rand.Next(1, 6)) ?? receiveDate.AddHours(rand.Next(1, 6))) : null,
+                        ActualTime = job.Status == JobStatus.Completed ? TimeSpan.FromHours(rand.Next(1, 6)) : (TimeSpan?)null,
+                        EstimatedTime = TimeSpan.FromHours(rand.Next(1, 6)),
+                        Notes = "Auto-generated repair note"
+                    };
+                    repairList.Add(repair);
+                    currentRepairs.Add(repair);
+                }
+
+                // occasional quotation for pending orders
+                if (rand.NextDouble() < 0.2) // 20% orders have quotations
+                {
+                    var q = new Quotation
+                    {
+                        QuotationId = Guid.NewGuid(),
+                        RepairOrderId = ro.RepairOrderId,
+                        UserId = customer.Id,
+                        VehicleId = vehicle.VehicleId,
+                        CreatedAt = receiveDate,
+                        SentToCustomerAt = receiveDate.AddDays(rand.Next(0, 2)),
+                        Status = QuotationStatus.Sent,
+                        TotalAmount = estAmount,
+                        DiscountAmount = rand.Next(0, 200000),
+                        Note = "Auto-generated quotation",
+                        ExpiresAt = receiveDate.AddDays(7)
+                    };
+                    quotationsList.Add(q);
+                    currentQuotations.Add(q);
+
+                    // add 1-2 services
+                    var qServices = chosenServices.Take(rand.Next(1, chosenServices.Count + 1)).ToList();
+                    foreach (var s in qServices)
+                    {
+                        var qs = new QuotationService
+                        {
+                            QuotationServiceId = Guid.NewGuid(),
+                            QuotationId = q.QuotationId,
+                            ServiceId = s.ServiceId,
+                            IsSelected = true,
+                            Price = s.Price
+                        };
+                        quotationServicesList.Add(qs);
+                        currentQuotationServices.Add(qs);
+
+                        // maybe add parts
+                        var qParts = parts.OrderBy(p => rand.Next()).Take(rand.Next(0, 2)).ToList();
+                        foreach (var p in qParts)
+                        {
+                            var qsp = new QuotationServicePart
+                            {
+                                QuotationServicePartId = Guid.NewGuid(),
+                                QuotationServiceId = qs.QuotationServiceId,
+                                PartId = p.PartId,
+                                IsSelected = true,
+                                Price = p.Price,
+                                Quantity = rand.Next(1, 3)
+                            };
+                            quotationServicePartsList.Add(qsp);
+                            currentQuotationServiceParts.Add(qsp);
+                        }
+                    }
+                }
+
+                // --- NEW: decide payment/completion AFTER jobs/repairs created for this RO ---
+                bool allJobsCompleted = currentJobs.Count > 0 && currentJobs.All(j => j.Status == JobStatus.Completed);
+                bool allRepairsHaveEnd = currentRepairs.Count == currentJobs.Count && currentRepairs.All(r => r.EndTime.HasValue);
+
+                if (allJobsCompleted && allRepairsHaveEnd)
+                {
+                    // completed: set completion date to latest repair end
+                    var latestEnd = currentRepairs.Max(r => r.EndTime.Value);
+                    ro.CompletionDate = latestEnd;
+                    ro.Cost = estAmount;
+                    ro.PaidAmount = estAmount;
+                    ro.PaidStatus = PaidStatus.Paid;
+                    // make sure UpdatedAt reflects completion
+                    ro.UpdatedAt = latestEnd;
+                }
+                else
+                {
+                    // NOT fully completed => NEVER set Paid.
+                    // Decide Pending or Partial (partial = customer paid some deposit, but job(s) still not finished)
+                    var paidDecision = rand.Next(0, 3); // 0 unpaid,1 partial,2 unpaid (treated same as 0)
+                    if (paidDecision == 1)
+                    {
+                        // Partial payment allowed but order is not marked Paid and CompletionDate stays null
+                        ro.PaidAmount = estAmount / 2;
+                        ro.Cost = 0; // final cost not set until completion
+                        ro.PaidStatus = PaidStatus.Partial;
+                    }
+                    else
+                    {
+                        ro.PaidAmount = 0;
+                        ro.Cost = 0;
+                        ro.PaidStatus = PaidStatus.Pending;
+                    }
+                    ro.CompletionDate = null;
+                }
+
+                createdOrders++;
+
+                // flush in batches
+                if (createdOrders % batchSaveInterval == 0 || createdOrders == totalOrdersTarget)
+                {
+                    // Add and save batches
+                    _context.RepairOrders.AddRange(repairOrdersList);
+                    _context.RepairOrderServices.AddRange(repairOrderServicesList);
+                    _context.Jobs.AddRange(jobList);
+                    _context.Repairs.AddRange(repairList);
+                    _context.JobParts.AddRange(jobPartsList);
+                    _context.JobTechnicians.AddRange(jobTechniciansList);
+                    _context.Quotations.AddRange(quotationsList);
+                    _context.QuotationServices.AddRange(quotationServicesList);
+                    _context.QuotationServiceParts.AddRange(quotationServicePartsList);
+
+                    await _context.SaveChangesAsync();
+
+                    // clear lists to free memory
+                    repairOrdersList.Clear();
+                    repairOrderServicesList.Clear();
+                    jobList.Clear();
+                    repairList.Clear();
+                    jobPartsList.Clear();
+                    jobTechniciansList.Clear();
+                    quotationsList.Clear();
+                    quotationServicesList.Clear();
+                    quotationServicePartsList.Clear();
+
+                    Console.WriteLine($"Seeded {createdOrders} repair orders so far...");
+                }
+
+                // safety break if loop unexpectedly long
+                if (createdOrders >= totalOrdersTarget) break;
+            }
+
+            Console.WriteLine($"Bulk seeding finished - total repair orders created: {createdOrders}");
         }
-    }
 
     }
+
+}

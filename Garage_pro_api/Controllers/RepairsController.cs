@@ -17,7 +17,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("odata/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Technician")]
+  
     public class RepairsController : ODataController
     {
         private readonly IRepairService _repairService;
@@ -43,10 +43,9 @@ namespace Garage_pro_api.Controllers
             return technician?.TechnicianId ?? Guid.Empty;
         }
 
-        // GET: odata/Repairs/{repairOrderId}
-
         [EnableQuery]
         [HttpGet("{repairOrderId}")]
+        [Authorize("REPAIR_VIEW")]
         public async Task<IActionResult> GetRepairOrderDetails(Guid repairOrderId)
         {
             var technicianId = await GetTechnicianIdAsync();
@@ -73,6 +72,7 @@ namespace Garage_pro_api.Controllers
         }
 
         [HttpPost("Create")]
+        [Authorize("REPAIR_CREATE")]
         public async Task<IActionResult> CreateRepair([FromBody] RepairCreateDto dto)
         {
             var technicianId = await GetTechnicianIdAsync();
@@ -114,8 +114,8 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        // PUT: odata/Repairs/{repairId}/Update
         [HttpPut("{repairId}/Update")]
+        [Authorize("REPAIR_UPDATE")]
         public async Task<IActionResult> UpdateRepair(Guid repairId, [FromBody] RepairUpdateDto dto)
         {
             var technicianId = await GetTechnicianIdAsync();

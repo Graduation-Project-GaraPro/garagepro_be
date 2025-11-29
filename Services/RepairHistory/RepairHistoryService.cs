@@ -91,7 +91,6 @@ namespace Services.RepairHistory
                         TotalAmount = job.TotalAmount,
                         Deadline = job.Deadline,
                         Note = job.Note,
-                        Level = job.Level,
                         JobParts = job.JobParts.Select(p => new Dtos.RepairHistory.JobPartDto
                         {
                             PartName = p.Part.Name,

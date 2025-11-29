@@ -18,6 +18,19 @@ namespace Garage_pro_api.Controllers
             _service = service;
         }
 
+        [Authorize(Policy = "PROMO_VIEW")]
+        [HttpGet("{id:guid}/analytics")]
+        public async Task<ActionResult<CampaignAnalyticsDto>> GetCampaignAnalytics(Guid id)
+        {
+            var analytics = await _service.GetCampaignAnalyticsAsync(id);
+
+            if (analytics == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(analytics);
+        }
 
 
         [Authorize(Policy = "PROMO_VIEW")]

@@ -85,7 +85,8 @@ namespace Garage_pro_api.Controllers
                     Description = request.Description ?? string.Empty,
                     ColorName = request.ColorName,
                     HexCode = request.HexCode,
-                    OrderStatusId = request.OrderStatusId
+                    OrderStatusId = request.OrderStatusId,
+                    IsDefault = request.IsDefault
                 };
 
                 var createdLabel = await _labelService.CreateLabelAsync(label);
@@ -123,7 +124,8 @@ namespace Garage_pro_api.Controllers
                     Description = request.Description ?? string.Empty,
                     ColorName = request.ColorName,
                     HexCode = request.HexCode,
-                    OrderStatusId = request.OrderStatusId
+                    OrderStatusId = request.OrderStatusId,
+                    IsDefault = request.IsDefault
                 };
 
                 var updatedLabel = await _labelService.UpdateLabelAsync(label);
@@ -187,7 +189,8 @@ namespace Garage_pro_api.Controllers
         public string? Description { get; set; }
         public string ColorName { get; set; } = string.Empty;
         public string HexCode { get; set; } = string.Empty;
-        public int OrderStatusId { get; set; } // Changed from Guid to int
+        public int OrderStatusId { get; set; }
+        public bool IsDefault { get; set; } = false;
     }
 
     public class UpdateLabelRequest
@@ -196,6 +199,7 @@ namespace Garage_pro_api.Controllers
         public string? Description { get; set; }
         public string ColorName { get; set; } = string.Empty;
         public string HexCode { get; set; } = string.Empty;
-        public int OrderStatusId { get; set; } // Changed from Guid to int
+        public int OrderStatusId { get; set; }
+        public bool IsDefault { get; set; } = false;
     }
 }

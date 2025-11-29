@@ -14,9 +14,9 @@ namespace BusinessObject.Campaigns
 
         public string? Description { get; set; } // NULLABLE
 
-        public CampaignType Type { get; set; } // ENUM('discount','seasonal','loyalty')
+        public CampaignType Type { get; set; } 
 
-        public DiscountType DiscountType { get; set; } // ENUM('percentage','fixed','free_service')
+        public DiscountType DiscountType { get; set; } 
 
         public decimal DiscountValue { get; set; } // >= 0
 
@@ -34,11 +34,15 @@ namespace BusinessObject.Campaigns
 
         public int UsedCount { get; set; } = 0; // DEFAULT 0
 
+
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime UpdatedAt { get; set; }
 
         // Many-to-many
+        public virtual ICollection<QuotationService>? QuotationServices { get; set; }
+         = new List<QuotationService>();
         public virtual ICollection<PromotionalCampaignService> PromotionalCampaignServices { get; set; }
             = new List<PromotionalCampaignService>();
         public virtual ICollection<VoucherUsage> VoucherUsages { get; set; }
@@ -55,6 +59,6 @@ namespace BusinessObject.Campaigns
     {
         Percentage,    // 'percentage'
         Fixed,         // 'fixed'
-        FreeService    // 'free_service'
+        
     }
 }

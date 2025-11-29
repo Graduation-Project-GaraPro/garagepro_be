@@ -54,7 +54,6 @@ namespace BusinessObject
         public virtual ICollection<Job>? Jobs { get; set; } = new List<Job>();
         // Many-to-many
         public virtual ICollection<BranchService>? BranchServices { get; set; } = new List<BranchService>();
-        public virtual ICollection<ServicePart>? ServiceParts { get; set; } = new List<ServicePart>();
 
         // Many-to-many
         public virtual ICollection<PromotionalCampaignService>? PromotionalCampaignServices { get; set; }

@@ -9,6 +9,7 @@ using Dtos.Campaigns;
 using Microsoft.EntityFrameworkCore;
 using Repositories.CampaignRepositories;
 using Repositories.ServiceRepositories;
+using Utils;
 
 namespace Services.CampaignServices
 {
@@ -68,6 +69,242 @@ namespace Services.CampaignServices
 
             return (_mapper.Map<IEnumerable<PromotionalCampaignDto>>(campaigns), totalCount);
         }
+
+
+
+        public async Task<CampaignAnalyticsDto?> GetCampaignAnalyticsAsync(Guid campaignId)
+        {
+            var exists = await _repository.ExistsAsync(campaignId);
+            if (!exists)
+            {
+                return null;
+            }
+
+            var quotationServices = await _repository.GetQuotationServicesByCampaignAsync(campaignId);
+
+            if (quotationServices == null || quotationServices.Count == 0)
+            {
+                return new CampaignAnalyticsDto
+                {
+                    TotalUsage = 0
+                };
+            }
+
+            
+            var totalUsage = quotationServices.Count;
+
+           
+            var topCustomers = quotationServices
+                .Where(qs => qs.Quotation != null && qs.Quotation.User != null)
+                .GroupBy(qs => new
+                {
+                    qs.Quotation.UserId,
+                    FirstName = qs.Quotation.User.FirstName,
+                    LastName = qs.Quotation.User.LastName
+                })
+                .Select(g => new TopCustomerDto
+                {
+                    CustomerId = g.Key.UserId,
+                    CustomerName = $"{g.Key.FirstName} {g.Key.LastName}".Trim(),
+                    UsageCount = g.Count()
+                })
+                .OrderByDescending(x => x.UsageCount)
+                .Take(10)
+                .ToList();
+
+            // Usage by date: group by quotation created date
+           
+            var usageByDate = quotationServices
+                .Where(qs => qs.Quotation != null)
+                .GroupBy(qs => qs.Quotation.CreatedAt.Date)
+                .Select(g => new UsageByDateDto
+                {
+                    Date = g.Key,
+                    UsageCount = g.Count()
+                })
+                .OrderBy(x => x.Date)
+                .ToList();
+
+            // Service performance: group by service
+            var servicePerformance = quotationServices
+                .Where(qs => qs.Service != null)
+                .GroupBy(qs => new
+                {
+                    qs.ServiceId,
+                    qs.Service!.ServiceName
+                })
+                .Select(g => new ServicePerformanceDto
+                {
+                    ServiceId = g.Key.ServiceId,
+                    ServiceName = g.Key.ServiceName,
+                    UsageCount = g.Count()
+                })
+                .OrderByDescending(x => x.UsageCount)
+                .ToList();
+
+            var result = new CampaignAnalyticsDto
+            {
+                TotalUsage = totalUsage,
+                TopCustomers = topCustomers,
+                UsageByDate = usageByDate,
+                ServicePerformance = servicePerformance
+            };
+
+            return result;
+        }
+
+
+
+        public async Task<CustomerPromotionResponse> GetCustomerPromotionsForServiceAsync(Guid serviceId, decimal currentOrderValue = 0)
+        {
+            // Validate input
+            if (serviceId == Guid.Empty)
+                throw new Exception("Service ID is required");
+
+            if (currentOrderValue < 0)
+                throw new Exception("Order value cannot be negative");
+
+            // Lấy service
+            var service = await _serviceRepository.GetByIdAsync(serviceId);
+            if (service == null)
+                throw new Exception("Service is not exist");
+
+            // Lấy tất cả promotions cho service này (không filter theo currentOrderValue)
+            var allPromotions = await _repository.GetAvailablePromotionsForServiceAsync(serviceId);
+
+            var promotionDtos = new List<CustomerPromotionDto>();
+
+            foreach (var promotion in allPromotions)
+            {
+                var (isEligible, calculatedDiscount, eligibilityMessage) =
+                    await EvaluatePromotionEligibility(promotion, service.Price, currentOrderValue);
+
+                var finalPrice = currentOrderValue - calculatedDiscount;
+
+                var promotionDto = new CustomerPromotionDto
+                {
+                    Id = promotion.Id,
+                    Name = promotion.Name,
+                    Description = promotion.Description,
+                    Type = promotion.Type,
+                    DiscountType = promotion.DiscountType,
+                    DiscountValue = promotion.DiscountValue,
+                    StartDate = promotion.StartDate,
+                    EndDate = promotion.EndDate,
+                    IsActive = promotion.IsActive,
+                    MinimumOrderValue = promotion.MinimumOrderValue,
+                    MaximumDiscount = promotion.MaximumDiscount,
+                    UsageLimit = promotion.UsageLimit,
+                    UsedCount = promotion.UsedCount,
+                    CreatedAt = promotion.CreatedAt,
+                    UpdatedAt = promotion.UpdatedAt,
+                    IsEligible = isEligible,
+                    CalculatedDiscount = calculatedDiscount,
+                    FinalPriceAfterDiscount = finalPrice,
+                    DiscountDisplayText = GetDiscountDisplayText(promotion),
+                    EligibilityMessage = eligibilityMessage
+                };
+
+                promotionDtos.Add(promotionDto);
+            }
+
+            // Sắp xếp theo thứ tự tốt nhất:
+            // 1. Đủ điều kiện trước, không đủ điều kiện sau
+            // 2. Trong nhóm đủ điều kiện: sắp xếp theo calculated discount giảm dần
+            // 3. Trong nhóm không đủ điều kiện: sắp xếp theo minimum order value tăng dần
+            var sortedPromotions = promotionDtos
+                .OrderByDescending(p => p.IsEligible)
+                .ThenByDescending(p => p.IsEligible ? p.CalculatedDiscount : 0)
+                .ThenBy(p => p.IsEligible ? 0 : (p.MinimumOrderValue ?? 0))
+                .ToList();
+
+            var bestPromotion = sortedPromotions.FirstOrDefault(p => p.IsEligible);
+
+            return new CustomerPromotionResponse
+            {
+                ServiceId = service.ServiceId,
+                ServiceName = service.ServiceName,
+                ServicePrice = service.Price,
+                Promotions = sortedPromotions,
+                BestPromotion = bestPromotion
+            };
+        }
+
+        private string GetDiscountDisplayText(PromotionalCampaign promotion)
+        {
+            return promotion.DiscountType switch
+            {
+                DiscountType.Fixed => $"-{promotion.DiscountValue.ToVnd()}",
+                DiscountType.Percentage => $"-{promotion.DiscountValue}%",
+                _ => string.Empty
+            };
+        }
+
+        private async Task<(bool IsEligible, decimal CalculatedDiscount, string EligibilityMessage)>
+            EvaluatePromotionEligibility(PromotionalCampaign promotion, decimal servicePrice, decimal currentOrderValue)
+        {
+            var now = DateTime.Now;
+            var calculatedDiscount = 0m;
+            var eligibilityMessage = string.Empty;
+
+            // Check basic conditions
+            if (!promotion.IsActive)
+            {
+                eligibilityMessage = "Promotion is no longer valid";
+                return (false, calculatedDiscount, eligibilityMessage);
+            }
+
+            if (promotion.StartDate > now || promotion.EndDate < now)
+            {
+                eligibilityMessage = "Promotion is not within the valid period";
+                return (false, calculatedDiscount, eligibilityMessage);
+            }
+
+            if (promotion.UsageLimit.HasValue && promotion.UsedCount >= promotion.UsageLimit.Value)
+            {
+                eligibilityMessage = "Promotion usage limit has been reached";
+                return (false, calculatedDiscount, eligibilityMessage);
+            }
+
+            // Check minimum order value
+            if (promotion.MinimumOrderValue.HasValue && currentOrderValue < promotion.MinimumOrderValue.Value)
+            {
+                var missingAmount = promotion.MinimumOrderValue.Value - currentOrderValue;
+                eligibilityMessage = $"Need {missingAmount.ToVnd()} more to apply this promotion";
+
+                calculatedDiscount = CalculatePotentialDiscount(promotion, servicePrice);
+                return (false, calculatedDiscount, eligibilityMessage);
+            }
+
+            // If eligible, calculate actual discount
+            calculatedDiscount = _repository.CalculateActualDiscountValue(promotion, servicePrice);
+            eligibilityMessage = "Eligible to apply";
+
+            return (true, calculatedDiscount, eligibilityMessage);
+        }
+
+        private decimal CalculatePotentialDiscount(PromotionalCampaign promotion, decimal servicePrice)
+        {
+            if (promotion.DiscountType == DiscountType.Fixed)
+            {
+                return promotion.MaximumDiscount.HasValue
+                    ? Math.Min(promotion.DiscountValue, promotion.MaximumDiscount.Value)
+                    : promotion.DiscountValue;
+            }
+            else // Percentage
+            {
+                var discountAmount = servicePrice * promotion.DiscountValue / 100;
+                return promotion.MaximumDiscount.HasValue
+                    ? Math.Min(discountAmount, promotion.MaximumDiscount.Value)
+                    : discountAmount;
+            }
+        }
+
+       
+
+       
+
+
         public async Task<bool> UpdateStatusAsync(Guid id, bool isActive)
         {
             var campaign = await _repository.GetByIdAsync(id);
@@ -404,8 +641,7 @@ namespace Services.CampaignServices
                 throw new ArgumentException($"A campaign with name '{dto.Name}' is already active or not yet expired.");
         }
 
-
-
+        
     }
 
 }

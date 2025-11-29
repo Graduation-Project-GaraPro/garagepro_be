@@ -1,4 +1,5 @@
 ﻿using BusinessObject.Notifications;
+using Dtos.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,20 +10,17 @@ namespace Services.Notifications
 {
     public interface INotificationService
     {
-        // Gửi notification
         Task SendJobAssignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName);
-        Task SendJobReassignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName);       
-
-        // Lấy notification
-        Task<List<Notification>> GetUserNotificationsAsync(string userId);
-        Task<List<Notification>> GetUnreadNotificationsAsync(string userId);
+        Task SendInspectionAssignedNotificationAsync(string userId, Guid inspectionId, string customerConcern, Guid repairOrderId);
+        Task<List<NotificationDto>> GetUserNotificationsAsync(string userId);
+        Task<List<NotificationDto>> GetUnreadNotificationsAsync(string userId);
         Task<int> GetUnreadCountAsync(string userId);
-
-        // Đọc notification
         Task<bool> MarkNotificationAsReadAsync(Guid notificationId, string userId);
         Task<bool> MarkAllNotificationsAsReadAsync(string userId);
-
-        // Xóa notification (chỉ owner)
         Task<bool> DeleteNotificationAsync(Guid notificationId, string userId);
+
+        Task SendJobDeadlineReminderAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursRemaining);
+        Task SendJobOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursOverdue);
+        Task SendJobRecurringOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int daysOverdue);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,8 +19,11 @@ namespace Dtos.RepairProgressDto
         public string VehicleLicensePlate { get; set; } = string.Empty;
         public string VehicleModel { get; set; } = string.Empty;
         public string StatusName { get; set; } = string.Empty;
+        public bool IsArchived { get; set; } = false;
+        public DateTime? ArchivedAt { get; set; }
         public List<LabelDto> Labels { get; set; } = new List<LabelDto>();
         public decimal ProgressPercentage { get; set; }
         public string ProgressStatus { get; set; } = string.Empty;
+        public FeedbackDto FeedBacks { get; set; } = new FeedbackDto();
     }
 }

@@ -6,7 +6,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Enums;
 namespace BusinessObject
 {
     public class Inspection
@@ -32,8 +31,6 @@ namespace BusinessObject
         [MaxLength(500)]
         public string? Note { get; set; }
 
-        public string? ImageUrl { get; set; }
-
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
@@ -41,8 +38,7 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual RepairOrder RepairOrder { get; set; }
-        public virtual InspectionAndRepair.Technician Technician { get; set; } // Thêm quan hệ với Technician
-
+        public virtual InspectionAndRepair.Technician Technician { get; set; } 
         public virtual ICollection<ServiceInspection> ServiceInspections { get; set; }
         public virtual ICollection<PartInspection> PartInspections { get; set; }
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();

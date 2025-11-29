@@ -36,6 +36,28 @@ namespace Garage_pro_api.Controllers
             if (role == null) return NotFound();
             return Ok(role);
         }
+
+        [HttpPost("{roleId}/assign-users")]
+        public async Task<IActionResult> AssignRoleToUsers(string roleId, [FromBody] AssignRoleToUsersRequest request)
+        {
+
+            try
+            {
+                var dto = new AssignRoleToUsersDto
+                {
+                    RoleId = roleId,
+                    UserIds = request.UserIds,
+                    GrantedBy = User?.Identity?.Name ?? "system"
+                };
+
+                //await _roleService.AssignRoleToUsersAsync(dto);
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest( new { message = ex.Message });
+            }
+        }
         [Authorize(Policy = "ROLE_CREATE")]
 
         [HttpPost]
@@ -135,23 +157,9 @@ namespace Garage_pro_api.Controllers
         }
 
 
-        //[HttpGet("{id}/permissions")]
-        //public async Task<IActionResult> GetPermissionsForRole(string id)
-        //    => Ok(await _roleService.GetPermissionsForRoleAsync(id));
-
-        //[HttpPost("{id}/permissions/{permissionId}")]
-        //public async Task<IActionResult> AssignPermission(string id,Guid permissionId)
-        //{
-        //    var currentUser = await _userManager.GetUserAsync(User);
-        //    await _roleService.AssignPermissionAsync(id, permissionId, currentUser.Id);
-        //    return NoContent();
-        //}
-
-        //[HttpDelete("{id}/permissions/{permissionId}")]
-        //public async Task<IActionResult> RemovePermission(string id, Guid permissionId)
-        //{
-        //    await _roleService.RemovePermissionAsync(id, permissionId);
-        //    return NoContent();
-        //}
+    }
+    public class AssignRoleToUsersRequest
+    {
+        public List<string> UserIds { get; set; } = new();
     }
 }

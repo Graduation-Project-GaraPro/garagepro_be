@@ -125,6 +125,7 @@ namespace Repositories.Customers
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RepairImages)
+                .Include(r => r.RepairOrder)
                 .Include(r => r.Customer)
                 
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);

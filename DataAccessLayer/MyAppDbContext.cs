@@ -1,4 +1,4 @@
-﻿﻿using BusinessObject;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject;
 using BusinessObject.AiChat;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
@@ -45,7 +45,6 @@ namespace DataAccessLayer
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }
-        public DbSet<PartSpecification> PartSpecifications { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
         public DbSet<Quotation> Quotations { get; set; }
@@ -82,7 +81,7 @@ namespace DataAccessLayer
         public DbSet<ServicePartCategory> ServicePartCategories { get; set; }
         public DbSet<PartInspection> PartInspections { get; set; }
 
-        public DbSet<ServicePart> ServiceParts { get; set; }
+      
 
         public DbSet<SystemLog> SystemLogs { get; set; }
         public DbSet<Notification> Notifications { get; set; }
@@ -169,6 +168,14 @@ namespace DataAccessLayer
                       .WithOne(qsp => qsp.QuotationService)
                       .HasForeignKey(qsp => qsp.QuotationServiceId)
                       .OnDelete(DeleteBehavior.Cascade);
+
+                // Thêm khóa ngoại đến PromotionalCampaign
+               
+                    entity.HasOne(qs => qs.AppliedPromotion)
+                        .WithMany(pc => pc.QuotationServices)
+                        .HasForeignKey(qs => qs.AppliedPromotionId)
+                        .OnDelete(DeleteBehavior.Restrict);
+                
             });
 
             // Add the new QuotationServicePart configuration
@@ -273,7 +280,6 @@ namespace DataAccessLayer
             {
                 b.Property(u => u.FirstName).HasMaxLength(50);
                 b.Property(u => u.LastName).HasMaxLength(50);
-                b.Property(u => u.FullName).HasMaxLength(100).IsRequired();
                 b.Property(u => u.Email).HasMaxLength(100).IsRequired();
                 b.Property(u => u.PhoneNumber).HasMaxLength(20);
                 b.Property(u => u.AvatarUrl).HasMaxLength(200);
@@ -439,15 +445,13 @@ namespace DataAccessLayer
                 entity.HasKey(e => e.InspectionId);
                 entity.Property(e => e.CustomerConcern).HasMaxLength(500);
                 entity.Property(e => e.Finding).HasMaxLength(500);
-                entity.Property(e => e.Note).HasMaxLength(500);
-                entity.Property(e => e.ImageUrl).HasMaxLength(500);
+                entity.Property(e => e.Note).HasMaxLength(500);              
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .IsRequired();
                 entity.Property(e => e.IssueRating)
                       .HasConversion<string>()
                       .IsRequired();
-                entity.Property(e => e.ImageUrl).HasMaxLength(500);
                 entity.Property(e => e.CreatedAt).IsRequired();
 
                 entity.HasOne(i => i.Technician)
@@ -760,7 +764,9 @@ namespace DataAccessLayer
                 .WithMany()
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-
+            modelBuilder.Entity<Payment>()
+                .Property(p => p.PaymentId)
+                .ValueGeneratedNever();
 
 
             // ServiceCategory self-referencing relationship
@@ -773,35 +779,12 @@ namespace DataAccessLayer
 
 
 
-            modelBuilder.Entity<FeedBack>(entity =>
-            {
-                entity.ToTable("FeedBacks");
-                entity.HasKey(f => f.FeedBackId);
+            modelBuilder.Entity<FeedBack>()
+    .HasOne(f => f.RepairOrder)
+    .WithOne(ro => ro.FeedBack)
+    .HasForeignKey<FeedBack>(f => f.RepairOrderId)
+    .OnDelete(DeleteBehavior.Cascade);
 
-                entity.Property(f => f.Description)
-                      .HasMaxLength(1000);
-
-                entity.Property(f => f.Rating)
-                      .IsRequired();
-
-                entity.Property(f => f.CreatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-                entity.Property(f => f.UpdatedAt)
-                      .HasDefaultValueSql("GETUTCDATE()");
-
-
-                entity.HasOne(f => f.User)
-                      .WithMany()
-                      .HasForeignKey(f => f.UserId)
-                      .OnDelete(DeleteBehavior.Cascade);
-
-
-                entity.HasOne(f => f.RepairOrder)
-                      .WithMany()
-                      .HasForeignKey(f => f.RepairOrderId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
 
             // Job relationships - prevent cascade delete conflicts
             modelBuilder.Entity<Job>()
@@ -870,6 +853,32 @@ namespace DataAccessLayer
                 .WithMany(os => os.Labels)
                 .HasForeignKey(l => l.OrderStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Many-to-many RepairOrder <-> Label relationship
+            modelBuilder.Entity<RepairOrder>()
+                .HasMany(ro => ro.Labels)
+                .WithMany(l => l.RepairOrders)
+                .UsingEntity<Dictionary<string, object>>(
+                    "RepairOrderLabels",
+                    j => j
+                        .HasOne<Label>()
+                        .WithMany()
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j => j
+                        .HasOne<RepairOrder>()
+                        .WithMany()
+                        .HasForeignKey("RepairOrderId")
+                        .OnDelete(DeleteBehavior.Cascade),
+                    j =>
+                    {
+                        j.HasKey("RepairOrderId", "LabelId");
+                        j.ToTable("RepairOrderLabels");
+                        j.Property<DateTime>("AssignedAt")
+                            .HasDefaultValueSql("GETUTCDATE()");
+                        j.HasIndex("RepairOrderId");
+                        j.HasIndex("LabelId");
+                    });
 
             // Configure OrderStatus to use identity
             modelBuilder.Entity<OrderStatus>(entity =>
@@ -965,18 +974,7 @@ namespace DataAccessLayer
 
             });
 
-            // PartSpecification configuration
-            modelBuilder.Entity<PartSpecification>(entity =>
-            {
-                entity.HasKey(e => e.SpecId);
-                entity.Property(e => e.SpecValue).IsRequired().HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).IsRequired();
-
-                entity.HasOne(ps => ps.Part)
-                      .WithMany(p => p.PartSpecifications)
-                      .HasForeignKey(ps => ps.PartId)
-                      .OnDelete(DeleteBehavior.Cascade);
-            });
+            
 
             // Many-to-many Branch <-> Service
             modelBuilder.Entity<BranchService>().HasKey(bs => new { bs.BranchId, bs.ServiceId });
@@ -998,22 +996,22 @@ namespace DataAccessLayer
 
 
             // ServicePart configuration
-            modelBuilder.Entity<ServicePart>(entity =>
-            {
+            //modelBuilder.Entity<ServicePart>(entity =>
+            //{
 
-                entity.HasKey(e => new { e.ServiceId, e.PartId });
-                entity.Property(e => e.CreatedAt).IsRequired();
+            //    entity.HasKey(e => new { e.ServiceId, e.PartId });
+            //    entity.Property(e => e.CreatedAt).IsRequired();
 
-                entity.HasOne(sp => sp.Service)
-                      .WithMany(s => s.ServiceParts)
-                      .HasForeignKey(sp => sp.ServiceId)
-                      .OnDelete(DeleteBehavior.Cascade);
+            //    entity.HasOne(sp => sp.Service)
+            //          .WithMany(s => s.ServiceParts)
+            //          .HasForeignKey(sp => sp.ServiceId)
+            //          .OnDelete(DeleteBehavior.Cascade);
 
-                entity.HasOne(sp => sp.Part)
-                      .WithMany(p => p.ServiceParts)
-                      .HasForeignKey(sp => sp.PartId)
-                      .OnDelete(DeleteBehavior.Restrict);
-            });
+            //    entity.HasOne(sp => sp.Part)
+            //          .WithMany(p => p.ServiceParts)
+            //          .HasForeignKey(sp => sp.PartId)
+            //          .OnDelete(DeleteBehavior.Restrict);
+            //});
             // branch 1 -> application User
 
             modelBuilder.Entity<ApplicationUser>()

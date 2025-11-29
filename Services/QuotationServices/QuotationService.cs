@@ -87,6 +87,9 @@ namespace Services.QuotationServices
 
             if (createQuotationDto.RepairOrderId.HasValue)
             {
+                // Multiple quotations are now allowed for the same repair order
+                // This enables creating alternative quotes with different service/part combinations
+                
                 var repairOrder = await _repairOrderRepository.GetByIdAsync(createQuotationDto.RepairOrderId.Value);
                 if (repairOrder != null)
                 {
@@ -161,7 +164,7 @@ namespace Services.QuotationServices
                             {
                                 QuotationServiceId = quotationService.QuotationServiceId,
                                 PartId = partDto.PartId,
-                                IsSelected = partDto.IsSelected, // Parts are automatically selected when service is selected
+                                IsSelected = partDto.IsSelected, // Use the IsSelected from DTO (pre-selected by technician or manager)
                                 Price = part.Price, // Store the actual part price at the time of quotation creation
                                 Quantity = partDto.Quantity
                             };
@@ -241,8 +244,8 @@ namespace Services.QuotationServices
         {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
 
-            //if (quotation == null)
-            //    return new Exception("Not Found Quotation");
+            if (quotation == null)
+                throw new Exception("Not Found Quotation");
 
             var dto = _mapper.Map<QuotationDetailDto>(quotation);
 
@@ -274,7 +277,7 @@ namespace Services.QuotationServices
                                             }).ToList();
             }
 
-            //return Ok(dto);
+           
 
             return dto;
         }
@@ -356,6 +359,183 @@ namespace Services.QuotationServices
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 
+        public async Task<QuotationDetailDto> UpdateQuotationDetailsAsync(Guid quotationId, UpdateQuotationDetailsDto updateDto)
+        {
+            var existingQuotation = await _quotationRepository.GetByIdAsync(quotationId);
+            if (existingQuotation == null)
+                throw new ArgumentException($"Quotation with ID {quotationId} not found.");
+
+            // Update basic quotation fields
+            if (updateDto.Note != null)
+                existingQuotation.Note = updateDto.Note;
+            
+            if (updateDto.ExpiresAt.HasValue)
+                existingQuotation.ExpiresAt = updateDto.ExpiresAt.Value;
+            
+            if (updateDto.DiscountAmount.HasValue)
+                existingQuotation.DiscountAmount = updateDto.DiscountAmount.Value;
+
+            existingQuotation.UpdatedAt = DateTime.UtcNow;
+
+            // Update services and parts
+            if (updateDto.QuotationServices != null)
+            {
+                foreach (var serviceDto in updateDto.QuotationServices)
+                {
+                    // Delete service if flagged
+                    if (serviceDto.ShouldDelete && serviceDto.QuotationServiceId.HasValue)
+                    {
+                        var serviceToDelete = existingQuotation.QuotationServices
+                            .FirstOrDefault(qs => qs.QuotationServiceId == serviceDto.QuotationServiceId.Value);
+                        
+                        if (serviceToDelete != null)
+                        {
+                            // Delete all parts first
+                            var partsToDelete = serviceToDelete.QuotationServiceParts.ToList();
+                            foreach (var part in partsToDelete)
+                            {
+                                await _quotationServicePartRepository.DeleteAsync(part.QuotationServicePartId);
+                            }
+                            
+                            // Delete the service
+                            await _quotationServiceRepository.DeleteAsync(serviceToDelete.QuotationServiceId);
+                        }
+                        continue;
+                    }
+
+                    // Update existing service
+                    if (serviceDto.QuotationServiceId.HasValue)
+                    {
+                        var existingService = existingQuotation.QuotationServices
+                            .FirstOrDefault(qs => qs.QuotationServiceId == serviceDto.QuotationServiceId.Value);
+                        
+                        if (existingService != null)
+                        {
+                            // Manager can update service selection status
+                            existingService.IsSelected = serviceDto.IsSelected;
+                            // Note: IsRequired cannot be changed - it's set during inspection
+                            await _quotationServiceRepository.UpdateAsync(existingService);
+
+                            // Update parts for this service
+                            if (serviceDto.QuotationServiceParts != null)
+                            {
+                                foreach (var partDto in serviceDto.QuotationServiceParts)
+                                {
+                                    // Delete part if flagged
+                                    if (partDto.ShouldDelete && partDto.QuotationServicePartId.HasValue)
+                                    {
+                                        await _quotationServicePartRepository.DeleteAsync(partDto.QuotationServicePartId.Value);
+                                        continue;
+                                    }
+
+                                    // Update existing part
+                                    if (partDto.QuotationServicePartId.HasValue)
+                                    {
+                                        var existingPart = existingService.QuotationServiceParts
+                                            .FirstOrDefault(qsp => qsp.QuotationServicePartId == partDto.QuotationServicePartId.Value);
+                                        
+                                        if (existingPart != null)
+                                        {
+                                            // Manager can update quantity and pre-selection (recommendation)
+                                            existingPart.Quantity = partDto.Quantity;
+                                            existingPart.IsSelected = partDto.IsSelected;
+                                            await _quotationServicePartRepository.UpdateAsync(existingPart);
+                                        }
+                                    }
+                                    // Add new part
+                                    else
+                                    {
+                                        var part = await _partRepository.GetByIdAsync(partDto.PartId);
+                                        if (part == null)
+                                            throw new ArgumentException($"Part with ID {partDto.PartId} not found.");
+
+                                        var newPart = new QuotationServicePart
+                                        {
+                                            QuotationServiceId = existingService.QuotationServiceId,
+                                            PartId = partDto.PartId,
+                                            IsSelected = partDto.IsSelected, // Manager can pre-select (recommend)
+                                            Price = part.Price,
+                                            Quantity = partDto.Quantity
+                                        };
+                                        
+                                        await _quotationServicePartRepository.CreateAsync(newPart);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Add new service
+                    else
+                    {
+                        var service = await _serviceRepository.GetByIdAsync(serviceDto.ServiceId);
+                        if (service == null)
+                            throw new ArgumentException($"Service with ID {serviceDto.ServiceId} not found.");
+
+                        var newService = new QuotationService
+                        {
+                            QuotationId = existingQuotation.QuotationId,
+                            ServiceId = serviceDto.ServiceId,
+                            IsSelected = serviceDto.IsSelected,
+                            IsRequired = false, // Default to false for new services added by manager
+                            Price = service.Price
+                        };
+                        
+                        var createdService = await _quotationServiceRepository.CreateAsync(newService);
+
+                        // Add parts for the new service
+                        if (serviceDto.QuotationServiceParts != null)
+                        {
+                            foreach (var partDto in serviceDto.QuotationServiceParts)
+                            {
+                                if (partDto.ShouldDelete) continue;
+
+                                var part = await _partRepository.GetByIdAsync(partDto.PartId);
+                                if (part == null)
+                                    throw new ArgumentException($"Part with ID {partDto.PartId} not found.");
+
+                                var newPart = new QuotationServicePart
+                                {
+                                    QuotationServiceId = createdService.QuotationServiceId,
+                                    PartId = partDto.PartId,
+                                    IsSelected = partDto.IsSelected, // Manager can pre-select (recommend)
+                                    Price = part.Price,
+                                    Quantity = partDto.Quantity
+                                };
+                                
+                                await _quotationServicePartRepository.CreateAsync(newPart);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Recalculate total amount
+            var updatedQuotation = await _quotationRepository.GetByIdAsync(quotationId);
+            decimal totalAmount = 0;
+            
+            foreach (var qs in updatedQuotation.QuotationServices)
+            {
+                if (qs.IsSelected)
+                {
+                    totalAmount += qs.Price;
+                    
+                    foreach (var part in qs.QuotationServiceParts)
+                    {
+                        if (part.IsSelected)
+                        {
+                            totalAmount += part.Price * part.Quantity;
+                        }
+                    }
+                }
+            }
+            
+            updatedQuotation.TotalAmount = totalAmount;
+            await _quotationRepository.UpdateAsync(updatedQuotation);
+
+            // Return the updated quotation with full details
+            return await GetQuotationDetailByIdAsync(quotationId);
+        }
+
         public async Task<bool> DeleteQuotationAsync(Guid quotationId)
         {
             return await _quotationRepository.DeleteAsync(quotationId);
@@ -366,83 +546,9 @@ namespace Services.QuotationServices
             return await _quotationRepository.ExistsAsync(quotationId);
         }
 
-        public async Task<QuotationDto> ProcessCustomerResponseAsync(CustomerQuotationResponseDto responseDto)
-        {
-            // Lấy quotation cùng toàn bộ dữ liệu liên quan
-            var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
-            if (quotation == null)
-                throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
-
-            // Cập nhật trạng thái và thời gian phản hồi của khách hàng
-            quotation.Status = Enum.Parse<QuotationStatus>(responseDto.Status);
-            quotation.CustomerResponseAt = DateTime.UtcNow;
-            quotation.Note = responseDto.CustomerNote;
-            // Cập nhật lựa chọn dịch vụ (QuotationServices)
-            if (responseDto.SelectedServices != null && responseDto.SelectedServices.Any())
-            {
-                var selectedServiceIds = responseDto.SelectedServices
-                    .Select(s => s.QuotationServiceId)
-                    .ToHashSet();
-
-                foreach (var qs in quotation.QuotationServices)
-                {
-                    qs.IsSelected = selectedServiceIds.Contains(qs.QuotationServiceId);
-                }
-            }
-            else
-            {
-                // Nếu không có dịch vụ nào được gửi lên, có thể giữ nguyên hoặc bỏ chọn tất cả
-                foreach (var qs in quotation.QuotationServices)
-                {
-                    qs.IsSelected = false;
-                }
-            }
-
-            // Cập nhật lựa chọn phụ tùng (QuotationServiceParts)
-            //if (responseDto.SelectedServiceParts != null && responseDto.SelectedServiceParts.Any())
-            //{
-            //    var selectedPartIds = responseDto.SelectedServiceParts
-            //        .Select(p => p.QuotationServicePartId)
-            //        .ToHashSet();
-
-            //    foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
-            //    {
-            //        part.IsSelected = selectedPartIds.Contains(part.QuotationServicePartId);
-            //    }
-            //}
-            //else
-            //{
-            //    // Nếu không có part nào được chọn, bỏ chọn tất cả
-            //    foreach (var part in quotation.QuotationServices.SelectMany(qs => qs.QuotationServiceParts))
-            //    {
-            //        part.IsSelected = false;
-            //    }
-            //}
-
-            // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
-            //await ValidateAndCorrectPartSelectionAsync(quotation);
-
-
-            // Lưu lại thay đổi
-            var updatedQuotation = await _quotationRepository.UpdateAsync(quotation);
-
-            await _quotationHubContext
-                .Clients
-                .Group($"Quotation_{updatedQuotation.QuotationId}")
-                .SendAsync("QuotationUpdated", new
-                {
-                    updatedQuotation.QuotationId,
-                    updatedQuotation.UserId,
-                    updatedQuotation.RepairOrderId,
-                    updatedQuotation.TotalAmount,
-                    updatedQuotation.Status,
-                    updatedQuotation.Note,
-                    UpdatedAt = updatedQuotation.UpdatedAt ?? DateTime.UtcNow
-                });
-
-
-            return _mapper.Map<QuotationDto>(updatedQuotation);
-        }
+        // REMOVED: ProcessCustomerResponseAsync - Use CustomerResponseQuotationService instead
+        // This method has been deprecated in favor of CustomerResponseQuotationService.ProcessCustomerResponseAsync
+        // which includes proper validation, promotion handling, and transaction management
 
 
 
@@ -490,7 +596,8 @@ namespace Services.QuotationServices
             quotation.Status = BusinessObject.Enums.QuotationStatus.Approved;
             quotation.CustomerResponseAt = DateTime.UtcNow;
 
-            // When approving, ensure required services are selected and select all parts for selected services
+            // When approving without customer response (direct approval), select all required services and their parts
+            // This is a fallback - normally customer should use ProcessCustomerResponseAsync
             foreach (var quotationService in quotation.QuotationServices)
             {
                 // Ensure required services are selected
@@ -498,24 +605,19 @@ namespace Services.QuotationServices
                 {
                     quotationService.IsSelected = true;
                     Console.WriteLine($"Selected required service ID: {quotationService.ServiceId}");
-                }
-
-                // Select all parts for selected services
-                if (quotationService.IsSelected)
-                {
+                    
+                    // Select all parts for required services
                     foreach (var part in quotationService.QuotationServiceParts)
                     {
                         part.IsSelected = true;
                     }
-                    Console.WriteLine($"Selected {quotationService.QuotationServiceParts.Count} parts for service ID: {quotationService.ServiceId}");
                 }
+                // For optional services, keep customer's selection (don't change IsSelected)
+                // For parts in selected services, keep customer's selection (don't change IsSelected)
             }
 
-            await _quotationRepository.UpdateAsync(quotation);
-
-            // Note: We no longer auto-generate jobs here as per new requirements
-            // Jobs will be manually created by manager using CopyQuotationToJobsAsync
-
+            await _quotationRepository.UpdateAsync(quotation);         
+            
             Console.WriteLine($"Quotation approved successfully");
             return true;
         }

@@ -45,6 +45,7 @@ using Services.SmsSenders;
 using Services.VehicleServices;
 using System.Text;
 using Microsoft.AspNetCore.OData;
+using Repositories.Revenue;
 using AutoMapper;
 using Repositories.InspectionAndRepair;
 using Services.InspectionAndRepair;
@@ -69,6 +70,7 @@ using Services.RepairProgressServices;
 using Garage_pro_api.BackgroundServices;
 using Services.UserServices;
 using Repositories.PaymentRepositories;
+using Repositories.Revenue;
 using Services.FCMServices;
 using Repositories.EmergencyRequestRepositories;
 using Services.EmergencyRequestService;
@@ -85,6 +87,8 @@ using Services.Notifications;
 using Services.PaymentServices;
 using BusinessObject.PayOsModels;
 using Services.PayOsClients;
+using Services.BillServices;
+using Services.DeadlineServices;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -161,6 +165,8 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<InspectionTechnicianProfile>();
     cfg.AddProfile<JobTechnicianProfile>();
     cfg.AddProfile<QuotationProfile>();
+    cfg.AddProfile<RepairOrderBillProfile>();
+    cfg.AddProfile<RepairOrderArchivedProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -353,7 +359,13 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
 builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
-builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
+{
+    var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+});
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 builder.Services.AddScoped<IRepairRepository, RepairRepository>();
@@ -371,6 +383,10 @@ builder.Services.AddScoped<IRolePermissionRepository, RolePermissionRepository>(
 
 builder.Services.AddScoped<IPermissionService, PermissionService>();
 builder.Services.Decorate<IPermissionService, CachedPermissionService>();
+
+builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>();
+
+builder.Services.AddScoped<IRepairOrderPaymentService, RepairOrderPaymentService>();
 
 
 builder.Services.AddScoped<IRepairProgressRepository, RepairProgressRepository>();
@@ -402,6 +418,9 @@ builder.Services.AddScoped<IVehicleIntegrationService, VehicleIntegrationService
 builder.Services.AddScoped<IEmergencyRequestRepository, EmergencyRequestRepository>();
 builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 // Quotation services
+
+builder.Services.AddScoped<ICustomerResponseQuotationService, CustomerResponseQuotationService>();
+
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
 // Update to use the new QuotationServicePartRepository
@@ -496,9 +515,13 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>(); // Add QR code service
+
 //Notifiaction 
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IJobDeadlineService, JobDeadlineService>();
+
 
 //priceEmer
 builder.Services.AddScoped<IPriceEmergencyRepositories, PriceEmergencyRepositories>();
@@ -511,7 +534,6 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
-
 
 
 // Job repository and service
@@ -534,7 +556,8 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext);
+    var notifiactionService = provider.GetRequiredService<INotificationService>();  
+    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
@@ -581,6 +604,7 @@ builder.Services.Configure<CloudinarySettings>(
 
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<IFacebookMessengerService, FacebookMessengerService>();
+builder.Services.AddScoped<IAdminRepairOrderRepository, AdminRepairOrderRepository>();
 
 
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -632,7 +656,8 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
                 "http://10.224.41.46:5117",
-                "http://10.0.2.2:7113" // Android emulator
+                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113" 
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -653,7 +678,7 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(7113, listenOptions =>
     {
         listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; // 👈 Bắt buộc thêm dòng này
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
     });
 });
 
@@ -687,7 +712,8 @@ app.MapHub<InspectionHub>("/hubs/inspection");
 app.MapHub<JobHub>("/hubs/job");            
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
-                                 
+app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
+
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();
@@ -703,40 +729,39 @@ app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
+////Initialize database
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+//    Console.WriteLine("Applying pending migrations...");
+//    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
-//Initialize database
-using (var scope = app.Services.CreateScope())
-{
-    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
-    Console.WriteLine("Applying pending migrations...");
-    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+//    if (!dbContext.SecurityPolicies.Any())
+//    {
+//        dbContext.SecurityPolicies.Add(new SecurityPolicy
+//        {
+//            Id = Guid.NewGuid(),
+//            MinPasswordLength = 8,
+//            RequireSpecialChar = true,
+//            RequireNumber = true,
+//            RequireUppercase = true,
+//            SessionTimeout = 30,
+//            MaxLoginAttempts = 5,
+//            AccountLockoutTime = 15,
+//            PasswordExpiryDays = 90,
+//            EnableBruteForceProtection = true,
+//            CreatedAt = DateTime.UtcNow,
+//            UpdatedAt = DateTime.UtcNow
+//        });
 
-    if (!dbContext.SecurityPolicies.Any())
-    {
-        dbContext.SecurityPolicies.Add(new SecurityPolicy
-        {
-            Id = Guid.NewGuid(),
-            MinPasswordLength = 8,
-            RequireSpecialChar = true,
-            RequireNumber = true,
-            RequireUppercase = true,
-            SessionTimeout = 30,
-            MaxLoginAttempts = 5,
-            AccountLockoutTime = 15,
-            PasswordExpiryDays = 90,
-            EnableBruteForceProtection = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+//        dbContext.SaveChanges();
+//    }
+//}
 
-        dbContext.SaveChanges();
-    }
-}
-
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
+//using (var scope = app.Services.CreateScope())
+//{
+//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+//    await dbInitializer.Initialize();
+//}
 
 app.Run();

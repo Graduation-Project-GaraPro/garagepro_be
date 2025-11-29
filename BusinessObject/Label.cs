@@ -32,7 +32,13 @@ namespace BusinessObject
         [MaxLength(7)] // Hex color code like #FF5733
         public string HexCode { get; set; }
 
+        // Default label for this status (only one per status should be true)
+        public bool IsDefault { get; set; } = false;
+
         // Navigation properties
         public virtual OrderStatus OrderStatus { get; set; } = null!;
+        
+        // Many-to-many relationship with RepairOrders
+        public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
     }
 }

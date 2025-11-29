@@ -8,6 +8,7 @@ using BusinessObject.Authentication;
 using BusinessObject.Customers;
 using BusinessObject.Enums;
 using DataAccessLayer;
+using Dtos.Quotations;
 using Dtos.RoBoard;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,6 +21,7 @@ namespace Repositories
         public RepairOrderRepository(MyAppDbContext context)
         {
             _context = context;
+            _context.Database.SetCommandTimeout(180);
         }
 
         // Add public property to access the context
@@ -31,17 +33,54 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
-                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
+        }
+
+        public async Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId)
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                .Where(ro => ro.RepairOrderId == repairOrderId
+                          && ro.UserId == userId
+                          && ro.OrderStatus.StatusName == "Completed")
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                // Approved quotations
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    // Only selected services
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.Service)
+                // Approved quotations + selected services + selected parts
+                .Include(ro => ro.Quotations
+                    .Where(q => q.Status == QuotationStatus.Approved))
+                    .ThenInclude(q => q.QuotationServices
+                        .Where(qs => qs.IsSelected))
+                        .ThenInclude(qs => qs.QuotationServiceParts
+                            .Where(p => p.IsSelected))
+                            .ThenInclude(qsp => qsp.Part)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<int> CountAsync(Expression<Func<RepairOrder, bool>> predicate)
         {
             return await _context.RepairOrders
                 .Where(predicate)
+                .Where(ro => !ro.IsArchived)
                 .CountAsync();
+        }
+        public async Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate)
+        {
+            return await _context.RepairOrders
+                .AnyAsync(predicate);
+                
         }
 
         public async Task<RepairOrder> CreateAsync(RepairOrder repairOrder)
@@ -70,7 +109,7 @@ namespace Repositories
 
         public async Task<bool> ExistsAsync(Guid repairOrderId)
         {
-            return await _context.RepairOrders.AnyAsync(ro => ro.RepairOrderId == repairOrderId);
+            return await _context.RepairOrders.AnyAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
         #endregion
@@ -82,6 +121,7 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels) // Assigned labels
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -95,6 +135,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels) // Assigned labels
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -117,6 +158,7 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels) // Include assigned labels for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -128,14 +170,16 @@ namespace Repositories
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
                 .Include(ro => ro.Payments)
-                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels) // Include assigned labels for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -149,6 +193,7 @@ namespace Repositories
                  .Include(ro => ro.Jobs)
                     .ThenInclude(jo => jo.Service)
                 .Include(ro => ro.Payments)
+                .Where(ro => !ro.IsArchived)
                 .ToListAsync();
         }
 
@@ -159,7 +204,7 @@ namespace Repositories
         public async Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string? changeNote = null) // Changed from Guid to int
         {
             var repairOrder = await _context.RepairOrders.FindAsync(repairOrderId);
-            if (repairOrder == null) return false;
+            if (repairOrder == null || repairOrder.IsArchived) return false;
 
             var oldStatusId = repairOrder.StatusId;
             repairOrder.StatusId = newStatusId;
@@ -191,7 +236,7 @@ namespace Repositories
 
             var repairOrderIds = updates.Select(u => u.RepairOrderId).ToList();
             var repairOrders = await _context.RepairOrders
-                .Where(ro => repairOrderIds.Contains(ro.RepairOrderId))
+                .Where(ro => repairOrderIds.Contains(ro.RepairOrderId) && !ro.IsArchived)
                 .ToListAsync();
 
             var updatedOrders = new List<RepairOrder>();
@@ -214,6 +259,42 @@ namespace Repositories
             return updatedOrders;
         }
 
+        public async Task<bool> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds)
+        {
+            var repairOrder = await _context.RepairOrders
+                .Include(ro => ro.Labels)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+
+            if (repairOrder == null || repairOrder.IsArchived)
+                return false;
+
+            try
+            {
+                // Clear existing labels
+                repairOrder.Labels.Clear();
+
+                // Add new labels if any
+                if (labelIds != null && labelIds.Any())
+                {
+                    var labels = await _context.Labels
+                        .Where(l => labelIds.Contains(l.LabelId))
+                        .ToListAsync();
+
+                    foreach (var label in labels)
+                    {
+                        repairOrder.Labels.Add(label);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
         #endregion
 
         #region List View Specific Queries
@@ -228,6 +309,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -259,7 +341,7 @@ namespace Repositories
 
         public async Task<Dictionary<int, int>> GetRepairOrderCountsByStatusAsync(List<int>? statusIds = null) // Changed from Guid to int
         {
-            var query = _context.RepairOrders.AsQueryable();
+            var query = _context.RepairOrders.Where(ro => !ro.IsArchived).AsQueryable();
 
             if (statusIds != null && statusIds.Any())
             {
@@ -273,7 +355,7 @@ namespace Repositories
 
         public async Task<Dictionary<string, object>> GetKanbanStatisticsAsync(RoBoardFiltersDto? filters = null)
         {
-            var query = _context.RepairOrders.AsQueryable();
+            var query = _context.RepairOrders.Where(ro => !ro.IsArchived).AsQueryable();
 
             if (filters != null)
             {
@@ -312,7 +394,7 @@ namespace Repositories
         {
             var repairOrder = await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
 
             if (repairOrder == null) return false;
 
@@ -323,18 +405,14 @@ namespace Repositories
             if (repairOrder.StatusId == newStatusId) return true;
 
             // Business rules validation
-            // Example: Can't move to "Completed" if there are unpaid amounts
-            if (newStatus.StatusName?.ToLower().Contains("completed") == true)
-            {
-                if (repairOrder.PaidAmount < repairOrder.EstimatedAmount)
-                {
-                    return false; // Cannot complete with outstanding payments
-                }
-            }
-
-            // Add more business rules as needed
             // Example: Can't move from "Completed" back to "In Progress"
             // Example: Require certain inspections before moving to specific statuses
+
+            // Business rule: Can't move from "Completed" back to other statuses
+            if (repairOrder.OrderStatus?.StatusName == "Completed" && newStatus.StatusName != "Completed")
+            {
+                return false;
+            }
 
             return true;
         }
@@ -354,10 +432,11 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
-                .Where(ro => ro.UserId == userId)
+                .Where(ro => ro.UserId == userId && !ro.IsArchived)
                 .OrderByDescending(ro => ro.CreatedAt)
                 .ToListAsync();
         }
@@ -366,10 +445,11 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
-                .Where(ro => ro.BranchId == branchId)
+                .Where(ro => ro.BranchId == branchId && !ro.IsArchived)
                 .OrderByDescending(ro => ro.CreatedAt)
                 .ToListAsync();
         }
@@ -387,9 +467,11 @@ namespace Repositories
         {
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
+                .Where(ro => !ro.IsArchived)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(searchText))
@@ -399,7 +481,7 @@ namespace Repositories
                 query = query.Where(ro =>                    
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
                     (ro.Vehicle.VIN != null && ro.Vehicle.VIN.ToLower().Contains(searchLower)) ||
-                    (ro.User.FullName != null && ro.User.FullName.ToLower().Contains(searchLower)) ||
+                    ((ro.User.FirstName + " " + ro.User.LastName).ToLower().Contains(searchLower)) ||
                     (ro.User.Email != null && ro.User.Email.ToLower().Contains(searchLower)) ||
                     (ro.Note != null && ro.Note.ToLower().Contains(searchLower)));
             }
@@ -433,7 +515,7 @@ namespace Repositories
             Expression<Func<RepairOrder, bool>>? predicate = null,
             params Expression<Func<RepairOrder, object>>[] includes)
         {
-            var query = _context.RepairOrders.AsQueryable();
+            var query = _context.RepairOrders.Where(ro => !ro.IsArchived).AsQueryable();
 
             if (predicate != null)
             {
@@ -458,10 +540,11 @@ namespace Repositories
 
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
-                .Where(ro => ro.CreatedAt >= cutoffTime)
+                .Where(ro => ro.CreatedAt >= cutoffTime && !ro.IsArchived)
                 .OrderByDescending(ro => ro.CreatedAt)
                 .ToListAsync();
         }
@@ -470,7 +553,7 @@ namespace Repositories
         {
             var repairOrder = await _context.RepairOrders
                 .AsNoTracking()
-                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
 
             return repairOrder?.CreatedAt; // In a real implementation, you'd track status change history
         }
@@ -534,6 +617,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -555,6 +639,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
@@ -678,7 +763,7 @@ namespace Repositories
 
                 query = query.Where(ro => 
                     (ro.Vehicle.LicensePlate != null && ro.Vehicle.LicensePlate.ToLower().Contains(searchLower)) ||
-                    (ro.User.FullName != null && ro.User.FullName.ToLower().Contains(searchLower)) ||
+                    ((ro.User.FirstName + " " + ro.User.LastName).ToLower().Contains(searchLower)) ||
                     (ro.Note != null && ro.Note.ToLower().Contains(searchLower)));
             }
 
@@ -696,7 +781,7 @@ namespace Repositories
                 "completiondate" => isDescending ? query.OrderByDescending(ro => ro.CompletionDate) : query.OrderBy(ro => ro.CompletionDate),
                 "estimatedamount" => isDescending ? query.OrderByDescending(ro => ro.EstimatedAmount) : query.OrderBy(ro => ro.EstimatedAmount),
                 "paidamount" => isDescending ? query.OrderByDescending(ro => ro.PaidAmount) : query.OrderBy(ro => ro.PaidAmount),
-                "customername" => isDescending ? query.OrderByDescending(ro => ro.User.FullName) : query.OrderBy(ro => ro.User.FullName),
+                "customername" => isDescending ? query.OrderByDescending(ro => ro.User.FirstName + " " + ro.User.LastName) : query.OrderBy(ro => ro.User.FirstName + " " + ro.User.LastName),
                 "statusname" => isDescending ? query.OrderByDescending(ro => ro.OrderStatus.StatusName) : query.OrderBy(ro => ro.OrderStatus.StatusName),             
                 "vehiclelicenseplate" => isDescending ? query.OrderByDescending(ro => ro.Vehicle.LicensePlate) : query.OrderBy(ro => ro.Vehicle.LicensePlate),
                 "createdat" => isDescending ? query.OrderByDescending(ro => ro.CreatedAt) : query.OrderBy(ro => ro.CreatedAt),
@@ -722,6 +807,7 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
                 .Include(ro => ro.Branch)
@@ -734,7 +820,7 @@ namespace Repositories
         public async Task<bool> RestoreArchivedRepairOrderAsync(Guid repairOrderId)
         {
             var repairOrder = await _context.RepairOrders.FindAsync(repairOrderId);
-            if (repairOrder == null) return false;
+            if (repairOrder == null || !repairOrder.IsArchived) return false;
 
             repairOrder.IsArchived = false;
             repairOrder.ArchivedAt = null;
@@ -754,7 +840,7 @@ namespace Repositories
         public async Task<bool> UpdateCompletionStatusAsync(Guid repairOrderId, bool isVehiclePickedUp, DateTime? vehiclePickupDate, bool isFullyPaid, DateTime? fullPaymentDate, string? notes = null)
         {
             var repairOrder = await _context.RepairOrders.FindAsync(repairOrderId);
-            if (repairOrder == null) return false;
+            if (repairOrder == null || repairOrder.IsArchived) return false;
 
             // Update completion status based on parameters
             if (isVehiclePickedUp && vehiclePickupDate.HasValue)

@@ -25,6 +25,7 @@ namespace BusinessObject.Enums
     {
         QuotationDetailFragment,
         RepairProgressDetailFragment,
+        RepairOrderArchivedDetailFragment,
         HomeFragment
     }
 }

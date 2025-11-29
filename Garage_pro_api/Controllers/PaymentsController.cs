@@ -11,6 +11,11 @@ using Services.PaymentServices;
 using System.Security.Claims;
 using Repositories.WebhookInboxRepositories;
 using BussinessObject;
+using Microsoft.AspNetCore.Identity;
+using BusinessObject;
+using BusinessObject.Authentication;
+using Services.BillServices;
+using Dtos.Bills;
 
 namespace Garage_pro_api.Controllers
 {
@@ -21,13 +26,34 @@ namespace Garage_pro_api.Controllers
         private readonly IPaymentService _service;
         private readonly IPayOsClient _payos;
         private readonly IWebhookInboxRepository _webhookInboxRepo;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly IQrCodeService _qrCodeService;
+        private readonly IRepairOrderPaymentService _paymentService;
 
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo)
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
         {
             _service = service;
             _payos = payos;
-            _webhookInboxRepo= webhookInboxRepo;
+            _webhookInboxRepo = webhookInboxRepo;
+            _userManager = userManager;
+            _qrCodeService = qrCodeService;
         }
+
+        [HttpGet("{repairOrderId:guid}/payment")]
+        public async Task<ActionResult<RepairOrderPaymentDto>> GetPaymentInfo(Guid repairOrderId)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+               ?? User.FindFirstValue("sub"); 
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+            var result = await _paymentService.GetRepairOrderPaymentInfoAsync(repairOrderId, userId);
+
+            if (result == null)
+                return NotFound(new { message = "RepairOrder không tồn tại." });
+
+            return Ok(result);
+        }
+
         [Authorize]
         [HttpPost("create-link")]
         public async Task<IActionResult> CreateLink([FromBody] CreatePaymentRequest req, CancellationToken ct)
@@ -46,6 +72,167 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+        
+        /// <summary>
+        /// Get payment preview for a repair order (used by manager before cash payment)
+        /// </summary>
+        [Authorize]
+        [HttpGet("preview/{repairOrderId}")]
+        public async Task<IActionResult> GetPaymentPreview(Guid repairOrderId, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get the current user ID
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // Check if user is a manager
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return Unauthorized();
+
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains("Manager"))
+                    return Forbid("Only managers can preview payments for repair orders");
+
+                var preview = await _service.GetPaymentPreviewAsync(repairOrderId, ct);
+                return Ok(preview);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Manager creates a payment record for a completed repair order
+        /// </summary>
+        [Authorize]
+        [HttpPost("manager-create/{repairOrderId}")]
+        public async Task<IActionResult> ManagerCreatePayment(Guid repairOrderId, [FromBody] ManagerCreatePaymentDto dto, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get the current user ID
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // Check if user is a manager
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return Unauthorized();
+
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains("Manager"))
+                    return Forbid("Only managers can create payments for repair orders");
+
+                // Validate payment method
+                if (dto.Method != PaymentMethod.Cash && dto.Method != PaymentMethod.PayOs)
+                    return BadRequest("Invalid payment method. Only Cash and PayOs are supported.");
+
+                // Get the repair order to determine the amount
+                var repairOrder = await _service.GetRepairOrderByIdAsync(repairOrderId);
+                if (repairOrder == null)
+                    return NotFound($"Repair order with ID {repairOrderId} not found");
+
+                // Check if repair order status is Completed (StatusId = 3)
+                if (repairOrder.StatusId != 3)
+                {
+                    return BadRequest($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
+                }
+
+                // Check if all jobs are completed
+                var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
+                if (!allJobsCompleted)
+                {
+                    return BadRequest($"All jobs in repair order must be completed before payment can be created");
+                }
+
+                // Check if there's already a paid payment
+                var existingPayments = await _service.GetByRepairOrderIdAsync(repairOrderId);
+                var paidPayment = existingPayments?.FirstOrDefault(p => p.Status == PaymentStatus.Paid);
+                if (paidPayment != null) 
+                    return BadRequest($"Payment {paidPayment.PaymentId} already paid");
+
+                // Calculate the amount to pay (estimated amount minus already paid amount)
+                var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+
+                // Create the payment record
+                var payment = await _service.CreateManualPaymentAsync(repairOrderId, userId, amountToPay, dto.Method, ct);
+                
+                // If payment method is PayOs, generate QR code as well
+                string? qrCodeData = null;
+                if (dto.Method == PaymentMethod.PayOs)
+                {
+                    qrCodeData = await _qrCodeService.GeneratePaymentQrCodeAsync(repairOrderId, amountToPay, dto.Description ?? "Payment for repair order");
+                }
+                
+                var response = new { 
+                    Message = "Payment record created successfully", 
+                    PaymentId = payment.PaymentId,
+                    Method = payment.Method,
+                    Amount = payment.Amount,
+                    Status = payment.Status,
+                    QrCodeData = qrCodeData
+                };
+                
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Manager creates a PayOS QR payment link for a completed repair order
+        /// This reuses the PayOS implementation from Android but adapted for manager web
+        /// </summary>
+        [Authorize]
+        [HttpPost("manager-qr-payment/{repairOrderId}")]
+        public async Task<IActionResult> ManagerCreateQrPayment(Guid repairOrderId, [FromBody] ManagerCreatePaymentDto dto, CancellationToken ct = default)
+        {
+            try
+            {
+                // Get the current user ID
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                             ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(userId))
+                    return Unauthorized();
+
+                // Check if user is a manager
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                    return Unauthorized();
+
+                var roles = await _userManager.GetRolesAsync(user);
+                if (!roles.Contains("Manager"))
+                    return Forbid("Only managers can create QR payments for repair orders");
+
+                // Create PayOS payment link using the reusable service
+                var result = await _service.CreateManagerPayOsPaymentAsync(repairOrderId, userId, dto.Description, ct);
+
+                var response = new
+                {
+                    Message = "PayOS QR payment link created successfully",
+                    PaymentId = result.PaymentId,
+                    OrderCode = result.OrderCode,
+                    CheckoutUrl = result.CheckoutUrl,
+                    QrCodeUrl = result.CheckoutUrl // The checkout URL can be used to generate QR code on frontend
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+        
 
         [HttpPost("webhook")]
         public async Task<IActionResult> Webhook([FromBody] JsonElement body, CancellationToken ct)
@@ -99,7 +286,6 @@ namespace Garage_pro_api.Controllers
                 // 5. Save to database - với webhook nên dùng CancellationToken.None
                 // để đảm bảo lưu thành công ngay cả khi client disconnect
                 await _webhookInboxRepo.SaveChangesAsync(CancellationToken.None);
-
              
 
                 // 6. Có thể trigger background processing ở đây
@@ -158,6 +344,27 @@ namespace Garage_pro_api.Controllers
         {
             var dto = await _service.GetStatusByOrderCodeAsync(orderCode, ct);
             return Ok(dto);
+        }
+
+        /// <summary>
+        /// Get payment summary for a repair order
+        /// </summary>
+        /// <param name="repairOrderId">The ID of the repair order</param>
+        /// <param name="ct">Cancellation token</param>
+        /// <returns>Payment summary information</returns>
+        [Authorize]
+        [HttpGet("summary/{repairOrderId}")]
+        public async Task<IActionResult> GetPaymentSummary(Guid repairOrderId, CancellationToken ct = default)
+        {
+            try
+            {
+                var summary = await _service.GetPaymentSummaryAsync(repairOrderId, ct);
+                return Ok(summary);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
     }

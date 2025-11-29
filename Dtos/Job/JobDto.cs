@@ -31,8 +31,6 @@ namespace Dtos.Job
         
         public DateTime? UpdatedAt { get; set; }
         
-        public int Level { get; set; }
-        
         // Manager-Technician communication properties
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
@@ -62,8 +60,6 @@ namespace Dtos.Job
         [MaxLength(500)]
         public string? Note { get; set; }
         
-        public int Level { get; set; } = 1;
-        
         // Manager-Technician communication properties
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
@@ -71,32 +67,12 @@ namespace Dtos.Job
     
     public class UpdateJobDto
     {
-        [Required]
-        public Guid ServiceId { get; set; }
-        
-        [Required]
-        public Guid RepairOrderId { get; set; }
-        
-        [Required]
-        [MaxLength(100)]
-        public string? JobName { get; set; }
-        
-        public JobStatus Status { get; set; }
-        
-        public DateTime? Deadline { get; set; }
-        
-        public decimal TotalAmount { get; set; }
+        public JobStatus? Status { get; set; }
         
         [MaxLength(500)]
         public string? Note { get; set; }
         
-        public DateTime? UpdatedAt { get; set; }
-        
-        public int Level { get; set; }
-        
-        // Manager-Technician communication properties
-        public string? AssignedByManagerId { get; set; }
-        public DateTime? AssignedAt { get; set; }
+        public DateTime? Deadline { get; set; }
     }
     
     // Technician Schedule DTOs

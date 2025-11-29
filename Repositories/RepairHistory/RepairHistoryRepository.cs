@@ -1,4 +1,4 @@
-﻿using BusinessObject;
+﻿﻿using BusinessObject;
 using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using BusinessObject.Enums;
@@ -62,7 +62,6 @@ namespace Repositories.RepairHistory
                     TotalAmount = j.TotalAmount,
                     Deadline = j.Deadline,
                     Note = j.Note,
-                    Level = j.Level,
                     ServiceId = j.ServiceId,
                     RepairOrderId = j.RepairOrderId,
 
@@ -143,7 +142,7 @@ namespace Repositories.RepairHistory
             var vehicleIds = jobs.Select(j => j.RepairOrder.Vehicle.VehicleId).Distinct().ToList();
             var repairOrderCounts = await _context.RepairOrders
                 .AsNoTracking()
-                .Where(ro => vehicleIds.Contains(ro.VehicleId))
+                .Where(ro => vehicleIds.Contains(ro.VehicleId) && !ro.IsArchived)
                 .GroupBy(ro => ro.VehicleId)
                 .Select(g => new { VehicleId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.VehicleId, x => x.Count);

@@ -27,7 +27,7 @@ namespace Repositories
                     .ThenInclude(t => t.User)
                 .Include(i => i.ServiceInspections)
                     .ThenInclude(si => si.Service)
-                        .ThenInclude(s => s.ServiceParts)
+                       .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
                 .Include(i => i.PartInspections)
                     .ThenInclude(pi => pi.Part)
                 .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
@@ -173,6 +173,15 @@ namespace Repositories
             return await _context.Technicians
                 .Include(t => t.User)
                 .FirstOrDefaultAsync(t => t.TechnicianId == technicianId);
+        }
+        public async Task<string> GetUserIdByTechnicianIdAsync(Guid technicianId)
+        {
+            var technician = await _context.Technicians
+                .Where(t => t.TechnicianId == technicianId)
+                .Select(t => t.UserId)
+                .FirstOrDefaultAsync();
+
+            return technician;
         }
 
     }

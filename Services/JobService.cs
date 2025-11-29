@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -204,61 +204,61 @@ namespace Services
             return result;
         }
 
-        public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
-        {
-            if (jobId == Guid.Empty)
-                throw new ArgumentException("Job ID is required", nameof(jobId));
+        //public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
+        //{
+        //    if (jobId == Guid.Empty)
+        //        throw new ArgumentException("Job ID is required", nameof(jobId));
 
-            if (newTechnicianId == Guid.Empty)
-                throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
+        //    if (newTechnicianId == Guid.Empty)
+        //        throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
 
-            if (string.IsNullOrWhiteSpace(managerId))
-                throw new ArgumentException("Manager ID is required", nameof(managerId));
+        //    if (string.IsNullOrWhiteSpace(managerId))
+        //        throw new ArgumentException("Manager ID is required", nameof(managerId));
 
-            if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
-                throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
+        //    if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
+        //        throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
 
-            var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
+        //    var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
 
-            if (result)
-            {
-                var job = await _jobRepository.GetJobByIdAsync(jobId);
-                var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
+        //    if (result)
+        //    {
+        //        var job = await _jobRepository.GetJobByIdAsync(jobId);
+        //        var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
 
-                if (job != null)
-                {
-                    // SignalR JobHub
-                    await _jobHubContext.Clients
-                        .Group($"Technician_{newTechnicianId}")
-                        .SendAsync("JobReassigned", new
-                        {
-                            JobId = jobId,
-                            TechnicianId = newTechnicianId,
-                            JobName = job.JobName,
-                            ServiceName = job.Service?.ServiceName,
-                            RepairOrderId = job.RepairOrderId,
-                            Status = job.Status.ToString(),
-                            ReassignedAt = DateTime.UtcNow,
-                            Message = "A job has been reassigned to you"
-                        });
+        //        if (job != null)
+        //        {
+        //            // SignalR JobHub
+        //            await _jobHubContext.Clients
+        //                .Group($"Technician_{newTechnicianId}")
+        //                .SendAsync("JobReassigned", new
+        //                {
+        //                    JobId = jobId,
+        //                    TechnicianId = newTechnicianId,
+        //                    JobName = job.JobName,
+        //                    ServiceName = job.Service?.ServiceName,
+        //                    RepairOrderId = job.RepairOrderId,
+        //                    Status = job.Status.ToString(),
+        //                    ReassignedAt = DateTime.UtcNow,
+        //                    Message = "A job has been reassigned to you"
+        //                });
 
-                    // GỬI NOTIFICATION
-                    if (!string.IsNullOrEmpty(userId))
-                    {
-                        await _notificationService.SendJobReassignedNotificationAsync(
-                            userId,
-                            jobId,
-                            job.JobName,
-                            job.Service?.ServiceName ?? "N/A"
-                        );
-                    }
+        //            // GỬI NOTIFICATION
+        //            if (!string.IsNullOrEmpty(userId))
+        //            {
+        //                await _notificationService.SendJobReassignedNotificationAsync(
+        //                    userId,
+        //                    jobId,
+        //                    job.JobName,
+        //                    job.Service?.ServiceName ?? "N/A"
+        //                );
+        //            }
 
-                    Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
-                }
-            }
+        //            Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
+        //        }
+        //    }
 
-            return result;
-        }
+        //    return result;
+        //}
 
         public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
         {
@@ -360,14 +360,20 @@ namespace Services
             return await _jobRepository.BatchUpdateStatusAsync(updates);
         }
 
+        // Service Methods
+        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
+        {
+            return await _jobRepository.GetServiceByIdAsync(serviceId);
+        }
+
         // Business Logic Validation
         public async Task<bool> CanAssignJobToTechnicianAsync(Guid jobId)
         {
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
 
-            // Job must be in Pending status to be assigned to technician
-            return job.Status == JobStatus.Pending;
+            // Job can be assigned when status is Pending or New
+            return job.Status == JobStatus.Pending || job.Status == JobStatus.New;
         }
         
         // Workflow Validation
@@ -420,6 +426,23 @@ namespace Services
 
             return allowedTransitions.ContainsKey(currentStatus) &&
                    allowedTransitions[currentStatus].Contains(targetStatus);
+        }
+
+        // New helper method for limited status transitions (only Pending <-> New)
+        private static bool IsValidLimitedStatusTransition(JobStatus currentStatus, JobStatus targetStatus)
+        {
+            // Only allow transitions between Pending and New
+            if (currentStatus == JobStatus.Pending && targetStatus == JobStatus.New)
+                return true;
+                
+            if (currentStatus == JobStatus.New && targetStatus == JobStatus.Pending)
+                return true;
+                
+            // Allow updating to the same status (no change)
+            if (currentStatus == targetStatus)
+                return true;
+                
+            return false;
         }
 
         private static List<JobStatus> GetAllowedNextStatuses(JobStatus currentStatus)

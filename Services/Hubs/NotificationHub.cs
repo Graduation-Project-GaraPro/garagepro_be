@@ -10,12 +10,11 @@ using System.Threading.Tasks;
 
 namespace Services.Hubs
 {
-    [Authorize] // Bắt buộc phải login
+    [Authorize]
     public class NotificationHub : Hub
     {
         public override async Task OnConnectedAsync()
         {
-            // Tự động join vào group của chính user khi connect
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
             if (!string.IsNullOrEmpty(userId))
@@ -39,8 +38,6 @@ namespace Services.Hubs
 
             await base.OnDisconnectedAsync(exception);
         }
-
-        // Method để mobile client join group thủ công (optional)
         public async Task JoinMyGroup()
         {
             var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;

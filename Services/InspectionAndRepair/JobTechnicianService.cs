@@ -130,7 +130,7 @@ namespace Services.InspectionAndRepair
                 Message = $"Job status changed from {oldStatus} to {dto.JobStatus}"
             };
 
-            var user = await _userService.GetUserByIdAsync(job.RepairOrder.UserId);
+            var user = await _userService.GetUserByIdAsync(job.RepairOrder.Vehicle.User.Id);
 
            
             if (user != null && user.DeviceId != null)
