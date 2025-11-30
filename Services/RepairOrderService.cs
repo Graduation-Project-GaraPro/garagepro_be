@@ -847,25 +847,59 @@ namespace Services
 
         private async Task<bool> ApplyBusinessRules(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            // Business rule: Can't move from "Completed" back to other statuses
-            if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
+
+            // Rule 1: Completed can move back to In Progress only if not fully paid
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
+            {
+                // Allow if not fully paid
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    return false; // Fully paid, cannot move back
+                }
+                return true; // Not fully paid, allow moving back
+            }
+
+            // Rule 2: Can't move from Completed to Pending
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "Pending")
             {
                 return false;
             }
 
-            // Business rule: Can't complete RO if it has incomplete jobs
+            // Rule 3: Pending cannot move directly to Completed (must go through In Progress first)
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                return false;
+            }
+
+            // Rule 4: In Progress → Completed requires either:
+            // - All jobs completed, OR
+            // - Has at least one "good quotation" (approved + all services are IsGood)
             if (targetStatus.StatusName == "Completed")
             {
+                // Check for good quotation: approved AND all services have IsGood = true
+                bool hasGoodQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => 
+                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                        q.QuotationServices != null &&
+                        q.QuotationServices.Any() &&
+                        q.QuotationServices.All(qs => qs.IsGood == true)
+                    );
+
+                bool allJobsCompleted = true;
                 if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
                 {
                     var incompleteJobs = repairOrder.Jobs
                         .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
                         .ToList();
 
-                    if (incompleteJobs.Any())
-                    {
-                        return false;
-                    }
+                    allJobsCompleted = !incompleteJobs.Any();
+                }
+
+                // Allow completion if either condition is met
+                if (!hasGoodQuotation && !allJobsCompleted)
+                {
+                    return false;
                 }
             }
 
@@ -874,22 +908,50 @@ namespace Services
 
         private string GetBusinessRuleMessage(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
+
+            // Completed → In Progress validation message
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
             {
-                return "Cannot move completed orders back to previous statuses";
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    return "Cannot move back to In Progress: Order is fully paid";
+                }
             }
 
+            // Completed → Pending validation message
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "Pending")
+            {
+                return "Cannot move completed order back to Pending status";
+            }
+
+            // Pending → Completed validation message
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                return "Cannot complete order directly from Pending. Move to In Progress first";
+            }
+
+            // In Progress → Completed validation message
             if (targetStatus.StatusName == "Completed")
             {
+                // Check for good quotation: approved AND all services have IsGood = true
+                bool hasGoodQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => 
+                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                        q.QuotationServices != null &&
+                        q.QuotationServices.Any() &&
+                        q.QuotationServices.All(qs => qs.IsGood == true)
+                    );
+
                 if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
                 {
                     var incompleteJobs = repairOrder.Jobs
                         .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
                         .ToList();
 
-                    if (incompleteJobs.Any())
+                    if (incompleteJobs.Any() && !hasGoodQuotation)
                     {
-                        return $"Cannot complete repair order: {incompleteJobs.Count} job(s) are not completed";
+                        return $"Cannot complete: {incompleteJobs.Count} job(s) incomplete and no good quotation (all services must be marked as Good)";
                     }
                 }
             }
@@ -900,17 +962,41 @@ namespace Services
         private List<string> GetBusinessRuleRequirements(RepairOrder repairOrder, OrderStatus targetStatus)
         {
             var requirements = new List<string>();
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
 
-            // REMOVED: Payment requirement - now allowing completion with outstanding payments
-            // if (targetStatus.StatusName == "Completed" && repairOrder.PaidAmount < repairOrder.EstimatedAmount)
-            // {
-            //     var outstanding = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
-            //     requirements.Add($"Complete payment of ${outstanding:F2} required");
-            // }
+            // Completed → In Progress requirements
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
+            {
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    requirements.Add("Order is fully paid and cannot be moved back to In Progress");
+                }
+            }
 
-            // Requirement: All jobs must be completed before completing RO
+            // Pending → Completed requirements
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                requirements.Add("Move order to 'In Progress' status first");
+                requirements.Add("Then complete all jobs or get quotation approval");
+            }
+
+            // In Progress → Completed requirements
             if (targetStatus.StatusName == "Completed")
             {
+                // Check for good quotation: approved AND all services have IsGood = true
+                bool hasGoodQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => 
+                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                        q.QuotationServices != null &&
+                        q.QuotationServices.Any() &&
+                        q.QuotationServices.All(qs => qs.IsGood == true)
+                    );
+
+                if (!hasGoodQuotation)
+                {
+                    requirements.Add("Option 1: Get a 'good quotation' (approved quotation where all services are marked as Good/IsGood)");
+                }
+
                 if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
                 {
                     var incompleteJobs = repairOrder.Jobs
@@ -919,11 +1005,20 @@ namespace Services
 
                     if (incompleteJobs.Any())
                     {
+                        if (!hasGoodQuotation)
+                        {
+                            requirements.Add("Option 2: Complete all jobs:");
+                        }
                         foreach (var job in incompleteJobs)
                         {
-                            requirements.Add($"Job '{job.JobName}' must be completed (Current status: {job.Status})");
+                            requirements.Add($"  - Job '{job.JobName}' (Current: {job.Status})");
                         }
                     }
+                }
+
+                if (!hasGoodQuotation && (!repairOrder.Jobs?.Any() ?? true))
+                {
+                    requirements.Add("Either create a good quotation (all services marked as Good), or assign and complete jobs");
                 }
             }
 
@@ -993,6 +1088,26 @@ namespace Services
                     result.Success = false;
                     result.Message = "Repair order is already archived";
                     result.Warnings.Add("Order was previously archived");
+                    return result;
+                }
+
+                // Validation: Only completed and fully paid RO can be archived
+                var completedStatus = await _orderStatusRepository.GetAllAsync();
+                var completedStatusId = completedStatus.FirstOrDefault(s => s.StatusName == "Completed")?.OrderStatusId;
+
+                if (repairOrder.StatusId != completedStatusId)
+                {
+                    result.Success = false;
+                    result.Message = "Only completed repair orders can be archived";
+                    result.Errors.Add("Repair order must be in 'Completed' status");
+                    return result;
+                }
+
+                if (repairOrder.PaidStatus != BusinessObject.Enums.PaidStatus.Paid)
+                {
+                    result.Success = false;
+                    result.Message = "Only fully paid repair orders can be archived";
+                    result.Errors.Add($"Current payment status: {repairOrder.PaidStatus}. Please complete payment before archiving");
                     return result;
                 }
 
