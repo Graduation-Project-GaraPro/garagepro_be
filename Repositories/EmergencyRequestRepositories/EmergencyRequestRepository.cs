@@ -112,6 +112,18 @@ namespace Repositories.EmergencyRequestRepositories
         }
 
         private double ToRadians(double deg) => deg * (Math.PI / 180);
+
+        public async Task<bool> AssignTechnicianAsync(string technicianUserId, Guid emergencyId)
+        {
+            var request = _context.RequestEmergencies.FirstOrDefault(e => e.EmergencyRequestId == emergencyId);
+            if (request == null)
+            {
+                return false;
+            }
+            request.TechnicianId = technicianUserId;
+            _context.RequestEmergencies.Update(request);
+            return await _context.SaveChangesAsync().ContinueWith(t => t.Result > 0);
+        }
     }
 }
 

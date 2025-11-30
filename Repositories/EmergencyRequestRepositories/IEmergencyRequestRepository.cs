@@ -19,6 +19,7 @@ namespace Repositories.EmergencyRequestRepositories
            
             Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
             Task<bool> AnyActiveAsync(string customerId, Guid vehicleId);
+        Task<bool> AssignTechnicianAsync(string technicianUserId, Guid emergencyId);
     }
     }
 

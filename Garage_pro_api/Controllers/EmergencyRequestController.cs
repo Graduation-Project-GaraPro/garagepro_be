@@ -294,7 +294,49 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+        [HttpPost("asign-tech")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> AsignTechnician(string emergencyId, Guid technicianUserId)
+        {
+            try
+            {
+                var managerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(managerUserId))
+                    return Unauthorized("User not found in token.");
 
+                var result = await _service.AsignTechnicianToEmergencyAsync(emergencyId, technicianUserId);
+                return Ok(new { Success = result });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Log chi tiết lỗi database để debug
+                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
+                if (dbEx.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
+                }
+                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                // Log chi tiết lỗi để debug
+                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Unhandled error: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
 
     }
 }
