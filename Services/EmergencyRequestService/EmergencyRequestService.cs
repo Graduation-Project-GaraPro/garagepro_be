@@ -160,13 +160,13 @@ namespace Services.EmergencyRequestService
                 };
 
                 // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
-                await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → All, id={fullRequest.EmergencyRequestId}");
+              //  await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
+             //   Console.WriteLine($"RT sent: EmergencyRequestCreated → All, id={fullRequest.EmergencyRequestId}");
 
                 // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
-                await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
-                    .SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → customer-{fullRequest.CustomerId}, id={fullRequest.EmergencyRequestId}");
+             //   await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
+            //        .SendAsync("EmergencyRequestCreated", notificationData);
+           //     Console.WriteLine($"RT sent: EmergencyRequestCreated → customer-{fullRequest.CustomerId}, id={fullRequest.EmergencyRequestId}");
 
                 // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
                 await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")

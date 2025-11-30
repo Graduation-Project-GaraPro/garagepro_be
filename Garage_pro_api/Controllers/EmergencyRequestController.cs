@@ -72,8 +72,8 @@ namespace Garage_pro_api.Controllers
                     return BadRequest(new { message = ex.Message });
                 if (ex is InvalidOperationException && ex.Message.Contains("Active emergency", StringComparison.OrdinalIgnoreCase))
                     return Conflict(new { message = ex.Message });
-                if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
-                    return StatusCode(429, new { message = ex.Message });
+             //   if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
+             //       return StatusCode(429, new { message = ex.Message });
                 var inner = ex.InnerException;
                 while (inner != null)
                 {
