@@ -23,6 +23,16 @@ namespace Services.QuotationServices
         /// <param name="categoryId">Parent category ID</param>
         Task<ServiceCategoryTreeResponseDto> GetCategoryChildrenAsync(Guid categoryId);
 
+        /// <summary>
+        /// Get service details with associated part categories
+        /// </summary>
+        /// <param name="serviceId">Service ID</param>
+        Task<ServiceDetailsDto> GetServiceDetailsAsync(Guid serviceId);
 
+        /// <summary>
+        /// Get all parts for a specific part category
+        /// </summary>
+        /// <param name="partCategoryId">Part category ID</param>
+        Task<List<PartForSelectionDto>> GetPartsByCategoryAsync(Guid partCategoryId);
     }
 }

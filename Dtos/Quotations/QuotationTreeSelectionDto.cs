@@ -61,4 +61,37 @@ namespace Dtos.Quotations
         public string CategoryName { get; set; }
         public int Level { get; set; }
     }
+
+    /// <summary>
+    /// DTO for service details - minimal info for quotation creation
+    /// </summary>
+    public class ServiceDetailsDto
+    {
+        public Guid ServiceId { get; set; }
+        public string ServiceName { get; set; }
+        public decimal Price { get; set; }
+        public List<PartCategoryForSelectionDto> PartCategories { get; set; }
+    }
+
+    /// <summary>
+    /// DTO for part category selection
+    /// </summary>
+    public class PartCategoryForSelectionDto
+    {
+        public Guid PartCategoryId { get; set; }
+        public string CategoryName { get; set; }
+    }
+
+    /// <summary>
+    /// DTO for part selection
+    /// </summary>
+    public class PartForSelectionDto
+    {
+        public Guid PartId { get; set; }
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public decimal Price { get; set; }
+        public int StockQuantity { get; set; }
+        public Guid PartCategoryId { get; set; }
+    }
 }

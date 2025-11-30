@@ -139,37 +139,34 @@ namespace Services.QuotationServices
                     // Only add to total if service is NOT Good
                     if (!serviceDto.IsGood)
                     {
-                        // Calculate service total (price * quantity) - using default quantity of 1
                         decimal serviceTotal = service.Price * 1;
                         totalAmount += serviceTotal;
                     }
 
-                    var quotationService = new QuotationService // This is the entity
+                    var quotationService = new QuotationService // entity
                     {
                         QuotationId = createdQuotation.QuotationId,
                         ServiceId = serviceDto.ServiceId,
                         IsSelected = serviceDto.IsSelected,
-                        IsRequired = serviceDto.IsRequired, // Set the IsRequired flag
-                        IsGood = serviceDto.IsGood, // Set IsGood flag
-                        Price = service.Price // Store the actual service price at the time of quotation creation
+                        IsRequired = serviceDto.IsRequired, // Set IsRequired 
+                        IsGood = serviceDto.IsGood, // Set IsGood
+                        Price = service.Price // Store the actual service price
                     };
 
                     await _quotationServiceRepository.CreateAsync(quotationService);
-                    // Don't add to the collection directly, let the repository handle the relationship
 
-                    // Create quotation service parts for this service (only if service is NOT Good)
+                    // Create quotation service parts for this service when service is NOT Good
                     if (!serviceDto.IsGood && serviceDto.QuotationServiceParts != null)
                     {
                         foreach (var partDto in serviceDto.QuotationServiceParts)
                         {
-                            // Get the actual part to retrieve its price
+                            // Get the actual part to retrieve price
                             var part = await _partRepository.GetByIdAsync(partDto.PartId);
                             if (part == null)
                             {
                                 throw new ArgumentException($"Part with ID {partDto.PartId} not found.");
                             }
 
-                            // Calculate part total (price * quantity) - using default quantity of 1
                             decimal partTotal = part.Price * 1;
                             totalAmount += partTotal;
 
@@ -177,8 +174,8 @@ namespace Services.QuotationServices
                             {
                                 QuotationServiceId = quotationService.QuotationServiceId,
                                 PartId = partDto.PartId,
-                                IsSelected = partDto.IsSelected, // Use the IsSelected from DTO (pre-selected by technician or manager)
-                                Price = part.Price, // Store the actual part price at the time of quotation creation
+                                IsSelected = partDto.IsSelected, // Use the IsSelected from DTO (goi y part cua tech)
+                                Price = part.Price,
                                 Quantity = partDto.Quantity
                             };
 

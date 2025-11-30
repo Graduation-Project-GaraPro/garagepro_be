@@ -559,8 +559,9 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();  
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService);
+    var notifiactionService = provider.GetRequiredService<INotificationService>();
+    var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
+    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService, dbContext);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();

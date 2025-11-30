@@ -6,6 +6,7 @@ using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.Hubs;
 using Services.Notifications;
@@ -19,16 +20,18 @@ namespace Services
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
         private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
-
         private readonly IHubContext<InspectionHub> _inspectionHubContext;
         private readonly INotificationService _notificationService;
+        private readonly DataAccessLayer.MyAppDbContext _dbContext;
+
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
             IQuotationService quotationService,
             IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
             IHubContext<InspectionHub> inspectionHubContext,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            DataAccessLayer.MyAppDbContext dbContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
@@ -36,6 +39,7 @@ namespace Services
             _technicianAssignmentHubContext = technicianAssignmentHubContext;
             _inspectionHubContext = inspectionHubContext;
             _notificationService = notificationService;
+            _dbContext = dbContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -233,7 +237,6 @@ namespace Services
             if (inspection.RepairOrder == null)
                 throw new InvalidOperationException("Inspection must have a valid repair order");
 
-            // Create quotation services from inspection services and parts
             var quotationServices = new List<CreateQuotationServiceDto>();
             
             // Add services from the inspection
@@ -241,11 +244,9 @@ namespace Services
             {
                 foreach (var serviceInspection in inspection.ServiceInspections)
                 {
-                    // Skip if service is null
                     if (serviceInspection.Service == null)
                         continue;
 
-                    // Determine service flags based on condition status
                     bool isGood = serviceInspection.ConditionStatus == ConditionStatus.Good;
                     bool isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace;
                     
@@ -280,7 +281,21 @@ namespace Services
                 }
             }
 
-            // Create the quotation DTO
+            // Calculate inspection fee based on service complexity
+            decimal inspectionFee = 0;
+            bool hasAdvancedService = inspection.ServiceInspections
+                .Any(si => si.Service != null && si.Service.IsAdvanced);
+
+            // 1=Basic, 2=Advanced
+            int inspectionTypeId = hasAdvancedService ? 2 : 1;
+            var inspectionType = await _dbContext.InspectionTypes
+                .FirstOrDefaultAsync(it => it.InspectionTypeId == inspectionTypeId && it.IsActive);
+
+            if (inspectionType != null)
+            {
+                inspectionFee = inspectionType.InspectionFee;
+            }
+
             var createQuotationDto = new CreateQuotationDto
             {
                 InspectionId = inspection.InspectionId,
@@ -291,8 +306,34 @@ namespace Services
                 QuotationServices = quotationServices
             };
 
-            // Create the quotation
-            return await _quotationService.CreateQuotationAsync(createQuotationDto);
+            //  calculate service/part totals
+            var quotation = await _quotationService.CreateQuotationAsync(createQuotationDto);
+
+
+            if (inspectionFee > 0)
+            {
+                var quotationEntity = await _dbContext.Quotations
+                    .Include(q => q.RepairOrder)
+                    .FirstOrDefaultAsync(q => q.QuotationId == quotation.QuotationId);
+
+                if (quotationEntity != null)
+                {
+                    quotationEntity.TotalAmount += inspectionFee;
+                    
+                    // Add ONLY inspection fee to RepairOrder cost now
+                    // Service/part fees will be added when quotation is approved
+                    if (quotationEntity.RepairOrder != null)
+                    {
+                        quotationEntity.RepairOrder.Cost = inspectionFee;
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+                    
+                    quotation.TotalAmount += inspectionFee;
+                }
+            }
+
+            return quotation;
         }
 
         private InspectionDto MapToDto(Inspection inspection)
