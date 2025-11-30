@@ -29,6 +29,10 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - MAPBOX_PROFILE=driving-traffic
+    env_file:
+      - .env
     ports:
       - "5000:8080"
     networks:
