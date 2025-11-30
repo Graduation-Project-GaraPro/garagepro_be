@@ -123,7 +123,7 @@ namespace Services.InspectionAndRepair
             var payload = new
             {
                 JobId = dto.JobId,
-                RepairOrderId = job.RepairOrderId,          // ✅ thêm RO Id vào JSON
+                RepairOrderId = job.RepairOrderId,          
                 OldStatus = oldStatus.ToString(),
                 NewStatus = dto.JobStatus.ToString(),
                 UpdatedAt = DateTime.UtcNow,
@@ -146,6 +146,9 @@ namespace Services.InspectionAndRepair
                 };
                 await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
 
+                await _hubContext.Clients
+               .Group($"RepairOrder_{user.Id}")
+               .SendAsync("JobStatusUpdated", payload);
             }
             // Send notification
             await _hubContext.Clients
@@ -162,6 +165,8 @@ namespace Services.InspectionAndRepair
             await _hubContext.Clients
             .Group($"RepairOrder_{job.RepairOrderId}")
             .SendAsync("JobStatusUpdated", payload);
+
+            
 
             return true;
         }

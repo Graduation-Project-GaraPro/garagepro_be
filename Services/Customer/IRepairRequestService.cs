@@ -17,22 +17,22 @@ namespace Services.Customer
         Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerAsync(); // New method for managers
         Task<ManagerRepairRequestDto> GetManagerRequestByIdAsync(Guid id); // New method for getting single request for manager        
        
-        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId); 
-              
+        Task<IEnumerable<ManagerRepairRequestDto>> GetForManagerByBranchAsync(Guid branchId);
+
+        Task<IReadOnlyList<string>> GetArrivalTimeSlotsAsync(Guid branchId, DateOnly date);
 
         Task<RPDetailDto> GetByIdDetailsAsync(Guid id);
 
         Task<bool> CustomerCancelRepairRequestAsync(Guid requestId, string userId);
+        
+        // Manager can cancel on behalf of customer (within 30 minutes before RequestDate)
+        Task<bool> ManagerCancelRepairRequestAsync(Guid requestId, string managerId);
 
         Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date);
 
-        Task<RepairRequestDto> CreateRepairRequestAsync(CreateRequestDto dto, string userId);
-        Task<RepairRequestDto> UpdateRepairRequestAsync(Guid requestId, UpdateRepairRequestDto dto,string userId);
+       
+       
         Task<bool> DeleteRepairRequestAsync(Guid id);
-
-        // Approval and rejection methods
-        Task<bool> ApproveRepairRequestAsync(Guid requestId);
-        Task<bool> RejectRepairRequestAsync(Guid requestId);
 
         // Conversion method
         Task<RepairOrderDto> ConvertToRepairOrderAsync(Guid requestId, CreateRoFromRequestDto dto);

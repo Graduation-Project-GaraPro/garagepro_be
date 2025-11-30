@@ -174,28 +174,7 @@ namespace Services.QuotationServices
                     {
                         quotationService.AppliedPromotionId = serviceDto.AppliedPromotionId.Value;
 
-                        // Tính toán discount value
-                        var promotional = await _promotionalCampaignRepo.GetByIdAsync(serviceDto.AppliedPromotionId.Value);
-                        if (promotional != null)
-                        {
-                            if (promotional.UsageLimit <= 0)
-                                throw new Exception("Promotion has reached usage limit.");
-
-                            // Tính discount
-                            var discountValue = _promotionalCampaignRepo.CalculateActualDiscountValue(
-                                promotional,
-                                quotationService.Price);
-
-                            // Giảm limit
-                            promotional.UsageLimit--;
-                            promotional.UsedCount++;
-
-                            // Lưu lại vào DB
-                             _promotionalCampaignRepo.Update(promotional);
-                            
-
-                            quotationService.DiscountValue = discountValue;
-                        }
+                       
 
                     }
                     else
@@ -231,20 +210,48 @@ namespace Services.QuotationServices
         {
             decimal totalAmount = 0;
 
-            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected))
+            // Only calculate for selected services that are NOT Good
+            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected && !qs.IsGood))
             {
                 // Tính giá dịch vụ sau discount
-                var servicePrice = quotationService.Price - quotationService.DiscountValue;
-                totalAmount += servicePrice;
+                //var servicePrice = quotationService.Price - quotationService.DiscountValue;
+                //totalAmount += servicePrice;
                 decimal partTotals = 0;
                 // Tính giá phụ tùng được chọn
                 foreach (var part in quotationService.QuotationServiceParts.Where(p => p.IsSelected))
                 {
-                    totalAmount += part.Price * part.Quantity;
+                   
                     partTotals += part.Price * part.Quantity; 
                 }
 
+                // Tính toán discount value
+                if(quotationService.AppliedPromotionId.HasValue)
+                {
+                    var promotional = await _promotionalCampaignRepo.GetByIdAsync(quotationService.AppliedPromotionId.Value);
+                    if (promotional != null)
+                    {
+                        if (promotional.UsageLimit <= 0)
+                            throw new Exception("Promotion has reached usage limit.");
+
+                        // Tính discount
+                        var discountValue = _promotionalCampaignRepo.CalculateActualDiscountValue(
+                            promotional,
+                            quotationService.Price + partTotals);
+
+                        // Giảm limit
+                        promotional.UsageLimit--;
+                        promotional.UsedCount++;
+
+                        // Lưu lại vào DB
+                        _promotionalCampaignRepo.Update(promotional);
+
+
+                        quotationService.DiscountValue = discountValue;
+                    }
+                }    
+                
                 var finalPrice = quotationService.Price + partTotals - quotationService.DiscountValue;
+                totalAmount += finalPrice;
                 quotationService.FinalPrice = finalPrice;
             }
 

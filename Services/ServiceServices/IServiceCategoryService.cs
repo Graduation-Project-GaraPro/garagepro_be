@@ -17,7 +17,9 @@ namespace Services.ServiceServices
             int pageNumber = 1,
             int pageSize = 10,
             Guid? serviceCategoryId = null,
-            string? searchTerm = null);
+            string? searchTerm = null
+            
+            );
 
         Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesForFilterAsync();
 
@@ -26,12 +28,15 @@ namespace Services.ServiceServices
            string? searchTerm = null,
            bool? isActive = null);
         Task<IEnumerable<ServiceCategoryDto>> GetValidParentCategoriesAsync(Guid? categoryId);
+
         Task<object> GetAllServiceCategoryFromParentCategoryAsync(
             Guid parentServiceCategoryId,
             int pageNumber = 1,
             int pageSize = 10,
             Guid? childServiceCategoryId = null,
-            string? searchTerm = null);
+            string? searchTerm = null
+            , Guid? branchId = null
+            );
 
         Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesAsync();
         Task<ServiceCategoryDto> CreateCategoryAsync(CreateServiceCategoryDto dto);

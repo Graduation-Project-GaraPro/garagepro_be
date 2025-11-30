@@ -91,18 +91,21 @@ namespace Services.ServiceServices
 
 
         public async Task<object> GetAllServiceCategoryFromParentCategoryAsync(
-            Guid parentServiceCategoryId,
-            int pageNumber = 1,
-            int pageSize = 10,
-            Guid? childServiceCategoryId = null,
-            string? searchTerm = null)
+             Guid parentServiceCategoryId,
+             int pageNumber = 1,
+             int pageSize = 10,
+             Guid? childServiceCategoryId = null,
+             string? searchTerm = null,
+             Guid? branchId = null  
+         )
         {
             var (categories, totalCount) = await _repository.GetCategoriesByParentAsync(
                 parentServiceCategoryId,
                 pageNumber,
                 pageSize,
                 childServiceCategoryId,
-                searchTerm
+                searchTerm,
+                branchId 
             );
 
             var result = categories.Select(cat => new ServiceCategoryForBooking
@@ -110,11 +113,12 @@ namespace Services.ServiceServices
                 ServiceCategoryId = cat.ServiceCategoryId,
                 ParentServiceCategoryId = cat.ParentServiceCategoryId,
                 CategoryName = cat.CategoryName,
-                Services = cat.Services.Where(s=>s.IsActive==true).Select(service => new ServiceDtoForBooking
+                
+                Services = cat.Services.Select(service => new ServiceDtoForBooking
                 {
                     ServiceId = service.ServiceId,
                     ServiceCategoryId = service.ServiceCategoryId,
-                    
+
                     ServiceName = service.ServiceName,
                     Description = service.Description,
                     Price = service.Price,
@@ -130,11 +134,11 @@ namespace Services.ServiceServices
                         CategoryName = service.ServiceCategory.CategoryName
                     }
                 }).ToList()
-            }).ToList();
+            }).ToList(); 
 
             return new
             {
-                TotalCount = totalCount,
+                TotalCount = totalCount, // đã là số category còn service
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 Data = result

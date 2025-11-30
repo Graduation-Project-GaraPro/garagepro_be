@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251128115429_isSystemPermission")]
-    partial class isSystemPermission
+    [Migration("20251130064850_isgood")]
+    partial class isgood
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -238,6 +238,10 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("Gender")
                         .HasColumnType("bit");
@@ -899,6 +903,41 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("VehicleLookups");
                 });
 
+            modelBuilder.Entity("BusinessObject.InspectionType", b =>
+                {
+                    b.Property<int>("InspectionTypeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InspectionTypeId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("InspectionFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TypeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("InspectionTypeId");
+
+                    b.ToTable("InspectionTypes");
+                });
+
             modelBuilder.Entity("BusinessObject.Job", b =>
                 {
                     b.Property<Guid>("JobId")
@@ -1094,8 +1133,8 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<DateTime>("TimeSent")
-                        .HasColumnType("datetime2");
+                    b.Property<DateTimeOffset>("TimeSent")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("Type")
                         .IsRequired()
@@ -1496,6 +1535,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("FinalPrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsGood")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");

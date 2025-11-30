@@ -12,7 +12,7 @@ namespace Dtos.InspectionAndRepair
         public Guid NotificationID { get; set; }
         public string Content { get; set; }
         public NotificationType Type { get; set; }
-        public DateTime TimeSent { get; set; }
+        public DateTimeOffset TimeSent { get; set; }
         public NotificationStatus Status { get; set; }
         public string Target { get; set; }
         public string UserID { get; set; }

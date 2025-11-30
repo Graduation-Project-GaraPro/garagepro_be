@@ -30,15 +30,26 @@ namespace Repositories.ServiceRepositories
                 .ToListAsync();
         }
         public async Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesByParentAsync(
-            Guid parentServiceCategoryId,
-            int pageNumber,
-            int pageSize,
-            Guid? childServiceCategoryId = null,
-            string? searchTerm = null)
+                 Guid parentServiceCategoryId,
+                 int pageNumber,
+                 int pageSize,
+                 Guid? childServiceCategoryId = null,
+                 string? searchTerm = null,
+                 Guid? branchId = null
+             )
         {
             var query = _context.ServiceCategories
-                .Include(c => c.Services)
-                    .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
+                // Include services đã filter theo Active + Branch
+                .Include(c => c.Services
+                    .Where(s =>
+                        s.IsActive == true &&
+                        (!branchId.HasValue ||
+                         s.BranchServices.Any(bs => bs.BranchId == branchId.Value))  
+                    )
+                )
+                    .ThenInclude(s => s.ServicePartCategories)
+                        .ThenInclude(spc => spc.PartCategory)
+                            .ThenInclude(p => p.Parts)
                 .Include(c => c.ChildServiceCategories)
                 .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId)
                 .AsQueryable();
@@ -49,15 +60,29 @@ namespace Repositories.ServiceRepositories
                 query = query.Where(c => c.ServiceCategoryId == childServiceCategoryId.Value);
             }
 
-            // 🔹 Tìm kiếm theo tên category con hoặc ServiceName
+            // 🔹 Tìm kiếm theo tên category / child / service
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(c =>
-                    c.CategoryName.Contains(searchTerm) ||                     // Tìm trong chính category này
-                    c.ChildServiceCategories.Any(cc => cc.CategoryName.Contains(searchTerm)) ||  // Tìm trong child
-                    c.Services.Any(s => s.ServiceName.Contains(searchTerm))    // Tìm trong service
+                    c.CategoryName.Contains(searchTerm) ||
+                    c.ChildServiceCategories.Any(cc => cc.CategoryName.Contains(searchTerm)) ||
+                    c.Services.Any(s =>
+                        s.ServiceName.Contains(searchTerm) &&
+                        s.IsActive == true &&
+                        (!branchId.HasValue ||
+                         s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) // ✅ search theo branch
+                    )
                 );
             }
+
+            // 🔹 Chỉ giữ category có ÍT NHẤT 1 service thoả IsActive + Branch
+            query = query.Where(c =>
+                c.Services.Any(s =>
+                    s.IsActive == true &&
+                    (!branchId.HasValue ||
+                     s.BranchServices.Any(bs => bs.BranchId == branchId.Value))
+                )
+            );
 
             var totalCount = await query.CountAsync();
 
@@ -69,6 +94,7 @@ namespace Repositories.ServiceRepositories
 
             return (categories, totalCount);
         }
+
 
         public async Task<IEnumerable<ServiceCategory>> GetAllCategoriesWithFilterAsync(
             Guid? parentServiceCategoryId = null,

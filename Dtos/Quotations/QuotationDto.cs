@@ -39,6 +39,7 @@ namespace Dtos.Quotations
         public Guid ServiceId { get; set; }
         public bool IsSelected { get; set; }
         public bool IsRequired { get; set; } // Indicates if this is a required service
+        public bool IsGood { get; set; } // Service condition is Good - view only, no payment
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
         public decimal TotalPrice { get; set; }
@@ -97,6 +98,8 @@ namespace Dtos.Quotations
         public bool IsRequired { get; set; } // Indicates if this is a required service
 
         public bool IsSelected { get; set; } = false;
+
+        public bool IsGood { get; set; } = false; // Service condition is Good - view only, no payment
         
         public ICollection<CreateQuotationServicePartDto> QuotationServiceParts { get; set; }
     }

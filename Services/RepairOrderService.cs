@@ -12,7 +12,10 @@ using Microsoft.AspNetCore.SignalR;
 using Services.Hubs; // Update namespace
 using Repositories;
 using Repositories.ServiceRepositories; // Add this for service repository
-using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
+using Microsoft.EntityFrameworkCore;
+using Services.FCMServices;
+using BusinessObject.FcmDataModels;
+using BusinessObject.Enums; // Add this for ToListAsync
 
 namespace Services
 {
@@ -20,9 +23,11 @@ namespace Services
     {
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IOrderStatusRepository _orderStatusRepository;
+        private readonly IFcmService _fcmService;
         private readonly ILabelRepository _labelRepository;
         private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
         private readonly IServiceRepository _serviceRepository; // Add service repository
+        private readonly IUserService _userService; // Add service repository
 
         // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
@@ -37,13 +42,16 @@ namespace Services
             IOrderStatusRepository orderStatusRepository,
             ILabelRepository labelRepository,
             IHubContext<RepairOrderHub> hubContext,
-            IServiceRepository serviceRepository) // Add service repository parameter
+            IUserService userService,
+            IServiceRepository serviceRepository, IFcmService fcmService) // Add service repository parameter
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
             _hubContext = hubContext;
             _serviceRepository = serviceRepository; // Initialize service repository
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
         #region Kanban Board Operations
@@ -1006,6 +1014,27 @@ namespace Services
                     result.IsArchived = true;
                     result.ArchivedAt = DateTime.UtcNow;
                     result.Message = "Repair order archived successfully";
+
+                    await _hubContext.Clients.All.SendAsync(
+                                "RepairOrderArchived",
+                                archiveDto.RepairOrderId
+                            );
+
+                    var user = await _userService.GetUserByIdAsync(repairOrder.UserId);
+
+                    if (user != null && user.DeviceId != null)
+                    {
+                        var FcmNotification = new FcmDataPayload
+                        {
+                            Type = NotificationType.Repair,
+                            Title = "Repair Order Completed",
+                            Body = "Your repair order has been completed. Thank you for using our service.",
+                            EntityKey = EntityKeyType.repairOrderId,
+                            EntityId = repairOrder.RepairOrderId,
+                            Screen = AppScreen.RepairOrderArchivedDetailFragment
+                        };
+                        await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+                    }
                 }
                 else
                 {

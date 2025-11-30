@@ -68,7 +68,8 @@ namespace Garage_pro_api.Controllers
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] Guid? childServiceCategoryId = null,
-            [FromQuery] string? searchTerm = null)
+            [FromQuery] string? searchTerm = null,
+            [FromQuery] Guid? branchId = null)
         {
             try
             {
@@ -77,7 +78,8 @@ namespace Garage_pro_api.Controllers
                     pageNumber,
                     pageSize,
                     childServiceCategoryId,
-                    searchTerm
+                    searchTerm,
+                    branchId
                 );
 
                 return Ok(result);

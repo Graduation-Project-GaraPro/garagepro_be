@@ -34,7 +34,8 @@ namespace BusinessObject.Authentication
         // Legacy properties
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        // Removed FullName property - will be computed in DTOs
+        public string FullName { get; set; } = string.Empty;
+
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
         public DateTime? DateOfBirth { get; set; }
@@ -50,7 +51,9 @@ namespace BusinessObject.Authentication
         //feedback 
         public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 
-        
+        public virtual ICollection<RequestEmergency.RequestEmergency> AssignedEmergencyRequests { get; set; }
+         = new List<RequestEmergency.RequestEmergency>();
+
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }

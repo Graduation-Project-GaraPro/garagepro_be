@@ -22,6 +22,7 @@ public class InspectionTechnicianService : IInspectionTechnicianService
     {
         _repo = repo;
         _mapper = mapper;
+        _repairOrderService = repairOrderService;
     }
     public async Task<List<InspectionTechnicianDto>> GetInspectionsByTechnicianAsync(string userId)
     {

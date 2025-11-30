@@ -40,6 +40,17 @@ namespace Repositories
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
+        public async Task<RepairOrder?> GetByIdArchivedAsync(Guid repairOrderId)
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                .Include(ro => ro.User)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && ro.IsArchived);
+        }
+
         public async Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId)
         {
             return await _context.RepairOrders

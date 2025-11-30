@@ -70,5 +70,10 @@ namespace BusinessObject.RequestEmergency
         public DateTime? ResponseDeadline { get; set; }
         public DateTime? RespondedAt { get; set; }
         public DateTime? AutoCanceledAt { get; set; }
+
+
+        public string? TechnicianId { get; set; }     
+        public ApplicationUser? Technician { get; set; }
+
     }
 }

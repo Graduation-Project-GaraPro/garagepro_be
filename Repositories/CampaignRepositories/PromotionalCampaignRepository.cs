@@ -85,7 +85,7 @@ namespace Repositories.CampaignRepositories
             if (promotion.DiscountType == DiscountType.Fixed)
             {
                 // Với chiết khấu cố định
-                if (promotion.MaximumDiscount.HasValue)
+                if (promotion.MaximumDiscount.HasValue && promotion.MaximumDiscount.Value != 0)
                 {
                     return Math.Min(promotion.DiscountValue, promotion.MaximumDiscount.Value);
                 }

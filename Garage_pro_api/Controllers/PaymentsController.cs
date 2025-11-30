@@ -30,13 +30,14 @@ namespace Garage_pro_api.Controllers
         private readonly IQrCodeService _qrCodeService;
         private readonly IRepairOrderPaymentService _paymentService;
 
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService, IRepairOrderPaymentService paymentService)
         {
             _service = service;
             _payos = payos;
             _webhookInboxRepo = webhookInboxRepo;
             _userManager = userManager;
             _qrCodeService = qrCodeService;
+            _paymentService = paymentService;
         }
 
         [HttpGet("{repairOrderId:guid}/payment")]
@@ -158,8 +159,8 @@ namespace Garage_pro_api.Controllers
                 if (paidPayment != null) 
                     return BadRequest($"Payment {paidPayment.PaymentId} already paid");
 
-                // Calculate the amount to pay (estimated amount minus already paid amount)
-                var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+                // Calculate the amount to pay (actual cost from approved quotations minus already paid amount)
+                var amountToPay = repairOrder.Cost - repairOrder.PaidAmount;
 
                 // Create the payment record
                 var payment = await _service.CreateManualPaymentAsync(repairOrderId, userId, amountToPay, dto.Method, ct);

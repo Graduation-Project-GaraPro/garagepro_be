@@ -20,7 +20,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections
         [HttpGet]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<InspectionDto>>> GetAllInspections()
         {
             var inspections = await _inspectionService.GetAllInspectionsAsync();
@@ -29,7 +29,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/{id}
         [HttpGet("{id}")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<InspectionDto>> GetInspectionById(Guid id)
         {
             var inspection = await _inspectionService.GetInspectionByIdAsync(id);
@@ -43,7 +43,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/repairorder/{repairOrderId}
         [HttpGet("repairorder/{repairOrderId}")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<InspectionDto>>> GetInspectionsByRepairOrderId(Guid repairOrderId)
         {
             var inspections = await _inspectionService.GetInspectionsByRepairOrderIdAsync(repairOrderId);
@@ -52,7 +52,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/technician/{technicianId}
         [HttpGet("technician/{technicianId}")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<InspectionDto>>> GetInspectionsByTechnicianId(Guid technicianId)
         {
             var inspections = await _inspectionService.GetInspectionsByTechnicianIdAsync(technicianId);
@@ -61,7 +61,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/pending
         [HttpGet("pending")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<InspectionDto>>> GetPendingInspections()
         {
             var inspections = await _inspectionService.GetPendingInspectionsAsync();
@@ -70,7 +70,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/completed
         [HttpGet("completed")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<InspectionDto>>> GetCompletedInspections()
         {
             var inspections = await _inspectionService.GetCompletedInspectionsAsync();
@@ -79,7 +79,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspections/completed-with-details
         [HttpGet("completed-with-details")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult<IEnumerable<CompletedInspectionDto>>> GetCompletedInspectionsWithDetails()
         {
             var inspections = await _inspectionService.GetCompletedInspectionsWithDetailsAsync();
@@ -88,7 +88,7 @@ namespace Garage_pro_api.Controllers
 
         // POST: api/Inspections
         [HttpPost]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult<InspectionDto>> CreateInspection(CreateInspectionDto createInspectionDto)
         {
             if (!ModelState.IsValid)
@@ -138,7 +138,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/Inspections/{id}
         [HttpPut("{id}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult<InspectionDto>> UpdateInspection(Guid id, UpdateInspectionDto updateInspectionDto)
         {
             if (!ModelState.IsValid)
@@ -159,7 +159,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/Inspections/{id}/assign/{technicianId}
         [HttpPut("{id}/assign/{technicianId}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult> AssignInspectionToTechnician(Guid id, Guid technicianId)
         {
             var result = await _inspectionService.AssignInspectionToTechnicianAsync(id, technicianId);
@@ -173,7 +173,7 @@ namespace Garage_pro_api.Controllers
 
         // DELETE: api/Inspections/{id}
         [HttpDelete("{id}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult> DeleteInspection(Guid id)
         {
             var result = await _inspectionService.DeleteInspectionAsync(id);
@@ -187,7 +187,7 @@ namespace Garage_pro_api.Controllers
 
         // POST: api/Inspection/seed-database
         [HttpPost("seed-database")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult> SeedDatabase([FromServices] IServiceProvider serviceProvider)
         {
             try
@@ -204,7 +204,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Inspection/check-seeding
         [HttpGet("check-seeding")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult> CheckSeeding([FromServices] IInspectionService inspectionService)
         {
             try
