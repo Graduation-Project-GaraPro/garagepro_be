@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251129114416_isSystemPermission.Designer.cs
-    [Migration("20251129114416_isSystemPermission")]
-    partial class isSystemPermission
-========
-    [Migration("20251130051139_UpdateDB")]
-    partial class UpdateDB
->>>>>>>> hauhv_technician:DataAccessLayer/Migrations/20251130051139_UpdateDB.Designer.cs
+    [Migration("20251130064850_isgood")]
+    partial class isgood
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -908,6 +903,41 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("VehicleLookups");
                 });
 
+            modelBuilder.Entity("BusinessObject.InspectionType", b =>
+                {
+                    b.Property<int>("InspectionTypeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InspectionTypeId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("InspectionFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TypeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("InspectionTypeId");
+
+                    b.ToTable("InspectionTypes");
+                });
+
             modelBuilder.Entity("BusinessObject.Job", b =>
                 {
                     b.Property<Guid>("JobId")
@@ -1505,6 +1535,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("FinalPrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsGood")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");

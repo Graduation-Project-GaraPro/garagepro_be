@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateDB : Migration
+    public partial class isgood : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -74,6 +74,24 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Branches", x => x.BranchId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "InspectionTypes",
+                columns: table => new
+                {
+                    InspectionTypeId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TypeName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    InspectionFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InspectionTypes", x => x.InspectionTypeId);
                 });
 
             migrationBuilder.CreateTable(
@@ -1726,6 +1744,7 @@ namespace DataAccessLayer.Migrations
                     ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsSelected = table.Column<bool>(type: "bit", nullable: false),
                     IsRequired = table.Column<bool>(type: "bit", nullable: false),
+                    IsGood = table.Column<bool>(type: "bit", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     DiscountValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     FinalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -2380,6 +2399,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "FeedBacks");
+
+            migrationBuilder.DropTable(
+                name: "InspectionTypes");
 
             migrationBuilder.DropTable(
                 name: "JobParts");

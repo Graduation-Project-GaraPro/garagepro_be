@@ -144,7 +144,7 @@ namespace Services.InspectionAndRepair
                     EntityId = job.RepairOrderId,
                     Screen = AppScreen.RepairProgressDetailFragment
                 };
-                //await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
 
                 await _hubContext.Clients
                .Group($"RepairOrder_{user.Id}")
