@@ -81,13 +81,13 @@ namespace Services.DeadlineServices
                 var userId = jobTechnician.Technician?.UserId;
                 if (string.IsNullOrEmpty(userId)) continue;
 
-                await _notificationService.SendJobDeadlineReminderAsync(
-                    userId,
-                    job.JobId,
-                    job.JobName,
-                    job.Service?.ServiceName ?? "N/A",
-                    hoursRemaining
-                );
+                //await _notificationService.SendJobDeadlineReminderAsync(
+                //    userId,
+                //    job.JobId,
+                //    job.JobName,
+                //    job.Service?.ServiceName ?? "N/A",
+                //    hoursRemaining
+                //);
             }
 
             await MarkNotificationAsSentAsync(notificationKey);
@@ -108,13 +108,13 @@ namespace Services.DeadlineServices
                 var userId = jobTechnician.Technician?.UserId;
                 if (string.IsNullOrEmpty(userId)) continue;
 
-                await _notificationService.SendJobOverdueWarningAsync(
-                    userId,
-                    job.JobId,
-                    job.JobName,
-                    job.Service?.ServiceName ?? "N/A",
-                    hoursOverdue
-                );
+                //await _notificationService.SendJobOverdueWarningAsync(
+                //    userId,
+                //    job.JobId,
+                //    job.JobName,
+                //    job.Service?.ServiceName ?? "N/A",
+                //    hoursOverdue
+                //);
             }
 
             await MarkNotificationAsSentAsync(notificationKey);
@@ -134,13 +134,13 @@ namespace Services.DeadlineServices
                 var userId = jobTechnician.Technician?.UserId;
                 if (string.IsNullOrEmpty(userId)) continue;
 
-                await _notificationService.SendJobRecurringOverdueWarningAsync(
-                    userId,
-                    job.JobId,
-                    job.JobName,
-                    job.Service?.ServiceName ?? "N/A",
-                    dayCount
-                );
+                //await _notificationService.SendJobRecurringOverdueWarningAsync(
+                //    userId,
+                //    job.JobId,
+                //    job.JobName,
+                //    job.Service?.ServiceName ?? "N/A",
+                //    dayCount
+                //);
             }
 
             await MarkNotificationAsSentAsync(notificationKey);

@@ -25,7 +25,7 @@ namespace Garage_pro_api.Controllers
         // GET: api/Job
         [HttpGet]
         [EnableQuery]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<IActionResult> GetJobs()
         {
             var jobs = await _jobService.GetAllJobsAsync();
@@ -71,7 +71,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Job/5
         [HttpGet("{id}")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<IActionResult> GetJob(Guid id)
         {
             var job = await _jobService.GetJobByIdAsync(id);
@@ -116,7 +116,7 @@ namespace Garage_pro_api.Controllers
         // GET: api/Job/repairorder/5
         [HttpGet("repairorder/{repairOrderId}")]
         [EnableQuery]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<IActionResult> GetJobsByRepairOrder(Guid repairOrderId)
         {
             var jobs = await _jobService.GetJobsByRepairOrderIdAsync(repairOrderId);
@@ -162,7 +162,7 @@ namespace Garage_pro_api.Controllers
 
         // POST: api/Job
         [HttpPost]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<IActionResult> CreateJob(CreateJobDto createJobDto)
         {
             if (!ModelState.IsValid)
@@ -175,7 +175,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/Job/5
         [HttpPut("{id}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<IActionResult> UpdateJob(Guid id, UpdateJobDto updateJobDto)
         {
             if (!ModelState.IsValid)
@@ -242,7 +242,7 @@ namespace Garage_pro_api.Controllers
 
         // DELETE: api/Job/5
         [HttpDelete("{id}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<IActionResult> DeleteJob(Guid id)
         {
             var result = await _jobService.DeleteJobAsync(id);
@@ -256,7 +256,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/Job/5/status
         [HttpPut("{id}/status")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<IActionResult> UpdateJobStatus(Guid id, [FromBody] string status)
         {
             // Convert string to JobStatus enum
@@ -278,7 +278,7 @@ namespace Garage_pro_api.Controllers
         // GET: api/Job/status/{status}
         [HttpGet("status/{status}")]
         [EnableQuery]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<IActionResult> GetJobsByStatus(string status)
         {
             // Convert string to JobStatus enum
@@ -293,7 +293,7 @@ namespace Garage_pro_api.Controllers
 
         // PUT: api/Job/{id}/assign/{technicianId}
         [HttpPut("{id}/assign/{technicianId}")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult> AssignJobToTechnician(Guid id, Guid technicianId)
         {
             // Get the current user (manager) ID
@@ -325,7 +325,7 @@ namespace Garage_pro_api.Controllers
 
         // POST: api/Job/assign
         [HttpPost("assign")]
-        [Authorize(Policy = "BOOKING_MANAGE")]
+        [Authorize(Policy = "JOB_MANAGE")]
         public async Task<ActionResult> AssignJobsToTechnician([FromBody] AssignTechnicianDto assignDto)
         {
             // Get the current user (manager) ID
@@ -395,7 +395,7 @@ namespace Garage_pro_api.Controllers
 
         // GET: api/Job/{id}/parts
         [HttpGet("{id}/parts")]
-        [Authorize(Policy = "BOOKING_VIEW")]
+        [Authorize(Policy = "JOB_VIEW")]
         public async Task<ActionResult> GetJobParts(Guid id)
         {
             try
