@@ -40,6 +40,17 @@ namespace Services.Hubs
         public async Task LeaveRepairOrderGroup(string repairOrderId)
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"RepairOrder_{repairOrderId}");
+
+        }
+
+        public async Task JoinRepairOrderUserGroup(string userId)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"RepairOrder_{userId}");
+        }
+
+        public async Task LeaveRepairOrderUserGroup(string userId)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"RepairOrder_{userId}");
         }
 
     }
