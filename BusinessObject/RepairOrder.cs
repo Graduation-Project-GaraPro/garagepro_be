@@ -10,10 +10,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Authentication;
-
-using BusinessObject.Manager;
-using BusinessObject.Branches;
 using BusinessObject.Campaigns;
 
 namespace BusinessObject
@@ -42,7 +38,6 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal PaidAmount { get; set; }
 
-        // Changed from string to enum
         public PaidStatus PaidStatus { get; set; }
 
         public long? EstimatedRepairTime { get; set; }
@@ -50,17 +45,19 @@ namespace BusinessObject
         [MaxLength(500)]
         public string Note { get; set; }
 
-        // Removed LabelId property as it should be accessed through OrderStatus
-
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Archive Management
         public bool IsArchived { get; set; } = false;
 
         public DateTime? ArchivedAt { get; set; }
+
+
+        public bool IsCancelled { get; set; } = false;
+        public DateTime? CancelledAt { get; set; }
+        public string? CancelReason { get; set; }
 
 
         public string? ArchivedByUserId { get; set; }
@@ -69,7 +66,7 @@ namespace BusinessObject
         public Guid BranchId { get; set; }
 
         [Required]
-        public int StatusId { get; set; } // Changed from Guid to int
+        public int StatusId { get; set; }
 
         [Required]
         public Guid VehicleId { get; set; }
@@ -81,7 +78,7 @@ namespace BusinessObject
 
         public Guid? FeedBackId { get; set; }
 
-        // Navigation property
+        // Navigation 
         [ForeignKey(nameof(RepairRequestId))]
         public virtual RepairRequest? RepairRequest { get; set; } 
 
@@ -94,11 +91,13 @@ namespace BusinessObject
         public virtual ICollection<Job> Jobs { get; set; }
         public virtual ICollection<Payment> Payments { get; set; }
         public virtual FeedBack? FeedBack { get; set; }
-        // Add navigation property for quotations
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
         // ?? One-to-many (VoucherUsage)
         public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();
+        
+        // Many-to-many relationship with Labels
+        public virtual ICollection<Label> Labels { get; set; } = new List<Label>();
     }
 }

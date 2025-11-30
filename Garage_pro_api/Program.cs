@@ -359,7 +359,13 @@ builder.Services.AddScoped<IRepairOrderService, Services.RepairOrderService>();
 builder.Services.AddScoped<IJobTechnicianRepository, JobTechnicianRepository>();
 builder.Services.AddScoped<IJobTechnicianService, JobTechnicianService>();
 builder.Services.AddScoped<IInspectionTechnicianRepository, InspectionTechnicianRepository>();
-builder.Services.AddScoped<IInspectionTechnicianService, InspectionTechnicianService>();
+builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
+{
+    var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+});
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 builder.Services.AddScoped<IRepairRepository, RepairRepository>();
@@ -428,13 +434,17 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     var serviceRepository = provider.GetRequiredService<Repositories.ServiceRepositories.IServiceRepository>();
     var partRepository = provider.GetRequiredService<Repositories.PartRepositories.IPartRepository>();
     var repairOrderRepository = provider.GetRequiredService<Repositories.IRepairOrderRepository>();
-    var jobService = provider.GetRequiredService<Services.IJobService>();
+    //var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
+    //var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
+    var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
+   // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
+
     var mapper = provider.GetRequiredService<IMapper>();
     var hubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
 
-    return new Services.QuotationServices.QuotationManagementService(
+    return new QuotationManagementService(
         quotationRepository,
         quotationServiceRepository,
         quotationServicePartRepository,
@@ -443,8 +453,8 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
         hubContext,
         repairOrderRepository,
         jobService,
-        fcmService, // Add this
-        userService, // Add this
+        fcmService,
+        userService,
         mapper);
 });
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line
@@ -505,11 +515,17 @@ builder.Services.AddScoped<IVehicleColorService, VehicleColorService>();
 //PAYMENT
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IQrCodeService, QrCodeService>(); // Add QR code service
+
 //Notifiaction 
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IJobDeadlineService, JobDeadlineService>();
 
+
+//priceEmer
+builder.Services.AddScoped<IPriceEmergencyRepositories, PriceEmergencyRepositories>();
+builder.Services.AddScoped<IPriceService, PriceEmergenciesService>();
 
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
@@ -518,7 +534,6 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 builder.Services.AddScoped<IRevenueService, RevenueService>();
-
 
 
 // Job repository and service
@@ -607,6 +622,7 @@ builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 
 builder.Services.AddHostedService<CampaignExpirationService>();
 builder.Services.AddHostedService<PayOsWebhookProcessor>();
+builder.Services.AddHostedService<EmergencySlaService>();
 
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
@@ -640,7 +656,8 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
                 "http://10.224.41.46:5117",
-                "http://10.0.2.2:7113" // Android emulator
+                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113" 
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -661,7 +678,7 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(7113, listenOptions =>
     {
         listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; // 👈 Bắt buộc thêm dòng này
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
     });
 });
 
@@ -709,6 +726,7 @@ app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
+app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
 //Initialize database

@@ -28,6 +28,11 @@ namespace Dtos.RoBoard
         public Guid LabelId { get; set; }
         public string LabelName { get; set; }
         public string Description { get; set; }
+        public string ColorName { get; set; }
+        public string HexCode { get; set; }
+        public int OrderStatusId { get; set; }
+        
+        // Backward compatibility
         public RoBoardColorDto Color { get; set; }
     }
 

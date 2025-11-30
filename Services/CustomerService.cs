@@ -42,7 +42,7 @@ namespace Services
                         FirstName = customer.FirstName,
                         LastName = customer.LastName,
                         Birthday = customer.Birthday,
-                        FullName = customer.FullName,
+                        // Removed FullName assignment since it's no longer in the entity
                         Email = customer.Email,
                         PhoneNumber = customer.PhoneNumber
                     });
@@ -62,7 +62,7 @@ namespace Services
                 FirstName = c.FirstName,
                 LastName = c.LastName,
                 Birthday = c.Birthday,
-                FullName = c.FullName,
+                // Removed FullName assignment since it's no longer in the entity
                 Email = c.Email,
                 PhoneNumber = c.PhoneNumber
             });
@@ -86,7 +86,7 @@ namespace Services
                 FirstName = customer.FirstName,
                 LastName = customer.LastName,
                 Birthday = customer.Birthday,
-                FullName = customer.FullName,
+                // Removed FullName assignment since it's no longer in the entity
                 Email = customer.Email,
                 PhoneNumber = customer.PhoneNumber
             };
@@ -142,10 +142,9 @@ namespace Services
                 PhoneNumber = createCustomerDto.PhoneNumber,
                 FirstName = createCustomerDto.FirstName,
                 LastName = createCustomerDto.LastName,
-                FullName = createCustomerDto.FullName,
                 Email = createCustomerDto.Email,
                 Birthday = createCustomerDto.Birthday,
-                DateOfBirth = createCustomerDto.Birthday, // Also set DateOfBirth for consistency
+                DateOfBirth = createCustomerDto.Birthday,
                 CreatedAt = DateTime.UtcNow
             };
             
@@ -169,9 +168,82 @@ namespace Services
                 FirstName = customer.FirstName,
                 LastName = customer.LastName,
                 Birthday = customer.Birthday,
-                FullName = customer.FullName,
+                // Removed FullName assignment since it's no longer in the entity
                 Email = customer.Email,
                 PhoneNumber = customer.PhoneNumber
+            };
+        }
+
+        public async Task<RoBoardCustomerDto> UpdateCustomerAsync(string customerId, UpdateCustomerDto updateCustomerDto)
+        {
+            // Validate the DTO
+            var validationContext = new ValidationContext(updateCustomerDto);
+            var validationResults = new List<ValidationResult>();
+            if (!Validator.TryValidateObject(updateCustomerDto, validationContext, validationResults, true))
+            {
+                var errorMessage = string.Join("; ", validationResults.Select(vr => vr.ErrorMessage));
+                var validationException = new ValidationException($"Invalid customer data: {errorMessage}");
+                throw validationException;
+            }
+            
+            // Additional custom validation
+            if (string.IsNullOrWhiteSpace(updateCustomerDto.FirstName) || 
+                string.IsNullOrWhiteSpace(updateCustomerDto.LastName))
+            {
+                throw new ValidationException("First name and last name are required");
+            }
+            
+            if (string.IsNullOrWhiteSpace(updateCustomerDto.PhoneNumber))
+            {
+                throw new ValidationException("Phone number is required");
+            }
+            
+            // Check if customer with same phone number already exists
+            var existingCustomer = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == updateCustomerDto.PhoneNumber);
+            if (existingCustomer != null && existingCustomer.Id != customerId)
+            {
+                throw new InvalidOperationException("Customer with this phone number already exists");
+            }
+            
+            // Check if customer with same email already exists (if email is provided)
+            if (!string.IsNullOrEmpty(updateCustomerDto.Email))
+            {
+                var existingEmailCustomer = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.Email == updateCustomerDto.Email);
+                if (existingEmailCustomer != null && existingEmailCustomer.Id != customerId)
+                {
+                    throw new InvalidOperationException("Customer with this email already exists");
+                }
+            }
+            
+            // Update the existing customer
+            existingCustomer.PhoneNumber = updateCustomerDto.PhoneNumber;
+            existingCustomer.FirstName = updateCustomerDto.FirstName;
+            existingCustomer.LastName = updateCustomerDto.LastName;
+            // Removed FullName assignment since it's no longer in the entity
+            existingCustomer.Email = updateCustomerDto.Email;
+            existingCustomer.Birthday = updateCustomerDto.Birthday;
+            existingCustomer.DateOfBirth = updateCustomerDto.Birthday;
+            existingCustomer.UpdatedAt = DateTime.UtcNow;
+            
+            var result = await _userManager.UpdateAsync(existingCustomer);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Failed to update customer: {errors}");
+            }
+            
+            // Return the updated customer DTO
+            return new RoBoardCustomerDto
+            {
+                UserId = existingCustomer.Id,
+                FirstName = existingCustomer.FirstName,
+                LastName = existingCustomer.LastName,
+                Birthday = existingCustomer.Birthday,
+                // Removed FullName assignment since it's no longer in the entity
+                Email = existingCustomer.Email,
+                PhoneNumber = existingCustomer.PhoneNumber
             };
         }
     }

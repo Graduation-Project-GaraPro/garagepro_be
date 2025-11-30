@@ -43,6 +43,9 @@ namespace Services
         Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null);
         Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates);
 
+        // Service Methods
+        Task<Service?> GetServiceByIdAsync(Guid serviceId);
+
         // Business Logic Validation
         Task<bool> CanAssignJobToTechnicianAsync(Guid jobId);
 

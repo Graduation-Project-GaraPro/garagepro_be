@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿﻿using AutoMapper;
 using BusinessObject;
 using Dtos.Quotations;
 
@@ -10,7 +10,7 @@ namespace Garage_pro_api.Mapper
         {
             // Quotation → QuotationDetailDto
             CreateMap<Quotation, QuotationDetailDto>()
-                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User.FullName))
+                .ForMember(dest => dest.CustomerName, opt => opt.MapFrom(src => src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : "Unknown Customer"))
                 .ForMember(dest => dest.VehicleInfo, opt => opt.MapFrom(src => src.Vehicle != null
                     ? $"{src.Vehicle.LicensePlate} - {src.Vehicle.Model.ModelName}"
                     : string.Empty))

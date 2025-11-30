@@ -1,4 +1,4 @@
-﻿using BusinessObject.InspectionAndRepair;
+﻿﻿using BusinessObject.InspectionAndRepair;
 using BusinessObject;
 using DataAccessLayer;
 using System;
@@ -42,7 +42,7 @@ namespace Repositories.InspectionAndRepair
                         .ThenInclude(p => p.PartCategory)
                 .Include(r => r.Jobs)
                     .ThenInclude(j => j.Repair)
-                .FirstOrDefaultAsync(r => r.RepairOrderId == repairOrderId);
+                .FirstOrDefaultAsync(r => r.RepairOrderId == repairOrderId && !r.IsArchived);
         }
 
         public async Task<Repair> GetRepairByIdAsync(Guid repairId)

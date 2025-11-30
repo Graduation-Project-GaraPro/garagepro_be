@@ -21,6 +21,9 @@ namespace Repositories
         Task<bool> DeleteAsync(Guid jobId);
         Task<bool> ExistsAsync(Guid jobId);
 
+        // Service methods
+        Task<Service?> GetServiceByIdAsync(Guid serviceId);
+
         // Job assignment and technician management
         Task<bool> AssignTechnicianToJobAsync(Guid jobId, Guid technicianId);
         Task<bool> RemoveTechnicianFromJobAsync(Guid jobId, Guid technicianId);

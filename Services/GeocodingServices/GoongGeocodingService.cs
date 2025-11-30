@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,6 +43,23 @@ namespace Services.GeocodingServices
             var formatted = first.GetProperty("formatted_address").GetString() ?? address;
 
             return (lat, lng, formatted);
+        }
+
+        public async Task<string> ReverseGeocodeAsync(double lat, double lng)
+        {
+            var url = $"https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat={lat}&lon={lng}";
+            var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("User-Agent", "garagepro-be");
+            var response = await _httpClient.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+            var json = await response.Content.ReadAsStringAsync();
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+            if (root.TryGetProperty("display_name", out var disp))
+            {
+                return disp.GetString() ?? string.Empty;
+            }
+            return string.Empty;
         }
     }
 }

@@ -23,6 +23,8 @@ using BusinessObject.Campaigns;
 using Dtos.Roles;
 using Dtos.Services;
 using Dtos.Vehicles;
+using Dtos.Emergency;
+using BusinessObject.RequestEmergency;
 
 namespace Garage_pro_api.Mapper
 {
@@ -115,7 +117,7 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.VIN, opt => opt.MapFrom(src => src.VIN))
                 .ForMember(dest => dest.Odometer, opt => opt.MapFrom(src => src.Odometer))
                 .ForMember(dest => dest.NextServiceDate, opt => opt.MapFrom(src => src.NextServiceDate))
-                .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
+                // .ForMember(dest => dest.WarrantyStatus, opt => opt.MapFrom(src => src.WarrantyStatus))
                 .ForMember(dest => dest.CreatedAt, opt => opt.Ignore())
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => DateTime.UtcNow))
                 .ForMember(dest => dest.Brand, opt => opt.Ignore())
@@ -342,7 +344,8 @@ namespace Garage_pro_api.Mapper
 
             // feedback 
             CreateMap<FeedBack, FeedBackReadDto>()
-     .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.UserName));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => 
+                    src.User != null ? $"{src.User.FirstName} {src.User.LastName}".Trim() : "Unknown"));
 
             //CreateMap<PartSpecification, PartSpecificationDto>();
 
@@ -356,8 +359,29 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.Finding, opt => opt.MapFrom(src => src.Finding))
                 .ForMember(dest => dest.CreatedAt, opt => opt.MapFrom(src => src.CreatedAt))
                 .ForMember(dest => dest.UpdatedAt, opt => opt.MapFrom(src => src.UpdatedAt))
-                .ForMember(dest => dest.TechnicianName, opt => opt.MapFrom(src => src.Technician.User.FullName));
+                .ForMember(dest => dest.TechnicianName, opt => opt.MapFrom(src => src.Technician.User != null ? $"{src.Technician.User.FirstName} {src.Technician.User.LastName}".Trim() : "Unknown Technician"));
 
+
+
+
+            // Emergency: CreateEmergencyRequestDto -> RequestEmergency
+            CreateMap<CreateEmergencyRequestDto, RequestEmergency>()
+                    .ForMember(dest => dest.EmergencyRequestId, opt => opt.MapFrom(src => Guid.NewGuid()))
+                    .ForMember(dest => dest.CustomerId, opt => opt.Ignore())
+                    .ForMember(dest => dest.Status, opt => opt.Ignore())
+                    .ForMember(dest => dest.RequestTime, opt => opt.Ignore())
+                    .ForMember(dest => dest.ResponseDeadline, opt => opt.Ignore())
+                    .ForMember(dest => dest.Address, opt => opt.Ignore())
+                    .ForMember(dest => dest.RepairRequestId, opt => opt.Ignore())
+                    .ForMember(dest => dest.RejectReason, opt => opt.Ignore())
+                    .ForMember(dest => dest.EstimatedCost, opt => opt.Ignore())
+                    .ForMember(dest => dest.DistanceToGarageKm, opt => opt.Ignore())
+                    .ForMember(dest => dest.MediaFiles, opt => opt.Ignore())
+                    .ForMember(dest => dest.Customer, opt => opt.Ignore())
+                    .ForMember(dest => dest.Branch, opt => opt.Ignore())
+                    .ForMember(dest => dest.Vehicle, opt => opt.Ignore())
+                    .ForMember(dest => dest.RespondedAt, opt => opt.Ignore())
+                    .ForMember(dest => dest.AutoCanceledAt, opt => opt.Ignore());
         }
     }
 }

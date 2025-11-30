@@ -35,6 +35,24 @@ namespace Repositories
                 .FirstOrDefaultAsync(l => l.LabelId == id);
         }
 
+        public async Task<IEnumerable<Label>> GetByIdsAsync(List<Guid> ids)
+        {
+            if (ids == null || !ids.Any())
+                return new List<Label>();
+
+            return await _context.Labels
+                .Include(l => l.OrderStatus)
+                .Where(l => ids.Contains(l.LabelId))
+                .ToListAsync();
+        }
+
+        public async Task<Label?> GetDefaultLabelByStatusIdAsync(int orderStatusId)
+        {
+            return await _context.Labels
+                .Include(l => l.OrderStatus)
+                .FirstOrDefaultAsync(l => l.OrderStatusId == orderStatusId && l.IsDefault);
+        }
+
         public async Task<Label> CreateAsync(Label label)
         {
             _context.Labels.Add(label);
@@ -44,8 +62,19 @@ namespace Repositories
 
         public async Task<Label> UpdateAsync(Label label)
         {
+            // Detach any tracked entity with the same key
+            var trackedEntity = _context.ChangeTracker.Entries<Label>()
+                .FirstOrDefault(e => e.Entity.LabelId == label.LabelId);
+            
+            if (trackedEntity != null)
+            {
+                _context.Entry(trackedEntity.Entity).State = EntityState.Detached;
+            }
+
+            // Update the entity
             _context.Labels.Update(label);
             await _context.SaveChangesAsync();
+            
             return label;
         }
 

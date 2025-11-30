@@ -1,4 +1,4 @@
-﻿using BusinessObject.RequestEmergency;
+using BusinessObject.RequestEmergency;
 using DataAccessLayer;
 using Dtos.Emergency;
 using Microsoft.EntityFrameworkCore;
@@ -26,13 +26,42 @@ namespace Repositories.EmergencyRequestRepositories
                 await _context.SaveChangesAsync();
                 return request;
             }
+        public async Task<RequestEmergency> UpdateAsync(RequestEmergency emergency)
+        {
+            _context.RequestEmergencies.Update(emergency);
+            await _context.SaveChangesAsync();
+            return emergency;
+        }
+
+
+        public async Task<List<RequestEmergency>> GetAllEmergencyAsync()
+        {
+            return await _context.RequestEmergencies
+                 .Include(r => r.Branch)
+                 .Include(r => r.Customer)
+                 .Include(r => r.Vehicle)
+                 .Include(r => r.MediaFiles)
+                 .Include(r=> r.RepairRequest)
+                 .ToListAsync();
+        }
+
+        public async Task<bool> AnyActiveAsync(string customerId, Guid vehicleId)
+        {
+            return await _context.RequestEmergencies.AnyAsync(e =>
+                e.CustomerId == customerId &&
+                e.VehicleId == vehicleId &&
+                (e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted));
+        }
 
         public async Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId)
         {
             return await _context.RequestEmergencies
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
+                .Include(r=>r.Vehicle)
                 .Include(r => r.MediaFiles)
+                .Include(r=> r.RepairRequest)
                 .Where(r => r.CustomerId == customerId)
                 .ToListAsync();
         }
@@ -42,20 +71,25 @@ namespace Repositories.EmergencyRequestRepositories
             return await _context.RequestEmergencies
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
+                .Include(r=> r.Vehicle)
                 .Include(r => r.MediaFiles)
                 .FirstOrDefaultAsync(r => r.EmergencyRequestId == id);
         }
 
+
         public async Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5)
         {
-            var branches = await _context.Branches.ToListAsync();
+            var branches = await _context.Branches
+                .Where(b => b.IsActive)
+                .ToListAsync();
 
             var nearestBranches = branches
                 .Select(branch => new BranchNearbyResponseDto
                 {
                     BranchId = branch.BranchId,
                     BranchName = branch.BranchName,
-                    Address = branch.Province + branch.Commune,
+                    PhoneNumber = branch.PhoneNumber,
+                    Address = string.Join(", ", new[] { branch.Street, branch.Commune, branch.Province }.Where(s => !string.IsNullOrWhiteSpace(s))),
                     DistanceKm = GetDistance(userLat, userLon, branch.Latitude, branch.Longitude)
                 })
                 .OrderBy(x => x.DistanceKm)

@@ -46,7 +46,7 @@ namespace BusinessObject.Branches
        
         public int ArrivalWindowMinutes { get; set; } = 30; // ?? dài c?a s? ??n
         public int MaxBookingsPerWindow { get; set; } = 6;  // quota duy?t/1 c?a s?
-        public int MaxConcurrentWip { get; set; } = 8;      // WIP limit trong x??ng
+       
 
         public virtual ICollection<OperatingHour> OperatingHours { get; set; } = new List<OperatingHour>();
 

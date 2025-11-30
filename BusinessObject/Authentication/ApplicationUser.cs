@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -35,6 +35,7 @@ namespace BusinessObject.Authentication
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
         public DateTime? DateOfBirth { get; set; }
@@ -56,5 +57,4 @@ namespace BusinessObject.Authentication
         public virtual Branch Branch { get; set; }
 
     }
-
 }

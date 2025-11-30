@@ -31,9 +31,11 @@ namespace Services
 
             if (order.UserId != userId)
                 throw new Exception("You are not allowed to give feedback for this order.");
-            /// cho anh quan 
-            if (order.OrderStatus.StatusName == "completed") 
+            /// ch
+            if (order.OrderStatus.OrderStatusId != 3) 
                 throw new Exception("Feedback can only be given after the order is completed.");
+            if(order.PaidStatus != BusinessObject.Enums.PaidStatus.Paid )
+                throw new Exception("Feedback can only be given after the order is paid.");
 
             //var existingFeedback = await _feedbackRepository
             //    .GetFeedbackByOrderIdAsync(dto.RepairOrderId);

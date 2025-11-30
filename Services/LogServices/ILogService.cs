@@ -17,14 +17,10 @@ namespace Services.LogServices
         Task LogSystemAsync(string message, LogLevel level = LogLevel.Information);
         Task LogSecurityAsync(string message, string? userId = null);
         Task LogUserActivityAsync(string action, string userId, string userName);
-        //Task LogApiAsync(string controller, string action, string? userId = null);
-        //Task LogDatabaseAsync(string operation, string? table = null, LogLevel level = LogLevel.Information, string? details = null);
+     
         Task LogErrorAsync(Exception ex, string? message = null);
 
-        // Đọc log
-        Task<IEnumerable<SystemLog>> GetUserActivityLogsAsync();
-        Task<IEnumerable<SystemLogDto>> GetAllSystemLogsAsync();
-        Task<IEnumerable<SystemLogDto>> GetLogsBySourceAsync(LogSource source);
+       
         Task<IEnumerable<SystemLogDto>> GetLogsFromFileAsync(LogSource source, int days = 7);
         Task<LogSearchResult> GetAllLogsAsync(LogSearchRequest request);
 

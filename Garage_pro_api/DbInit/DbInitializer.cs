@@ -214,6 +214,7 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Service Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Promotional Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Part Management" },
+        new PermissionCategory { Id = Guid.NewGuid(), Name = "Booking Management" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Log Monitoring" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Policy Security" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistic Monitoring" },
@@ -251,6 +252,7 @@ namespace Garage_pro_api.DbInit
             var serviceCatId = categories.First(c => c.Name == "Service Management").Id;
             var promotionalCatId = categories.First(c => c.Name == "Promotional Management").Id;
             var partCatId = categories.First(c => c.Name == "Part Management").Id;
+            var bookingCatId = categories.First(c => c.Name == "Booking Management").Id;
             var logCatId = categories.First(c => c.Name == "Log Monitoring").Id;
             var policyCatId = categories.First(c => c.Name == "Policy Security").Id;
             var statCatId = categories.First(c => c.Name == "Statistic Monitoring").Id;
@@ -291,6 +293,7 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_UPDATE", Name = "Update Branch", Description = "Can update branch info", CategoryId = branchCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_DELETE", Name = "Delete Branch", Description = "Can delete branches", CategoryId = branchCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "BRANCH_STATUS_TOGGLE", Name = "Toggle Branch Status", Description = "Can activate/deactivate branches", CategoryId = branchCatId },
+                    new Permission { Id = Guid.NewGuid(), Code = "BRANCH_IMPORT_EXCEL", Name = "Import Branches From Excel", Description = "Can import branch data via Excel files", CategoryId = branchCatId },
 
                     // ✅ Service Management
                     new Permission { Id = Guid.NewGuid(), Code = "SERVICE_VIEW", Name = "View Services", Description = "Can view services", CategoryId = serviceCatId,IsDefault=true },
@@ -312,33 +315,39 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
+
                     //Job
                      new Permission { Id = Guid.NewGuid(), Code = "JOB_VIEW", Name = "View Job", Description = "Can view jobs", CategoryId =  jobCatId},
                      new Permission { Id = Guid.NewGuid(), Code = "JOB_MANAGE", Name = "Manage Job", Description = "Can manage jobs", CategoryId =  jobCatId},
 
+                    
+                    //// ✅ Booking Management (Inspections & Jobs)
+                    //new Permission { Id = Guid.NewGuid(), Code = "BOOKING_VIEW", Name = "View Bookings", Description = "Can view inspections and jobs", CategoryId = bookingCatId, IsDefault=true },
+                    //new Permission { Id = Guid.NewGuid(), Code = "BOOKING_MANAGE", Name = "Manage Bookings", Description = "Can create, update, and manage inspections and jobs", CategoryId = bookingCatId },
+
                      //Technician
                      //Inspections Technician
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_VIEW", Name = "View Inspection Technician", Description = "Can view assigned inspection and all servivice", CategoryId = inspectionTechnicianId },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_UPDATE", Name = "Update Inspection Technician", Description = "Can update assigned inspection", CategoryId = inspectionTechnicianId },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_DELETE", Name = "Delete Inspection Technician", Description = "Can delete service or part to assigned inspection", CategoryId = inspectionTechnicianId },
-                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ADD_SERVICE", Name = "Add Service Inspection ", Description = "Can add service to assigned inspection", CategoryId = inspectionTechnicianId },
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_VIEW", Name = "View Inspection Technician", Description = "Can view assigned inspection and all servivice", CategoryId = inspectionTechnicianId, IsDefault= true ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_UPDATE", Name = "Update Inspection Technician", Description = "Can update assigned inspection", CategoryId = inspectionTechnicianId , IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_TECHNICIAN_DELETE", Name = "Delete Inspection Technician", Description = "Can delete service or part to assigned inspection", CategoryId = inspectionTechnicianId ,IsSystem = true},
+                     new Permission { Id = Guid.NewGuid(), Code = "INSPECTION_ADD_SERVICE", Name = "Add Service Inspection ", Description = "Can add service to assigned inspection", CategoryId = inspectionTechnicianId,IsSystem = true },
                     // Job Technician 
-                     new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_VIEW", Name = "View Job Technician", Description = "Can view assigned job", CategoryId = jobTechnicianId },
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_VIEW", Name = "View Job Technician", Description = "Can view assigned job", CategoryId = jobTechnicianId , IsDefault= true },
                      new Permission { Id = Guid.NewGuid(), Code = "JOB_TECHNICIAN_UPDATE", Name = "Update Job Technician", Description = "Can update status assigned job", CategoryId = jobTechnicianId },
                     // Notification
-                     new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_VIEW", Name = "View Notifications", Description = "Can view notifications", CategoryId = notificationId },
+                     new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_VIEW", Name = "View Notifications", Description = "Can view notifications", CategoryId = notificationId , IsDefault = true},
                      new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_MARK", Name = "Mark Notifications", Description = "Can mark notifications", CategoryId = notificationId },
                      new Permission { Id = Guid.NewGuid(), Code = "NOTIFICATION_DELETE", Name = "Delete Notifications", Description = "Can delete notifications", CategoryId = notificationId },
                      // Repair History
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_HISTORY_VIEW", Name = "View Repair History", Description = "Can view repair history", CategoryId = repairHistoryId },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_HISTORY_VIEW", Name = "View Repair History", Description = "Can view repair history", CategoryId = repairHistoryId , IsDefault= true },
                      // Repair
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_VIEW", Name = "View Repair", Description = "Can view repair", CategoryId = repairId },
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_CREATE", Name = "Create Repair", Description = "Can create repair", CategoryId = repairId },
-                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_UPDATE", Name = "Update Repair", Description = "Can update repair", CategoryId = repairId },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_VIEW", Name = "View Repair", Description = "Can view repair", CategoryId = repairId, IsDefault= true, IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_CREATE", Name = "Create Repair", Description = "Can create repair", CategoryId = repairId ,IsSystem = true },
+                     new Permission { Id = Guid.NewGuid(), Code = "REPAIR_UPDATE", Name = "Update Repair", Description = "Can update repair", CategoryId = repairId ,IsSystem = true},
                      // Specification
-                     new Permission { Id = Guid.NewGuid(), Code = "SPECIFICATION_MANAGE", Name = "Manage Specification", Description = "Can view  and search specification of vehicle", CategoryId = specificationId },
+                     new Permission { Id = Guid.NewGuid(), Code = "SPECIFICATION_MANAGE", Name = "Manage Specification", Description = "Can view  and search specification of vehicle",IsSystem = true, CategoryId = specificationId },
                      // Statistical
-                     new Permission { Id = Guid.NewGuid(), Code = "STATISTICAL_VIEW", Name = "View Statistical", Description = "Can view Statistical page", CategoryId = statisticalId },
+                     new Permission { Id = Guid.NewGuid(), Code = "STATISTICAL_VIEW", Name = "View Statistical", Description = "Can view Statistical page", CategoryId = statisticalId , IsDefault = true, IsSystem = true},
             
                     // ✅ Vehicle Management
                     new Permission { Id = Guid.NewGuid(), Code = "VEHICLE_VIEW", Name = "View Vehicles", Description = "Can view vehicles", CategoryId = basicCatId,IsDefault=true },
@@ -385,12 +394,15 @@ namespace Garage_pro_api.DbInit
                                     //Stat
                                     "VIEW_STAT",
                                     // Role
-                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",           
-                                    // Branch Management
-                                    "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE",           
-                                    // Service Management
-                                    "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",            
-                                    // Promotional Management
+                                    "ROLE_VIEW", "ROLE_CREATE", "ROLE_UPDATE", "ROLE_DELETE", "PERMISSION_ASSIGN",
+            
+                                    // ✅ Branch Management
+                                    "BRANCH_VIEW", "BRANCH_CREATE", "BRANCH_UPDATE", "BRANCH_DELETE", "BRANCH_STATUS_TOGGLE","BRANCH_IMPORT_EXCEL",
+            
+                                    // ✅ Service Management
+                                    "SERVICE_VIEW", "SERVICE_CREATE", "SERVICE_UPDATE", "SERVICE_DELETE", "SERVICE_STATUS_TOGGLE",
+            
+                                    // ✅ Promotional Management
                                     "PROMO_VIEW", "PROMO_CREATE", "PROMO_UPDATE", "PROMO_DELETE", "PROMO_TOGGLE",
                                     // LOG MONITORING
                                     "LOG_VIEW" ,                                    
@@ -401,9 +413,28 @@ namespace Garage_pro_api.DbInit
                             {
                                 "Manager", new[]
                                 {
-                                    "USER_VIEW", "JOB_MANAGE", "JOB_VIEW",
-                                    "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
-                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
+
+                                    //"USER_VIEW", "JOB_MANAGE", "JOB_VIEW",
+                                    //"BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
+                                    //"VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
+                                    "JOB_MANAGE", "JOB_VIEW",
+                                    // User Management
+                                    "USER_VIEW",
+                                    // Branch Management
+                                    "BRANCH_VIEW",
+                                    // Service Management
+                                    "SERVICE_VIEW",
+                                    // Promotional Management
+                                    "PROMO_VIEW",
+                                    // Part Management
+                                    "PART_VIEW",
+                                    // Booking Management (Inspections & Jobs)
+                                    "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    // Vehicle Management
+                                    "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_DELETE", "VEHICLE_SCHEDULE",
+                                    // Repair Management
+                                    "REPAIR_VIEW", "REPAIR_CREATE", "REPAIR_UPDATE", "REPAIR_HISTORY_VIEW"
+
                                 }
                             },
                             {
@@ -414,14 +445,25 @@ namespace Garage_pro_api.DbInit
                                 { 
                                     "BOOKING_MANAGE",
 
-                                    "INSPECTION_TECHNICIAN_VIEW", "INSPECTION_TECHNICIAN_UPDATE", "INSPECTION_TECHNICIAN_DELETE","INSPECTION_ADD_SERVICE",
-                                    "JOB_TECHNICIAN_VIEW", "JOB_TECHNICIAN_UPDATE",
+                                    "INSPECTION_TECHNICIAN_VIEW", 
+                                    "INSPECTION_TECHNICIAN_UPDATE", 
+                                    "INSPECTION_TECHNICIAN_DELETE",
+                                    "INSPECTION_ADD_SERVICE",
+
+                                    "JOB_TECHNICIAN_VIEW", 
+                                    "JOB_TECHNICIAN_UPDATE",
+
+
                                     "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
-                                    "REPAIR_HISTORY_VIEW", "REPAIR_UPDATE", "REPAIR_CREATE", "REPAIR_VIEW",
-                                    "SPECIFICATION_MANAGE", "STATISTICAL_VIEW"
+                                    "REPAIR_HISTORY_VIEW",
+                                    
+                                    "REPAIR_UPDATE",
+                                    "REPAIR_CREATE",
+                                    "REPAIR_VIEW",
 
+                                    "SPECIFICATION_MANAGE",
 
-
+                                    "STATISTICAL_VIEW"
 
                                 }
 
@@ -1790,7 +1832,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Standard oil change completed successfully",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1806,7 +1847,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Tire rotation completed - even wear achieved",
                 CreatedAt = DateTime.UtcNow.AddDays(-5),
                 UpdatedAt = DateTime.UtcNow.AddDays(1),
-                Level = 1,
                 AssignedAt = DateTime.UtcNow.AddDays(-5),
                 AssignedByManagerId = userId
             },
@@ -1824,7 +1864,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Waiting for customer approval of brake repair",
                 CreatedAt = DateTime.UtcNow.AddDays(-2),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedByManagerId = userId
             },
 
@@ -1841,7 +1880,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Urgent brake system repair in progress",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 3,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1857,7 +1895,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Engine performance optimization",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
                 UpdatedAt = DateTime.UtcNow,
-                Level = 2,
                 AssignedAt = DateTime.UtcNow.AddDays(-1),
                 AssignedByManagerId = userId
             },
@@ -1875,7 +1912,6 @@ namespace Garage_pro_api.DbInit
                 Note = "Scheduled tire rotation service",
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                Level = 1,
                 AssignedByManagerId = userId
             }
         };
@@ -2400,7 +2436,6 @@ namespace Garage_pro_api.DbInit
                         Note = "Auto-generated job",
                         CreatedAt = receiveDate,
                         UpdatedAt = receiveDate,
-                        Level = rand.Next(1, 4),
                         AssignedAt = rand.Next(0, 2) == 0 ? (DateTime?)receiveDate.AddHours(rand.Next(1, 48)) : null,
                         AssignedByManagerId = customer.Id
                     };

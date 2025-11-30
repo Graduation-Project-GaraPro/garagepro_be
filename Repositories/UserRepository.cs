@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject.Authentication;
+using BusinessObject.Enums;
 using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -68,35 +69,65 @@ namespace Repositories
                 .Where(r => roleNames.Contains(r.Name))
                 .ToListAsync();
 
-            var roleIds = roles.Select(r => r.Id).ToList();
+            var managerRoleId = roles.Single(r => r.Name == "Manager").Id;
+            var technicianRoleId = roles.Single(r => r.Name == "Technician").Id;
 
-            // Lấy userIds có role Manager hoặc Technician
-            var userIds = await _context.UserRoles
-                .Where(ur => roleIds.Contains(ur.RoleId))
+           
+            var managerUserIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == managerRoleId)
                 .Select(ur => ur.UserId)
                 .Distinct()
                 .ToListAsync();
 
+
+            // KHÔNG có JobTechnician nào mà Job.Status != Completed
+            var technicianUserIds = await (
+                 from t in _context.Technicians
+                 join ur in _context.UserRoles on t.UserId equals ur.UserId
+                 join u in _context.Users on t.UserId equals u.Id
+                 where ur.RoleId == technicianRoleId
+                       && (
+                            // Case 1: technician rảnh - không có job nào chưa complete
+                            !t.JobTechnicians.Any(jt => jt.Job.Status != JobStatus.Completed)
+
+                            // Case 2: technician chưa thuộc branch nào và chưa có job nào
+                            || (u.BranchId == null)
+                       )
+                 select t.UserId
+             )
+             .Distinct()
+             .ToListAsync();
+
+
+            var allUserIds = managerUserIds
+                .Union(technicianUserIds)
+                .ToList();
+
             return await _context.Users
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => allUserIds.Contains(u.Id))
                 .ToListAsync();
         }
+
 
         // Lấy tất cả user chỉ có role Technician
         public async Task<List<ApplicationUser>> GetTechniciansAsync()
         {
             var technicianRole = await _context.Roles
-                .FirstOrDefaultAsync(r => r.Name == "Technician");
+            .FirstOrDefaultAsync(r => r.Name == "Technician");
 
             if (technicianRole == null) return new List<ApplicationUser>();
 
-            var userIds = await _context.UserRoles
+            // Lấy UserId của các technician
+            var allTechIds = await _context.UserRoles
                 .Where(ur => ur.RoleId == technicianRole.Id)
                 .Select(ur => ur.UserId)
+                .Distinct()
                 .ToListAsync();
 
+           
+
             return await _context.Users
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => allTechIds.Contains(u.Id))
                 .ToListAsync();
         }
 
@@ -197,7 +228,7 @@ namespace Repositories
             }
             
             return await _context.Users
-                .Where(u => u.FullName.Contains(searchTerm) || 
+                .Where(u => (u.FirstName + " " + u.LastName).Contains(searchTerm) || 
                             u.PhoneNumber.Contains(searchTerm) || 
                             u.Email.Contains(searchTerm))
                 .ToListAsync();

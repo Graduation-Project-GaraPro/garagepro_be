@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -360,14 +360,20 @@ namespace Services
             return await _jobRepository.BatchUpdateStatusAsync(updates);
         }
 
+        // Service Methods
+        public async Task<Service?> GetServiceByIdAsync(Guid serviceId)
+        {
+            return await _jobRepository.GetServiceByIdAsync(serviceId);
+        }
+
         // Business Logic Validation
         public async Task<bool> CanAssignJobToTechnicianAsync(Guid jobId)
         {
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
 
-            // Job must be in Pending status to be assigned to technician
-            return job.Status == JobStatus.Pending;
+            // Job can be assigned when status is Pending or New
+            return job.Status == JobStatus.Pending || job.Status == JobStatus.New;
         }
         
         // Workflow Validation
@@ -420,6 +426,23 @@ namespace Services
 
             return allowedTransitions.ContainsKey(currentStatus) &&
                    allowedTransitions[currentStatus].Contains(targetStatus);
+        }
+
+        // New helper method for limited status transitions (only Pending <-> New)
+        private static bool IsValidLimitedStatusTransition(JobStatus currentStatus, JobStatus targetStatus)
+        {
+            // Only allow transitions between Pending and New
+            if (currentStatus == JobStatus.Pending && targetStatus == JobStatus.New)
+                return true;
+                
+            if (currentStatus == JobStatus.New && targetStatus == JobStatus.Pending)
+                return true;
+                
+            // Allow updating to the same status (no change)
+            if (currentStatus == targetStatus)
+                return true;
+                
+            return false;
         }
 
         private static List<JobStatus> GetAllowedNextStatuses(JobStatus currentStatus)

@@ -58,20 +58,31 @@ namespace Services.VehicleServices
         }
 
         // This method is used when the user ID is provided in the DTO
-        public async Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto)
+        public async Task<VehicleDto> CreateVehicleAsync( CreateVehicleDto createVehicleDto)
         {
-            // Create a new Vehicle entity and map the properties
+            var vehiclesExits = await _vehicleRepository.GetByUserIdAsync(createVehicleDto.UserID);
+            var vin = createVehicleDto.VIN;
+            if (!string.IsNullOrWhiteSpace(vin) && vehiclesExits.Any(v => v.VIN == vin))
+            {
+                throw new Exception("VIN already exists for this user");
+            }
+
+            if (vehiclesExits.Any(v => v.LicensePlate == createVehicleDto.LicensePlate))
+            {
+                throw new Exception("License plate already exists for this user");
+            }
+
             var vehicle = new Vehicle
             {
                 BrandId = createVehicleDto.BrandID,
-                UserId = createVehicleDto.UserID, // Use the provided user ID
+                UserId = createVehicleDto.UserID,
                 ModelId = createVehicleDto.ModelID,
                 ColorId = createVehicleDto.ColorID,
                 LicensePlate = createVehicleDto.LicensePlate,
                 VIN = createVehicleDto.VIN,
                 Year = createVehicleDto.Year,
                 Odometer = createVehicleDto.Odometer,
-                LastServiceDate = DateTime.UtcNow, // Set default value
+                LastServiceDate = DateTime.UtcNow,
                 CreatedAt = DateTime.UtcNow
             };
             
@@ -83,6 +94,19 @@ namespace Services.VehicleServices
         public async Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto, string userId)
         {
             // Override the user ID with the authenticated user's ID
+            var vehiclesExits = await _vehicleRepository.GetByUserIdAsync(userId);
+
+            var vin = createVehicleDto.VIN;
+            if (!string.IsNullOrWhiteSpace(vin) && vehiclesExits.Any(v => v.VIN == vin))
+            {
+                throw new Exception("VIN already exists for this user");
+            }
+
+            if (vehiclesExits.Any(v => v.LicensePlate == createVehicleDto.LicensePlate))
+            {
+                throw new Exception("License plate already exists for this user");
+            }
+
             createVehicleDto.UserID = userId;
             
             // Create a new Vehicle entity and map the properties
@@ -112,6 +136,22 @@ namespace Services.VehicleServices
                 throw new ArgumentException($"Vehicle with ID {vehicleId} not found.");
             }
 
+            var userVehicles = await _vehicleRepository.GetByUserIdAsync(existingVehicle.UserId);
+            var normalizedLicense = (updateVehicleDto.LicensePlate ?? string.Empty).ToUpper();
+            var normalizedVin = updateVehicleDto.VIN?.Trim().ToUpper();
+
+            if (!string.IsNullOrWhiteSpace(normalizedVin) &&
+                userVehicles.Any(v => v.VehicleId != existingVehicle.VehicleId && string.Equals(v.VIN ?? string.Empty, normalizedVin, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ApplicationException("VIN đã tồn tại cho một xe khác của bạn. Vui lòng kiểm tra.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedLicense) &&
+                userVehicles.Any(v => v.VehicleId != existingVehicle.VehicleId && string.Equals(v.LicensePlate ?? string.Empty, normalizedLicense, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ApplicationException("Biển số đã tồn tại cho một xe khác của bạn. Vui lòng kiểm tra.");
+            }
+
             _mapper.Map(updateVehicleDto, existingVehicle);
             existingVehicle.UpdatedAt = DateTime.UtcNow;
 
@@ -121,6 +161,29 @@ namespace Services.VehicleServices
 
         public async Task<bool> DeleteVehicleAsync(Guid vehicleId)
         {
+            var exists = await _vehicleRepository.ExistsAsync(vehicleId);
+            if (!exists) return false;
+
+            if (await _vehicleRepository.HasRepairOrdersAsync(vehicleId))
+            {
+                throw new Exception("Cannot delete vehicle with existing repair orders");
+            }
+
+            if (await _vehicleRepository.HasRepairRequestsAsync(vehicleId))
+            {
+                throw new Exception("Cannot delete vehicle with existing repair requests");
+            }
+
+            if (await _vehicleRepository.HasQuotationsAsync(vehicleId))
+            {
+                throw new Exception("Cannot delete vehicle with existing quotations");
+            }
+
+            if (await _vehicleRepository.HasEmergencyRequestsAsync(vehicleId))
+            {
+                throw new Exception("Cannot delete vehicle with existing emergency requests");
+            }
+
             return await _vehicleRepository.DeleteAsync(vehicleId);
         }
 
@@ -138,7 +201,8 @@ namespace Services.VehicleServices
             var customerDto = new RoBoardCustomerDto
             {
                 UserId = vehicle.User.Id,
-                FullName = vehicle.User.FullName,
+                FirstName = vehicle.User.FirstName,
+                LastName = vehicle.User.LastName,
                 Email = vehicle.User.Email,
                 PhoneNumber = vehicle.User.PhoneNumber
             };

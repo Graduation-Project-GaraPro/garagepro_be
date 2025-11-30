@@ -70,6 +70,22 @@ namespace Garage_pro_api.Controllers
                 return Ok(roles);
             }
 
+        [HttpGet("all-roles")]
+        public async Task<ActionResult<IEnumerable<RoleLookupDto>>> GetAllRoles()
+        {
+            var roles = await _roleManager.Roles
+                .Where(r =>
+                    r.NormalizedName != "ADMIN")
+                .Select(r => new RoleLookupDto
+                {
+                    Id = r.Id,
+                    Name = r.Name
+                })
+                .ToListAsync();
+
+            return Ok(roles);
+        }
+
         [HttpGet("me")]
         public async Task<IActionResult> GetCurrentUser()
         {

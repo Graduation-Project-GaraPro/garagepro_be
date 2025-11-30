@@ -45,7 +45,6 @@ namespace Repositories.InspectionAndRepair
                             Note = j.Note,
                             CreatedAt = j.CreatedAt,
                             UpdatedAt = j.UpdatedAt,
-                            Level = j.Level,
                             RepairOrderId = j.RepairOrderId,
 
                             Service = new Service

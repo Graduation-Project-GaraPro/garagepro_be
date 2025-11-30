@@ -66,6 +66,7 @@ namespace Dtos.RepairOrder
         // Enhanced properties for better display
 
         public string CustomerName { get; set; }
+        public string CustomerEmail { get; set; }
         public string CustomerPhone { get; set; }
         public List<string> TechnicianNames { get; set; } = new List<string>();
         
@@ -73,6 +74,11 @@ namespace Dtos.RepairOrder
         public int TotalJobs { get; set; }
         public int CompletedJobs { get; set; }
         public decimal ProgressPercentage { get; set; }
+        
+        // Cancel Management
+        public bool IsCancelled { get; set; }
+        public DateTime? CancelledAt { get; set; }
+        public string? CancelReason { get; set; }
     }
     
     
@@ -111,46 +117,14 @@ namespace Dtos.RepairOrder
 
     public class UpdateRepairOrderDto
     {
-        [Required]
-        public DateTime ReceiveDate { get; set; }
-        
-        [Required]
-        public RoType RoType { get; set; }
-        
-        public DateTime? EstimatedCompletionDate { get; set; }
-        
-        public DateTime? CompletionDate { get; set; }
-        
-        public decimal Cost { get; set; }
-        
-        public decimal EstimatedAmount { get; set; }
-        
-        public decimal PaidAmount { get; set; }
-        
-        [Required]
-        public PaidStatus PaidStatus { get; set; }
-        
-        public long? EstimatedRepairTime { get; set; }
+        public int StatusId { get; set; }
         
         [MaxLength(500)]
         public string Note { get; set; }
         
+        public List<Guid> SelectedServiceIds { get; set; } = new List<Guid>();
+        
         public DateTime? UpdatedAt { get; set; }
-        
-        // Archive Management
-        public bool IsArchived { get; set; }
-        
-        public DateTime? ArchivedAt { get; set; }
-        
-        public string? ArchivedByUserId { get; set; }
-        
-        // Foreign keys
-        public Guid BranchId { get; set; }
-        
-        public int StatusId { get; set; } // Changed from Guid to int
-        
-        public Guid VehicleId { get; set; }
-        
-        public string UserId { get; set; }
     }
+
 }
