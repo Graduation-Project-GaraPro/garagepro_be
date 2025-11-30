@@ -277,7 +277,7 @@ namespace Services.CampaignServices
             }
 
             // If eligible, calculate actual discount
-            calculatedDiscount = _repository.CalculateActualDiscountValue(promotion, servicePrice);
+            calculatedDiscount = _repository.CalculateActualDiscountValue(promotion, currentOrderValue);
             eligibilityMessage = "Eligible to apply";
 
             return (true, calculatedDiscount, eligibilityMessage);

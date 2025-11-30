@@ -32,6 +32,36 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(requests);
         }
 
+
+
+
+        [HttpGet("branches/{branchId:guid}/arrival-time-slots")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetArrivalTimeSlotsAsync(
+        Guid branchId,
+        [FromQuery] DateOnly? date)
+        {
+            var targetDate = date ?? DateOnly.FromDateTime(DateTime.Now);
+
+            try
+            {
+                var slots = await _repairRequestService.GetArrivalTimeSlotsAsync(branchId, targetDate);
+                return Ok(slots);
+            }
+            catch (Exception ex)
+            {
+                // V� d?: service ?ang throw "Branch not found"
+                if (ex.Message.Contains("Branch not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(new { message = ex.Message });
+
+                // N?u mu?n custom more th� b?t ri�ng t?ng lo?i exception
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Error when getting arrival time slots",
+                    detail = ex.Message
+                });
+            }
+        }
+
         // GET: api/ManagerRepairRequest/branch/{branchId}
         [HttpGet("branch/{branchId}")]
         [EnableQuery] // Enable OData query support
@@ -70,7 +100,7 @@ namespace Garage_pro_api.Controllers.Customer
         }
 
         // POST: api/ManagerRepairRequest/{id}/cancel
-        [HttpPost("{id}/cancel")]
+        [HttpPost("{id}/cancel-on-behalf")]
         public async Task<IActionResult> CancelRepairRequest(Guid id)
         {
             try
@@ -81,6 +111,7 @@ namespace Garage_pro_api.Controllers.Customer
 
                 var result = await _repairRequestService.ManagerCancelRepairRequestAsync(id, managerId);
                 return Ok(new { Message = "Repair request cancelled successfully", Success = result });
+                //return Ok(new { Message = "Repair request cancelled successfully"});
             }
             catch (Exception ex)
             {

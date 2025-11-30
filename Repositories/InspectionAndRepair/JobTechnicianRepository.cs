@@ -23,7 +23,6 @@ namespace Repositories.InspectionAndRepair
 
         public async Task<List<Job>> GetJobsByTechnicianAsync(string userId)
         {
-            // Query chính - lấy JobIds trước
             var jobIds = await _context.JobTechnicians
                 .AsNoTracking()
                 .Where(jt => jt.Technician.UserId == userId)
@@ -34,7 +33,6 @@ namespace Repositories.InspectionAndRepair
             if (!jobIds.Any())
                 return new List<Job>();
 
-            // Query đầy đủ với projection
             var query = from j in _context.Jobs.AsNoTracking()
                         where jobIds.Contains(j.JobId)
                         select new Job
@@ -100,7 +98,6 @@ namespace Repositories.InspectionAndRepair
 
             var jobs = await query.ToListAsync();
 
-            // Load JobParts và JobTechnicians riêng
             if (jobs.Any())
             {
                 var jobParts = await _context.JobParts
@@ -171,12 +168,10 @@ namespace Repositories.InspectionAndRepair
 
         public async Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null)
         {
-            // Tạo context riêng cho update để tránh tracking conflicts
             using var transaction = await _context.Database.BeginTransactionAsync();
 
             try
             {
-                // Update Job
                 var job = await _context.Jobs.Include(j=>j.RepairOrder).FirstOrDefaultAsync(j => j.JobId == jobId);
                 if (job == null)
                     throw new Exception("Job không tồn tại");
@@ -184,7 +179,6 @@ namespace Repositories.InspectionAndRepair
                 job.Status = newStatus;
                 job.UpdatedAt = DateTime.UtcNow;
 
-                // Update Repair nếu có
                 if (endTime.HasValue)
                 {
                     var repair = await _context.Repairs.FirstOrDefaultAsync(r => r.JobId == jobId);

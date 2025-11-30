@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class isSystemPermission : Migration
+    public partial class newDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -74,6 +74,24 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Branches", x => x.BranchId);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "InspectionTypes",
+                columns: table => new
+                {
+                    InspectionTypeId = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TypeName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    InspectionFee = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_InspectionTypes", x => x.InspectionTypeId);
                 });
 
             migrationBuilder.CreateTable(
@@ -312,6 +330,7 @@ namespace DataAccessLayer.Migrations
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     FirstName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     LastName = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     LastLogin = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Avatar = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
@@ -641,7 +660,7 @@ namespace DataAccessLayer.Migrations
                     NotificationID = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Content = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
                     Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    TimeSent = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    TimeSent = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Target = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
                     UserID = table.Column<string>(type: "nvarchar(450)", nullable: false)
@@ -1157,7 +1176,8 @@ namespace DataAccessLayer.Migrations
                     Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ResponseDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RespondedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AutoCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    AutoCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TechnicianId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1168,6 +1188,12 @@ namespace DataAccessLayer.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RequestEmergencies_AspNetUsers_TechnicianId",
+                        column: x => x.TechnicianId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RequestEmergencies_Branches_BranchId",
                         column: x => x.BranchId,
@@ -1725,6 +1751,7 @@ namespace DataAccessLayer.Migrations
                     ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsSelected = table.Column<bool>(type: "bit", nullable: false),
                     IsRequired = table.Column<bool>(type: "bit", nullable: false),
+                    IsGood = table.Column<bool>(type: "bit", nullable: false),
                     Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     DiscountValue = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
                     FinalPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
@@ -2153,6 +2180,11 @@ namespace DataAccessLayer.Migrations
                 filter: "[RepairRequestId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RequestEmergencies_TechnicianId",
+                table: "RequestEmergencies",
+                column: "TechnicianId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RequestEmergencies_VehicleId",
                 table: "RequestEmergencies",
                 column: "VehicleId");
@@ -2379,6 +2411,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "FeedBacks");
+
+            migrationBuilder.DropTable(
+                name: "InspectionTypes");
 
             migrationBuilder.DropTable(
                 name: "JobParts");

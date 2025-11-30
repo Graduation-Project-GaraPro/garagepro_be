@@ -23,7 +23,21 @@ namespace Services.Notifications
             _notificationRepository = notificationRepository;
             _notificationHubContext = notificationHubContext;
         }
+        private async Task SendUnreadCountUpdateAsync(string userId)
+        {
+            var unreadCount = await _notificationRepository.GetUnreadCountAsync(userId);
 
+            await _notificationHubContext.Clients
+                .Group($"User_{userId}")
+                .SendAsync("UnreadCountUpdated", new
+                {
+                    UserId = userId,
+                    UnreadCount = unreadCount,
+                    Timestamp = DateTime.UtcNow
+                });
+
+            Console.WriteLine($"[NotificationService] Unread count updated: {unreadCount} for User_{userId}");
+        }         
         public async Task SendJobAssignedNotificationAsync(string userId, Guid jobId, string jobName, string serviceName)
         {
             var notification = new Notification
@@ -55,9 +69,10 @@ namespace Services.Notifications
                     Status = notification.Status.ToString()
                 });
 
-            Console.WriteLine($"[NotificationService] Job assigned notification sent to User_{userId}");
-        }        
+            await SendUnreadCountUpdateAsync(userId);
 
+            Console.WriteLine($"[NotificationService] Job assigned notification sent to User_{userId}");
+        }
         public async Task<List<NotificationDto>> GetUserNotificationsAsync(string userId)
         {
             return await _notificationRepository.GetNotificationsByUserIdAsync(userId);
@@ -72,7 +87,7 @@ namespace Services.Notifications
         {
             return await _notificationRepository.GetUnreadCountAsync(userId);
         }
-
+        
         public async Task<bool> MarkNotificationAsReadAsync(Guid notificationId, string userId)
         {
             var ownerId = await _notificationRepository.GetNotificationOwnerIdAsync(notificationId);
@@ -80,12 +95,47 @@ namespace Services.Notifications
             if (ownerId != userId)
                 return false;
 
-            return await _notificationRepository.MarkAsReadAsync(notificationId);
+            var result = await _notificationRepository.MarkAsReadAsync(notificationId);
+
+            if (result)
+            {
+                await _notificationHubContext.Clients
+                    .Group($"User_{userId}")
+                    .SendAsync("NotificationRead", new
+                    {
+                        NotificationId = notificationId,
+                        Status = NotificationStatus.Read.ToString()
+                    });
+
+                await SendUnreadCountUpdateAsync(userId);
+
+                Console.WriteLine($"[NotificationService] Notification {notificationId} marked as read for User_{userId}");
+            }
+
+            return result;
         }
 
         public async Task<bool> MarkAllNotificationsAsReadAsync(string userId)
         {
-            return await _notificationRepository.MarkAllAsReadAsync(userId);
+            var result = await _notificationRepository.MarkAllAsReadAsync(userId);
+
+            if (result)
+            {
+                await _notificationHubContext.Clients
+                    .Group($"User_{userId}")
+                    .SendAsync("AllNotificationsRead", new
+                    {
+                        UserId = userId,
+                        Message = "All notifications marked as read",
+                        Timestamp = DateTime.UtcNow
+                    });
+
+                await SendUnreadCountUpdateAsync(userId);
+
+                Console.WriteLine($"[NotificationService] All notifications marked as read for User_{userId}");
+            }
+
+            return result;
         }
 
         public async Task<bool> DeleteNotificationAsync(Guid notificationId, string userId)
@@ -95,116 +145,33 @@ namespace Services.Notifications
             if (ownerId != userId)
                 return false;
 
-            return await _notificationRepository.DeleteNotificationAsync(notificationId);
-        }
+            var notification = await _notificationRepository.GetNotificationByIdAsync(notificationId);
+            var wasUnread = notification?.Status == NotificationStatus.Unread;
 
-        public async Task SendJobDeadlineReminderAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursRemaining)
-        {
-            var notification = new Notification
+            var result = await _notificationRepository.DeleteNotificationAsync(notificationId);
+
+            if (result)
             {
-                NotificationID = Guid.NewGuid(),
-                UserID = userId,
-                Content = $"Reminder: Job '{jobName}' ({serviceName}) deadline is in {hoursRemaining} hours!",
-                Type = NotificationType.Message,
-                Status = NotificationStatus.Unread,
-                Target = $"/jobs/{jobId}",
-                TimeSent = DateTime.UtcNow
-            };
+                await _notificationHubContext.Clients
+                    .Group($"User_{userId}")
+                    .SendAsync("NotificationDeleted", new
+                    {
+                        NotificationId = notificationId,
+                        Message = "Notification deleted successfully",
+                        Timestamp = DateTime.UtcNow
+                    });
 
-            await _notificationRepository.CreateNotificationAsync(notification);
-
-            await _notificationHubContext.Clients
-                .Group($"User_{userId}")
-                .SendAsync("ReceiveNotification", new
+                if (wasUnread)
                 {
-                    NotificationId = notification.NotificationID,
-                    Type = "JOB_DEADLINE_REMINDER",
-                    Title = "Deadline Reminder",
-                    Content = notification.Content,
-                    JobId = jobId,
-                    JobName = jobName,
-                    ServiceName = serviceName,
-                    HoursRemaining = hoursRemaining,
-                    Target = notification.Target,
-                    TimeSent = notification.TimeSent,
-                    Status = notification.Status.ToString(),
-                    NotificationType = NotificationType.Message.ToString()
-                });
+                    await SendUnreadCountUpdateAsync(userId);
+                }
 
-            Console.WriteLine($"[NotificationService] Deadline reminder sent to User_{userId}");
-        }
+                Console.WriteLine($"[NotificationService] Notification {notificationId} deleted for User_{userId}");
+            }
 
-        public async Task SendJobOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursOverdue)
-        {
-            var notification = new Notification
-            {
-                NotificationID = Guid.NewGuid(),
-                UserID = userId,
-                Content = $"WARNING: Job '{jobName}' ({serviceName}) is overdue by {hoursOverdue} hours!",
-                Type = NotificationType.Warning,
-                Status = NotificationStatus.Unread,
-                Target = $"/jobs/{jobId}",
-                TimeSent = DateTime.UtcNow
-            };
+            return result;
+        }       
 
-            await _notificationRepository.CreateNotificationAsync(notification);
-
-            await _notificationHubContext.Clients
-                .Group($"User_{userId}")
-                .SendAsync("ReceiveNotification", new
-                {
-                    NotificationId = notification.NotificationID,
-                    Type = "JOB_OVERDUE",
-                    Title = "Job Overdue!",
-                    Content = notification.Content,
-                    JobId = jobId,
-                    JobName = jobName,
-                    ServiceName = serviceName,
-                    HoursOverdue = hoursOverdue,
-                    Target = notification.Target,
-                    TimeSent = notification.TimeSent,
-                    Status = notification.Status.ToString(),
-                    NotificationType = NotificationType.Warning.ToString()
-                });
-
-            Console.WriteLine($"[NotificationService] Overdue warning sent to User_{userId}");
-        }
-
-        public async Task SendJobRecurringOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int daysOverdue)
-        {
-            var notification = new Notification
-            {
-                NotificationID = Guid.NewGuid(),
-                UserID = userId,
-                Content = $"URGENT: Job '{jobName}' ({serviceName}) is {daysOverdue} day(s) overdue!",
-                Type = NotificationType.Warning,
-                Status = NotificationStatus.Unread,
-                Target = $"/jobs/{jobId}",
-                TimeSent = DateTime.UtcNow
-            };
-
-            await _notificationRepository.CreateNotificationAsync(notification);
-
-            await _notificationHubContext.Clients
-                .Group($"User_{userId}")
-                .SendAsync("ReceiveNotification", new
-                {
-                    NotificationId = notification.NotificationID,
-                    Type = "JOB_RECURRING_OVERDUE",
-                    Title = $"Job {daysOverdue} Day(s) Overdue!",
-                    Content = notification.Content,
-                    JobId = jobId,
-                    JobName = jobName,
-                    ServiceName = serviceName,
-                    DaysOverdue = daysOverdue,
-                    Target = notification.Target,
-                    TimeSent = notification.TimeSent,
-                    Status = notification.Status.ToString(),
-                    NotificationType = NotificationType.Warning.ToString()
-                });
-
-            Console.WriteLine($"[NotificationService] Recurring overdue warning (Day {daysOverdue}) sent to User_{userId}");
-        }
         public async Task SendInspectionAssignedNotificationAsync(string userId, Guid inspectionId, string customerConcern, Guid repairOrderId)
         {
             var notification = new Notification
@@ -236,7 +203,46 @@ namespace Services.Notifications
                     Status = notification.Status.ToString()
                 });
 
+            await SendUnreadCountUpdateAsync(userId);
+
             Console.WriteLine($"[NotificationService] Inspection assigned notification sent to User_{userId}");
+        }
+        public async Task SendJobOverdueNotificationAsync(string userId, Guid jobId, string jobName, string serviceName, DateTime deadline, int daysOverdue)
+        {
+            var notification = new Notification
+            {
+                NotificationID = Guid.NewGuid(),
+                UserID = userId,
+                Content = $"Job '{jobName}' ({serviceName}) is {daysOverdue} day(s) overdue! Deadline was {deadline:dd/MM/yyyy}. Please complete it as soon as possible.",
+                Type = NotificationType.Warning,
+                Status = NotificationStatus.Unread,
+                Target = $"/jobs/{jobId}",
+                TimeSent = DateTime.UtcNow
+            };
+
+            await _notificationRepository.CreateNotificationAsync(notification);
+
+            await _notificationHubContext.Clients
+                .Group($"User_{userId}")
+                .SendAsync("ReceiveNotification", new
+                {
+                    NotificationId = notification.NotificationID,
+                    Type = "JOB_OVERDUE",
+                    Title = "Job Overdue Alert",
+                    Content = notification.Content,
+                    JobId = jobId,
+                    JobName = jobName,
+                    ServiceName = serviceName,
+                    Deadline = deadline,
+                    DaysOverdue = daysOverdue,
+                    Target = notification.Target,
+                    TimeSent = notification.TimeSent,
+                    Status = notification.Status.ToString()
+                });
+
+            await SendUnreadCountUpdateAsync(userId);
+
+            Console.WriteLine($"[NotificationService] Job overdue notification sent to User_{userId} - {daysOverdue} days overdue");
         }
     }
 }

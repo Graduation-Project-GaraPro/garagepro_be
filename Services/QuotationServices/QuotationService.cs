@@ -373,6 +373,38 @@ namespace Services.QuotationServices
             }
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(existingQuotation);
+
+
+            await _quotationHubContext
+            .Clients
+            .Group($"User_{updatedQuotation.UserId}")
+            .SendAsync("QuotationCreated", new
+            {
+                updatedQuotation.QuotationId,
+                updatedQuotation.UserId,
+                updatedQuotation.RepairOrderId,
+                updatedQuotation.TotalAmount,
+                updatedQuotation.Status,
+                updatedQuotation.CreatedAt,
+                updatedQuotation.Note
+            });
+
+            var user = await _userService.GetUserByIdAsync(updatedQuotation.UserId);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "Quotation Available",
+                    Body = "A new quotation has been created for your repair job. Tap to view details.",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = updatedQuotation.QuotationId,
+                    Screen = AppScreen.QuotationDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
+
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 

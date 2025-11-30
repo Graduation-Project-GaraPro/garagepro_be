@@ -1093,6 +1093,14 @@ namespace DataAccessLayer
                       .HasForeignKey(v => v.RepairOrderId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+
+
+            modelBuilder.Entity<RequestEmergency>()
+                .HasOne(r => r.Technician)
+                .WithMany()
+                .HasForeignKey(r => r.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
 
     }

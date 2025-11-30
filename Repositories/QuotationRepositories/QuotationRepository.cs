@@ -51,7 +51,7 @@ namespace Repositories.QuotationRepositories
                     .ThenInclude(qs => qs.Service)
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.QuotationServiceParts)
-                        .ThenInclude(qsp => qsp.Part)
+                        .ThenInclude(qsp => qsp.Part).AsSplitQuery()
                 .Where(q => q.UserId == userId);
 
             if (status.HasValue)
@@ -131,7 +131,7 @@ namespace Repositories.QuotationRepositories
                     .ThenInclude(qs => qs.Service)
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.QuotationServiceParts)
-                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory)
+                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory).AsSplitQuery()
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 

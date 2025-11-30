@@ -23,6 +23,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class RepairOrderController : ControllerBase
     {
         private readonly IRepairOrderService _repairOrderService;

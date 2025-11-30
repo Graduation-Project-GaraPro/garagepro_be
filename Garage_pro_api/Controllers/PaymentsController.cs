@@ -30,13 +30,14 @@ namespace Garage_pro_api.Controllers
         private readonly IQrCodeService _qrCodeService;
         private readonly IRepairOrderPaymentService _paymentService;
 
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService, IRepairOrderPaymentService paymentService)
         {
             _service = service;
             _payos = payos;
             _webhookInboxRepo = webhookInboxRepo;
             _userManager = userManager;
             _qrCodeService = qrCodeService;
+            _paymentService = paymentService;
         }
 
         [HttpGet("{repairOrderId:guid}/payment")]

@@ -9,6 +9,7 @@ namespace BusinessObject.Enums
     public enum EntityKeyType
     {
         repairOrderId,
+        repairRequestId,
         quotationId,
         ChatSessionId,
         vehicleId,

@@ -89,6 +89,7 @@ using BusinessObject.PayOsModels;
 using Services.PayOsClients;
 using Services.BillServices;
 using Services.DeadlineServices;
+using BusinessObject.Customers;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -375,7 +376,7 @@ builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
 builder.Services.AddScoped<IStatisticalService, StatisticalService>();
 builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
 builder.Services.AddScoped<IRepairHistoryService, RepairHistoryService>();
-
+builder.Services.AddHostedService<JobDeadlineNotificationService>();
 
 
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -581,7 +582,11 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
     var userRepository = provider.GetRequiredService<IUserRepository>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
     var vehicleService = provider.GetRequiredService<IVehicleService>();
-    
+    var requestHub = provider.GetRequiredService<IHubContext<RepairRequestHub>>();
+    var iFcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+
     return new Services.Customer.RepairRequestService(
         unitOfWork,
         cloudinaryService,
@@ -589,7 +594,10 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
         repairRequestRepository,
         userRepository,
         repairOrderService,
-        vehicleService
+        vehicleService,
+        requestHub,
+        iFcmService,
+        userService
     );
 });
 
@@ -718,7 +726,7 @@ app.MapHub<JobHub>("/hubs/job");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
 app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
-
+app.MapHub<RepairRequestHub>("/hubs/repairRequest");
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();
@@ -734,7 +742,7 @@ app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
-////Initialize database
+//Initialize database
 //using (var scope = app.Services.CreateScope())
 //{
 //    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
@@ -750,7 +758,7 @@ app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub"
 //            RequireSpecialChar = true,
 //            RequireNumber = true,
 //            RequireUppercase = true,
-//            SessionTimeout = 30,
+//            SessionTimeout = 300,
 //            MaxLoginAttempts = 5,
 //            AccountLockoutTime = 15,
 //            PasswordExpiryDays = 90,

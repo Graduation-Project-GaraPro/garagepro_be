@@ -16,6 +16,8 @@ namespace Repositories
         Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId);
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
+
+        Task<RepairOrder?> GetByIdArchivedAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
         Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate);

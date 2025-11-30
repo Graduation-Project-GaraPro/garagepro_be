@@ -25,7 +25,7 @@ namespace Services
 
         public async Task<FeedBackReadDto> CreateFeedbackAsync(FeedBackCreateDto dto, string userId)
         {
-            var order = await _repairOrderRepository.GetByIdAsync(dto.RepairOrderId);
+            var order = await _repairOrderRepository.GetByIdArchivedAsync(dto.RepairOrderId);
             if (order == null)
                 throw new Exception("Repair order not found.");
 
