@@ -123,7 +123,7 @@ namespace Services.InspectionAndRepair
             var payload = new
             {
                 JobId = dto.JobId,
-                RepairOrderId = job.RepairOrderId,          // ✅ thêm RO Id vào JSON
+                RepairOrderId = job.RepairOrderId,          
                 OldStatus = oldStatus.ToString(),
                 NewStatus = dto.JobStatus.ToString(),
                 UpdatedAt = DateTime.UtcNow,
@@ -144,7 +144,7 @@ namespace Services.InspectionAndRepair
                     EntityId = job.RepairOrderId,
                     Screen = AppScreen.RepairProgressDetailFragment
                 };
-                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+                //await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
 
             }
             // Send notification

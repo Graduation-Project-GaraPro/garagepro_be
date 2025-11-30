@@ -227,6 +227,7 @@ namespace Garage_pro_api.DbInit
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Specification" },
         new PermissionCategory { Id = Guid.NewGuid(), Name = "Statistical" }
 
+
     };
 
 
@@ -311,7 +312,9 @@ namespace Garage_pro_api.DbInit
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_DELETE", Name = "Delete Part", Description = "Can delete parts", CategoryId = partCatId },
-                    
+                    //Job
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_VIEW", Name = "View Job", Description = "Can view jobs", CategoryId =  jobCatId},
+                     new Permission { Id = Guid.NewGuid(), Code = "JOB_MANAGE", Name = "Manage Job", Description = "Can manage jobs", CategoryId =  jobCatId},
 
                      //Technician
                      //Inspections Technician
@@ -398,7 +401,7 @@ namespace Garage_pro_api.DbInit
                             {
                                 "Manager", new[]
                                 {
-                                    "USER_VIEW", "BOOKING_VIEW", "BOOKING_MANAGE",
+                                    "USER_VIEW", "JOB_MANAGE", "JOB_VIEW",
                                     "BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
                                     "VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
                                 }

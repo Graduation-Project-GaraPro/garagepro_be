@@ -368,7 +368,7 @@ builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
 builder.Services.AddScoped<IStatisticalService, StatisticalService>();
 builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
 builder.Services.AddScoped<IRepairHistoryService, RepairHistoryService>();
-
+builder.Services.AddHostedService<JobDeadlineNotificationService>();
 
 
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();

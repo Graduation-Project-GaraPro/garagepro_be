@@ -18,9 +18,7 @@ namespace Services.Notifications
         Task<bool> MarkNotificationAsReadAsync(Guid notificationId, string userId);
         Task<bool> MarkAllNotificationsAsReadAsync(string userId);
         Task<bool> DeleteNotificationAsync(Guid notificationId, string userId);
+        Task SendJobOverdueNotificationAsync(string userId, Guid jobId, string jobName, string serviceName, DateTime deadline, int daysOverdue);
 
-        Task SendJobDeadlineReminderAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursRemaining);
-        Task SendJobOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int hoursOverdue);
-        Task SendJobRecurringOverdueWarningAsync(string userId, Guid jobId, string jobName, string serviceName, int daysOverdue);
     }
 }

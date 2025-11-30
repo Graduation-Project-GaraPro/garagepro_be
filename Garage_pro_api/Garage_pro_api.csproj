@@ -44,7 +44,6 @@
 
   <ItemGroup>
     <Folder Include="Controllers\Keys\" />
-    <Folder Include="Keys\" />
     <Folder Include="Logs\" />
   </ItemGroup>
 

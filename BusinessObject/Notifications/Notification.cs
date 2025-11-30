@@ -22,7 +22,7 @@ namespace BusinessObject.Notifications
         public NotificationType Type { get; set; }
 
         [Required]
-        public DateTime TimeSent { get; set; } = DateTime.UtcNow;
+        public DateTimeOffset TimeSent { get; set; } = DateTimeOffset.UtcNow;
 
         [Required]
         public NotificationStatus Status { get; set; }
