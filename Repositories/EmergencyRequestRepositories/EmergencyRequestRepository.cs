@@ -121,6 +121,7 @@ namespace Repositories.EmergencyRequestRepositories
                 return false;
             }
             request.TechnicianId = technicianUserId;
+            request.Status = BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted;
             _context.RequestEmergencies.Update(request);
             return await _context.SaveChangesAsync().ContinueWith(t => t.Result > 0);
         }
