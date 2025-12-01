@@ -791,6 +791,31 @@ namespace Services.QuotationServices
                 throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
             }
 
+            // Validation 1: Check if this quotation has already been copied to jobs
+            var existingJobsFromQuotation = await _jobService.GetJobsByRepairOrderIdAsync(quotation.RepairOrderId.Value);
+            var quotationNote = $"Auto-generated from approved quotation {quotation.QuotationId}";
+            
+            if (existingJobsFromQuotation.Any(j => j.Note != null && j.Note.Contains(quotation.QuotationId.ToString())))
+            {
+                throw new InvalidOperationException($"This quotation has already been copied to jobs. Each quotation can only create jobs once.");
+            }
+
+            // Validation 2: Check for duplicate services in existing jobs
+            var selectedServices = quotation.QuotationServices.Where(qs => qs.IsSelected).ToList();
+            var existingServiceIds = existingJobsFromQuotation.Select(j => j.ServiceId).ToHashSet();
+            
+            var duplicateServices = selectedServices
+                .Where(qs => existingServiceIds.Contains(qs.ServiceId))
+                .Select(qs => qs.Service?.ServiceName ?? "Unknown Service")
+                .ToList();
+
+            if (duplicateServices.Any())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create jobs: The following services already exist in jobs: {string.Join(", ", duplicateServices)}. " +
+                    $"Each service can only have one job in the system.");
+            }
+
             try
             {
                 // Generate jobs from the quotation

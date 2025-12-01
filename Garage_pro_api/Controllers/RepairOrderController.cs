@@ -170,7 +170,7 @@ namespace Garage_pro_api.Controllers
                     }
 
                 }
-                // Tính toán chi phí kh?n c?p n?u có
+                // Tï¿½nh toï¿½n chi phï¿½ kh?n c?p n?u cï¿½
               
 
                     // Create a new repair order based on the simplified DTO
@@ -408,6 +408,27 @@ namespace Garage_pro_api.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+            }
+        }
+
+        // GET: api/RepairOrder/{id}/customer-vehicle-info
+        [HttpGet("{id}/customer-vehicle-info")]
+        public async Task<IActionResult> GetCustomerVehicleInfo(Guid id)
+        {
+            try
+            {
+                var info = await _repairOrderService.GetCustomerVehicleInfoAsync(id);
+                
+                if (info == null)
+                {
+                    return NotFound(new { message = "Repair order not found" });
+                }
+
+                return Ok(info);
             }
             catch (Exception ex)
             {

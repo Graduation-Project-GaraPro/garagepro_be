@@ -709,6 +709,31 @@ namespace Services
                 CancelReason = repairOrder.CancelReason
             };
 
+            // Add vehicle details
+            if (repairOrder.Vehicle != null)
+            {
+                dto.Vehicle = new Dtos.Vehicles.VehicleDto
+                {
+                    VehicleID = repairOrder.Vehicle.VehicleId,
+                    BrandID = repairOrder.Vehicle.BrandId,
+                    UserID = repairOrder.Vehicle.UserId,
+                    ModelID = repairOrder.Vehicle.ModelId,
+                    ColorID = repairOrder.Vehicle.ColorId,
+                    LicensePlate = repairOrder.Vehicle.LicensePlate ?? "",
+                    VIN = repairOrder.Vehicle.VIN ?? "",
+                    Year = repairOrder.Vehicle.Year,
+                    Odometer = repairOrder.Vehicle.Odometer,
+                    LastServiceDate = repairOrder.Vehicle.LastServiceDate,
+                    NextServiceDate = repairOrder.Vehicle.NextServiceDate,
+                    WarrantyStatus = repairOrder.Vehicle.WarrantyStatus ?? "",
+                    CreatedAt = repairOrder.Vehicle.CreatedAt,
+                    UpdatedAt = repairOrder.Vehicle.UpdatedAt,
+                    BrandName = repairOrder.Vehicle.Brand?.BrandName ?? "Unknown",
+                    ModelName = repairOrder.Vehicle.Model?.ModelName ?? "Unknown",
+                    ColorName = repairOrder.Vehicle.Color?.ColorName ?? "Unknown"
+                };
+            }
+
             // Add technician names (from jobs)
             if (repairOrder.Jobs != null)
             {
@@ -729,6 +754,12 @@ namespace Services
                 dto.TotalJobs = repairOrder.Jobs.Count;
                 dto.CompletedJobs = repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed);
                 dto.ProgressPercentage = dto.TotalJobs > 0 ? (decimal)(dto.CompletedJobs * 100) / dto.TotalJobs : 0;
+            }
+
+            // Add labels
+            if (repairOrder.Labels != null && repairOrder.Labels.Any())
+            {
+                dto.Labels = repairOrder.Labels.Select(MapToRoBoardLabelDto).ToList();
             }
 
             return dto;
@@ -1403,6 +1434,45 @@ namespace Services
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region Customer and Vehicle Info
+
+        public async Task<Dtos.RepairOrder.RoCustomerVehicleInfoDto> GetCustomerVehicleInfoAsync(Guid repairOrderId)
+        {
+            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            
+            if (repairOrder == null)
+                return null;
+
+            var dto = new Dtos.RepairOrder.RoCustomerVehicleInfoDto
+            {
+                // Repair Order Info
+                RepairOrderId = repairOrder.RepairOrderId,
+                ReceiveDate = repairOrder.ReceiveDate,
+                StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
+
+                // Customer Info
+                CustomerId = repairOrder.User?.Id ?? "",
+                CustomerFirstName = repairOrder.User?.FirstName ?? "",
+                CustomerLastName = repairOrder.User?.LastName ?? "",
+                CustomerEmail = repairOrder.User?.Email ?? "",
+                CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+
+                // Vehicle Info
+                VehicleId = repairOrder.Vehicle?.VehicleId ?? Guid.Empty,
+                LicensePlate = repairOrder.Vehicle?.LicensePlate ?? "",
+                VIN = repairOrder.Vehicle?.VIN ?? "",
+                Year = repairOrder.Vehicle?.Year,
+                Odometer = repairOrder.Vehicle?.Odometer,
+                BrandName = repairOrder.Vehicle?.Brand?.BrandName ?? "Unknown",
+                ModelName = repairOrder.Vehicle?.Model?.ModelName ?? "Unknown",
+                ColorName = repairOrder.Vehicle?.Color?.ColorName ?? "Unknown"
+            };
+
+            return dto;
         }
 
         #endregion

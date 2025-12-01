@@ -138,7 +138,7 @@ namespace Services
             // Create new ApplicationUser
             var customer = new ApplicationUser
             {
-                UserName = createCustomerDto.PhoneNumber,
+                UserName = createCustomerDto.PhoneNumber, // Username is phone number
                 PhoneNumber = createCustomerDto.PhoneNumber,
                 FirstName = createCustomerDto.FirstName,
                 LastName = createCustomerDto.LastName,
@@ -148,8 +148,8 @@ namespace Services
                 CreatedAt = DateTime.UtcNow
             };
             
-            // Set a default password
-            var defaultPassword = "Customer@123"; // In a real implementation, this should be more secure
+            // Set default password: Garagepro123!
+            var defaultPassword = "Garagepro123!";
             
             var result = await _userManager.CreateAsync(customer, defaultPassword);
             if (!result.Succeeded)

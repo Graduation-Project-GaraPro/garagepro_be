@@ -43,6 +43,9 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal DiscountAmount { get; set; } = 0;
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal InspectionFee { get; set; } = 0; // Fee for inspection service
+
         [MaxLength(500)]
         public string? Note { get; set; }
         public string? CustomerNote { get; set; }

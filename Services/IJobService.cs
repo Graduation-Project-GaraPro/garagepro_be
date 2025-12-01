@@ -69,6 +69,5 @@ namespace Services
         
         // Create job with parts in a transaction
         Task<Job> CreateJobWithPartsAsync(Job job, List<JobPart> jobParts);
-        
     }
 }

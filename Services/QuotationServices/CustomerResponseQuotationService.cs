@@ -84,6 +84,15 @@ namespace Services.QuotationServices
                 }
                 else if (status == QuotationStatus.Rejected)
                 {
+                    // When rejected, customer pays inspection fee for all services
+                    quotation.TotalAmount = quotation.InspectionFee;
+                    
+                    // Update RO cost with inspection fee
+                    if (quotation.RepairOrder != null)
+                    {
+                        quotation.RepairOrder.Cost = quotation.InspectionFee;
+                    }
+                    
                     quotation.Status = status;
                     quotation.CustomerResponseAt = DateTime.UtcNow;
                     quotation.CustomerNote = responseDto.CustomerNote;
@@ -259,7 +268,13 @@ namespace Services.QuotationServices
             }
 
             quotation.TotalAmount = totalAmount;
-            quotation.RepairOrder.Cost += totalAmount;
+            
+            // Update RO cost with final total (replace, not add)
+            if (quotation.RepairOrder != null)
+            {
+                quotation.RepairOrder.Cost = totalAmount;
+            }
+            
             quotation.UpdatedAt = DateTime.UtcNow;
         }
         private async Task SendQuotationUpdateNotificationAsync(Quotation quotation)
