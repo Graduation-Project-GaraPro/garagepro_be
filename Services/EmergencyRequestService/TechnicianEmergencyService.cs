@@ -40,6 +40,7 @@ namespace Services.EmergencyRequestService
 
             return result;
         }
+
         public async Task<bool> UpdateEmergencyStatusAsync(
             Guid emergencyRequestId,
             RequestEmergency.EmergencyStatus newStatus,
