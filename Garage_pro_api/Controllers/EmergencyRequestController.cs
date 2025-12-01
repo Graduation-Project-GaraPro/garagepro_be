@@ -16,10 +16,12 @@ namespace Garage_pro_api.Controllers
     public class EmergencyRequestController : ControllerBase
     {
         private readonly IEmergencyRequestService _service;
+        private readonly ITechnicianEmergencyService _technicianEmergencyService;
 
-        public EmergencyRequestController(IEmergencyRequestService service)
+        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService)
         {
             _service = service;
+            _technicianEmergencyService = technicianEmergencyService;
         }
 
         /// <summary>
@@ -305,6 +307,7 @@ namespace Garage_pro_api.Controllers
                     return Unauthorized("User not found in token.");
 
                 var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
+                await _technicianEmergencyService.UpdateEmergencyStatusAsync(assignTechnicianPayload.emergencyId, BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned, technicianId: assignTechnicianPayload.technicianUserId.ToString());
                 return Ok(new { Success = result });
             }
             catch (ArgumentException ex)

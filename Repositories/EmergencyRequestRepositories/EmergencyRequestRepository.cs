@@ -84,7 +84,7 @@ namespace Repositories.EmergencyRequestRepositories
             if (emergency == null) return false;
 
             emergency.TechnicianId = technicianId;
-            emergency.Status = RequestEmergency.EmergencyStatus.Assigned; 
+            
 
             await _context.SaveChangesAsync();
             return true;
