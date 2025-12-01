@@ -16,10 +16,12 @@ namespace Garage_pro_api.Controllers
     public class EmergencyRequestController : ControllerBase
     {
         private readonly IEmergencyRequestService _service;
+        private readonly ITechnicianEmergencyService _technicianEmergencyService;
 
-        public EmergencyRequestController(IEmergencyRequestService service)
+        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService)
         {
             _service = service;
+            _technicianEmergencyService = technicianEmergencyService;
         }
 
         /// <summary>
@@ -72,8 +74,8 @@ namespace Garage_pro_api.Controllers
                     return BadRequest(new { message = ex.Message });
                 if (ex is InvalidOperationException && ex.Message.Contains("Active emergency", StringComparison.OrdinalIgnoreCase))
                     return Conflict(new { message = ex.Message });
-                if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
-                    return StatusCode(429, new { message = ex.Message });
+             //   if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
+             //       return StatusCode(429, new { message = ex.Message });
                 var inner = ex.InnerException;
                 while (inner != null)
                 {
@@ -294,7 +296,54 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+        [HttpPost("asign-tech")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> AsignTechnician(AssignTechnicianPayload assignTechnicianPayload)
+        {
+            try
+            {
+                var managerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(managerUserId))
+                    return Unauthorized("User not found in token.");
 
-
+                var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
+                await _technicianEmergencyService.UpdateEmergencyStatusAsync(assignTechnicianPayload.emergencyId, BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned, technicianId: assignTechnicianPayload.technicianUserId.ToString());
+                return Ok(new { Success = result });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Log chi tiết lỗi database để debug
+                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
+                if (dbEx.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
+                }
+                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                // Log chi tiết lỗi để debug
+                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Unhandled error: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
+        public class AssignTechnicianPayload
+        {
+            public Guid technicianUserId { get; set; }
+            public Guid emergencyId { get; set; }
+        }
     }
 }

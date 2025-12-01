@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject.RequestEmergency;
 using Dtos.EmergencyTechnicians;
+using Microsoft.AspNetCore.SignalR;
 using Repositories.EmergencyRequestRepositories;
+using Services.Hubs;
 
 namespace Services.EmergencyRequestService
 {
@@ -15,11 +17,13 @@ namespace Services.EmergencyRequestService
     {
         private readonly IEmergencyRequestRepository _repo;
         private readonly IMapper _mapper;
+        private readonly IHubContext<EmergencyRequestHub> _hubContext;
 
-        public TechnicianEmergencyService(IEmergencyRequestRepository repo, IMapper mapper)
+        public TechnicianEmergencyService(IEmergencyRequestRepository repo, IMapper mapper, IHubContext<EmergencyRequestHub> hubContext)
         {
             _repo = repo;
             _mapper = mapper;
+            _hubContext = hubContext;
         }
 
         public async Task<TechnicianEmergencyResultDto> GetTechnicianEmergenciesAsync(string technicianId)
@@ -54,6 +58,9 @@ namespace Services.EmergencyRequestService
                 rejectReason,
                 technicianId
             );
+
+            await _hubContext.Clients.Group($"emergency-{emergencyRequestId}")
+                    .SendAsync("EmergencyStatusUpdated", newStatus);
 
             return result;
         }
