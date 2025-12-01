@@ -50,9 +50,7 @@ namespace DataAccessLayer
         public DbSet<FeedBack> FeedBacks { get; set; }
         public DbSet<Quotation> Quotations { get; set; }
         public DbSet<QuotationService> QuotationServices { get; set; }
-        // Removed QuotationParts DbSet as the entity was removed
-        // public DbSet<QuotationPart> QuotationParts { get; set; }
-        // Add the new QuotationServicePart entity
+
 
         public DbSet<WebhookInbox> WebhookInboxes { get; set; }
 

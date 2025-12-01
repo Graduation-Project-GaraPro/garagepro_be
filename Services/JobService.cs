@@ -372,6 +372,10 @@ namespace Services
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
 
+            // Cannot assign job if it's already in progress
+            if (job.Status == JobStatus.InProgress)
+                return false;
+
             // Job can be assigned when status is Pending or New
             return job.Status == JobStatus.Pending || job.Status == JobStatus.New;
         }

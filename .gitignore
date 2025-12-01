@@ -486,3 +486,4 @@ $RECYCLE.BIN/
 # Ignore all launchSettings.json files in any project
 **/Properties/launchSettings.json
 
+Garage_pro_api/Keys/garapro-firebase-firebase-adminsdk-fbsvc-292a41367b.json

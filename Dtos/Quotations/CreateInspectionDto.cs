@@ -30,6 +30,8 @@ namespace Dtos.Quotations
         public string? Note { get; set; }
         
         public string? ImageUrl { get; set; }
+        
+        public InspectionStatus? Status { get; set; }
     }
 
     public class InspectionConcernDto

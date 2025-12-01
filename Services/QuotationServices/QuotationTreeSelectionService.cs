@@ -139,6 +139,54 @@ namespace Services.QuotationServices
             };
         }
 
+        public async Task<ServiceDetailsDto> GetServiceDetailsAsync(Guid serviceId)
+        {
+            var service = await _serviceRepository.Query()
+                .Include(s => s.ServicePartCategories)
+                    .ThenInclude(spc => spc.PartCategory)
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+
+            if (service == null)
+                throw new ArgumentException($"Service with ID {serviceId} not found.");
+
+            var partCategories = service.ServicePartCategories?
+                .Select(spc => new PartCategoryForSelectionDto
+                {
+                    PartCategoryId = spc.PartCategoryId,
+                    CategoryName = spc.PartCategory?.CategoryName ?? ""
+                })
+                .ToList() ?? new List<PartCategoryForSelectionDto>();
+
+            return new ServiceDetailsDto
+            {
+                ServiceId = service.ServiceId,
+                ServiceName = service.ServiceName,
+                Price = service.Price,
+                PartCategories = partCategories
+            };
+        }
+
+        public async Task<List<PartForSelectionDto>> GetPartsByCategoryAsync(Guid partCategoryId)
+        {
+            var parts = await _serviceRepository.Query()
+                .SelectMany(s => s.ServicePartCategories)
+                .Where(spc => spc.PartCategoryId == partCategoryId)
+                .SelectMany(spc => spc.PartCategory.Parts)
+                .Distinct()
+                .Select(p => new PartForSelectionDto
+                {
+                    PartId = p.PartId,
+                    Name = p.Name,
+                    Description = "",
+                    Price = p.Price,
+                    StockQuantity = p.Stock,
+                    PartCategoryId = p.PartCategoryId
+                })
+                .ToListAsync();
+
+            return parts;
+        }
+
         /// <summary>
         /// Build breadcrumb trail from root to current category
         /// </summary>

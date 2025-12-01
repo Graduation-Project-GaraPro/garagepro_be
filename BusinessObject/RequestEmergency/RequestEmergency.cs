@@ -37,7 +37,7 @@ namespace BusinessObject.RequestEmergency
         {
             Pending,    // Chờ gara xác nhận
             Accepted,   // Gara đã tiếp nhận
-            Assigned,   // Đã gán kỹ thuật viên
+            Assigned,   // Đã gán
             InProgress, // Đang xử lý cứu hộ
             Towing,
             Completed,  // Hoàn thành
@@ -74,7 +74,7 @@ namespace BusinessObject.RequestEmergency
         public DateTime? AutoCanceledAt { get; set; }
 
 
-        public string? TechnicianId { get; set; }     
+        public string? TechnicianId { get; set; }
         public ApplicationUser? Technician { get; set; }
 
     }

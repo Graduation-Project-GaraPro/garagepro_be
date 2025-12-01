@@ -33,6 +33,64 @@ namespace Repositories.EmergencyRequestRepositories
             return emergency;
         }
 
+        public async Task<bool> UpdateEmergencyStatusAsync(
+                Guid emergencyRequestId,
+                RequestEmergency.EmergencyStatus newStatus,
+                string? rejectReason = null,
+                string? technicianId = null
+            )
+        {
+            var request = await _context.RequestEmergencies
+                .FirstOrDefaultAsync(r => r.EmergencyRequestId == emergencyRequestId);
+
+            if (request == null)
+                return false;
+
+            // Cập nhật trạng thái
+            request.Status = newStatus;
+
+            // Nếu gara từ chối -> lưu RejectReason + thời gian phản hồi
+            if (newStatus == RequestEmergency.EmergencyStatus.Canceled && rejectReason != null)
+            {
+                request.RejectReason = rejectReason;
+            }
+
+            // Nếu gara tiếp nhận -> lưu thời gian phản hồi
+            if (newStatus == RequestEmergency.EmergencyStatus.Accepted)
+            {
+                request.RespondedAt = DateTime.UtcNow;
+            }
+
+            // Nếu chỉ định kỹ thuật viên
+            if (technicianId != null)
+            {
+                request.TechnicianId = technicianId;
+            }
+
+            // Hoàn thành yêu cầu
+            if (newStatus == RequestEmergency.EmergencyStatus.Completed)
+            {
+                // Bạn có thể thêm logic nếu cần
+                // request.CompletedAt = DateTime.UtcNow; (nếu muốn thêm)
+            }
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
+        {
+            var emergency = await GetByIdAsync(emergencyId);
+            if (emergency == null) return false;
+
+            emergency.TechnicianId = technicianId;
+            emergency.Status = RequestEmergency.EmergencyStatus.Assigned; 
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+
 
         public async Task<List<RequestEmergency>> GetAllEmergencyAsync()
         {
@@ -74,6 +132,38 @@ namespace Repositories.EmergencyRequestRepositories
                 .Include(r=> r.Vehicle)
                 .Include(r => r.MediaFiles)
                 .FirstOrDefaultAsync(r => r.EmergencyRequestId == id);
+        }
+
+
+        public async Task<RequestEmergency?> GetCurrentEmergencyForTechnicianAsync(string technicianId)
+        {
+            return await _context.Set<RequestEmergency>()
+                .Include(x => x.Customer)
+                .Include(x => x.Branch)
+                .Include(x => x.Vehicle)
+                .Include(x => x.MediaFiles)
+                .Where(x =>
+                    x.TechnicianId == technicianId &&
+                    (x.Status == RequestEmergency.EmergencyStatus.Assigned ||
+                     x.Status == RequestEmergency.EmergencyStatus.InProgress
+                     || x.Status == RequestEmergency.EmergencyStatus.Towing
+                     )
+                     
+                     )
+                .OrderByDescending(x => x.RequestTime)
+                .FirstOrDefaultAsync();
+        }
+
+       
+        public async Task<List<RequestEmergency>> GetEmergencyListForTechnicianAsync(string technicianId)
+        {
+            return await _context.Set<RequestEmergency>()
+                .Include(x => x.Customer)
+                .Include(x => x.Branch)
+                .Include(x => x.Vehicle)
+                .Where(x => x.TechnicianId == technicianId)
+                .OrderByDescending(x => x.RequestTime)
+                .ToListAsync();
         }
 
 
