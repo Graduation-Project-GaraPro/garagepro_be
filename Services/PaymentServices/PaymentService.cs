@@ -321,14 +321,21 @@ namespace Services.PaymentServices
                 throw new Exception($"All jobs in repair order must be completed before payment can be created");
             }
 
-            // 3. Check if there's already a paid payment
+            // 3. Check if repair order is already fully paid
+            if (repairOrder.PaidStatus == PaidStatus.Paid)
+            {
+                throw new Exception("Repair order is already fully paid. Cannot create another payment.");
+            }
+
+            // 4. Check if there's already a paid payment
             var paidPayment = await _repo.GetByConditionAsync(
                 p => p.RepairOrderId == repairOrderId && p.Status == PaymentStatus.Paid, ct);
             if (paidPayment != null) throw new Exception($"Payment {paidPayment.PaymentId} already paid");
 
-            // 4. Create payment record
+            // 5. Create payment record
             var payment = new Payment
             {
+                PaymentId = GeneratePaymentId(),
                 RepairOrderId = repairOrderId,
                 UserId = managerId, // Manager ID
                 Amount = amount,
@@ -338,11 +345,11 @@ namespace Services.PaymentServices
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // 5. Add payment to database
+            // 6. Add payment to database
             await _repo.AddAsync(payment);
             await _repo.SaveChangesAsync(ct);
 
-            // 6. Update repair order paid status (only for cash payments)
+            // 7. Update repair order paid status (only for cash payments)
             if (method == PaymentMethod.Cash)
             {
                 repairOrder.PaidAmount += amount;
@@ -385,7 +392,13 @@ namespace Services.PaymentServices
                 throw new Exception($"All jobs in repair order must be completed before payment can be created");
             }
 
-            // 2. Calculate amount to pay
+            // 2. Check if repair order is already fully paid
+            if (repairOrder.PaidStatus == PaidStatus.Paid)
+            {
+                throw new Exception("Repair order is already fully paid. Cannot create another payment.");
+            }
+
+            // 3. Calculate amount to pay
             var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
             if (amountToPay <= 0)
             {

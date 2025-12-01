@@ -19,10 +19,8 @@ namespace Garage_pro_api.Controllers
             _treeSelectionService = treeSelectionService;
         }
 
-        /// <summary>
         /// GET: api/QuotationTreeSelection/root
-        /// Get root-level service categories (starting point of the tree)
-        /// </summary>
+        /// Get root-level service categories
         [HttpGet("root")]
         public async Task<ActionResult<ServiceCategoryTreeResponseDto>> GetRootCategories()
         {
@@ -37,11 +35,8 @@ namespace Garage_pro_api.Controllers
             }
         }
 
-        /// <summary>
         /// GET: api/QuotationTreeSelection/category/{categoryId}
-        /// Get child categories and services for a specific category
-        /// Drill down one level in the tree
-        /// </summary>
+
         [HttpGet("category/{categoryId}")]
         public async Task<ActionResult<ServiceCategoryTreeResponseDto>> GetCategoryChildren(Guid categoryId)
         {
@@ -60,6 +55,37 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        [HttpGet("service/{serviceId}")]
+        public async Task<ActionResult<ServiceDetailsDto>> GetServiceDetails(Guid serviceId)
+        {
+            try
+            {
+                var result = await _treeSelectionService.GetServiceDetailsAsync(serviceId);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Error retrieving service details", Detail = ex.Message });
+            }
+        }
 
+        /// GET: api/QuotationTreeSelection/parts/category/{partCategoryId}
+        [HttpGet("parts/category/{partCategoryId}")]
+        public async Task<ActionResult<List<PartForSelectionDto>>> GetPartsByCategory(Guid partCategoryId)
+        {
+            try
+            {
+                var result = await _treeSelectionService.GetPartsByCategoryAsync(partCategoryId);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Error retrieving parts", Detail = ex.Message });
+            }
+        }
     }
 }

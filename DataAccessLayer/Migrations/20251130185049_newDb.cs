@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class isgood : Migration
+    public partial class newDb : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1176,7 +1176,8 @@ namespace DataAccessLayer.Migrations
                     Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ResponseDeadline = table.Column<DateTime>(type: "datetime2", nullable: true),
                     RespondedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AutoCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    AutoCanceledAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    TechnicianId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1187,6 +1188,12 @@ namespace DataAccessLayer.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RequestEmergencies_AspNetUsers_TechnicianId",
+                        column: x => x.TechnicianId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RequestEmergencies_Branches_BranchId",
                         column: x => x.BranchId,
@@ -2171,6 +2178,11 @@ namespace DataAccessLayer.Migrations
                 column: "RepairRequestId",
                 unique: true,
                 filter: "[RepairRequestId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RequestEmergencies_TechnicianId",
+                table: "RequestEmergencies",
+                column: "TechnicianId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RequestEmergencies_VehicleId",

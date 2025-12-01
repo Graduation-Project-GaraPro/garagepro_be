@@ -6,6 +6,7 @@ using BusinessObject;
 using BusinessObject.Enums;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Services.Hubs;
 using Services.Notifications;
@@ -19,16 +20,18 @@ namespace Services
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IQuotationService _quotationService;
         private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
-
         private readonly IHubContext<InspectionHub> _inspectionHubContext;
         private readonly INotificationService _notificationService;
+        private readonly DataAccessLayer.MyAppDbContext _dbContext;
+
         public InspectionService(
             IInspectionRepository inspectionRepository,
             IRepairOrderRepository repairOrderRepository,
             IQuotationService quotationService,
             IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
             IHubContext<InspectionHub> inspectionHubContext,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            DataAccessLayer.MyAppDbContext dbContext)
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
@@ -36,6 +39,7 @@ namespace Services
             _technicianAssignmentHubContext = technicianAssignmentHubContext;
             _inspectionHubContext = inspectionHubContext;
             _notificationService = notificationService;
+            _dbContext = dbContext;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -43,7 +47,23 @@ namespace Services
             var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
             if (inspection == null) return null;
 
-            return MapToDto(inspection);
+            var inspectionDto = MapToDto(inspection);
+
+            // Send SignalR notification if inspection is assigned to a technician
+            if (inspection.TechnicianId.HasValue)
+            {
+                await _inspectionHubContext.Clients
+                    .Group($"Technician_{inspection.TechnicianId.Value}")
+                    .SendAsync("InspectionRetrieved", new
+                    {
+                        InspectionId = inspectionId,
+                        TechnicianId = inspection.TechnicianId.Value,
+                        Inspection = inspectionDto,
+                        RetrievedAt = DateTime.UtcNow
+                    });
+            }
+
+            return inspectionDto;
         }
 
         public async Task<IEnumerable<InspectionDto>> GetAllInspectionsAsync()
@@ -61,7 +81,20 @@ namespace Services
         public async Task<IEnumerable<InspectionDto>> GetInspectionsByTechnicianIdAsync(Guid technicianId)
         {
             var inspections = await _inspectionRepository.GetByTechnicianIdAsync(technicianId);
-            return inspections.Select(MapToDto);
+            var inspectionDtos = inspections.Select(MapToDto).ToList();
+
+            // Send SignalR notification to the technician
+            await _inspectionHubContext.Clients
+                .Group($"Technician_{technicianId}")
+                .SendAsync("InspectionsRetrieved", new
+                {
+                    TechnicianId = technicianId,
+                    InspectionCount = inspectionDtos.Count,
+                    Inspections = inspectionDtos,
+                    RetrievedAt = DateTime.UtcNow
+                });
+
+            return inspectionDtos;
         }
 
         public async Task<InspectionDto> CreateInspectionAsync(CreateInspectionDto createInspectionDto)
@@ -114,10 +147,18 @@ namespace Services
             if (inspection == null)
                 throw new ArgumentException("Inspection not found");
 
+            var oldStatus = inspection.Status;
+
             // Update technician if provided
             if (updateInspectionDto.TechnicianId.HasValue)
             {
                 inspection.TechnicianId = updateInspectionDto.TechnicianId.Value;
+            }
+
+            // Update status if provided
+            if (updateInspectionDto.Status.HasValue)
+            {
+                inspection.Status = updateInspectionDto.Status.Value;
             }
 
             // Update other fields if provided
@@ -136,7 +177,119 @@ namespace Services
             inspection.UpdatedAt = DateTime.UtcNow;
 
             var updatedInspection = await _inspectionRepository.UpdateAsync(inspection);
-            return MapToDto(updatedInspection);
+            var inspectionDto = MapToDto(updatedInspection);
+
+            // Send SignalR notification if status changed
+            if (oldStatus != updatedInspection.Status)
+            {
+                Console.WriteLine($"[InspectionService] Status changed for Inspection {inspectionId}: {oldStatus} → {updatedInspection.Status}");
+                
+                var statusMessage = GetStatusChangeMessage(oldStatus, updatedInspection.Status);
+                
+                var notificationPayload = new
+                {
+                    InspectionId = inspectionId,
+                    TechnicianId = updatedInspection.TechnicianId,
+                    TechnicianName = updatedInspection.Technician?.User != null 
+                        ? $"{updatedInspection.Technician.User.FirstName} {updatedInspection.Technician.User.LastName}".Trim() 
+                        : "Unknown Technician",
+                    OldStatus = oldStatus.ToString(),
+                    NewStatus = updatedInspection.Status.ToString(),
+                    RepairOrderId = updatedInspection.RepairOrderId,
+                    CustomerConcern = updatedInspection.CustomerConcern,
+                    Finding = updatedInspection.Finding,
+                    IssueRating = updatedInspection.IssueRating,
+                    Inspection = inspectionDto,
+                    Message = statusMessage,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                // Notify the technician (if assigned)
+                if (updatedInspection.TechnicianId.HasValue)
+                {
+                    Console.WriteLine($"[InspectionService] Sending InspectionStatusUpdated to Technician_{updatedInspection.TechnicianId.Value}");
+                    await _inspectionHubContext.Clients
+                        .Group($"Technician_{updatedInspection.TechnicianId.Value}")
+                        .SendAsync("InspectionStatusUpdated", notificationPayload);
+                }
+
+                Console.WriteLine($"[InspectionService] Sending InspectionStatusUpdated to Managers group");
+                await _inspectionHubContext.Clients
+                    .Group("Managers")
+                    .SendAsync("InspectionStatusUpdated", notificationPayload);
+
+                Console.WriteLine($"[InspectionService] Sending InspectionStatusUpdated to Inspection_{inspectionId} group");
+                await _inspectionHubContext.Clients
+                    .Group($"Inspection_{inspectionId}")
+                    .SendAsync("InspectionStatusUpdated", notificationPayload);
+
+                if (updatedInspection.Status == InspectionStatus.Completed)
+                {
+                    Console.WriteLine($"[InspectionService] Inspection {inspectionId} completed by Technician {updatedInspection.TechnicianId}");
+                    Console.WriteLine($"[InspectionService] Sending InspectionCompleted to Managers group");
+
+                    await _inspectionHubContext.Clients
+                        .Group("Managers")
+                        .SendAsync("InspectionCompleted", new
+                        {
+                            InspectionId = inspectionId,
+                            RepairOrderId = updatedInspection.RepairOrderId,
+                            TechnicianId = updatedInspection.TechnicianId,
+                            TechnicianName = notificationPayload.TechnicianName,
+                            CustomerConcern = updatedInspection.CustomerConcern,
+                            Finding = updatedInspection.Finding,
+                            IssueRating = updatedInspection.IssueRating,
+                            ServiceCount = updatedInspection.ServiceInspections?.Count ?? 0,
+                            PartCount = updatedInspection.PartInspections?.Count ?? 0,
+                            CompletedAt = DateTime.UtcNow,
+                            InspectionDetails = inspectionDto,
+                            Message = "Inspection completed and ready for quotation"
+                        });
+                    
+                    Console.WriteLine($"[InspectionService] InspectionCompleted event sent successfully");
+                }
+
+                // Special notification when inspection starts (InProgress)
+                if (updatedInspection.Status == InspectionStatus.InProgress && oldStatus == InspectionStatus.Pending)
+                {
+                    Console.WriteLine($"[InspectionService] Inspection {inspectionId} started by Technician {updatedInspection.TechnicianId}");
+                    Console.WriteLine($"[InspectionService] Sending InspectionStarted to Managers group");
+                    
+                    // Notify managers that technician has started working
+                    await _inspectionHubContext.Clients
+                        .Group("Managers")
+                        .SendAsync("InspectionStarted", new
+                        {
+                            InspectionId = inspectionId,
+                            RepairOrderId = updatedInspection.RepairOrderId,
+                            TechnicianId = updatedInspection.TechnicianId,
+                            TechnicianName = notificationPayload.TechnicianName,
+                            CustomerConcern = updatedInspection.CustomerConcern,
+                            StartedAt = DateTime.UtcNow,
+                            Message = "Technician has started the inspection"
+                        });
+                    
+                    Console.WriteLine($"[InspectionService] InspectionStarted event sent successfully");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[InspectionService] No status change detected for Inspection {inspectionId}. Status remains: {updatedInspection.Status}");
+            }
+
+            return inspectionDto;
+        }
+
+        private string GetStatusChangeMessage(InspectionStatus oldStatus, InspectionStatus newStatus)
+        {
+            return newStatus switch
+            {
+                InspectionStatus.InProgress => "Inspection is now in progress",
+                InspectionStatus.Completed => "Inspection has been completed",
+                InspectionStatus.Pending => "Inspection is pending",
+                InspectionStatus.New => "New inspection created",
+                _ => $"Inspection status changed from {oldStatus} to {newStatus}"
+            };
         }
 
         public async Task<bool> DeleteInspectionAsync(Guid inspectionId)
@@ -173,6 +326,10 @@ namespace Services
             var inspection = await _inspectionRepository.GetByIdAsync(inspectionId);
             if (inspection == null)
                 throw new ArgumentException("Inspection not found", nameof(inspectionId));
+
+            // 2. Validate inspection status - cannot assign if already in progress
+            if (inspection.Status == InspectionStatus.InProgress)
+                throw new InvalidOperationException("Cannot assign inspection that is already in progress");
 
             var technician = await _inspectionRepository.GetTechnicianByIdAsync(technicianId);
             var technicianName = technician?.User != null ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() : "Unknown Technician";
@@ -233,7 +390,6 @@ namespace Services
             if (inspection.RepairOrder == null)
                 throw new InvalidOperationException("Inspection must have a valid repair order");
 
-            // Create quotation services from inspection services and parts
             var quotationServices = new List<CreateQuotationServiceDto>();
             
             // Add services from the inspection
@@ -241,11 +397,9 @@ namespace Services
             {
                 foreach (var serviceInspection in inspection.ServiceInspections)
                 {
-                    // Skip if service is null
                     if (serviceInspection.Service == null)
                         continue;
 
-                    // Determine service flags based on condition status
                     bool isGood = serviceInspection.ConditionStatus == ConditionStatus.Good;
                     bool isRequired = serviceInspection.ConditionStatus == ConditionStatus.Replace;
                     
@@ -280,7 +434,21 @@ namespace Services
                 }
             }
 
-            // Create the quotation DTO
+            // Calculate inspection fee based on service complexity
+            decimal inspectionFee = 0;
+            bool hasAdvancedService = inspection.ServiceInspections
+                .Any(si => si.Service != null && si.Service.IsAdvanced);
+
+            // Get inspection type by name (more reliable than hardcoded IDs)
+            string inspectionTypeName = hasAdvancedService ? "Advanced" : "Basic";
+            var inspectionType = await _dbContext.InspectionTypes
+                .FirstOrDefaultAsync(it => it.TypeName == inspectionTypeName && it.IsActive);
+
+            if (inspectionType != null)
+            {
+                inspectionFee = inspectionType.InspectionFee;
+            }
+
             var createQuotationDto = new CreateQuotationDto
             {
                 InspectionId = inspection.InspectionId,
@@ -291,8 +459,34 @@ namespace Services
                 QuotationServices = quotationServices
             };
 
-            // Create the quotation
-            return await _quotationService.CreateQuotationAsync(createQuotationDto);
+            //  calculate service/part totals
+            var quotation = await _quotationService.CreateQuotationAsync(createQuotationDto);
+
+
+            if (inspectionFee > 0)
+            {
+                var quotationEntity = await _dbContext.Quotations
+                    .Include(q => q.RepairOrder)
+                    .FirstOrDefaultAsync(q => q.QuotationId == quotation.QuotationId);
+
+                if (quotationEntity != null)
+                {
+                    quotationEntity.TotalAmount += inspectionFee;
+                    
+                    // Add ONLY inspection fee to RepairOrder cost now
+                    // Service/part fees will be added when quotation is approved
+                    if (quotationEntity.RepairOrder != null)
+                    {
+                        quotationEntity.RepairOrder.Cost = inspectionFee;
+                    }
+
+                    await _dbContext.SaveChangesAsync();
+                    
+                    quotation.TotalAmount += inspectionFee;
+                }
+            }
+
+            return quotation;
         }
 
         private InspectionDto MapToDto(Inspection inspection)
