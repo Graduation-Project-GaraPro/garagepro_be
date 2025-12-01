@@ -198,5 +198,10 @@ namespace Repositories.InspectionAndRepair
                 throw;
             }
         }
+        public async Task<Technician?> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .FirstOrDefaultAsync(t => t.UserId == userId);
+        }
     }
 }
