@@ -19,7 +19,11 @@ namespace Services
         private readonly IHubContext<JobHub> _jobHubContext;
         private readonly INotificationService _notificationService;
 
-        public JobService(IJobRepository jobRepository, IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, IHubContext<JobHub> jobHubContext, INotificationService notificationService)
+        public JobService(
+            IJobRepository jobRepository, 
+            IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, 
+            IHubContext<JobHub> jobHubContext, 
+            INotificationService notificationService)
         {
             _jobRepository = jobRepository;
             _technicianAssignmentHubContext = technicianAssignmentHubContext;

@@ -435,20 +435,6 @@ namespace Services
             }
 
             // Calculate inspection fee based on service complexity
-            decimal inspectionFee = 0;
-            bool hasAdvancedService = inspection.ServiceInspections
-                .Any(si => si.Service != null && si.Service.IsAdvanced);
-
-            // Get inspection type by name (more reliable than hardcoded IDs)
-            string inspectionTypeName = hasAdvancedService ? "Advanced" : "Basic";
-            var inspectionType = await _dbContext.InspectionTypes
-                .FirstOrDefaultAsync(it => it.TypeName == inspectionTypeName && it.IsActive);
-
-            if (inspectionType != null)
-            {
-                inspectionFee = inspectionType.InspectionFee;
-            }
-
             var createQuotationDto = new CreateQuotationDto
             {
                 InspectionId = inspection.InspectionId,
@@ -462,27 +448,61 @@ namespace Services
             //  calculate service/part totals
             var quotation = await _quotationService.CreateQuotationAsync(createQuotationDto);
 
+            // Calculate inspection fee PER SERVICE based on IsAdvanced flag
+            var quotationEntity = await _dbContext.Quotations
+                .Include(q => q.QuotationServices)
+                    .ThenInclude(qs => qs.Service)
+                .Include(q => q.RepairOrder)
+                .FirstOrDefaultAsync(q => q.QuotationId == quotation.QuotationId);
 
-            if (inspectionFee > 0)
+            if (quotationEntity != null)
             {
-                var quotationEntity = await _dbContext.Quotations
-                    .Include(q => q.RepairOrder)
-                    .FirstOrDefaultAsync(q => q.QuotationId == quotation.QuotationId);
+                // Get inspection types
+                var basicInspectionType = await _dbContext.InspectionTypes
+                    .FirstOrDefaultAsync(it => it.TypeName == "Basic" && it.IsActive);
+                var advancedInspectionType = await _dbContext.InspectionTypes
+                    .FirstOrDefaultAsync(it => it.TypeName == "Advanced" && it.IsActive);
 
-                if (quotationEntity != null)
+                if (basicInspectionType != null && advancedInspectionType != null)
                 {
-                    quotationEntity.TotalAmount += inspectionFee;
-                    
-                    // Add ONLY inspection fee to RepairOrder cost now
-                    // Service/part fees will be added when quotation is approved
-                    if (quotationEntity.RepairOrder != null)
+                    decimal totalInspectionFee = 0;
+                    decimal goodServicesInspectionTotal = 0;
+
+                    // Calculate inspection fee for EACH service based on its IsAdvanced flag
+                    foreach (var quotationService in quotationEntity.QuotationServices)
                     {
-                        quotationEntity.RepairOrder.Cost = inspectionFee;
+                        // Determine inspection fee for this specific service
+                        decimal serviceInspectionFee = quotationService.Service.IsAdvanced
+                            ? advancedInspectionType.InspectionFee
+                            : basicInspectionType.InspectionFee;
+
+                        // Add to total inspection fee (for rejection case)
+                        totalInspectionFee += serviceInspectionFee;
+
+                        // If service is Good, set its price to inspection fee
+                        if (quotationService.IsGood)
+                        {
+                            quotationService.Price = serviceInspectionFee;
+                            goodServicesInspectionTotal += serviceInspectionFee;
+                        }
                     }
 
+                    // Store total inspection fee (sum of all services' inspection fees)
+                    quotationEntity.InspectionFee = totalInspectionFee;
+
+                    // Add Good services inspection fees to quotation total
+                    if (goodServicesInspectionTotal > 0)
+                    {
+                        quotationEntity.TotalAmount += goodServicesInspectionTotal;
+                    }
+
+                    // DO NOT update RO cost here - customer response will handle it
+                    // Manager only creates quotation and shows preview to customer
+
                     await _dbContext.SaveChangesAsync();
-                    
-                    quotation.TotalAmount += inspectionFee;
+
+                    quotation.InspectionFee = totalInspectionFee;
+                    quotation.TotalAmount = quotationEntity.TotalAmount;
                 }
             }
 

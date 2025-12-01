@@ -83,5 +83,14 @@ namespace Services
         /// <returns>A RepairOrderDto</returns>
         RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder);
         #endregion
+
+        #region Customer and Vehicle Info
+        /// <summary>
+        /// Gets customer and vehicle information for a repair order
+        /// </summary>
+        /// <param name="repairOrderId">The ID of the repair order</param>
+        /// <returns>Customer and vehicle information DTO</returns>
+        Task<Dtos.RepairOrder.RoCustomerVehicleInfoDto> GetCustomerVehicleInfoAsync(Guid repairOrderId);
+        #endregion
     }
 }

@@ -4,8 +4,10 @@ using BusinessObject.Enums;
 using BusinessObject.FcmDataModels;
 using BusinessObject.InspectionAndRepair;
 using Dtos.InspectionAndRepair;
+using Dtos.RoBoard;
 using Microsoft.AspNetCore.SignalR;
 using OfficeOpenXml.FormulaParsing.LexicalAnalysis;
+using Repositories;
 using Repositories.InspectionAndRepair;
 using Services.FCMServices;
 using Services.Hubs;
@@ -23,17 +25,25 @@ namespace Services.InspectionAndRepair
         private readonly IHubContext<JobHub> _hubContext;
         private readonly IFcmService _fcmService;
         private readonly IUserService _userService;
+        private readonly IRepairOrderService _repairOrderService;
+        private readonly IOrderStatusRepository _orderStatusRepository;
 
         public JobTechnicianService(
             IJobTechnicianRepository jobTechnicianRepository,
             IMapper mapper,
-            IHubContext<JobHub> hubContext, IFcmService fcmService, IUserService userService)
+            IHubContext<JobHub> hubContext, 
+            IFcmService fcmService, 
+            IUserService userService,
+            IRepairOrderService repairOrderService,
+            IOrderStatusRepository orderStatusRepository)
         {
             _jobTechnicianRepository = jobTechnicianRepository;
             _mapper = mapper;
             _hubContext = hubContext;
             _fcmService = fcmService;
             _userService = userService;
+            _repairOrderService = repairOrderService;
+            _orderStatusRepository = orderStatusRepository;
         }
 
         public async Task<List<JobTechnicianDto>> GetJobsByTechnicianAsync(string userId)
@@ -168,7 +178,18 @@ namespace Services.InspectionAndRepair
             .Group($"RepairOrder_{job.RepairOrderId}")
             .SendAsync("JobStatusUpdated", payload);
 
-            
+            // Auto-complete RO if all jobs are completed
+            if (dto.JobStatus == JobStatus.Completed)
+            {
+                try
+                {
+                    await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
+                }
+            }
 
             return true;
         }
@@ -181,6 +202,59 @@ namespace Services.InspectionAndRepair
             {
                 TechnicianId = technician.TechnicianId
             };
+        }
+        
+        // check all jobs in RO and complete RO if all jobs are completed
+        private async Task<bool> CheckAndCompleteRepairOrderAsync(Guid repairOrderId)
+        {
+            var allJobs = await _jobTechnicianRepository.GetJobsByRepairOrderIdAsync(repairOrderId);
+            
+            if (!allJobs.Any())
+            {
+                Console.WriteLine($"[JobTechnicianService] No jobs found for RepairOrder {repairOrderId}");
+                return false;
+            }
+
+            var allCompleted = allJobs.All(j => j.Status == JobStatus.Completed);
+            
+            if (!allCompleted)
+            {
+                var incompleteCount = allJobs.Count(j => j.Status != JobStatus.Completed);
+                Console.WriteLine($"[JobTechnicianService] RepairOrder {repairOrderId}: {incompleteCount} job(s) still incomplete");
+                return false;
+            }
+
+            Console.WriteLine($"[JobTechnicianService] All {allJobs.Count()} jobs completed for RepairOrder {repairOrderId}. Auto-completing RO...");
+            
+            try
+            {
+                var allStatuses = await _orderStatusRepository.GetAllAsync();
+                var completedStatus = allStatuses.FirstOrDefault(s => s.StatusName == "Completed");               
+                
+                var updateDto = new UpdateRoBoardStatusDto
+                {
+                    RepairOrderId = repairOrderId,
+                    NewStatusId = completedStatus.OrderStatusId
+                };
+                
+                var result = await _repairOrderService.UpdateRepairOrderStatusAsync(updateDto);
+                
+                if (result.Success)
+                {
+                    Console.WriteLine($"[JobTechnicianService] RepairOrder {repairOrderId} auto-completed successfully");
+                    return true;
+                }
+                else
+                {
+                    Console.WriteLine($"[JobTechnicianService] Failed to auto-complete RepairOrder {repairOrderId}: {result.Message}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[JobTechnicianService] Exception while auto-completing RepairOrder {repairOrderId}: {ex.Message}");
+                throw;
+            }
         }
     }
 }

@@ -18,14 +18,14 @@ namespace BusinessObject
         public Guid ServiceId { get; set; }
 
         [Required]
-        public bool IsSelected { get; set; } = false; // Customer approval
+        public bool IsSelected { get; set; } = false; 
 
-        public bool IsRequired { get; set; } = false; // Indicates if this is a required service
+        public bool IsRequired { get; set; } = false; 
 
-        public bool IsGood { get; set; } = false; // Service condition is Good - view only, no payment needed
+        public bool IsGood { get; set; } = false;
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal Price { get; set; } // Store the quoted price at the time of quotation creation
+        public decimal Price { get; set; } 
         [Column(TypeName = "decimal(18,2)")]
         public decimal DiscountValue { get; set; } = 0;
 
