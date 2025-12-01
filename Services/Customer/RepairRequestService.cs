@@ -105,7 +105,10 @@ namespace Services.Customer
 
             // ✅ Sort theo RequestDate (mới nhất trước)
             var data = await query
-                .OrderByDescending(r => r.RequestDate)
+                // Ưu tiên Accept trước: Accept => 0, còn lại => 1
+                .OrderBy(r => r.Status == RepairRequestStatus.Accept ? 0 : 1)
+                // Sau đó sắp xếp theo ngày request gần nhất
+                .ThenBy(r => r.RequestDate)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
                 .Select(r => new RepairRequestDto
@@ -123,6 +126,7 @@ namespace Services.Customer
                     EstimatedCost = r.EstimatedCost
                 })
                 .ToListAsync();
+
 
             // ✅ Kết quả phân trang
             return new

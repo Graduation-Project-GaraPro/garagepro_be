@@ -198,35 +198,35 @@ namespace Services.QuotationServices
             await _quotationRepository.UpdateAsync(createdQuotation);
 
 
-            await _quotationHubContext
-            .Clients
-            .Group($"User_{createQuotationDto.UserId}")
-            .SendAsync("QuotationCreated", new
-            {
-                createdQuotation.QuotationId,
-                createdQuotation.UserId,
-                createdQuotation.RepairOrderId,
-                createdQuotation.TotalAmount,
-                createdQuotation.Status,
-                createdQuotation.CreatedAt,
-                createQuotationDto.Note
-            });
+            //await _quotationHubContext
+            //.Clients
+            //.Group($"User_{createQuotationDto.UserId}")
+            //.SendAsync("QuotationCreated", new
+            //{
+            //    createdQuotation.QuotationId,
+            //    createdQuotation.UserId,
+            //    createdQuotation.RepairOrderId,
+            //    createdQuotation.TotalAmount,
+            //    createdQuotation.Status,
+            //    createdQuotation.CreatedAt,
+            //    createQuotationDto.Note
+            //});
 
-            var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
+            //var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
 
-            if (user != null && user.DeviceId != null)
-            {
-                var FcmNotification = new FcmDataPayload
-                {
-                    Type = NotificationType.Repair,
-                    Title = "New Quotation Available",
-                    Body = "A new quotation has been created for your repair job. Tap to view details.",
-                    EntityKey = EntityKeyType.quotationId,
-                    EntityId = createdQuotation.QuotationId,
-                    Screen = AppScreen.QuotationDetailFragment
-                };
-                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
-            }
+            //if (user != null && user.DeviceId != null)
+            //{
+            //    var FcmNotification = new FcmDataPayload
+            //    {
+            //        Type = NotificationType.Repair,
+            //        Title = "New Quotation Available",
+            //        Body = "A new quotation has been created for your repair job. Tap to view details.",
+            //        EntityKey = EntityKeyType.quotationId,
+            //        EntityId = createdQuotation.QuotationId,
+            //        Screen = AppScreen.QuotationDetailFragment
+            //    };
+            //    await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            //}
 
 
             // Reload the quotation with all related data to ensure we have the complete object
