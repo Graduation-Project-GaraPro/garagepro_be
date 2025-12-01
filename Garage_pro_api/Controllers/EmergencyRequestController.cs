@@ -296,7 +296,7 @@ namespace Garage_pro_api.Controllers
         }
         [HttpPost("asign-tech")]
         [Authorize(Roles = "Manager")]
-        public async Task<IActionResult> AsignTechnician(string emergencyId, Guid technicianUserId)
+        public async Task<IActionResult> AsignTechnician(AssignTechnicianPayload assignTechnicianPayload)
         {
             try
             {
@@ -304,7 +304,7 @@ namespace Garage_pro_api.Controllers
                 if (string.IsNullOrEmpty(managerUserId))
                     return Unauthorized("User not found in token.");
 
-                var result = await _service.AsignTechnicianToEmergencyAsync(emergencyId, technicianUserId);
+                var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
                 return Ok(new { Success = result });
             }
             catch (ArgumentException ex)
@@ -337,6 +337,10 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"Unhandled error: {ex.InnerException?.Message ?? ex.Message}");
             }
         }
-
+        public class AssignTechnicianPayload
+        {
+            public Guid technicianUserId { get; set; }
+            public Guid emergencyId { get; set; }
+        }
     }
 }

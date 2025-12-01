@@ -24,6 +24,6 @@ namespace Services.EmergencyRequestService
         Task<RouteDto> GetRouteByEmergencyIdAsync(Guid routeId);
         Task<RouteDto> GetRouteAsync(double startLat, double startLng, double endLat, double endLng);
         Task<bool> UpdateTechnicianLocationAsync(string technicianUserId, TechnicianLocationDto location);
-        Task<bool> AsignTechnicianToEmergencyAsync(string emergencyId, Guid technicianUserId);
+        Task<bool> AssignTechnicianToEmergencyAsync(Guid emergencyId, Guid technicianUserId);
     }
 }
