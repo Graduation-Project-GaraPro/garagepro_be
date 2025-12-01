@@ -1426,41 +1426,23 @@ namespace Garage_pro_api.DbInit
             {
                 var colors = new List<VehicleColor>
                 {
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "White",
-                        HexCode = "#FFFFFF",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Black",
-                        HexCode = "#000000",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Silver",
-                        HexCode = "#C0C0C0",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Red",
-                        HexCode = "#FF0000",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Blue",
-                        HexCode = "#0000FF",
-                        CreatedAt = DateTime.UtcNow
-                    }
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White",  HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black",  HexCode = "#000000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray",   HexCode = "#808080", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red",    HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue",   HexCode = "#0000FF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Green",  HexCode = "#008000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Yellow", HexCode = "#FFFF00", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Orange", HexCode = "#FFA500", CreatedAt = DateTime.UtcNow },
+              //      new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Purple", HexCode = "#800080", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Brown",  HexCode = "#A52A2A", CreatedAt = DateTime.UtcNow },
+            //        new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Beige",  HexCode = "#F5F5DC", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gold",   HexCode = "#FFD700", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Pink",   HexCode = "#FFC0CB", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Navy",   HexCode = "#000080", CreatedAt = DateTime.UtcNow },
+          //          new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Teal",   HexCode = "#008080", CreatedAt = DateTime.UtcNow },
+          //          new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Maroon", HexCode = "#800000", CreatedAt = DateTime.UtcNow }
                 };
 
                 _context.VehicleColors.AddRange(colors);

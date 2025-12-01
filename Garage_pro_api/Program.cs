@@ -769,10 +769,10 @@ app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub"
 //    }
 //}
 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-//    await dbInitializer.Initialize();
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+    await dbInitializer.Initialize();
+}
 
 app.Run();
