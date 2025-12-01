@@ -351,12 +351,7 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             Console.WriteLine($"[InspectionTechnicianService] Sent InspectionCompleted to Managers group for Inspection {id}");
         }
 
-        // neu inspect xong ma khach khong lam thi lay gia cua inspection luu vao cost cua RO
-        if (previousStatus != InspectionStatus.Completed && inspection.Status == InspectionStatus.Completed)
-        {
-            // ham cap nhat cost
-            await _repairOrderService.UpdateCostFromInspectionAsync(inspection.RepairOrderId);
-        }
+       
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
