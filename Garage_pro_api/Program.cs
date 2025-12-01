@@ -168,6 +168,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<QuotationProfile>();
     cfg.AddProfile<RepairOrderBillProfile>();
     cfg.AddProfile<RepairOrderArchivedProfile>();
+    cfg.AddProfile<TechemergencyProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -534,6 +535,10 @@ builder.Services.AddScoped<IPriceService, PriceEmergenciesService>();
 // Repositories & Services
 builder.Services.AddScoped<IPromotionalCampaignRepository, PromotionalCampaignRepository>();
 builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignService>();
+
+
+
+builder.Services.AddScoped<ITechnicianEmergencyService, TechnicianEmergencyService>();
 
 
 
