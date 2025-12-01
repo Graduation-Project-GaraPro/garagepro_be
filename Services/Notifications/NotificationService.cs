@@ -47,7 +47,7 @@ namespace Services.Notifications
                 Content = $"You have been assigned a new job: {jobName} ({serviceName})",
                 Type = NotificationType.Message,
                 Status = NotificationStatus.Unread,
-                Target = $"/jobs/{jobId}",
+                Target = $"/technician/taskManagement",
                 TimeSent = DateTime.UtcNow
             };
 
@@ -181,7 +181,7 @@ namespace Services.Notifications
                 Content = $"You have been assigned a new inspection: {customerConcern}",
                 Type = NotificationType.Message,
                 Status = NotificationStatus.Unread,
-                Target = $"/inspections/{inspectionId}",
+                Target = $"/technician/inspectionAndRepair/inspection",
                 TimeSent = DateTime.UtcNow
             };
 
@@ -213,10 +213,10 @@ namespace Services.Notifications
             {
                 NotificationID = Guid.NewGuid(),
                 UserID = userId,
-                Content = $"Job '{jobName}' ({serviceName}) is {daysOverdue} day(s) overdue! Deadline was {deadline:dd/MM/yyyy}. Please complete it as soon as possible.",
+                Content = $"Job '{jobName}' is {daysOverdue} day(s) overdue! Deadline was {deadline:dd/MM/yyyy}. Please complete it as soon as possible.",
                 Type = NotificationType.Warning,
                 Status = NotificationStatus.Unread,
-                Target = $"/jobs/{jobId}",
+                Target = $"/technician/taskManagement",
                 TimeSent = DateTime.UtcNow
             };
 

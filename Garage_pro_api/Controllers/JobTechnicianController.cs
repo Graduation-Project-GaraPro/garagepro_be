@@ -71,5 +71,19 @@ namespace Garage_pro_api.Controllers
                 return BadRequest(new { Message = ex.Message });
             }
         }
+        [HttpGet("my-technician-id")]
+        [Authorize("JOB_TECHNICIAN_VIEW")]
+        public async Task<IActionResult> GetMyTechnicianId()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+
+            var technician = await _technicianService.GetTechnicianByUserIdAsync(user.Id);
+            if (technician == null)
+                return NotFound(new { Message = "Không tìm thấy thông tin technician." });
+
+            return Ok(new { TechnicianId = technician.TechnicianId });
+        }
     }
 }

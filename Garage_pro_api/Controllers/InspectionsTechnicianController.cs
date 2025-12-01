@@ -233,6 +233,20 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, new { Message = "Đã xảy ra lỗi khi xóa service khỏi Inspection.", Error = ex.Message });
             }
         }
+        [HttpGet("my-technician-id")]
+        [Authorize("INSPECTION_TECHNICIAN_VIEW")]
+        public async Task<IActionResult> GetMyTechnicianId()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+
+            var technician = await _inspectionService.GetTechnicianByUserIdAsync(user.Id);
+            if (technician == null)
+                return NotFound(new { Message = "Không tìm thấy thông tin technician." });
+
+            return Ok(new { TechnicianId = technician.TechnicianId });
+        }
 
     }
 }
