@@ -102,6 +102,9 @@ namespace Services.QuotationServices
                 await SendQuotationUpdateNotificationAsync(quotation);
 
                 await NotifyPromotionsAppliedAsync(quotation);
+
+                // Send SignalR notification to managers when customer responds to quotation
+                await NotifyManagersOfCustomerResponseAsync(quotation, status);
                 return _mapper.Map<QuotationDto>(quotation);
             }
             catch
@@ -359,7 +362,37 @@ namespace Services.QuotationServices
             }
         }
 
+        private async Task NotifyManagersOfCustomerResponseAsync(Quotation quotation, QuotationStatus status)
+        {
+            var customerName = quotation.User != null 
+                ? $"{quotation.User.FirstName} {quotation.User.LastName}".Trim() 
+                : "Unknown Customer";
 
+            var selectedServicesCount = quotation.QuotationServices?.Count(qs => qs.IsSelected) ?? 0;
+            var totalServicesCount = quotation.QuotationServices?.Count ?? 0;
+
+            await _quotationHubContext.Clients
+                .Group("Managers")
+                .SendAsync("CustomerRespondedToQuotation", new
+                {
+                    QuotationId = quotation.QuotationId,
+                    RepairOrderId = quotation.RepairOrderId,
+                    InspectionId = quotation.InspectionId,
+                    CustomerId = quotation.UserId,
+                    CustomerName = customerName,
+                    Status = status.ToString(),
+                    TotalAmount = quotation.TotalAmount,
+                    SelectedServicesCount = selectedServicesCount,
+                    TotalServicesCount = totalServicesCount,
+                    CustomerNote = quotation.CustomerNote,
+                    RespondedAt = quotation.CustomerResponseAt ?? DateTime.UtcNow,
+                    Message = status == QuotationStatus.Approved 
+                        ? $"Customer {customerName} approved quotation (${quotation.TotalAmount:F2})"
+                        : $"Customer {customerName} rejected quotation"
+                });
+
+            Console.WriteLine($"[CustomerResponseQuotationService] Sent CustomerRespondedToQuotation to Managers group for Quotation {quotation.QuotationId}");
+        }
 
     }
 }

@@ -168,6 +168,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<QuotationProfile>();
     cfg.AddProfile<RepairOrderBillProfile>();
     cfg.AddProfile<RepairOrderArchivedProfile>();
+    cfg.AddProfile<TechemergencyProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -365,7 +366,8 @@ builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
     var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
     var mapper = provider.GetRequiredService<IMapper>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
-    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+    var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService, inspectionHubContext);
 });
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
@@ -537,6 +539,10 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 
+builder.Services.AddScoped<ITechnicianEmergencyService, TechnicianEmergencyService>();
+
+
+
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 
@@ -560,8 +566,9 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();  
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService);
+    var notifiactionService = provider.GetRequiredService<INotificationService>();
+    var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
+    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService, dbContext);
 });
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();

@@ -44,7 +44,7 @@ namespace Garage_pro_api.DbInit
             await SeedPermissionsAsync();
             await AssignPermissionsToRolesAsync();
 
-
+            await SeedInspectionTypesAsync();
             await SeedPartCategoriesAsync();
             await SeedPartsAsync();
             await SeedServiceCategoriesAsync();
@@ -60,9 +60,7 @@ namespace Garage_pro_api.DbInit
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
-           
             //await SeedRepairOrdersAsync();
-            // await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
         }
 
@@ -1324,6 +1322,35 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+        private async Task SeedInspectionTypesAsync()
+        {
+            if (!_context.InspectionTypes.Any())
+            {
+                var inspectionTypes = new List<BusinessObject.InspectionType>
+                {
+                    new BusinessObject.InspectionType
+                    {
+                        TypeName = "Basic",
+                        InspectionFee = 1000m,
+                        Description = "Giá kiểm tra cơ bản",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new BusinessObject.InspectionType
+                    {
+                        TypeName = "Advanced",
+                        InspectionFee = 2000m,
+                        Description = "Giá kiểm tra dịch vụ nâng cao",
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                _context.InspectionTypes.AddRange(inspectionTypes);
+                await _context.SaveChangesAsync();            
+            }
+        }
+
         private async Task SeedLabelsAsync()
         {
             if (!_context.Labels.Any())
@@ -1817,26 +1844,69 @@ namespace Garage_pro_api.DbInit
 
                 var vehicleId = vehicle.VehicleId;
 
-                // Lấy các service từ database
-                var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
-                var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
-                var engineTuneUp = await _context.Services.FirstAsync(s => s.ServiceName == "Engine Tune-Up");
-                var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
-                var tireRotation = await _context.Services.FirstAsync(s => s.ServiceName == "Tire Rotation Service");
+                // Lấy các service từ database - use FirstOrDefaultAsync and check for null
+                var basicOilChange = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Basic Oil Change");
+                var brakePadReplacement = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Brake Pad Replacement");
+                var engineTuneUp = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Engine Tune-Up");
+                var fullEngineDiagnostic = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Full Engine Diagnostic");
+                var tireRotation = await _context.Services.FirstOrDefaultAsync(s => s.ServiceName == "Tire Rotation Service");
 
-                // Lấy các parts từ database
-                var oilFilterMedium = await _context.Parts.FirstAsync(p => p.Name == "Oil Filter (Medium)");
-                var airFilterCheap = await _context.Parts.FirstAsync(p => p.Name == "Air Filter (Cheap)");
-                var brakePadCheap = await _context.Parts.FirstAsync(p => p.Name == "Brake Pad (Cheap)");
-                var brakeDiscMedium = await _context.Parts.FirstAsync(p => p.Name == "Brake Disc (Medium)");
-                var sparkPlugExpensive = await _context.Parts.FirstAsync(p => p.Name == "Spark Plug (Expensive)");
-                var shockAbsorberCheap = await _context.Parts.FirstAsync(p => p.Name == "Shock Absorber (Cheap)");
+                // If specific services not found, get any available services
+                var availableServices = await _context.Services.Take(5).ToListAsync();
+                if (availableServices.Count == 0)
+                {
+                    Console.WriteLine("⚠️ No services found in database. Skipping RepairOrder seeding.");
+                    return;
+                }
+
+                // Use found services or fallback to available ones
+                basicOilChange ??= availableServices.ElementAtOrDefault(0);
+                brakePadReplacement ??= availableServices.ElementAtOrDefault(1);
+                engineTuneUp ??= availableServices.ElementAtOrDefault(2);
+                fullEngineDiagnostic ??= availableServices.ElementAtOrDefault(3);
+                tireRotation ??= availableServices.ElementAtOrDefault(4) ?? availableServices.First();
+
+                // Lấy các parts từ database - use FirstOrDefaultAsync and check for null
+                var oilFilterMedium = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Oil Filter (Medium)");
+                var airFilterCheap = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Air Filter (Cheap)");
+                var brakePadCheap = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Brake Pad (Cheap)");
+                var brakeDiscMedium = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Brake Disc (Medium)");
+                var sparkPlugExpensive = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Spark Plug (Expensive)");
+                var shockAbsorberCheap = await _context.Parts.FirstOrDefaultAsync(p => p.Name == "Shock Absorber (Cheap)");
+
+                // If specific parts not found, get any available parts
+                var availableParts = await _context.Parts.Take(6).ToListAsync();
+                if (availableParts.Count == 0)
+                {
+                    Console.WriteLine("⚠️ No parts found in database. Skipping RepairOrder seeding.");
+                    return;
+                }
+
+                // Use found parts or fallback to available ones
+                oilFilterMedium ??= availableParts.ElementAtOrDefault(0);
+                airFilterCheap ??= availableParts.ElementAtOrDefault(1);
+                brakePadCheap ??= availableParts.ElementAtOrDefault(2);
+                brakeDiscMedium ??= availableParts.ElementAtOrDefault(3);
+                sparkPlugExpensive ??= availableParts.ElementAtOrDefault(4);
+                shockAbsorberCheap ??= availableParts.ElementAtOrDefault(5) ?? availableParts.First();
 
                 // Lấy branch và status
-                var branch = await _context.Branches.FirstAsync();
-                var pendingStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "Pending");
-                var inProgressStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "In Progress");
-                var completedStatus = await _context.OrderStatuses.FirstAsync(s => s.StatusName == "Completed");
+                var branch = await _context.Branches.FirstOrDefaultAsync();
+                if (branch == null)
+                {
+                    Console.WriteLine("⚠️ No branches found in database. Skipping RepairOrder seeding.");
+                    return;
+                }
+
+                var pendingStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Pending");
+                var inProgressStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "In Progress");
+                var completedStatus = await _context.OrderStatuses.FirstOrDefaultAsync(s => s.StatusName == "Completed");
+
+                if (pendingStatus == null || inProgressStatus == null || completedStatus == null)
+                {
+                    Console.WriteLine("⚠️ Required order statuses not found. Skipping RepairOrder seeding.");
+                    return;
+                }
 
                 // Get required entities for creating repair requests
                 var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
