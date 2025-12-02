@@ -690,6 +690,8 @@ namespace Services.EmergencyRequestService
             if (emergency == null) throw new ArgumentException("Emergency not found");
             if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress)
                 throw new InvalidOperationException("Emergency must be accepted or in-progress to update location.");
+            if (string.IsNullOrEmpty(emergency.TechnicianId) || !string.Equals(emergency.TechnicianId, technicianUserId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Only the assigned technician can update location for this emergency.");
 
             RouteDto? route = null;
             if (location.RecomputeRoute)
