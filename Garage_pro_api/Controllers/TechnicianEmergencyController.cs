@@ -99,7 +99,7 @@ namespace Garage_pro_api.Controllers
                     EntityId = Guid.NewGuid(),
                     Screen = AppScreen.ReportsFragment
                 };
-                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+                await _fcmService.SendFcmMessageWithDataAsync(user?.DeviceId, FcmNotification);
 
                
             }

@@ -743,6 +743,7 @@ app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<RepairOrderArchiveHub>("/api/archivehub");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");

@@ -258,184 +258,192 @@ namespace Services.Customer
             return _mapper.Map<RPDetailDto>(request);
         }
 
-       
 
-       
-        public async Task<RepairRequestDto> CreateRepairWithImageRequestAsync(CreateRepairRequestWithImageDto dto, string userId)
+
+
+        public async Task<RepairRequestDto> CreateRepairWithImageRequestAsync(
+          CreateRepairRequestWithImageDto dto,
+          string userId)
         {
-            // Validate vehicle ownership
-            var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
-            if (vehicle == null || vehicle.UserId != userId)
-                throw new Exception("This vehicle does not belong to the current user.");
-
-            var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
-                ?? throw new Exception("Branch not found.");
-            if (!branch.IsActive)
-                throw new Exception("This branch is currently inactive.");
-
-            var requestVn = new DateTimeOffset(dto.RequestDate, VietnamTime.VN_OFFSET);
-
-            var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
-            var (winStart, winEnd) = WindowRange(requestVn, windowMin);
-
-            var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
-
-            const int cutoffMinutes = 15; // chỉ được đặt trước 15p khung end
-
-            var latestAllowed = winEnd.AddMinutes(-cutoffMinutes);
-
-            if (nowLocal >= latestAllowed)
-            {
-                throw new Exception($"You must book this time slot at least {cutoffMinutes} minutes before it ends.");
-            }
-
-
-            await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
-
-            // User cooldown throttling
-            var now = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
-            var cooldownCutoff = now - RepairRequestAppConfig.CreateCooldown;
-
-            // Limit active requests for the user
-            var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
-                x.UserID == userId && ActiveStatuses.Contains(x.Status));
-
-            //if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
-            //    throw new Exception("You have reached the maximum number of active repair requests. Please complete or cancel existing requests before creating a new one.");
-
-            // Prevent multiple active repairs for the same vehicle
-            var hasActiveVehicleRequest = await _unitOfWork.RepairRequests.AnyAsync(x =>
-                x.VehicleID == dto.VehicleID &&
-                ActiveStatuses.Contains(x.Status));
-
-            //if (hasActiveVehicleRequest)
-            //    throw new Exception("This vehicle already has an active repair request. Please complete the previous request before creating a new one.");
-
-            // Check if the vehicle is currently under repair (existing RepairOrder)
-            var hasActiveRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(x =>
-                x.VehicleId == dto.VehicleID &&
-                !x.IsArchived);
-
-            //if (hasActiveRepairOrder)
-            //    throw new Exception("This vehicle is currently being repaired in the garage. Please wait until the repair is completed before booking another request.");
-
-            // Limit number of requests per vehicle per day
-            var dayStart = new DateTimeOffset(winStart.Year, winStart.Month, winStart.Day, 0, 0, 0, VietnamTime.VN_OFFSET);
-            var dayEnd = dayStart.AddDays(1);
-
-            var vehicleDaily = await _unitOfWork.RepairRequests.CountAsync(x =>
-                x.VehicleID == dto.VehicleID &&
-                x.ArrivalWindowStart >= dayStart &&
-                x.ArrivalWindowStart < dayEnd);
-
-            //if (vehicleDaily >= RepairRequestAppConfig.MaxRequestsPerVehiclePerDay)
-            //    throw new Exception("This vehicle has reached the maximum number of requests allowed for today. Please choose another date.");
-
-            // Prevent duplicate requests for the same time window
-            var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
-                x.UserID == userId &&
-                x.VehicleID == dto.VehicleID &&
-                x.BranchId == dto.BranchId &&
-                ActiveStatuses.Contains(x.Status) &&
-                x.ArrivalWindowStart == winStart);
-
-            if (dup)
-                throw new Exception("You already have a repair request for this time slot. Please choose a different time window.");
-
-            var repairRequest = new RepairRequest
-            {
-                VehicleID = dto.VehicleID,
-                UserID = userId,
-                BranchId = dto.BranchId,
-                Description = dto.Description,
-                RequestDate = dto.RequestDate,
-                ArrivalWindowStart = winStart,
-                EstimatedCost = 0,
-                Status = RepairRequestStatus.Accept,
-                RequestServices = new List<RequestService>(),
-                RepairImages = new List<RepairImage>()
-            };
-
-            decimal totalServiceFee = 0;
             
+            await _unitOfWork.BeginTransactionAsync();
 
-            // Process requested services
-            foreach (var serviceDto in dto.Services)
+            try
             {
-                var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
-                              ?? throw new Exception($"Service with ID {serviceDto.ServiceId} not found.");
+                var vehicle = await _unitOfWork.Vehicles.GetByIdAsync(dto.VehicleID);
+                if (vehicle == null || vehicle.UserId != userId)
+                    throw new Exception("This vehicle does not belong to the current user.");
 
-                var requestService = new RequestService
+                var branch = await _unitOfWork.Branches.GetByIdAsync(dto.BranchId)
+                              ?? throw new Exception("Branch not found.");
+                if (!branch.IsActive)
+                    throw new Exception("This branch is currently inactive.");
+
+                var requestVn = new DateTimeOffset(dto.RequestDate, VietnamTime.VN_OFFSET);
+
+                var windowMin = branch.ArrivalWindowMinutes > 0 ? branch.ArrivalWindowMinutes : 30;
+                var (winStart, winEnd) = WindowRange(requestVn, windowMin);
+
+                var nowLocal = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+
+                const int cutoffMinutes = 15; // chỉ được đặt trước 15p khung end
+
+                var latestAllowed = winEnd.AddMinutes(-cutoffMinutes);
+
+                if (nowLocal >= latestAllowed)
                 {
-                    ServiceId = service.ServiceId,
-                    ServiceFee = service.Price,
-                    RequestParts = new List<RequestPart>()
+                    throw new Exception($"You must book this time slot at least {cutoffMinutes} minutes before it ends.");
+                }
+
+                await EnsureWithinOperatingHoursAsync(dto.BranchId, winStart, windowMin);
+
+                // User cooldown throttling
+                var now = DateTimeOffset.Now.ToOffset(VietnamTime.VN_OFFSET);
+                var cooldownCutoff = now - RepairRequestAppConfig.CreateCooldown;
+
+                // Limit active requests for the user
+                var activeOfUser = await _unitOfWork.RepairRequests.CountAsync(x =>
+                    x.UserID == userId && ActiveStatuses.Contains(x.Status));
+
+                if (activeOfUser >= RepairRequestAppConfig.MaxActiveRequestsPerUser)
+                    throw new Exception("You have reached the maximum number of active repair requests. Please complete or cancel existing requests before creating a new one.");
+
+                // Prevent multiple active repairs for the same vehicle
+                var hasActiveVehicleRequest = await _unitOfWork.RepairRequests.AnyAsync(x =>
+                    x.VehicleID == dto.VehicleID &&
+                    ActiveStatuses.Contains(x.Status));
+
+                if (hasActiveVehicleRequest)
+                    throw new Exception("This vehicle already has an active repair request. Please complete the previous request before creating a new one.");
+
+               
+                var hasActiveRepairOrder = await _unitOfWork.RepairOrders.AnyAsync(x =>
+                    x.VehicleId == dto.VehicleID &&
+                    !x.IsArchived);
+
+                if (hasActiveRepairOrder)
+                    throw new Exception("This vehicle is currently being repaired in the garage. Please wait until the repair is completed before booking another request.");
+
+                // Check duplicate same slot
+                //var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
+                //    x.UserID == userId &&
+                //    x.VehicleID == dto.VehicleID &&
+                //    x.BranchId == dto.BranchId &&
+                //    ActiveStatuses.Contains(x.Status) &&
+                //    x.ArrivalWindowStart == winStart);
+
+                var dup = await _unitOfWork.RepairRequests.AnyAsync(x =>
+                    x.UserID == userId &&
+                    x.VehicleID == dto.VehicleID &&
+                    x.BranchId == dto.BranchId &&
+                    ActiveStatuses.Contains(x.Status) &&
+                    x.RequestDate == dto.RequestDate);
+
+                if (dup)
+                    throw new Exception("You already have a repair request for this time slot. Please choose a different time window.");
+
+                var repairRequest = new RepairRequest
+                {
+                    VehicleID = dto.VehicleID,
+                    UserID = userId,
+                    BranchId = dto.BranchId,
+                    Description = dto.Description,
+                    RequestDate = dto.RequestDate,
+                    ArrivalWindowStart = winStart,
+                    EstimatedCost = 0,
+                    Status = RepairRequestStatus.Accept,
+                    RequestServices = new List<RequestService>(),
+                    RepairImages = new List<RepairImage>()
                 };
 
-                totalServiceFee += service.Price;
-                repairRequest.RequestServices.Add(requestService);
-            }
+                decimal totalServiceFee = 0;
 
-
-            repairRequest.EstimatedCost = totalServiceFee;
-
-            // Upload images
-            if (dto.Images != null && dto.Images.Any())
-            {
-                var uploadedUrls = await _cloudinaryService.UploadImagesAsync(dto.Images);
-
-                foreach (var url in uploadedUrls)
+                foreach (var serviceDto in dto.Services)
                 {
-                    repairRequest.RepairImages.Add(new RepairImage
+                    var service = await _unitOfWork.Services.GetByIdAsync(serviceDto.ServiceId)
+                                  ?? throw new Exception($"Service with ID {serviceDto.ServiceId} not found.");
+
+                    var requestService = new RequestService
                     {
-                        ImageId = Guid.NewGuid(),
-                        ImageUrl = url
-                    });
+                        ServiceId = service.ServiceId,
+                        ServiceFee = service.Price,
+                        RequestParts = new List<RequestPart>()
+                    };
+
+                    totalServiceFee += service.Price;
+                    repairRequest.RequestServices.Add(requestService);
                 }
-            }
 
-           
-            await _unitOfWork.RepairRequests.AddAsync(repairRequest);
-            await _unitOfWork.SaveChangesAsync();
+                repairRequest.EstimatedCost = totalServiceFee;
 
-            var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
-            var sigdto = new ManagerRepairRequestDto
-            {
-                RequestID = repairRequest.RepairRequestID,
-                VehicleID = repairRequest.VehicleID,
-                CustomerID = repairRequest.UserID,
-                CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
-                VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
-                Description = repairRequest.Description,
-                RequestDate = repairRequest.RequestDate,
-                ArrivalWindowStart = repairRequest.ArrivalWindowStart,
-                CompletedDate = repairRequest.CompletedDate,
-                ImageUrls = repairRequest.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
-                Services = repairRequest.RequestServices?
-                    .Select(s => new RequestServiceDto
+                if (dto.Images != null && dto.Images.Any())
+                {
+                    var uploadedUrls = await _cloudinaryService.UploadImagesAsync(dto.Images);
+
+                    foreach (var url in uploadedUrls)
                     {
-                        ServiceId = s.ServiceId,
-                        ServiceName = s.Service?.ServiceName,
-                        Price = s.Service?.Price ?? 0
-                    })
-                    .ToList() ?? new List<RequestServiceDto>(),
-                CreatedAt = repairRequest.CreatedAt,
-                UpdatedAt = repairRequest.UpdatedAt,
-                Status = repairRequest.Status.ToString()
-            };
-            var branchGroup = $"branch_{repairRequest.BranchId}";
-            await _hubContext.Clients
-            .Group(branchGroup)
-            .SendAsync("NewRepairRequest", sigdto );
+                        repairRequest.RepairImages.Add(new RepairImage
+                        {
+                            ImageId = Guid.NewGuid(),
+                            ImageUrl = url
+                        });
+                    }
+                }
 
-            return _mapper.Map<RepairRequestDto>(repairRequest);
+                await _unitOfWork.RepairRequests.AddAsync(repairRequest);
+
+                
+                await _unitOfWork.CommitAsync();
+
+                
+                var customer = await _userRepository.GetByIdAsync(repairRequest.UserID);
+
+                var sigdto = new ManagerRepairRequestDto
+                {
+                    RequestID = repairRequest.RepairRequestID,
+                    VehicleID = repairRequest.VehicleID,
+                    CustomerID = repairRequest.UserID,
+                    CustomerName = customer != null ? $"{customer.FirstName} {customer.LastName}".Trim() : "Unknown Customer",
+                    VehicleInfo = $"{vehicle?.Brand?.BrandName ?? "Unknown"} {vehicle?.Model?.ModelName ?? "Unknown Model"}",
+                    Description = repairRequest.Description,
+                    RequestDate = repairRequest.RequestDate,
+                    ArrivalWindowStart = repairRequest.ArrivalWindowStart,
+                    CompletedDate = repairRequest.CompletedDate,
+                    ImageUrls = repairRequest.RepairImages?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
+                    Services = repairRequest.RequestServices?
+                        .Select(s => new RequestServiceDto
+                        {
+                            ServiceId = s.ServiceId,
+                            ServiceName = s.Service?.ServiceName,
+                            Price = s.Service?.Price ?? 0
+                        })
+                        .ToList() ?? new List<RequestServiceDto>(),
+                    CreatedAt = repairRequest.CreatedAt,
+                    UpdatedAt = repairRequest.UpdatedAt,
+                    Status = repairRequest.Status.ToString()
+                };
+
+                var branchGroup = $"branch_{repairRequest.BranchId}";
+                await _hubContext.Clients
+                    .Group(branchGroup)
+                    .SendAsync("NewRepairRequest", sigdto);
+
+                return _mapper.Map<RepairRequestDto>(repairRequest);
+            }
+            catch
+            {
+                // Nếu có lỗi, rollback transaction
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
         }
 
 
 
-        
 
-        
+
+
+
 
         public async Task<IReadOnlyList<SlotAvailabilityDto>> GetArrivalAvailabilityAsync(Guid branchId, DateOnly date)
         {
