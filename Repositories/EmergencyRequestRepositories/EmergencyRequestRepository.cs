@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static BusinessObject.RequestEmergency.RequestEmergency;
 
 namespace Repositories.EmergencyRequestRepositories
 {
@@ -84,6 +85,7 @@ namespace Repositories.EmergencyRequestRepositories
             if (emergency == null) return false;
 
             emergency.TechnicianId = technicianId;
+            emergency.Status = EmergencyStatus.Assigned;
             
 
             await _context.SaveChangesAsync();

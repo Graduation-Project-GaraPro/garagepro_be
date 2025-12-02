@@ -1289,7 +1289,7 @@ namespace Garage_pro_api.DbInit
                     if (technicianUser != null) branch.Staffs.Add(technicianUser);
 
                     // Gán dịch vụ
-                    var services = await _context.Services.Take(5).ToListAsync();
+                    var services = await _context.Services.Take(20).ToListAsync();
                     foreach (var service in services)
                     {
                         branch.BranchServices.Add(new BranchService

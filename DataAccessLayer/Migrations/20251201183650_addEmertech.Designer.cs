@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251201101912_AddInspectionFeeToQuotation")]
-    partial class AddInspectionFeeToQuotation
+    [Migration("20251201183650_addEmertech")]
+    partial class addEmertech
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
