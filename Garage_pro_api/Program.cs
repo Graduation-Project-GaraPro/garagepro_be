@@ -686,19 +686,19 @@ builder.Services.AddCors(options =>
 RepairRequestAppConfig.Initialize(builder.Configuration);
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5117, listenOptions =>
-    {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ListenAnyIP(5117, listenOptions =>
+//    {
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+//    });
 
-    options.ListenAnyIP(7113, listenOptions =>
-    {
-        listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
-    });
-});
+//    options.ListenAnyIP(7113, listenOptions =>
+//    {
+//        listenOptions.UseHttps();
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
+//    });
+//});
 
 var app = builder.Build();
 app.UseCors("AllowFrontendAndAndroid");
