@@ -32,11 +32,14 @@ namespace Repositories
         public async Task<RepairOrder?> GetByIdAsync(Guid repairOrderId)
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                 .Include(ro => ro.Labels)
+                .Include(ro=>ro.Inspections).ThenInclude(r=>r.ServiceInspections)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
+                .Include(ro => ro.RepairOrderServices)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 

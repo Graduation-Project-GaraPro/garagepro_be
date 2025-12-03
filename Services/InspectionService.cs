@@ -99,115 +99,246 @@ namespace Services
 
         public async Task<InspectionDto> CreateInspectionAsync(CreateInspectionDto createInspectionDto)
         {
-            // Validate that the repair order exists
+            // Lấy RepairOrder kèm navigation properties (Inspections, ServiceInspections, RepairOrderServices)
             var repairOrder = await _repairOrderRepository.GetByIdAsync(createInspectionDto.RepairOrderId);
             if (repairOrder == null)
                 throw new ArgumentException("Repair order not found");
 
+            // Nếu đã có inspection còn đang mở thì không cho tạo thêm
+            if (repairOrder.Inspections != null &&
+                repairOrder.Inspections.Any(i =>
+                    i.Status == InspectionStatus.InProgress ||
+                    i.Status == InspectionStatus.New ||
+                    i.Status == InspectionStatus.Pending))
+            {
+                throw new ArgumentException("Already have inspection, please wait until latest inspection is completed");
+            }
+
+            // Lấy tất cả ServiceId trong RepairOrder
+            var roServiceIds = repairOrder?.RepairOrderServices
+                .Select(x => x.ServiceId)
+                .Distinct()
+                .ToHashSet();
+
+            // Lấy tất cả ServiceId đã xuất hiện trong các ServiceInspection của các Inspection trước đó
+            var inspectedServiceIds = (repairOrder.Inspections ?? new List<Inspection>())
+                .SelectMany(i => i.ServiceInspections ?? new List<ServiceInspection>())
+                .Select(si => si.ServiceId)
+                .Distinct()
+                .ToHashSet();
+
+            // Tìm các ServiceId CHƯA từng được inspect
+            var notYetInspectedServiceIds = roServiceIds.Except(inspectedServiceIds).ToList();
+
+            // Tạo Inspection mới
             var inspection = new Inspection
             {
                 RepairOrderId = createInspectionDto.RepairOrderId,
                 CustomerConcern = createInspectionDto.CustomerConcern,
                 Status = InspectionStatus.Pending,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                ServiceInspections = new List<ServiceInspection>()
             };
 
-            var createdInspection = await _inspectionRepository.CreateAsync(inspection);
-            
-            // Check if this is the first inspection for this RO
-            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createInspectionDto.RepairOrderId);
-            if (existingInspections.Count() == 1) // Only the one we just created
+            // Nếu vẫn còn service chưa inspect -> tạo ServiceInspection cho từng service đó
+            if (notYetInspectedServiceIds.Any())
             {
-                // Update RO status to In Progress (OrderStatusId = 2)
+                foreach (var serviceId in notYetInspectedServiceIds)
+                {
+                    inspection.ServiceInspections.Add(new ServiceInspection
+                    {
+                        ServiceId = serviceId,
+                        
+                    });
+                }
+            }
+           
+
+            var createdInspection = await _inspectionRepository.CreateAsync(inspection);
+
+            
+            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createInspectionDto.RepairOrderId);
+            if (existingInspections.Count() == 1) // Chỉ có inspection vừa tạo
+            {
+
                 await _repairOrderRepository.UpdateRepairOrderStatusAsync(createInspectionDto.RepairOrderId, 2);
             }
-            
+
             return MapToDto(createdInspection);
         }
 
+
         public async Task<InspectionDto> CreateManagerInspectionAsync(CreateManagerInspectionDto createManagerInspectionDto)
         {
-            // Validate that the repair order exists
-            var repairOrder = await _repairOrderRepository.GetByIdAsync(createManagerInspectionDto.RepairOrderId);
-            if (repairOrder == null)
-                throw new ArgumentException("Repair order not found");
+            await using var transaction = await _dbContext.Database.BeginTransactionAsync();
 
-            // Validate services if provided
-            if (createManagerInspectionDto.ServiceIds != null && createManagerInspectionDto.ServiceIds.Any())
+            try
             {
-                // Get all services from COMPLETED inspections only for this RO
-                // Note: Services in RO can be inspected again, only completed inspection services are blocked
+                // 1. Lấy RepairOrder
+                var repairOrder = await _repairOrderRepository.GetByIdAsync(createManagerInspectionDto.RepairOrderId);
+                if (repairOrder == null)
+                    throw new ArgumentException("Repair order not found");
+
+                // 2. Không cho tạo khi đang có inspection New/InProgress/Pending
+                if (repairOrder.Inspections != null &&
+                    repairOrder.Inspections.Any(i =>
+                        i.Status == InspectionStatus.InProgress ||
+                        i.Status == InspectionStatus.New ||
+                        i.Status == InspectionStatus.Pending))
+                {
+                    throw new ArgumentException("Already have inspection, please wait until latest inspection is completed");
+                }
+
+                // 3. Lấy tất cả inspection hiện có của RO
                 var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
-                var completedInspectionServices = existingInspections
+
+                // 3.1. Lấy tất cả ServiceId trong các inspection COMPLETED
+                var completedInspectionServiceIds = existingInspections
                     .Where(i => i.Status == InspectionStatus.Completed)
                     .SelectMany(i => i.ServiceInspections ?? new List<ServiceInspection>())
                     .Select(si => si.ServiceId)
                     .Distinct()
                     .ToList();
 
-                // Check for duplicates with completed inspection services only
-                var duplicateServices = createManagerInspectionDto.ServiceIds
-                    .Where(sid => completedInspectionServices.Contains(sid))
-                    .ToList();
+                // 3.2. Lấy tất cả ServiceId đã xuất hiện trong mọi Inspection
+                var allInspectedServiceIds = existingInspections
+                    .SelectMany(i => i.ServiceInspections ?? new List<ServiceInspection>())
+                    .Select(si => si.ServiceId)
+                    .Distinct()
+                    .ToHashSet();
 
-                if (duplicateServices.Any())
+                // 4. Xóa toàn bộ RepairOrderServices để rebuild lại
+                if (repairOrder.RepairOrderServices != null && repairOrder.RepairOrderServices.Any())
                 {
-                    // Get service names for better error message
-                    var duplicateServiceNames = await _dbContext.Services
-                        .Where(s => duplicateServices.Contains(s.ServiceId))
-                        .Select(s => s.ServiceName)
+                    var rosToRemove = await _dbContext.RepairOrderServices
+                        .Where(x =>
+                            x.RepairOrderId == repairOrder.RepairOrderId &&
+                            allInspectedServiceIds.Contains(x.ServiceId)
+                        )
                         .ToListAsync();
 
-                    throw new InvalidOperationException(
-                        $"The following services have already been inspected in completed inspections: {string.Join(", ", duplicateServiceNames)}");
-                }
-            }
-
-            var inspection = new Inspection
-            {
-                RepairOrderId = createManagerInspectionDto.RepairOrderId,
-                CustomerConcern = createManagerInspectionDto.CustomerConcern,
-                Status = InspectionStatus.Pending,
-                CreatedAt = DateTime.UtcNow
-            };
-            
-            // Only assign technician if provided
-            if (createManagerInspectionDto.TechnicianId.HasValue)
-            {
-                inspection.TechnicianId = createManagerInspectionDto.TechnicianId.Value;
-            }
-
-            var createdInspection = await _inspectionRepository.CreateAsync(inspection);
-            
-            // Add services to inspection if provided
-            if (createManagerInspectionDto.ServiceIds != null && createManagerInspectionDto.ServiceIds.Any())
-            {
-                foreach (var serviceId in createManagerInspectionDto.ServiceIds)
-                {
-                    var serviceInspection = new ServiceInspection
+                    if (rosToRemove.Any())
                     {
-                        InspectionId = createdInspection.InspectionId,
-                        ServiceId = serviceId,
-                        CreatedAt = DateTime.UtcNow
-                        // ConditionStatus will use default value from ServiceInspection model (Not_Checked)
-                    };
-                    
-                    await _dbContext.ServiceInspections.AddAsync(serviceInspection);
+                        _dbContext.RepairOrderServices.RemoveRange(rosToRemove);
+                        await _dbContext.SaveChangesAsync();
+                    }
                 }
+
+               if(completedInspectionServiceIds.Count !=0)
+                {
+                    // Sau khi remove, lấy lại list ServiceId hiện tại trong RO
+                    var currentRoServiceIds = repairOrder?.RepairOrderServices
+                        .Select(ros => ros.ServiceId)
+                        .Distinct()
+                        .ToHashSet();
+
+                    // 5. Xử lý ServiceIds Manager truyền vào
+                    var managerServiceIds = createManagerInspectionDto?.ServiceIds
+                        .Distinct()
+                        .ToList();
+
+                    // 5.1 Service dùng cho Inspection lần này (loại service đã Completed)
+                    var serviceIdsForThisInspection = managerServiceIds
+                        .Where(id => !completedInspectionServiceIds.Contains(id))
+                        .ToList();
+
+                    // 5.2 Service mới cần thêm vào RepairOrder
+                    var newServiceIdsForRepairOrder = managerServiceIds
+                        .Where(id => !currentRoServiceIds.Contains(id) && !allInspectedServiceIds.Contains(id))
+                        .ToList();
+
+                    if (newServiceIdsForRepairOrder.Any())
+                    {
+                        foreach (var serviceId in newServiceIdsForRepairOrder)
+                        {
+                            var newRoService = new BusinessObject.RepairOrderService
+                            {
+                                RepairOrderId = repairOrder.RepairOrderId,
+                                ServiceId = serviceId,
+                                CreatedAt = DateTime.Now,
+                            };
+
+                            await _dbContext.RepairOrderServices.AddAsync(newRoService);
+                        }
+
+                        await _dbContext.SaveChangesAsync();
+                    }
+                }else
+                {
+                    var currentRoServiceIds = repairOrder?.RepairOrderServices
+                        .Select(ros => ros.ServiceId)
+                        .Distinct()
+                        .ToHashSet();
+
+                    var managerServiceIds = createManagerInspectionDto?.ServiceIds
+                        .Distinct()
+                        .ToList();
+
+                   
+                    // 5.2 Service mới cần thêm vào RepairOrder
+                    var newServiceIdsForRepairOrder = managerServiceIds
+                        .Where(id => !currentRoServiceIds.Contains(id) && !allInspectedServiceIds.Contains(id))
+                        .ToList();
+
+                    if (newServiceIdsForRepairOrder.Any())
+                    {
+                        foreach (var serviceId in newServiceIdsForRepairOrder)
+                        {
+                            var newRoService = new BusinessObject.RepairOrderService
+                            {
+                                RepairOrderId = repairOrder.RepairOrderId,
+                                ServiceId = serviceId,
+                                CreatedAt = DateTime.Now,
+                            };
+
+                            await _dbContext.RepairOrderServices.AddAsync(newRoService);
+                        }
+
+                        await _dbContext.SaveChangesAsync();
+                    }
+                }    
+
                 
-                await _dbContext.SaveChangesAsync();
+
+                // 6. Tạo Inspection mới
+                var inspection = new Inspection
+                {
+                    RepairOrderId = createManagerInspectionDto.RepairOrderId,
+                    CustomerConcern = createManagerInspectionDto.CustomerConcern,
+                    Status = InspectionStatus.Pending,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                if (createManagerInspectionDto.TechnicianId.HasValue)
+                {
+                    inspection.TechnicianId = createManagerInspectionDto.TechnicianId.Value;
+                }
+
+                var createdInspection = await _inspectionRepository.CreateAsync(inspection);
+
+                // 9. Nếu đây là inspection đầu tiên của RO → cập nhật trạng thái RO
+                var existingInspectionsAfterCreate = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
+                if (existingInspectionsAfterCreate.Count() == 1)
+                {
+                    await _repairOrderRepository.UpdateRepairOrderStatusAsync(createManagerInspectionDto.RepairOrderId, 2);
+                }
+
+                // Commit transaction
+                await transaction.CommitAsync();
+
+                var finalInspection = await _inspectionRepository.GetByIdAsync(createdInspection.InspectionId);
+                return MapToDto(finalInspection);
             }
-            
-            // Check if this is the first inspection in ro
-            var existingInspectionsAfterCreate = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
-            if (existingInspectionsAfterCreate.Count() == 1)
+            catch
             {
-                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createManagerInspectionDto.RepairOrderId, 2);
+                // Rollback khi lỗi
+                await transaction.RollbackAsync();
+                throw;
             }
-            
-            var finalInspection = await _inspectionRepository.GetByIdAsync(createdInspection.InspectionId);
-            return MapToDto(finalInspection);
         }
+
+
+
 
         public async Task<InspectionDto> UpdateInspectionAsync(Guid inspectionId, UpdateInspectionDto updateInspectionDto)
         {

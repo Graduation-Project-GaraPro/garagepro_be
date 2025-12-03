@@ -271,7 +271,7 @@ namespace Services.QuotationServices
             // Update RO cost with final total (replace, not add)
             if (quotation.RepairOrder != null)
             {
-                quotation.RepairOrder.Cost = totalAmount;
+                quotation.RepairOrder.Cost += totalAmount;
             }
             
             quotation.UpdatedAt = DateTime.UtcNow;
