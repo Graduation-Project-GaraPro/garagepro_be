@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251130185049_newDb")]
-    partial class newDb
+    [Migration("20251201183650_addEmertech")]
+    partial class addEmertech
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1469,6 +1469,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("InspectionFee")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<Guid?>("InspectionId")
                         .HasColumnType("uniqueidentifier");

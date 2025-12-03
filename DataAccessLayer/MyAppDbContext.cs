@@ -712,6 +712,11 @@ namespace DataAccessLayer
             modelBuilder.Entity<RepairRequest>()
                 .Ignore(rr => rr.RepairOrder);
 
+            modelBuilder.Entity<RepairRequest>().HasIndex(r => new { r.VehicleID, r.RequestDate })
+              .HasDatabaseName("UX_RepairRequests_VehicleRequestDate_Active")
+              .IsUnique()
+              .HasFilter("[Status] IN (0,1,2)");
+
             modelBuilder.Entity<RepairOrder>()
              .HasOne(ro => ro.RepairRequest)
              .WithOne()

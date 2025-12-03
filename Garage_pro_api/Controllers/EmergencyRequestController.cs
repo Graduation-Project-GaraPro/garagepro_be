@@ -1,8 +1,13 @@
+using Azure.Core;
+using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
 using Dtos.Emergency;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Services;
 using Services.EmergencyRequestService;
+using Services.FCMServices;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -17,11 +22,14 @@ namespace Garage_pro_api.Controllers
     {
         private readonly IEmergencyRequestService _service;
         private readonly ITechnicianEmergencyService _technicianEmergencyService;
-
-        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService)
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
+        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService, IFcmService fcmService, IUserService userService)
         {
             _service = service;
             _technicianEmergencyService = technicianEmergencyService;
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
         /// <summary>
@@ -296,7 +304,7 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
-        [HttpPost("asign-tech")]
+        [HttpPost("assign-tech")]
         [Authorize(Roles = "Manager")]
         public async Task<IActionResult> AsignTechnician(AssignTechnicianPayload assignTechnicianPayload)
         {
@@ -308,6 +316,28 @@ namespace Garage_pro_api.Controllers
 
                 var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
                 await _technicianEmergencyService.UpdateEmergencyStatusAsync(assignTechnicianPayload.emergencyId, BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned, technicianId: assignTechnicianPayload.technicianUserId.ToString());
+                
+                if(result)
+                {
+                    var user = await _userService.GetUserByIdAsync(assignTechnicianPayload.technicianUserId.ToString());
+
+
+                    if (user != null && user.DeviceId != null)
+                    {
+                        var FcmNotification = new FcmDataPayload
+                        {
+                            Type = NotificationType.Emergency,
+                            Title = "Emergency case",
+                            Body = "New Emergency case for you",
+                            EntityKey = EntityKeyType.repairOrderId,
+                            EntityId = Guid.NewGuid(),
+                            Screen = AppScreen.ReportsFragment
+                        };
+                        await _fcmService.SendFcmMessageWithDataAsync(user?.DeviceId, FcmNotification);
+                    }
+                }    
+
+                
                 return Ok(new { Success = result });
             }
             catch (ArgumentException ex)

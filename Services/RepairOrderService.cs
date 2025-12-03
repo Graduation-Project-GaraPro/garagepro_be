@@ -26,6 +26,7 @@ namespace Services
         private readonly IFcmService _fcmService;
         private readonly ILabelRepository _labelRepository;
         private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
+        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; // Update namespace
         private readonly IServiceRepository _serviceRepository; // Add service repository
         private readonly IUserService _userService; // Add service repository
 
@@ -43,7 +44,7 @@ namespace Services
             ILabelRepository labelRepository,
             IHubContext<RepairOrderHub> hubContext,
             IUserService userService,
-            IServiceRepository serviceRepository, IFcmService fcmService) // Add service repository parameter
+            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService) // Add service repository parameter
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
@@ -52,6 +53,7 @@ namespace Services
             _serviceRepository = serviceRepository; // Initialize service repository
             _fcmService = fcmService;
             _userService = userService;
+            _archivedhubContext = archivedhubContext;
         }
 
         #region Kanban Board Operations
@@ -194,6 +196,17 @@ namespace Services
                     if (_hubContext != null)
                     {
                         await _hubContext.Clients.All.SendAsync("RepairOrderMoved", updateDto.RepairOrderId, updateDto.NewStatusId, result.UpdatedCard);
+
+                        //await _JobhubContext
+                        //             .Clients
+                        //             .Group($"RepairOrder_{updateDto.RepairOrderId}")
+                        //             .SendAsync(
+                        //                 "RepairOrderMoved",
+                        //                 updateDto.RepairOrderId
+
+                        //);
+
+
                     }
                 }
                 else
@@ -1165,6 +1178,11 @@ namespace Services
                                 "RepairOrderArchived",
                                 archiveDto.RepairOrderId
                             );
+
+                    await _archivedhubContext
+                            .Clients
+                            .Group($"RepairOrderArchive_{repairOrder.UserId}")
+                            .SendAsync("RepairOrderArchived", archiveDto.RepairOrderId);
 
                     var user = await _userService.GetUserByIdAsync(repairOrder.UserId);
 
