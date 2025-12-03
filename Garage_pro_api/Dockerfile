@@ -12,6 +12,7 @@ COPY DataAccessLayer/*.csproj DataAccessLayer/
 COPY Dtos/*.csproj Dtos/
 COPY Repositories/*.csproj Repositories/
 COPY Services/*.csproj Services/
+COPY Utils/*.csproj Utils/
 
 # Restore dependencies
 RUN dotnet restore "garagepro_backend.sln"

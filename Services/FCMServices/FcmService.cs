@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Google.Apis.Auth.OAuth2;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
+using Google.Apis.Auth.OAuth2;
+using Microsoft.Extensions.Configuration;
 using BusinessObject.FcmDataModels;
 using BusinessObject.Enums;
 
@@ -18,41 +15,58 @@ namespace Services.FCMServices
     public class FcmService : IFcmService
     {
         private readonly string _projectId;
-        private readonly string _credentialsPath;
+        private readonly string _serviceAccountJson;
 
         public FcmService(IConfiguration configuration)
         {
             _projectId = configuration["Firebase:ProjectId"]
                 ?? throw new ArgumentNullException("Firebase:ProjectId");
-            _credentialsPath = Path.Combine(AppContext.BaseDirectory, "Keys", "garapro-firebase-firebase-adminsdk-fbsvc-292a41367b.json");
+
+            // Lấy section Firebase:ServiceAccount (object) và convert thành JSON string
+            var serviceAccountSection = configuration.GetSection("Firebase:ServiceAccount");
+            if (!serviceAccountSection.Exists())
+            {
+                throw new ArgumentNullException("Firebase:ServiceAccount",
+                    "Firebase:ServiceAccount section is missing in configuration.");
+            }
+
+            // Convert các key-value con thành dictionary => serialize ra JSON
+            var dict = serviceAccountSection.GetChildren()
+                                            .ToDictionary(c => c.Key, c => c.Value);
+
+            _serviceAccountJson = JsonSerializer.Serialize(dict);
+
+            Console.WriteLine("[FCM] Loaded ServiceAccount JSON from configuration:");
+            Console.WriteLine(_serviceAccountJson);
         }
 
+        private GoogleCredential CreateCredentialFromConfig()
+        {
+            try
+            {
+                Console.WriteLine("[FCM] Creating GoogleCredential from appsettings JSON...");
+
+                var credential = GoogleCredential
+                    .FromJson(_serviceAccountJson)
+                    .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
+
+                Console.WriteLine("[FCM] GoogleCredential created.");
+                return credential;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[FCM] Failed to create GoogleCredential from JSON:");
+                Console.WriteLine(ex.ToString());
+                throw;
+            }
+        }
 
         public async Task SendFcmMessageAsync(string deviceToken, FcmDataPayload payload)
         {
             if (string.IsNullOrEmpty(deviceToken))
                 throw new ArgumentNullException(nameof(deviceToken));
 
-            Console.WriteLine("[FCM] Using credentials at: " + _credentialsPath);
-
-            if (!File.Exists(_credentialsPath))
-                throw new FileNotFoundException("Credentials file not found", _credentialsPath);
-
-            GoogleCredential credential;
-
-            try
-            {
-                using var stream = new FileStream(_credentialsPath, FileMode.Open, FileAccess.Read);
-                credential = GoogleCredential.FromStream(stream)
-                    .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
-                Console.WriteLine("[FCM] GoogleCredential created.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[FCM] Failed to create GoogleCredential:");
-                Console.WriteLine(ex.ToString());
-                throw;
-            }
+            var credential = CreateCredentialFromConfig();
 
             string accessToken;
             try
@@ -78,14 +92,13 @@ namespace Services.FCMServices
                         title = payload.Title ?? "Notification",
                         body = payload.Body ?? ""
                     },
-                    data = payload.ToDictionary() // tự động map từ FcmDataPayload
+                    data = payload.ToDictionary()
                 }
             };
 
             var json = JsonSerializer.Serialize(message);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
 
@@ -100,7 +113,7 @@ namespace Services.FCMServices
                 throw new Exception($"FCM Error: {response.StatusCode} - {error}");
             }
 
-            Console.WriteLine(" Notification sent successfully.");
+            Console.WriteLine("Notification sent successfully.");
         }
 
         public async Task SendFcmMessageWithDataAsync(string deviceToken, FcmDataPayload payload)
@@ -108,26 +121,7 @@ namespace Services.FCMServices
             if (string.IsNullOrEmpty(deviceToken))
                 throw new ArgumentNullException(nameof(deviceToken));
 
-            Console.WriteLine("[FCM] Using credentials at: " + _credentialsPath);
-
-            if (!File.Exists(_credentialsPath))
-                throw new FileNotFoundException("Credentials file not found", _credentialsPath);
-
-            GoogleCredential credential;
-
-            try
-            {
-                using var stream = new FileStream(_credentialsPath, FileMode.Open, FileAccess.Read);
-                credential = GoogleCredential.FromStream(stream)
-                    .CreateScoped("https://www.googleapis.com/auth/firebase.messaging");
-                Console.WriteLine("[FCM] GoogleCredential created.");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("[FCM] Failed to create GoogleCredential:");
-                Console.WriteLine(ex.ToString());
-                throw;
-            }
+            var credential = CreateCredentialFromConfig();
 
             string accessToken;
             try
@@ -145,12 +139,10 @@ namespace Services.FCMServices
 
             object messageBody;
 
-            
             if (payload.Type == NotificationType.Emergency)
             {
-                var data = payload.ToDictionary(); 
+                var data = payload.ToDictionary();
 
-               
                 data["type"] = "Emergency";
                 if (!data.ContainsKey("title")) data["title"] = payload.Title ?? "Emergency case";
                 if (!data.ContainsKey("body")) data["body"] = payload.Body ?? "New Emergency case for you";
@@ -165,15 +157,12 @@ namespace Services.FCMServices
                         android = new
                         {
                             priority = "HIGH"
-                            // Có thể chỉ rõ channel nếu muốn:
-                            // notification = new { channelId = "emergency_channel_v2" }
                         }
                     }
                 };
             }
             else
             {
-                // Các loại noti bình thường: vẫn dùng notification + data
                 messageBody = new
                 {
                     message = new
@@ -208,7 +197,5 @@ namespace Services.FCMServices
 
             Console.WriteLine("Notification sent successfully.");
         }
-
     }
 }
-
