@@ -125,6 +125,7 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.Vehicle).ThenInclude(v => v.Brand)
                 .Include(q => q.Vehicle).ThenInclude(v => v.Model)
                 .Include(q => q.RepairOrder)
+                 .ThenInclude(qs => qs.Branch)
                 .Include(q=>q.QuotationServices).ThenInclude(qs=>qs.AppliedPromotion)
                 .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)

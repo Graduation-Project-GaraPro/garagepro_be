@@ -1,4 +1,5 @@
 ﻿using BusinessObject.InspectionAndRepair;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Repositories.InspectionAndRepair;
 using System;
 using System.Collections.Generic;
@@ -21,7 +22,6 @@ namespace Services.InspectionAndRepair
         {
             return await _repository.GetAllSpecificationsAsync();
         }
-
         public async Task<List<VehicleLookup>> SearchSpecificationsAsync(string keyword)
         {
             return await _repository.SearchSpecificationsAsync(keyword);
