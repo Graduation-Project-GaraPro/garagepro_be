@@ -24,6 +24,7 @@ namespace Services.InspectionAndRepair
             Guid partCategoryId,
             string userId
         );
+        Task<TechnicianDto?> GetTechnicianByUserIdAsync(string userId);
 
     }
 }

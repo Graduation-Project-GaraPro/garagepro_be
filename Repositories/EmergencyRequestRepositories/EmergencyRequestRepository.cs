@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static BusinessObject.RequestEmergency.RequestEmergency;
 
 namespace Repositories.EmergencyRequestRepositories
 {
@@ -84,7 +85,8 @@ namespace Repositories.EmergencyRequestRepositories
             if (emergency == null) return false;
 
             emergency.TechnicianId = technicianId;
-            emergency.Status = RequestEmergency.EmergencyStatus.Assigned; 
+            emergency.Status = EmergencyStatus.Assigned;
+            
 
             await _context.SaveChangesAsync();
             return true;
@@ -202,6 +204,23 @@ namespace Repositories.EmergencyRequestRepositories
         }
 
         private double ToRadians(double deg) => deg * (Math.PI / 180);
+
+        public async Task<bool> AssignTechnicianAsync(Guid emergencyId, Guid technicianUserId)
+        {
+            var request = _context.RequestEmergencies.FirstOrDefault(e => e.EmergencyRequestId.Equals( emergencyId));
+            if (request == null)
+            {
+                return false;
+            }
+            if (request.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending)
+            {
+                throw new InvalidOperationException("Cannot assign technician to a pending emergency request.");
+            }
+            request.TechnicianId = technicianUserId.ToString();
+            request.Status = BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned;
+            _context.RequestEmergencies.Update(request);
+            return await _context.SaveChangesAsync().ContinueWith(t => t.Result > 0);
+        }
     }
 }
 

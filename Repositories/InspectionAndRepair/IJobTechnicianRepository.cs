@@ -1,5 +1,6 @@
 ﻿using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 using Dtos.Common;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,7 @@ namespace Repositories.InspectionAndRepair
         Task<List<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId);
         //Task UpdateJobAsync(Job job);
         Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null);
+        Task<Technician?> GetTechnicianByUserIdAsync(string userId);
 
     }
 }

@@ -682,6 +682,10 @@ builder.Services.AddCors(options =>
                 "http://10.42.97.46:5117",
                 "http://10.224.41.46:5117",
                 "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113",
+"http://103.216.119.34:3000",
+                "http://103.216.119.34:3001",
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
                 "http://10.0.2.2:7113"
             )
             .AllowAnyHeader()
@@ -693,21 +697,56 @@ builder.Services.AddCors(options =>
 RepairRequestAppConfig.Initialize(builder.Configuration);
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5117, listenOptions =>
-    {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ListenAnyIP(5117, listenOptions =>
+//    {
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+//    });
 
-    options.ListenAnyIP(7113, listenOptions =>
-    {
-        listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
-});
+//    options.ListenAnyIP(7113, listenOptions =>
+//    {
+//        listenOptions.UseHttps();
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
+//    });
+//});
 
 var app = builder.Build();
+
+// --- Apply migrations + seed DB (run once on startup) ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        // 1) Áp migration (tạo DB + schema nếu cần)
+        var db = services.GetRequiredService<MyAppDbContext>();
+        logger.LogInformation("Applying pending migrations (if any)...");
+        db.Database.Migrate();
+        logger.LogInformation("Migrations applied.");
+
+        // 2) Gọi DbInitializer để seed dữ liệu (bạn đã register DbInitializer)
+        var dbInitializer = services.GetRequiredService<DbInitializer>();
+        logger.LogInformation("Seeding database...");
+        // Nếu DbInitializer chỉ có phương thức sync Initialize(), gọi nó.
+        // Nếu bạn muốn async, implement InitializeAsync() trong DbInitializer và await nó.
+        // Dưới đây giả sử Initialize() là sync. Nếu async, dùng: await dbInitializer.InitializeAsync();
+        dbInitializer.Initialize();
+        logger.LogInformation("Database seeding finished.");
+    }
+    catch (Exception ex)
+    {
+        // Nếu đang chạy trong container và DB chưa sẵn sàng, Log lỗi rõ ràng để debug
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        // Tuỳ bạn: nếu muốn dừng app khi không seed được, bỏ comment dòng dưới:
+        // throw;
+    }
+}
+// --- End migrations + seeding ---
+
+
 app.UseCors("AllowFrontendAndAndroid");
 
 // Configure the HTTP request pipeline.
@@ -748,44 +787,47 @@ app.UseAuthorization();
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
+// Add this line to map the SignalR hub
+app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<RepairOrderArchiveHub>("/api/archivehub");
 app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
 //Initialize database
-//using (var scope = app.Services.CreateScope())
-//{
-//    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
-//    Console.WriteLine("Applying pending migrations...");
-//    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
+    Console.WriteLine("Applying pending migrations...");
+    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
-//    if (!dbContext.SecurityPolicies.Any())
-//    {
-//        dbContext.SecurityPolicies.Add(new SecurityPolicy
-//        {
-//            Id = Guid.NewGuid(),
-//            MinPasswordLength = 8,
-//            RequireSpecialChar = true,
-//            RequireNumber = true,
-//            RequireUppercase = true,
-//            SessionTimeout = 300,
-//            MaxLoginAttempts = 5,
-//            AccountLockoutTime = 15,
-//            PasswordExpiryDays = 90,
-//            EnableBruteForceProtection = true,
-//            CreatedAt = DateTime.UtcNow,
-//            UpdatedAt = DateTime.UtcNow
-//        });
+    if (!dbContext.SecurityPolicies.Any())
+    {
+        dbContext.SecurityPolicies.Add(new SecurityPolicy
+        {
+            Id = Guid.NewGuid(),
+            MinPasswordLength = 8,
+            RequireSpecialChar = true,
+            RequireNumber = true,
+            RequireUppercase = true,
+            SessionTimeout = 300,
+            MaxLoginAttempts = 5,
+            AccountLockoutTime = 15,
+            PasswordExpiryDays = 90,
+            EnableBruteForceProtection = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        });
 
-//        dbContext.SaveChanges();
-//    }
-//}
+        dbContext.SaveChanges();
+    }
+}
 
-//using (var scope = app.Services.CreateScope())
-//{
-//    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-//    await dbInitializer.Initialize();
-//}
+using (var scope = app.Services.CreateScope())
+{
+    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+    await dbInitializer.Initialize();
+}
 
 app.Run();

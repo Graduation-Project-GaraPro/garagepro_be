@@ -23,10 +23,10 @@ namespace Garage_pro_api.BackgroundServices
         private readonly IServiceProvider _sp;
         private readonly ILogger<PayOsWebhookProcessor> _logger;
 
-        // Tùy chỉnh hiệu năng:
-        private const int BatchSize = 100;            // số bản ghi xử lý mỗi vòng
-        private const int MaxAttempts = 10;           // retry tối đa
-        private const int MaxDegreeOfParallelism = 8; // luồng xử lý song song
+        
+        private const int BatchSize = 100;            
+        private const int MaxAttempts = 10;           
+        private const int MaxDegreeOfParallelism = 8; 
         private static readonly TimeSpan LoopDelay = TimeSpan.FromMilliseconds(800);
 
         public PayOsWebhookProcessor(IServiceProvider sp, ILogger<PayOsWebhookProcessor> logger)
@@ -136,19 +136,19 @@ namespace Garage_pro_api.BackgroundServices
                             repairOrder.PaidStatus = PaidStatus.Paid;
                         }
 
-                        // ================== SIGNALR: thông báo thanh toán thành công ==================
+                       
                         if (repairOrder != null)
                         {
-                            // Nếu bạn group theo RepairOrderId:
+                            
                             await hubContext.Clients.All
                                 .SendAsync("RepairOrderPaid", repairOrder.RepairOrderId, cancellationToken: ct);
 
-                            // hoặc theo user:
+                            
                             // await hubContext.Clients.User(repairOrder.UserId.ToString())
                             //     .SendAsync("RepairOrderPaid", repairOrder.RepairOrderId, cancellationToken: ct);
                         }
 
-                        // ================== FCM: thông báo Payment thành công ==================
+                       
                         if (repairOrder != null)
                         {
                             var user = await userService.GetUserByIdAsync(repairOrder.UserId);
@@ -160,7 +160,7 @@ namespace Garage_pro_api.BackgroundServices
                                 Body = $"Payment for order  is successful.",
                                 EntityKey = EntityKeyType.repairOrderId,
                                 EntityId = repairOrder.RepairOrderId,
-                                Screen = AppScreen.RepairProgressDetailFragment   // hoặc màn hình detail payment
+                                Screen = AppScreen.RepairProgressDetailFragment  
                             };
 
                             await fcmService.SendFcmMessageAsync(user?.DeviceId, fcmNotification);

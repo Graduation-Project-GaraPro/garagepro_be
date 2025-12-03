@@ -47,7 +47,7 @@ namespace Services.Authentication
                 return SignInResult.Failed;
             var policy = await _securityPolicyService.GetCurrentAsync();
 
-            if(user.IsActive == false)
+            if(user.IsActive == false && user.EmailConfirmed == false)
             {
                 return SignInResult.NotAllowed;
             }

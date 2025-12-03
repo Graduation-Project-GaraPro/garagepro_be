@@ -53,19 +53,21 @@ namespace Services.InspectionAndRepair
             var now = DateTime.UtcNow.Date;
             var validStatuses = new[]
             {
-                JobStatus.New,
-                JobStatus.InProgress,
-                JobStatus.OnHold,
-                JobStatus.Completed
-            };
+        JobStatus.New,
+        JobStatus.InProgress,
+        JobStatus.OnHold,
+        JobStatus.Completed
+    };
 
-            // Kết hợp filter trong một LINQ query
             var filteredJobs = jobs
                 .Where(j => validStatuses.Contains(j.Status) &&
-                           (j.Status != JobStatus.Completed ||
-                            j.Deadline == null ||
-                            j.Deadline.Value.Date >= now))
+                           (
+                               (j.Status == JobStatus.Completed && j.Deadline.HasValue && j.Deadline.Value.Date >= now) ||
+                               (j.Status == JobStatus.Completed && !j.Deadline.HasValue) ||                                                                          
+                               (j.Status != JobStatus.Completed)
+                           ))
                 .OrderBy(j => GetStatusPriority(j.Status))
+                .ThenBy(j => j.Deadline)
                 .ThenBy(j => j.JobName)
                 .ToList();
 
@@ -209,7 +211,17 @@ namespace Services.InspectionAndRepair
 
             return true;
         }
+        public async Task<TechnicianDto?> GetTechnicianByUserIdAsync(string userId)
+        {
+            var technician = await _jobTechnicianRepository.GetTechnicianByUserIdAsync(userId);
+            if (technician == null) return null;
 
+            return new TechnicianDto
+            {
+                TechnicianId = technician.TechnicianId
+            };
+        }
+        
         // check all jobs in RO and complete RO if all jobs are completed
         private async Task<bool> CheckAndCompleteRepairOrderAsync(Guid repairOrderId)
         {

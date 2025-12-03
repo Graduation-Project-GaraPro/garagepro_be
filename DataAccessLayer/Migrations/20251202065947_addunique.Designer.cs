@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251201101912_AddInspectionFeeToQuotation")]
-    partial class AddInspectionFeeToQuotation
+    [Migration("20251202065947_addunique")]
+    partial class addunique
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -603,10 +603,13 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.HasIndex("VehicleID");
-
                     b.HasIndex("BranchId", "Status")
                         .HasDatabaseName("IX_Request_Branch_Status");
+
+                    b.HasIndex("VehicleID", "RequestDate")
+                        .IsUnique()
+                        .HasDatabaseName("UX_RepairRequests_VehicleRequestDate_Active")
+                        .HasFilter("[Status] IN (0,1,2)");
 
                     b.HasIndex("BranchId", "ArrivalWindowStart", "Status")
                         .HasDatabaseName("IX_Request_Branch_Arrival_Status");

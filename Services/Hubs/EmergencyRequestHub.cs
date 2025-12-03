@@ -99,6 +99,24 @@ namespace Services.Hubs
             await Clients.Caller.SendAsync("LeftBranchGroup", grp);
         }
 
+        // group emergency 
+        public async Task JoinEmergencyGroup(string emergencyId)
+        {
+            var grp = $"emergency-{emergencyId}";
+            await Groups.AddToGroupAsync(Context.ConnectionId, grp);
+            _connectionGroups.AddOrUpdate(Context.ConnectionId, _ => new HashSet<string> { grp }, (_, set) => { set.Add(grp); return set; });
+            await Clients.Caller.SendAsync("JoinedEmergencyGroup", grp);
+        }
+
+        // leave group
+        public async Task LeaveEmergencyGroup(string emergencyId)
+        {
+            var grp = $"emergency-{emergencyId}";
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, grp);
+            if (_connectionGroups.TryGetValue(Context.ConnectionId, out var set)) set.Remove(grp);
+            await Clients.Caller.SendAsync("LeftEmergencyGroup", grp);
+        }
+
         public Task<IEnumerable<string>> GetJoinedGroups()
         {
             if (_connectionGroups.TryGetValue(Context.ConnectionId, out var set))

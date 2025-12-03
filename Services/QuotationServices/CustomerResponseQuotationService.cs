@@ -156,7 +156,7 @@ namespace Services.QuotationServices
                     var isPromotionApplicable = await _promotionalCampaignRepo.IsPromotionApplicableForServiceAsync(
                         selectedService.AppliedPromotionId.Value,
                         quotationService.ServiceId,
-                        quotationService.Price);
+                        quotationService.Price + quotationService.QuotationServiceParts.Sum(x => x.Price));
 
                     if (!isPromotionApplicable)
                     {

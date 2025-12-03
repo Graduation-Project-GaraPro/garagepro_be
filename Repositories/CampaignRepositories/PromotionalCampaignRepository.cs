@@ -110,7 +110,7 @@ namespace Repositories.CampaignRepositories
             Guid serviceId,
             decimal orderValue = 0)
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             return Query()
                 .AnyAsync(pc => pc.Id == promotionId &&
