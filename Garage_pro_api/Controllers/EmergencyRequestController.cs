@@ -321,6 +321,7 @@ namespace Garage_pro_api.Controllers
                 {
                     var user = await _userService.GetUserByIdAsync(assignTechnicianPayload.technicianUserId.ToString());
 
+                    Console.WriteLine("Sending FCM notification to technician:");
 
                     if (user != null && user.DeviceId != null)
                     {
