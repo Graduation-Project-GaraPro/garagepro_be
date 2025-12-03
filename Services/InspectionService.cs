@@ -4,10 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
 using Dtos.Quotations;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Repositories;
+using Services.FCMServices;
 using Services.Hubs;
 using Services.Notifications;
 using Services.QuotationServices;
@@ -22,6 +24,10 @@ namespace Services
         private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
         private readonly IHubContext<InspectionHub> _inspectionHubContext;
         private readonly INotificationService _notificationService;
+
+        private readonly IHubContext<QuotationHub> _quotationHubContext;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
         private readonly DataAccessLayer.MyAppDbContext _dbContext;
 
         public InspectionService(
@@ -31,7 +37,11 @@ namespace Services
             IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext,
             IHubContext<InspectionHub> inspectionHubContext,
             INotificationService notificationService,
-            DataAccessLayer.MyAppDbContext dbContext)
+            DataAccessLayer.MyAppDbContext dbContext,
+            IHubContext<QuotationHub> quotationHubContext,
+             IFcmService fcmService,
+            IUserService userService
+            )
         {
             _inspectionRepository = inspectionRepository;
             _repairOrderRepository = repairOrderRepository;
@@ -40,6 +50,10 @@ namespace Services
             _inspectionHubContext = inspectionHubContext;
             _notificationService = notificationService;
             _dbContext = dbContext;
+
+            _quotationHubContext = quotationHubContext;
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
         public async Task<InspectionDto> GetInspectionByIdAsync(Guid inspectionId)
@@ -705,6 +719,39 @@ namespace Services
                     quotation.TotalAmount = quotationEntity.TotalAmount;
                 }
             }
+
+            if(quotationEntity?.Status ==  QuotationStatus.Good)
+            {
+                await _quotationHubContext
+                       .Clients
+                       .Group($"User_{createQuotationDto.UserId}")
+                       .SendAsync("QuotationCreated", new
+                       {
+                           quotation.QuotationId,
+                           quotation.UserId,
+                           quotation.RepairOrderId,
+                           quotation.TotalAmount,
+                           quotation.Status,
+                           quotation.CreatedAt,
+                           createQuotationDto.Note
+                       });
+
+                var user = await _userService.GetUserByIdAsync(quotationEntity.UserId);
+
+                if (user != null && user.DeviceId != null)
+                {
+                    var FcmNotification = new FcmDataPayload
+                    {
+                        Type = NotificationType.Repair,
+                        Title = "New Quotation Available",
+                        Body = "A new quotation has been created for your repair job. Tap to view details.",
+                        EntityKey = EntityKeyType.quotationId,
+                        EntityId = quotationEntity.QuotationId,
+                        Screen = AppScreen.QuotationDetailFragment
+                    };
+                    await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+                }
+            }    
 
             return quotation;
         }
