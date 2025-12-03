@@ -673,6 +673,7 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://192.168.1.61:5117",
                 "http://10.224.41.46:5117",
                 "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
                 "http://10.0.2.2:7113",
