@@ -58,7 +58,7 @@ namespace Services.QuotationServices
 
             try
             {
-                // 1. Lấy quotation
+                
                 var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
                 if (quotation == null)
                     throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
@@ -72,10 +72,10 @@ namespace Services.QuotationServices
                 {
                     await ValidateCustomerResponseAsync(quotation, responseDto);
 
-                    // Xử lý service + part + promotion
+                   
                     await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
 
-                    // Tính lại tổng
+                   
                     await RecalculateQuotationTotalAsync(quotation);
 
                     quotation.Status = status;
@@ -84,10 +84,10 @@ namespace Services.QuotationServices
                 }
                 else if (status == QuotationStatus.Rejected)
                 {
-                    // When rejected, customer pays inspection fee for all services
+                    
                     quotation.TotalAmount = quotation.InspectionFee;
                     
-                    // Update RO cost with inspection fee
+                    
                     if (quotation.RepairOrder != null)
                     {
                         quotation.RepairOrder.Cost = quotation.InspectionFee;
@@ -112,7 +112,7 @@ namespace Services.QuotationServices
 
                 await NotifyPromotionsAppliedAsync(quotation);
 
-                // Send SignalR notification to managers when customer responds to quotation
+                
                 await NotifyManagersOfCustomerResponseAsync(quotation, status);
                 return _mapper.Map<QuotationDto>(quotation);
             }
@@ -125,7 +125,7 @@ namespace Services.QuotationServices
 
         private async Task ValidateCustomerResponseAsync(Quotation quotation, CustomerQuotationResponseDto responseDto)
         {
-            // Kiểm tra các dịch vụ bắt buộc phải được chọn
+            
             var requiredServices = quotation.QuotationServices.Where(qs => qs.IsRequired).ToList();
             var selectedServiceIds = responseDto.SelectedServices.Select(s => s.QuotationServiceId).ToHashSet();
 
@@ -186,8 +186,7 @@ namespace Services.QuotationServices
                     {
                         quotationService.AppliedPromotionId = serviceDto.AppliedPromotionId.Value;
 
-                       
-
+                      
                     }
                     else
                     {
@@ -203,7 +202,7 @@ namespace Services.QuotationServices
                 }
                 else
                 {
-                    // Nếu dịch vụ không được chọn, reset promotion và bỏ chọn tất cả phụ tùng
+                   
                     quotationService.AppliedPromotionId = null;
                     quotationService.DiscountValue = 0;
 
@@ -214,7 +213,7 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
+            
             await ValidateAndCorrectPartSelectionAsync(quotation);
         }
 
@@ -297,22 +296,22 @@ namespace Services.QuotationServices
 
 
 
-        /// Validates and corrects part selection based on whether services are advanced or not.
+        
         private async Task ValidateAndCorrectPartSelectionAsync(Quotation quotation)
         {
             foreach (var quotationService in quotation.QuotationServices)
             {
-                // Load the full service information to check if it's advanced
+                
                 var service = await _serviceRepository.GetByIdAsync(quotationService.ServiceId);
 
                 if (service != null)
                 {
-                    // Get all selected parts for this service
+                    
                     var selectedParts = quotationService.QuotationServiceParts
                         .Where(qsp => qsp.IsSelected)
                         .ToList();
 
-                    // If it's not an advanced service, ensure only one part is selected
+                    
                     if (!service.IsAdvanced && selectedParts.Count > 1)
                     {
                         // Keep only the first selected part and deselect the rest
@@ -328,11 +327,11 @@ namespace Services.QuotationServices
 
         private async Task NotifyPromotionsAppliedAsync(Quotation quotation)
         {
-            // Only on approved quotations
+            
             if (quotation.Status != QuotationStatus.Approved)
                 return;
 
-            // Ensure QuotationServices and AppliedPromotion are loaded in GetByIdAsync
+            
             if (quotation.QuotationServices == null || !quotation.QuotationServices.Any())
                 return;
 
@@ -356,12 +355,12 @@ namespace Services.QuotationServices
                 Services = servicesWithPromo
             };
 
-            // 1) Send to global promotions dashboard group
+            
             await _promotionalHub.Clients
                 .Group("promotions-dashboard")
                 .SendAsync("PromotionAppliedToQuotation", payload);
 
-            // 2) Also send to each promotion-specific group
+            
             var promotionIds = servicesWithPromo
                 .Where(s => s.AppliedPromotionId.HasValue)
                 .Select(s => s.AppliedPromotionId!.Value)

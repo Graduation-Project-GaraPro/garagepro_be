@@ -14,7 +14,7 @@ namespace BusinessObject.InspectionAndRepair {
 
         [Required]
         [MaxLength(100)]
-        public string Label { get; set; } // "Overall size", "Wheelbase", etc.
+        public string Label { get; set; } 
 
         public int DisplayOrder { get; set; }
 

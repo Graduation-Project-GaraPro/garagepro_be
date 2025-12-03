@@ -62,6 +62,10 @@ namespace Garage_pro_api.DbInit
 
             //await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
+
+            // Seed Vehicle Specifications
+            var vehicleSpecsSeeder = new VehicleSpecificationsSeeder(_context);
+            await vehicleSpecsSeeder.SeedAllSpecificationsDataAsync();
         }
 
         // 1. Seed Roles

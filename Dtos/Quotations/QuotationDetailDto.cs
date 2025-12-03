@@ -24,7 +24,7 @@ namespace Dtos.Quotations
         public string? Note { get; set; }
         public string? CustomerNote { get; set; }
         public DateTime? ExpiresAt { get; set; }
-
+        public string PhoneBranch { get; set; }
         public bool IsArchived { get; set; } = false;
 
         public DateTime? ArchivedAt { get; set; }
