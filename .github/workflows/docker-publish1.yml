@@ -1,1 +1,60 @@
+name: Build & Push Docker Image (garagepro_be)
 
+on:
+  push:
+    branches:
+      - deploy
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU (for multi-arch)
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Determine tags
+        id: tags
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          SHORT_SHA=${GITHUB_SHA::8}
+          IMAGE="${{ secrets.DOCKERHUB_USERNAME }}/garagepro_api"
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+          echo "TAG_TS=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "TAG_SHA=sha-${SHORT_SHA}" >> $GITHUB_ENV
+          echo "TAG_LATEST=latest" >> $GITHUB_ENV
+          echo "::set-output name=tags::${IMAGE}:${TIMESTAMP},${IMAGE}:sha-${SHORT_SHA},${IMAGE}:latest"
+
+      - name: Build and push Docker image (with cache)
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile        # đổi đường dẫn nếu Dockerfile nằm ở vị trí khác
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.IMAGE }}:${{ env.TAG_TS }},${{ env.IMAGE }}:${{ env.TAG_SHA }},${{ env.IMAGE }}:${{ env.TAG_LATEST }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Output image tags
+        run: |
+          echo "Pushed images:"
+          echo "${{ env.IMAGE }}:${{ env.TAG_TS }}"
+          echo "${{ env.IMAGE }}:${{ env.TAG_SHA }}"
+          echo "${{ env.IMAGE }}:${{ env.TAG_LATEST }}"
