@@ -52,7 +52,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("SessionId");
 
-                    b.ToTable("AiChatMessages");
+                    b.ToTable("AiChatMessages", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.AiChat.AIChatSession", b =>
@@ -95,7 +95,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("SessionId");
 
-                    b.ToTable("AiChatSessions");
+                    b.ToTable("AiChatSessions", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.AiChat.AIDiagnostic_Keyword", b =>
@@ -141,7 +141,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("SessionId");
 
-                    b.ToTable("AIDiagnostic_Keywords");
+                    b.ToTable("AIDiagnostic_Keywords", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.AiChat.AIResponseTemplate", b =>
@@ -186,7 +186,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("MessageId");
 
-                    b.ToTable("AIResponseTemplates");
+                    b.ToTable("AIResponseTemplates", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
@@ -377,7 +377,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("BranchId");
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.BranchService", b =>
@@ -392,7 +392,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("BranchServices");
+                    b.ToTable("BranchServices", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Branches.OperatingHour", b =>
@@ -422,7 +422,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("OperatingHours");
+                    b.ToTable("OperatingHours", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaign", b =>
@@ -476,7 +476,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PromotionalCampaigns");
+                    b.ToTable("PromotionalCampaigns", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Campaigns.PromotionalCampaignService", b =>
@@ -491,7 +491,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("PromotionalCampaignServices");
+                    b.ToTable("PromotionalCampaignServices", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Campaigns.VoucherUsage", b =>
@@ -543,7 +543,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("RepairRequestId");
 
-                    b.ToTable("RepairImages");
+                    b.ToTable("RepairImages", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Customers.RepairRequest", b =>
@@ -611,7 +611,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId", "ArrivalWindowStart", "Status")
                         .HasDatabaseName("IX_Request_Branch_Arrival_Status");
 
-                    b.ToTable("RepairRequests");
+                    b.ToTable("RepairRequests", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Customers.RequestPart", b =>
@@ -638,7 +638,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("RequestServiceId");
 
-                    b.ToTable("RequestParts");
+                    b.ToTable("RequestParts", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Customers.RequestService", b =>
@@ -662,7 +662,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("RequestServices");
+                    b.ToTable("RequestServices", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Inspection", b =>
@@ -710,7 +710,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("TechnicianId");
 
-                    b.ToTable("Inspections");
+                    b.ToTable("Inspections", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.JobTechnician", b =>
@@ -734,7 +734,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("TechnicianId");
 
-                    b.ToTable("JobTechnicians");
+                    b.ToTable("JobTechnicians", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.Repair", b =>
@@ -773,7 +773,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("JobId")
                         .IsUnique();
 
-                    b.ToTable("Repairs");
+                    b.ToTable("Repairs", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.Specification", b =>
@@ -799,7 +799,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("CategoryID", "DisplayOrder");
 
-                    b.ToTable("Specification");
+                    b.ToTable("Specification", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationCategory", b =>
@@ -820,7 +820,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("DisplayOrder");
 
-                    b.ToTable("SpecificationCategory");
+                    b.ToTable("SpecificationCategory", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.SpecificationsData", b =>
@@ -847,7 +847,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("LookupID", "SpecificationID")
                         .IsUnique();
 
-                    b.ToTable("SpecificationsData");
+                    b.ToTable("SpecificationsData", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.Technician", b =>
@@ -877,7 +877,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Technicians");
+                    b.ToTable("Technicians", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionAndRepair.VehicleLookup", b =>
@@ -900,7 +900,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("Automaker", "NameCar");
 
-                    b.ToTable("VehicleLookups");
+                    b.ToTable("VehicleLookups", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.InspectionType", b =>
@@ -935,7 +935,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("InspectionTypeId");
 
-                    b.ToTable("InspectionTypes");
+                    b.ToTable("InspectionTypes", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Job", b =>
@@ -1001,7 +1001,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("Jobs");
+                    b.ToTable("Jobs", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.JobPart", b =>
@@ -1034,7 +1034,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.ToTable("JobParts");
+                    b.ToTable("JobParts", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Label", b =>
@@ -1073,7 +1073,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("OrderStatusId");
 
-                    b.ToTable("Labels");
+                    b.ToTable("Labels", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Manager.FeedBack", b =>
@@ -1110,7 +1110,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("FeedBacks");
+                    b.ToTable("FeedBacks", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Notifications.Notification", b =>
@@ -1148,7 +1148,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>
@@ -1166,7 +1166,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("OrderStatusId");
 
-                    b.ToTable("OrderStatuses");
+                    b.ToTable("OrderStatuses", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Part", b =>
@@ -1204,7 +1204,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartCategoryId");
 
-                    b.ToTable("Parts");
+                    b.ToTable("Parts", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
@@ -1230,7 +1230,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("LaborCategoryId");
 
-                    b.ToTable("PartCategories");
+                    b.ToTable("PartCategories", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.PartInspection", b =>
@@ -1262,7 +1262,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PartId");
 
-                    b.ToTable("PartInspections");
+                    b.ToTable("PartInspections", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
@@ -1310,7 +1310,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("Status", "Attempts", "ReceivedAt");
 
-                    b.ToTable("WebhookInboxes");
+                    b.ToTable("WebhookInboxes", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Payment", b =>
@@ -1355,7 +1355,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>
@@ -1521,7 +1521,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("Quotations");
+                    b.ToTable("Quotations", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.QuotationService", b =>
@@ -1570,7 +1570,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId1");
 
-                    b.ToTable("QuotationServices");
+                    b.ToTable("QuotationServices", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.QuotationServicePart", b =>
@@ -1600,7 +1600,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("QuotationServiceId");
 
-                    b.ToTable("QuotationServiceParts");
+                    b.ToTable("QuotationServiceParts", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrder", b =>
@@ -1700,7 +1700,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("RepairOrders");
+                    b.ToTable("RepairOrders", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrderService", b =>
@@ -1731,7 +1731,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("RepairOrderServices");
+                    b.ToTable("RepairOrderServices", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.RepairOrderServicePart", b =>
@@ -1772,7 +1772,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("RepairOrderServiceId");
 
-                    b.ToTable("RepairOrderServiceParts");
+                    b.ToTable("RepairOrderServiceParts", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.RequestEmergency.PriceEmergency", b =>
@@ -1792,7 +1792,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("PriceId");
 
-                    b.ToTable("PriceEmergencies");
+                    b.ToTable("PriceEmergencies", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.RequestEmergency.RequestEmergency", b =>
@@ -1871,7 +1871,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("VehicleId");
 
-                    b.ToTable("RequestEmergencies");
+                    b.ToTable("RequestEmergencies", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Roles.ApplicationRole", b =>
@@ -1966,7 +1966,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Permissions");
+                    b.ToTable("Permissions", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Roles.PermissionCategory", b =>
@@ -1985,7 +1985,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PermissionCategories");
+                    b.ToTable("PermissionCategories", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Roles.RolePermission", b =>
@@ -2012,7 +2012,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("PermissionId");
 
-                    b.ToTable("RolePermissions");
+                    b.ToTable("RolePermissions", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Service", b =>
@@ -2059,7 +2059,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceCategoryId");
 
-                    b.ToTable("Services");
+                    b.ToTable("Services", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceCategory", b =>
@@ -2094,7 +2094,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ParentServiceCategoryId");
 
-                    b.ToTable("ServiceCategories");
+                    b.ToTable("ServiceCategories", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.ServiceInspection", b =>
@@ -2122,7 +2122,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("ServiceInspections");
+                    b.ToTable("ServiceInspections", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.ServicePartCategory", b =>
@@ -2146,7 +2146,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ServiceId");
 
-                    b.ToTable("ServicePartCategories");
+                    b.ToTable("ServicePartCategories", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.SystemLogs.SystemLog", b =>
@@ -2280,7 +2280,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Vehicles");
+                    b.ToTable("Vehicles", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleBrand", b =>
@@ -2303,7 +2303,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("BrandID");
 
-                    b.ToTable("VehicleBrands");
+                    b.ToTable("VehicleBrands", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleColor", b =>
@@ -2327,7 +2327,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("ColorID");
 
-                    b.ToTable("VehicleColors");
+                    b.ToTable("VehicleColors", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleModel", b =>
@@ -2357,7 +2357,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("BrandID");
 
-                    b.ToTable("VehicleModels");
+                    b.ToTable("VehicleModels", (string)null);
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleModelColor", b =>
@@ -2378,7 +2378,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("ModelID");
 
-                    b.ToTable("VehicleModelColors");
+                    b.ToTable("VehicleModelColors", (string)null);
                 });
 
             modelBuilder.Entity("EmergencyMedia", b =>
@@ -2404,7 +2404,7 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("RequestEmergencyEmergencyRequestId");
 
-                    b.ToTable("EmergencyMedias");
+                    b.ToTable("EmergencyMedias", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

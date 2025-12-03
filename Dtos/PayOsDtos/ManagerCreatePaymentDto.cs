@@ -10,6 +10,5 @@ namespace Dtos.PayOsDtos
     public class ManagerCreatePaymentDto
     {
         public PaymentMethod Method { get; set; } = PaymentMethod.Cash; // Default to Cash
-        public string? Description { get; set; }
     }
 }

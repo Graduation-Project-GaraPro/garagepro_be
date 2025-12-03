@@ -117,5 +117,48 @@ namespace Garage_pro_api.Controllers
                 });
             }
         }
+
+        // POST: api/Customer/quick
+        [HttpPost("quick")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> QuickCreateCustomer([FromBody] QuickCreateCustomerDto quickCreateCustomerDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                var errors = new SerializableError(ModelState);
+                return BadRequest(new { 
+                    message = "Validation failed", 
+                    errors 
+                });
+            }
+
+            try
+            {
+                var customer = await _customerService.QuickCreateCustomerAsync(quickCreateCustomerDto);
+                return CreatedAtAction(nameof(GetCustomer), new { id = customer.UserId }, customer);
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { 
+                    message = "Validation error", 
+                    details = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { 
+                    message = "Operation failed", 
+                    details = ex.Message 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    message = "An error occurred while creating the customer", 
+                    error = ex.Message,
+                    innerException = ex.InnerException?.Message
+                });
+            }
+        }
     }
 }

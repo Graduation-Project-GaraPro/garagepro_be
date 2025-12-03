@@ -269,9 +269,14 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/listview
         [HttpGet("listview")]
         [EnableQuery]
-        public async Task<IActionResult> GetListView()
+        public async Task<IActionResult> GetListView(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortBy = "ReceiveDate",
+            [FromQuery] string sortOrder = "Desc",
+            [FromQuery] RoBoardFiltersDto filters = null)
         {
-            var listView = await _repairOrderService.GetListViewAsync();
+            var listView = await _repairOrderService.GetListViewAsync(filters, sortBy, sortOrder, page, pageSize);
             return Ok(listView);
         }
         
@@ -358,10 +363,39 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/archived
         [HttpGet("archived")]
         [EnableQuery]
-        public async Task<IActionResult> GetArchivedRepairOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        public async Task<IActionResult> GetArchivedRepairOrders(
+            [FromQuery] Guid? branchId = null,
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortBy = "ArchivedAt",
+            [FromQuery] string sortOrder = "Desc")
         {
-            var archivedOrders = await _repairOrderService.GetArchivedRepairOrdersAsync(null, "ArchivedAt", "Desc", page, pageSize);
+            var filters = new RoBoardFiltersDto
+            {
+                OnlyArchived = true
+            };
+
+            if (branchId.HasValue)
+            {
+                filters.BranchIds = new List<Guid> { branchId.Value };
+            }
+
+            var archivedOrders = await _repairOrderService.GetArchivedRepairOrdersAsync(filters, sortBy, sortOrder, page, pageSize);
             return Ok(archivedOrders);
+        }
+
+        // GET: api/RepairOrder/archived/{id}
+        [HttpGet("archived/{id}")]
+        public async Task<IActionResult> GetArchivedRepairOrderDetail(Guid id)
+        {
+            var archivedDetail = await _repairOrderService.GetArchivedRepairOrderDetailAsync(id);
+            
+            if (archivedDetail == null)
+            {
+                return NotFound(new { message = "Archived repair order not found or repair order is not archived" });
+            }
+
+            return Ok(archivedDetail);
         }
         
         // POST: api/RepairOrder/cancel

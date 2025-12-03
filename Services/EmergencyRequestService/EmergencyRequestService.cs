@@ -160,18 +160,16 @@ namespace Services.EmergencyRequestService
                 };
 
                 // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
-              //  await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
-             //   Console.WriteLine($"RT sent: EmergencyRequestCreated → All, id={fullRequest.EmergencyRequestId}");
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
+
 
                 // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
-             //   await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
-            //        .SendAsync("EmergencyRequestCreated", notificationData);
-           //     Console.WriteLine($"RT sent: EmergencyRequestCreated → customer-{fullRequest.CustomerId}, id={fullRequest.EmergencyRequestId}");
+                await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
+                    .SendAsync("EmergencyRequestCreated", notificationData);
 
                 // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
                 await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → branch-{fullRequest.BranchId}, id={fullRequest.EmergencyRequestId}");
             }
             catch (Exception ex)
             {
@@ -241,7 +239,9 @@ namespace Services.EmergencyRequestService
                 RespondedAt = fr.RespondedAt,
                 AutoCanceledAt = fr.AutoCanceledAt,
                 CustomerName = fr.Customer?.UserName ?? "",
-                CustomerPhone = fr.Customer?.PhoneNumber ?? ""
+                CustomerPhone = fr.Customer?.PhoneNumber ?? "",
+                AssignedTechnicianName = fr.Technician?.LastName ?? "",
+                AssginedTecinicianPhone =fr.Technician?.PhoneNumber??""
             }).ToList();
 
 
@@ -500,6 +500,7 @@ namespace Services.EmergencyRequestService
                     EmergencyRequestId = emergency.EmergencyRequestId,
                     Status = "InProgress",
                     CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
                     BranchId = emergency.BranchId,
                     Message = "Cứu hộ đang được xử lý",
                     Timestamp = DateTime.UtcNow
@@ -692,6 +693,8 @@ namespace Services.EmergencyRequestService
             if (emergency == null) throw new ArgumentException("Emergency not found");
             if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress)
                 throw new InvalidOperationException("Emergency must be accepted or in-progress to update location.");
+            if (string.IsNullOrEmpty(emergency.TechnicianId) || !string.Equals(emergency.TechnicianId, technicianUserId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Only the assigned technician can update location for this emergency.");
 
             RouteDto? route = null;
             if (location.RecomputeRoute)
@@ -718,7 +721,9 @@ namespace Services.EmergencyRequestService
                 Route = route?.Geometry,
                 Steps = route?.Steps,
                 DistanceKm = route?.DistanceKm,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
+                TechnicianName = emergency.Technician.LastName,
+                PhoneNumberTecnician = emergency.Technician.PhoneNumber
             };
 
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);

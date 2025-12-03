@@ -18,7 +18,8 @@ namespace Garage_pro_api.Mapper
                 .ForMember(dest => dest.QuotationServices, opt => opt.MapFrom(src => src.QuotationServices))
                 .ForMember(dest => dest.Inspection, opt => opt.MapFrom(src => src.Inspection))
                 .ForMember(dest => dest.IsArchived, opt => opt.MapFrom(src => src.RepairOrder.IsArchived))
-                .ForMember(dest => dest.ArchivedAt, opt => opt.MapFrom(src => src.RepairOrder.ArchivedAt));
+                .ForMember(dest => dest.ArchivedAt, opt => opt.MapFrom(src => src.RepairOrder.ArchivedAt))
+                .ForMember(dest => dest.PhoneBranch, opt => opt.MapFrom(src => src.RepairOrder.Branch.PhoneNumber));
 
             // QuotationService → QuotationServiceDetailDto
             CreateMap<QuotationService, QuotationServiceDetailDto>()

@@ -78,33 +78,29 @@ namespace Dtos.Job
     // Technician Schedule DTOs
     public class TechnicianScheduleDto
     {
-        public Guid TechnicianId { get; set; }
-        
-        public string TechnicianName { get; set; } = string.Empty;
-        
         public Guid JobId { get; set; }
         
         public string JobName { get; set; } = string.Empty;
         
-        public Guid RepairOrderId { get; set; }
+        public Guid TechnicianId { get; set; }
         
-        public string RepairOrderNumber { get; set; } = string.Empty;
+        public string TechnicianName { get; set; } = string.Empty;
         
         public JobStatus Status { get; set; }
         
-        public DateTime? StartTime { get; set; }
-        
-        public DateTime? EndTime { get; set; }
+        public DateTime? StartDate { get; set; }
         
         public DateTime? Deadline { get; set; }
         
-        public TimeSpan? EstimatedDuration { get; set; }
+        public double EstimatedDuration { get; set; } // in minutes
         
-        public TimeSpan? ActualDuration { get; set; }
+        public double ActualDuration { get; set; } // in minutes
         
-        public bool IsOverdue => Deadline.HasValue && Deadline.Value < DateTime.UtcNow && Status != JobStatus.Completed;
+        public bool IsOverdue { get; set; }
         
-        public int PriorityLevel { get; set; }
+        public Guid RepairOrderId { get; set; }
+        
+        public string VehicleLicensePlate { get; set; } = string.Empty;
     }
     
     public class TechnicianScheduleFilterDto
@@ -126,7 +122,9 @@ namespace Dtos.Job
     {
         public Guid TechnicianId { get; set; }
         
-        public string TechnicianName { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        
+        public string FullName { get; set; } = string.Empty;
         
         public int TotalJobs { get; set; }
         
@@ -136,8 +134,16 @@ namespace Dtos.Job
         
         public int PendingJobs { get; set; }
         
-        public double CompletionRate => TotalJobs > 0 ? (double)CompletedJobs / TotalJobs * 100 : 0;
+        public int OverdueJobs { get; set; }
         
-        public List<TechnicianScheduleDto> UpcomingJobs { get; set; } = new List<TechnicianScheduleDto>();
+        public float AverageCompletionTime { get; set; } // in minutes
+        
+        public float Efficiency { get; set; } // 0-100
+        
+        public float Quality { get; set; } // 0-100
+        
+        public float Speed { get; set; } // 0-100
+        
+        public float Score { get; set; } // 0-100 (overall performance score)
     }
 }

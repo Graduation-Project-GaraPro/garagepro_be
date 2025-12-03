@@ -15,14 +15,12 @@ namespace BusinessObject.InspectionAndRepair
 
         [Required]
         [MaxLength(200)]
-        public string Value { get; set; } // Giá trị cụ thể của xe
+        public string Value { get; set; } 
 
-        // FK -> VehicleLookup
         [ForeignKey(nameof(VehicleLookup))]
         public Guid LookupID { get; set; }
         public virtual VehicleLookup VehicleLookup { get; set; }
 
-        // FK -> Specification
         [ForeignKey(nameof(Specification))]
         public Guid SpecificationID { get; set; }
         public virtual Specification Specification { get; set; }

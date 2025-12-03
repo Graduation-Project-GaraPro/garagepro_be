@@ -351,7 +351,6 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             Console.WriteLine($"[InspectionTechnicianService] Sent InspectionCompleted to Managers group for Inspection {id}");
         }
 
-       
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
