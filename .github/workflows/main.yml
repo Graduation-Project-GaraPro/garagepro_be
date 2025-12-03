@@ -45,7 +45,7 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: .
-          file: ./Dockerfile        # đổi đường dẫn nếu Dockerfile nằm ở vị trí khác
+          file: .Garage_pro_api/Dockerfile       # đổi đường dẫn nếu Dockerfile nằm ở vị trí khác
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.IMAGE }}:${{ env.TAG_TS }},${{ env.IMAGE }}:${{ env.TAG_SHA }},${{ env.IMAGE }}:${{ env.TAG_LATEST }}
