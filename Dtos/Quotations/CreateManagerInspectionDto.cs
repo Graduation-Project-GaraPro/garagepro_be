@@ -15,5 +15,11 @@ namespace Dtos.Quotations
         [Required]
         [MaxLength(500)]
         public string CustomerConcern { get; set; }
+
+        /// <summary>
+        /// Optional list of service IDs to add to this inspection.
+        /// System will validate that these services don't already exist in RO or previous inspections.
+        /// </summary>
+        public List<Guid> ServiceIds { get; set; } = new List<Guid>();
     }
 }

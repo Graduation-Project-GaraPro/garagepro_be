@@ -178,7 +178,25 @@ namespace Services.InspectionAndRepair
             .Group($"RepairOrder_{job.RepairOrderId}")
             .SendAsync("JobStatusUpdated", payload);
 
-            // Auto-complete RO if all jobs are completed
+            // send tin hieu cho manager kh start work
+            await _hubContext.Clients
+                .Group("Managers")
+                .SendAsync("JobStatusUpdated", new
+                {
+                    JobId = dto.JobId,
+                    JobName = job.JobName,
+                    RepairOrderId = job.RepairOrderId,
+                    TechnicianId = job.JobTechnicians?.FirstOrDefault()?.TechnicianId,
+                    TechnicianName = job.JobTechnicians?.FirstOrDefault()?.Technician?.User?.FullName,
+                    OldStatus = oldStatus.ToString(),
+                    NewStatus = dto.JobStatus.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    Message = $"Technician updated job status from {oldStatus} to {dto.JobStatus}"
+                });
+
+            Console.WriteLine($"[JobTechnicianService] Job {dto.JobId} status updated by technician: {oldStatus} → {dto.JobStatus}");
+
+            // auto completed RO if all jobs are completed
             if (dto.JobStatus == JobStatus.Completed)
             {
                 try

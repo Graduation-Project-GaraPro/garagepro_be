@@ -113,6 +113,15 @@ namespace Services
             };
 
             var createdInspection = await _inspectionRepository.CreateAsync(inspection);
+            
+            // Check if this is the first inspection for this RO
+            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createInspectionDto.RepairOrderId);
+            if (existingInspections.Count() == 1) // Only the one we just created
+            {
+                // Update RO status to In Progress (OrderStatusId = 2)
+                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createInspectionDto.RepairOrderId, 2);
+            }
+            
             return MapToDto(createdInspection);
         }
 
@@ -122,6 +131,37 @@ namespace Services
             var repairOrder = await _repairOrderRepository.GetByIdAsync(createManagerInspectionDto.RepairOrderId);
             if (repairOrder == null)
                 throw new ArgumentException("Repair order not found");
+
+            // Validate services if provided
+            if (createManagerInspectionDto.ServiceIds != null && createManagerInspectionDto.ServiceIds.Any())
+            {
+                // Get all services from COMPLETED inspections only for this RO
+                // Note: Services in RO can be inspected again, only completed inspection services are blocked
+                var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
+                var completedInspectionServices = existingInspections
+                    .Where(i => i.Status == InspectionStatus.Completed)
+                    .SelectMany(i => i.ServiceInspections ?? new List<ServiceInspection>())
+                    .Select(si => si.ServiceId)
+                    .Distinct()
+                    .ToList();
+
+                // Check for duplicates with completed inspection services only
+                var duplicateServices = createManagerInspectionDto.ServiceIds
+                    .Where(sid => completedInspectionServices.Contains(sid))
+                    .ToList();
+
+                if (duplicateServices.Any())
+                {
+                    // Get service names for better error message
+                    var duplicateServiceNames = await _dbContext.Services
+                        .Where(s => duplicateServices.Contains(s.ServiceId))
+                        .Select(s => s.ServiceName)
+                        .ToListAsync();
+
+                    throw new InvalidOperationException(
+                        $"The following services have already been inspected in completed inspections: {string.Join(", ", duplicateServiceNames)}");
+                }
+            }
 
             var inspection = new Inspection
             {
@@ -138,7 +178,35 @@ namespace Services
             }
 
             var createdInspection = await _inspectionRepository.CreateAsync(inspection);
-            return MapToDto(createdInspection);
+            
+            // Add services to inspection if provided
+            if (createManagerInspectionDto.ServiceIds != null && createManagerInspectionDto.ServiceIds.Any())
+            {
+                foreach (var serviceId in createManagerInspectionDto.ServiceIds)
+                {
+                    var serviceInspection = new ServiceInspection
+                    {
+                        InspectionId = createdInspection.InspectionId,
+                        ServiceId = serviceId,
+                        CreatedAt = DateTime.UtcNow
+                        // ConditionStatus will use default value from ServiceInspection model (Not_Checked)
+                    };
+                    
+                    await _dbContext.ServiceInspections.AddAsync(serviceInspection);
+                }
+                
+                await _dbContext.SaveChangesAsync();
+            }
+            
+            // Check if this is the first inspection in ro
+            var existingInspectionsAfterCreate = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
+            if (existingInspectionsAfterCreate.Count() == 1)
+            {
+                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createManagerInspectionDto.RepairOrderId, 2);
+            }
+            
+            var finalInspection = await _inspectionRepository.GetByIdAsync(createdInspection.InspectionId);
+            return MapToDto(finalInspection);
         }
 
         public async Task<InspectionDto> UpdateInspectionAsync(Guid inspectionId, UpdateInspectionDto updateInspectionDto)
@@ -149,19 +217,16 @@ namespace Services
 
             var oldStatus = inspection.Status;
 
-            // Update technician if provided
             if (updateInspectionDto.TechnicianId.HasValue)
             {
                 inspection.TechnicianId = updateInspectionDto.TechnicianId.Value;
             }
 
-            // Update status if provided
             if (updateInspectionDto.Status.HasValue)
             {
                 inspection.Status = updateInspectionDto.Status.Value;
             }
 
-            // Update other fields if provided
             if (!string.IsNullOrEmpty(updateInspectionDto.CustomerConcern))
                 inspection.CustomerConcern = updateInspectionDto.CustomerConcern;
                 
@@ -579,6 +644,37 @@ namespace Services
                         }).ToList() ?? new List<InspectionPartDto>()
                 }).ToList() ?? new List<InspectionServiceDto>()
             };
+        }
+
+        public async Task<IEnumerable<AvailableServiceDto>> GetAvailableServicesForInspectionAsync(Guid repairOrderId)
+        {
+            // Get all services from COMPLETED inspections only for this RO
+            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(repairOrderId);
+            var completedInspectionServices = existingInspections
+                .Where(i => i.Status == InspectionStatus.Completed)
+                .SelectMany(i => i.ServiceInspections ?? new List<ServiceInspection>())
+                .Select(si => si.ServiceId)
+                .Distinct()
+                .ToList();
+
+            // k dc chon service trong inspection completed
+            var availableServices = await _dbContext.Services
+                .Where(s => s.IsActive && !completedInspectionServices.Contains(s.ServiceId))
+                .Select(s => new AvailableServiceDto
+                {
+                    ServiceId = s.ServiceId,
+                    ServiceName = s.ServiceName,
+                    Description = s.Description,
+                    Price = s.Price,
+                    IsAdvanced = s.IsAdvanced,
+                    ServiceCategoryId = s.ServiceCategoryId,
+                    ServiceCategoryName = s.ServiceCategory != null ? s.ServiceCategory.CategoryName : null
+                })
+                .OrderBy(s => s.ServiceCategoryName)
+                .ThenBy(s => s.ServiceName)
+                .ToListAsync();
+
+            return availableServices;
         }
     }
 }

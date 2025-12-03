@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Repositories;
 using Dtos.RoBoard;
+using Services.EmailSenders;
+using DataAccessLayer;
 
 namespace Services
 {
@@ -17,12 +19,18 @@ namespace Services
         private readonly IUserRepository _userRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IMapper _mapper;
+        private readonly IEmailSender _emailSender;
+        private readonly IEmailTemplateService _emailTemplateService;
+        private readonly MyAppDbContext _dbContext;
 
-        public CustomerService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IMapper mapper)
+        public CustomerService(IUserRepository userRepository, UserManager<ApplicationUser> userManager, IMapper mapper, IEmailSender emailSender, IEmailTemplateService emailTemplateService, MyAppDbContext dbContext)
         {
             _userRepository = userRepository;
             _userManager = userManager;
             _mapper = mapper;
+            _emailSender = emailSender;
+            _emailTemplateService = emailTemplateService;
+            _dbContext = dbContext;
         }
 
         public async Task<IEnumerable<RoBoardCustomerDto>> SearchCustomersAsync(string searchTerm)
@@ -145,7 +153,9 @@ namespace Services
                 Email = createCustomerDto.Email,
                 Birthday = createCustomerDto.Birthday,
                 DateOfBirth = createCustomerDto.Birthday,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                EmailConfirmed = true,
+                PhoneNumberConfirmed = true
             };
             
             // Set default password: Garagepro123!
@@ -158,20 +168,132 @@ namespace Services
                 throw new InvalidOperationException($"Failed to create customer: {errors}");
             }
             
-            // Add to Customer role
             await _userManager.AddToRoleAsync(customer, "Customer");
             
-            // Return the created customer DTO
             return new RoBoardCustomerDto
             {
                 UserId = customer.Id,
                 FirstName = customer.FirstName,
                 LastName = customer.LastName,
                 Birthday = customer.Birthday,
-                // Removed FullName assignment since it's no longer in the entity
                 Email = customer.Email,
                 PhoneNumber = customer.PhoneNumber
             };
+        }
+
+        public async Task<RoBoardCustomerDto> QuickCreateCustomerAsync(QuickCreateCustomerDto quickCreateCustomerDto)
+        {
+            // Start database transaction
+            using var transaction = await _dbContext.Database.BeginTransactionAsync();
+            
+            try
+            {
+                var validationContext = new ValidationContext(quickCreateCustomerDto);
+                var validationResults = new List<ValidationResult>();
+                if (!Validator.TryValidateObject(quickCreateCustomerDto, validationContext, validationResults, true))
+                {
+                    var errorMessage = string.Join("; ", validationResults.Select(vr => vr.ErrorMessage));
+                    throw new ValidationException($"Invalid customer data: {errorMessage}");
+                }
+                
+                // Validate birthday is not in the future
+                if (quickCreateCustomerDto.Birthday.HasValue && quickCreateCustomerDto.Birthday.Value.Date > DateTime.UtcNow.Date)
+                {
+                    throw new ValidationException("Birthday cannot be in the future");
+                }
+                
+                // Check if customer with same phone number already exists
+                var existingCustomer = await _userManager.Users
+                    .FirstOrDefaultAsync(u => u.PhoneNumber == quickCreateCustomerDto.PhoneNumber);
+                if (existingCustomer != null)
+                {
+                    throw new InvalidOperationException("Customer with this phone number already exists");
+                }
+                
+                // Check if customer with same email already exists (if email is provided)
+                if (!string.IsNullOrEmpty(quickCreateCustomerDto.Email))
+                {
+                    var existingEmailCustomer = await _userManager.Users
+                        .FirstOrDefaultAsync(u => u.Email == quickCreateCustomerDto.Email);
+                    if (existingEmailCustomer != null)
+                    {
+                        throw new InvalidOperationException("Customer with this email already exists");
+                    }
+                }
+                
+                // Create new ApplicationUser with minimal info
+                var customer = new ApplicationUser
+                {
+                    UserName = quickCreateCustomerDto.PhoneNumber,
+                    PhoneNumber = quickCreateCustomerDto.PhoneNumber,
+                    FirstName = quickCreateCustomerDto.FirstName,
+                    LastName = quickCreateCustomerDto.LastName,
+                    Email = quickCreateCustomerDto.Email,
+                    Birthday = quickCreateCustomerDto.Birthday,
+                    DateOfBirth = quickCreateCustomerDto.Birthday,
+                    CreatedAt = DateTime.UtcNow,
+                    EmailConfirmed = true,
+                    PhoneNumberConfirmed = true
+                };
+                
+                // Set default password
+                var defaultPassword = "Garagepro123!";
+                
+                var result = await _userManager.CreateAsync(customer, defaultPassword);
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join("; ", result.Errors.Select(e => e.Description));
+                    throw new InvalidOperationException($"Failed to create customer: {errors}");
+                }
+                
+                // Add to Customer role
+                await _userManager.AddToRoleAsync(customer, "Customer");
+                
+                // Commit transaction - all database operations succeeded
+                await transaction.CommitAsync();
+                
+                // Send welcome email if customer has email address (after transaction commit)
+                if (!string.IsNullOrEmpty(customer.Email))
+                {
+                    try
+                    {
+                        var customerFullName = $"{customer.FirstName} {customer.LastName}".Trim();
+                        var subject = "Welcome to GaragePro - Your Account Information";
+                        
+                        var htmlMessage = await _emailTemplateService.GetWelcomeEmailTemplateAsync(
+                            customerFullName,
+                            customer.PhoneNumber,
+                            customer.PhoneNumber,
+                            customer.Email,
+                            defaultPassword
+                        );
+
+                        await _emailSender.SendEmailAsync(customer.Email, subject, htmlMessage);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Failed to send welcome email to {customer.Email}: {ex.Message}");
+                        // Customer is still created successfully even if email fails
+                    }
+                }
+                
+                // Return the created customer DTO
+                return new RoBoardCustomerDto
+                {
+                    UserId = customer.Id,
+                    FirstName = customer.FirstName,
+                    LastName = customer.LastName,
+                    Birthday = customer.Birthday,
+                    Email = customer.Email,
+                    PhoneNumber = customer.PhoneNumber
+                };
+            }
+            catch
+            {
+                // Rollback transaction on any error
+                await transaction.RollbackAsync();
+                throw;
+            }
         }
 
         public async Task<RoBoardCustomerDto> UpdateCustomerAsync(string customerId, UpdateCustomerDto updateCustomerDto)
