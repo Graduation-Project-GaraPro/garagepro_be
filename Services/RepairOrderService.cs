@@ -206,10 +206,6 @@ namespace Services
 
                         //);
 
-                        await _archivedhubContext
-                                .Clients
-                                .Group($"RepairOrderArchive_{currentRepairOrder.UserId}")
-                                .SendAsync("RepairOrderArchived", updateDto.RepairOrderId);
 
                     }
                 }
@@ -1182,6 +1178,11 @@ namespace Services
                                 "RepairOrderArchived",
                                 archiveDto.RepairOrderId
                             );
+
+                    await _archivedhubContext
+                            .Clients
+                            .Group($"RepairOrderArchive_{repairOrder.UserId}")
+                            .SendAsync("RepairOrderArchived", archiveDto.RepairOrderId);
 
                     var user = await _userService.GetUserByIdAsync(repairOrder.UserId);
 
