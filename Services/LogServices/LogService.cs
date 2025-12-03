@@ -26,6 +26,7 @@ namespace Services.LogServices
         private readonly IHubContext<LogHub> _hubContext;
         private readonly long _maxFileSizeBytes = 10 * 1024 * 1024; // 10MB
         private readonly int _maxBackupFiles = 3;
+        private static readonly SemaphoreSlim _fileLock = new SemaphoreSlim(1, 1);
 
         public LogService(IWebHostEnvironment env, IHttpContextAccessor httpContextAccessor, ISystemLogRepository logRepository, IHubContext<LogHub> hubContext)
         {
@@ -125,13 +126,22 @@ namespace Services.LogServices
         private async Task WriteToFileAsync(LogSource source, SystemLog log)
         {
             var filePath = _logFilePaths[source];
-            await RotateLogFileIfNeeded(filePath);
+            
+            await _fileLock.WaitAsync();
+            try
+            {
+                await RotateLogFileIfNeeded(filePath);
 
-            var logLine = $"{log.Timestamp:yyyy-MM-dd HH:mm:ss} [{log.Level}] {log.Message} " +
-                         $"(User: {log.UserName}, IP: {log.IpAddress})" +
-                         (!string.IsNullOrEmpty(log.Details) ? $"\nDetails: {log.Details}" : "");
+                var logLine = $"{log.Timestamp:yyyy-MM-dd HH:mm:ss} [{log.Level}] {log.Message} " +
+                             $"(User: {log.UserName}, IP: {log.IpAddress})" +
+                             (!string.IsNullOrEmpty(log.Details) ? $"\nDetails: {log.Details}" : "");
 
-            await File.AppendAllTextAsync(filePath, logLine + Environment.NewLine);
+                await File.AppendAllTextAsync(filePath, logLine + Environment.NewLine);
+            }
+            finally
+            {
+                _fileLock.Release();
+            }
         }
 
         // Xoay file

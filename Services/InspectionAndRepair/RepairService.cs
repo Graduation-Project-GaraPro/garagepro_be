@@ -53,17 +53,18 @@ namespace Services.InspectionAndRepair
             repair.EstimatedTime = estimatedTime;
             repair.StartTime = DateTime.UtcNow;
 
+            var oldStatus = job.Status;
             await _repairRepository.AddRepairAsync(repair);
             job.Status = JobStatus.InProgress;
             await _repairRepository.SaveChangesAsync();
 
             var response = _mapper.Map<RepairResponseDto>(repair);
 
-            // SignalR
-            await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairCreated", new
+            var payload = new
             {
                 repair.RepairId,
                 repair.JobId,
+                JobName = job.JobName,
                 job.RepairOrderId,
                 repair.Description,
                 repair.Notes,
@@ -71,8 +72,23 @@ namespace Services.InspectionAndRepair
                     ? $"{(int)repair.EstimatedTime.Value.TotalHours:D2}:{repair.EstimatedTime.Value.Minutes:D2}"
                     : null,
                 repair.StartTime,
-                JobStatus = job.Status.ToString()
-            });
+                OldStatus = oldStatus.ToString(),
+                JobStatus = job.Status.ToString(),
+                TechnicianId = technicianId,
+                Message = "Technician started work on this job"
+            };
+
+            // SignalR - Notify RepairOrder group
+            await _hubContext.Clients
+                .Group($"RepairOrder_{job.RepairOrderId}")
+                .SendAsync("RepairCreated", payload);
+
+            // SignalR - Notify Managers group
+            await _hubContext.Clients
+                .Group("Managers")
+                .SendAsync("RepairCreated", payload);
+
+            Console.WriteLine($"[RepairService] Technician {technicianId} started work on Job {job.JobId}");
 
             return response;
         }
@@ -150,18 +166,32 @@ namespace Services.InspectionAndRepair
             await _repairRepository.UpdateRepairAsync(repair);
             await _repairRepository.SaveChangesAsync();
 
-            // SignalR
-            await _hubContext.Clients.Group($"RepairOrder_{job.RepairOrderId}").SendAsync("RepairUpdated", new
+            var payload = new
             {
                 repair.RepairId,
                 repair.JobId,
+                JobName = job.JobName,
                 job.RepairOrderId,
                 repair.Description,
                 repair.Notes,
                 OldDescription = oldDescription,
                 OldNotes = oldNotes,
-                UpdatedAt = DateTime.UtcNow
-            });
+                TechnicianId = technicianId,
+                UpdatedAt = DateTime.UtcNow,
+                Message = "Technician updated repair details"
+            };
+
+            // SignalR - Notify RepairOrder group
+            await _hubContext.Clients
+                .Group($"RepairOrder_{job.RepairOrderId}")
+                .SendAsync("RepairUpdated", payload);
+
+            // SignalR - Notify Managers group
+            await _hubContext.Clients
+                .Group("Managers")
+                .SendAsync("RepairUpdated", payload);
+
+            Console.WriteLine($"[RepairService] Technician {technicianId} updated Repair {repairId}");
 
             return repair;
         }

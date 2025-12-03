@@ -113,6 +113,15 @@ namespace Services
             };
 
             var createdInspection = await _inspectionRepository.CreateAsync(inspection);
+            
+            // Check if this is the first inspection for this RO
+            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createInspectionDto.RepairOrderId);
+            if (existingInspections.Count() == 1) // Only the one we just created
+            {
+                // Update RO status to In Progress (OrderStatusId = 2)
+                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createInspectionDto.RepairOrderId, 2);
+            }
+            
             return MapToDto(createdInspection);
         }
 
@@ -138,6 +147,15 @@ namespace Services
             }
 
             var createdInspection = await _inspectionRepository.CreateAsync(inspection);
+            
+            // Check if this is the first inspection for this RO
+            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
+            if (existingInspections.Count() == 1) // Only the one we just created
+            {
+                // Update RO status to In Progress (OrderStatusId = 2)
+                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createManagerInspectionDto.RepairOrderId, 2);
+            }
+            
             return MapToDto(createdInspection);
         }
 

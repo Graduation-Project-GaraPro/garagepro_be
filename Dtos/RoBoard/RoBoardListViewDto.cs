@@ -52,6 +52,8 @@ namespace Dtos.RoBoard
         public DateTime? CompletionDate { get; set; }
         
         // Financial Info
+        public decimal Cost { get; set; }
+        
         public decimal EstimatedAmount { get; set; }
         
         public decimal PaidAmount { get; set; }
@@ -59,6 +61,8 @@ namespace Dtos.RoBoard
         public PaidStatus PaidStatus { get; set; }
         
         public decimal CompletionPercentage => EstimatedAmount > 0 ? (PaidAmount / EstimatedAmount) * 100 : 0;
+        
+        public decimal MissingCost => EstimatedAmount - Cost;
         
         // Status Info
         public int StatusId { get; set; }

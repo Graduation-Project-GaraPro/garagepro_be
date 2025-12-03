@@ -590,8 +590,35 @@ namespace Services.BranchServices
 
             return (_mapper.Map<IEnumerable<BranchReadDto>>(branches), totalCount);
         }
+
+        public async Task<IEnumerable<object>> GetTechniciansWithWorkloadByBranchAsync(Guid branchId)
+        {
+            // Get all technicians in the branch
+            var technicians = await _context.Technicians
+                .Include(t => t.User)
+                .Include(t => t.JobTechnicians)
+                    .ThenInclude(jt => jt.Job)
+                .Where(t => t.User.BranchId == branchId)
+                .ToListAsync();
+
+            var result = technicians.Select(t => new
+            {
+                Id = t.UserId,
+                TechnicianId = t.TechnicianId,
+                FullName = $"{t.User.FirstName} {t.User.LastName}".Trim(),
+                Email = t.User.Email,
+                IsActive = t.User.IsActive,
+                CreatedAt = t.User.CreatedAt,
+                LastLogin = t.User.LastLogin,
+                BranchId = t.User.BranchId,
+                InProgressTasks = t.JobTechnicians.Count(jt => jt.Job.Status == BusinessObject.Enums.JobStatus.InProgress),
+                PendingTasks = t.JobTechnicians.Count(jt => jt.Job.Status == BusinessObject.Enums.JobStatus.Pending),
+                TotalActiveTasks = t.JobTechnicians.Count(jt => 
+                    jt.Job.Status == BusinessObject.Enums.JobStatus.InProgress || 
+                    jt.Job.Status == BusinessObject.Enums.JobStatus.Pending)
+            }).ToList();
+
+            return result;
+        }
     }
-
-
-
 }

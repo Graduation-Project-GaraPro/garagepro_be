@@ -736,7 +736,7 @@ namespace Services.QuotationServices
                     JobName = $"{quotationService.Service?.ServiceName ?? "Service"} - Quotation {quotation.QuotationId.ToString().Substring(0, 8)}",
                     Status = JobStatus.Pending,
                     TotalAmount = quotationService.Price,
-                    Note = $"Auto-generated from approved quotation {quotation.QuotationId}",
+                    Note = $"Auto-generated from approved quotation",
                     CreatedAt = DateTime.UtcNow
                 };
 

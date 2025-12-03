@@ -21,6 +21,7 @@ namespace Services.BranchServices
         Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive);
         Task DeleteManyAsync(IEnumerable<Guid> branchIds);
         Task<bool> DeleteBranchAsync(Guid id);
+        Task<IEnumerable<object>> GetTechniciansWithWorkloadByBranchAsync(Guid branchId);
     }
 
 }

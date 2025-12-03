@@ -18,16 +18,16 @@ namespace BusinessObject.InspectionAndRepair
         [Required]
         public string UserId { get; set; }
 
-        [Range(0, 10)]
+        [Range(0, 100)]
         public float Quality { get; set; }
 
-        [Range(0, 10)]
+        [Range(0, 100)]
         public float Speed { get; set; }
 
-        [Range(0, 10)]
+        [Range(0, 100)]
         public float Efficiency { get; set; }
 
-        [Range(0, 10)]
+        [Range(0, 100)]
         public float Score { get; set; }
 
         // Navigation properties

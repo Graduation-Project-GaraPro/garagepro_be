@@ -8,6 +8,7 @@ using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using Dtos.RepairOrder;
 using Dtos.RoBoard;
+using Dtos.Vehicles;
 using Microsoft.AspNetCore.SignalR;
 using Services.Hubs; // Update namespace
 using Repositories;
@@ -765,7 +766,7 @@ namespace Services
             return dto;
         }
 
-        private RoBoardListItemDto MapToRoBoardListItemDto(RepairOrder repairOrder, int rowNumber)
+        private RoBoardListItemDto MapToRoBoardListItemDto(RepairOrder repairOrder, int rowNumber, bool includeLabels = true)
         {
             return new RoBoardListItemDto
             {
@@ -774,13 +775,16 @@ namespace Services
                 ReceiveDate = repairOrder.ReceiveDate,
                 EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
                 CompletionDate = repairOrder.CompletionDate,
+                Cost = repairOrder.Cost,
                 EstimatedAmount = repairOrder.EstimatedAmount,
                 PaidAmount = repairOrder.PaidAmount,
                 PaidStatus = repairOrder.PaidStatus,
                 StatusId = repairOrder.StatusId,
                 StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
                 StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
-                Labels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                Labels = includeLabels 
+                    ? (repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>())
+                    : new List<RoBoardLabelDto>(),
                 CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
                 CustomerEmail = repairOrder.User?.Email ?? "",
                 CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
@@ -1280,7 +1284,7 @@ namespace Services
 
             var listView = new RoBoardListViewDto
             {
-                Items = pagedItems.Select((ro, index) => MapToRoBoardListItemDto(ro, ((page - 1) * pageSize) + index + 1)).ToList(),
+                Items = pagedItems.Select((ro, index) => MapToRoBoardListItemDto(ro, ((page - 1) * pageSize) + index + 1, includeLabels: false)).ToList(),
                 Pagination = new RoBoardListPaginationDto
                 {
                     CurrentPage = page,
@@ -1297,6 +1301,124 @@ namespace Services
             };
 
             return listView;
+        }
+
+        public async Task<ArchivedRepairOrderDetailDto> GetArchivedRepairOrderDetailAsync(Guid repairOrderId)
+        {
+            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsIncludingArchivedAsync(repairOrderId);
+            
+            if (repairOrder == null || !repairOrder.IsArchived)
+            {
+                return null;
+            }
+
+            var archivedByUser = !string.IsNullOrEmpty(repairOrder.ArchivedByUserId) 
+                ? await _userService.GetUserByIdAsync(repairOrder.ArchivedByUserId) 
+                : null;
+
+            // Map Vehicle manually
+            var vehicleDto = repairOrder.Vehicle != null ? new Dtos.Vehicles.VehicleDto
+            {
+                VehicleID = repairOrder.Vehicle.VehicleId,
+                UserID = repairOrder.Vehicle.UserId,
+                BrandID = repairOrder.Vehicle.BrandId,
+                ModelID = repairOrder.Vehicle.ModelId,
+                ColorID = repairOrder.Vehicle.ColorId,
+                LicensePlate = repairOrder.Vehicle.LicensePlate,
+                VIN = repairOrder.Vehicle.VIN,
+                Year = repairOrder.Vehicle.Year,
+                Odometer = repairOrder.Vehicle.Odometer,
+                BrandName = repairOrder.Vehicle.Brand?.BrandName ?? "Unknown",
+                ModelName = repairOrder.Vehicle.Model?.ModelName ?? "Unknown",
+                ColorName = repairOrder.Vehicle.Color?.ColorName ?? "Unknown"
+            } : null;
+
+            return new ArchivedRepairOrderDetailDto
+            {
+                RepairOrderId = repairOrder.RepairOrderId,
+                ReceiveDate = repairOrder.ReceiveDate,
+                RoType = repairOrder.RoType,
+                EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
+                CompletionDate = repairOrder.CompletionDate,
+                Cost = repairOrder.Cost,
+                EstimatedAmount = repairOrder.EstimatedAmount,
+                PaidAmount = repairOrder.PaidAmount,
+                PaidStatus = repairOrder.PaidStatus,
+                EstimatedRepairTime = repairOrder.EstimatedRepairTime,
+                Note = repairOrder.Note,
+                CreatedAt = repairOrder.CreatedAt,
+                UpdatedAt = repairOrder.UpdatedAt,
+                IsArchived = repairOrder.IsArchived,
+                ArchivedAt = repairOrder.ArchivedAt,
+                ArchivedByUserId = repairOrder.ArchivedByUserId,
+                ArchivedByUserName = archivedByUser != null ? $"{archivedByUser.FirstName} {archivedByUser.LastName}".Trim() : "Unknown",
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason,
+                BranchId = repairOrder.BranchId,
+                BranchName = repairOrder.Branch?.BranchName ?? "Unknown",
+                StatusId = repairOrder.StatusId,
+                StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
+                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
+                UserId = repairOrder.UserId,
+                CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown",
+                CustomerEmail = repairOrder.User?.Email ?? "",
+                CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+                VehicleId = repairOrder.VehicleId,
+                Vehicle = vehicleDto,
+                Labels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                Services = repairOrder.RepairOrderServices?.Select(s => new ArchivedRepairOrderServiceDto
+                {
+                    RepairOrderServiceId = s.RepairOrderServiceId,
+                    ServiceName = s.Service?.ServiceName ?? "Unknown",
+                    ServiceDescription = s.Service?.Description ?? "",
+                    ServicePrice = s.Service?.Price ?? 0,
+                    Quantity = 1,
+                    Parts = s.RepairOrderServiceParts?.Select(p => new ArchivedRepairOrderServicePartDto
+                    {
+                        RepairOrderServicePartId = p.RepairOrderServicePartId,
+                        PartName = p.Part?.Name ?? "Unknown",
+                        PartCode = "N/A",
+                        PartPrice = p.Part?.Price ?? 0,
+                        Quantity = p.Quantity
+                    }).ToList() ?? new List<ArchivedRepairOrderServicePartDto>()
+                }).ToList() ?? new List<ArchivedRepairOrderServiceDto>(),
+                Inspections = repairOrder.Inspections?.Select(i => new ArchivedInspectionDto
+                {
+                    InspectionId = i.InspectionId,
+                    InspectionTypeName = "Inspection",
+                    TechnicianName = i.Technician?.User != null ? $"{i.Technician.User.FirstName} {i.Technician.User.LastName}".Trim() : "Unassigned",
+                    StartTime = null,
+                    EndTime = null,
+                    Status = i.Status.ToString(),
+                    Notes = i.Note
+                }).ToList() ?? new List<ArchivedInspectionDto>(),
+                Jobs = repairOrder.Jobs?.Select(j => new ArchivedJobDto
+                {
+                    JobId = j.JobId,
+                    JobName = j.JobName ?? "Unknown",
+                    TechnicianName = j.JobTechnicians?.FirstOrDefault()?.Technician?.User != null 
+                        ? $"{j.JobTechnicians.FirstOrDefault().Technician.User.FirstName} {j.JobTechnicians.FirstOrDefault().Technician.User.LastName}".Trim() 
+                        : "Unassigned",
+                    StartTime = null,
+                    EndTime = null,
+                    Status = j.Status.ToString(),
+                    Notes = j.Note
+                }).ToList() ?? new List<ArchivedJobDto>(),
+                Payments = repairOrder.Payments?.Select(p => new ArchivedPaymentDto
+                {
+                    PaymentId = Guid.NewGuid(),
+                    Amount = p.Amount,
+                    PaymentMethod = p.Method.ToString(),
+                    PaymentDate = p.PaymentDate,
+                    Notes = p.ProviderDesc ?? ""
+                }).ToList() ?? new List<ArchivedPaymentDto>(),
+                TotalJobs = repairOrder.Jobs?.Count ?? 0,
+                CompletedJobs = repairOrder.Jobs?.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? 0,
+                ProgressPercentage = repairOrder.Jobs?.Count > 0 
+                    ? (decimal)repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) / repairOrder.Jobs.Count * 100 
+                    : 0
+            };
         }
 
         public async Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId)

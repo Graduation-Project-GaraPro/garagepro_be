@@ -168,6 +168,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<QuotationProfile>();
     cfg.AddProfile<RepairOrderBillProfile>();
     cfg.AddProfile<RepairOrderArchivedProfile>();
+    cfg.AddProfile<TechemergencyProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -442,7 +443,7 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     //var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
     //var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
     var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
-   // var jobService = provider.GetRequiredService<Services.IJobService>();
+                                                                          // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
 
@@ -538,6 +539,10 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 
+builder.Services.AddScoped<ITechnicianEmergencyService, TechnicianEmergencyService>();
+
+
+
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 
@@ -568,8 +573,15 @@ builder.Services.AddScoped<IInspectionService>(provider =>
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
-// Technician services
-builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+// Technician repository and services
+builder.Services.AddScoped<Repositories.InspectionAndRepair.ITechnicianRepository, Repositories.InspectionAndRepair.TechnicianRepository>();
+builder.Services.AddScoped<ITechnicianService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var userRepository = provider.GetRequiredService<IUserRepository>();
+    var technicianRepository = provider.GetRequiredService<Repositories.InspectionAndRepair.ITechnicianRepository>();
+    return new TechnicianService(jobRepository, userRepository, technicianRepository);
+});
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
@@ -669,8 +681,8 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
                 "http://10.224.41.46:5117",
-                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
-                "http://10.0.2.2:7113" 
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -691,7 +703,7 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(7113, listenOptions =>
     {
         listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
+        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
     });
 });
 
@@ -722,7 +734,7 @@ app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
 app.MapHub<PermissionHub>("/hubs/permissions");
 app.MapHub<InspectionHub>("/hubs/inspection");
-app.MapHub<JobHub>("/hubs/job");            
+app.MapHub<JobHub>("/hubs/job");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
 app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
@@ -736,8 +748,7 @@ app.UseAuthorization();
 
 app.UseSecurityPolicyEnforcement();
 app.MapControllers();
-// Add this line to map the SignalR hub
-app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
