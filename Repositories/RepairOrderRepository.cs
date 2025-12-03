@@ -190,6 +190,8 @@ namespace Repositories
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
                 .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
@@ -220,6 +222,8 @@ namespace Repositories
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
                 .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
         }

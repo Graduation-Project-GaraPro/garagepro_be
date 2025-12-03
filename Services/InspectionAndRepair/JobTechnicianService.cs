@@ -151,12 +151,12 @@ namespace Services.InspectionAndRepair
                 {
                     Type = NotificationType.Repair,
                     Title = "Repair Update",
-                    Body = "Job " + job.JobName + "is  " + job.Status,
+                    Body = $"Job '{job.JobName}' is now {dto.JobStatus}",
                     EntityKey = EntityKeyType.repairOrderId,
                     EntityId = job.RepairOrderId,
                     Screen = AppScreen.RepairProgressDetailFragment
                 };
-                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
 
                 await _hubContext.Clients
                .Group($"RepairOrder_{user.Id}")
