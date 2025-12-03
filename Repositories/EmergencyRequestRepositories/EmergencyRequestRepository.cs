@@ -109,7 +109,10 @@ namespace Repositories.EmergencyRequestRepositories
                 e.CustomerId == customerId &&
                 e.VehicleId == vehicleId &&
                 (e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending
-                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted));
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.InProgress
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Towing
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned));
         }
 
         public async Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId)
@@ -118,6 +121,7 @@ namespace Repositories.EmergencyRequestRepositories
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
                 .Include(r=>r.Vehicle)
+                .Include(r=>r.Technician)
                 .Include(r => r.MediaFiles)
                 .Include(r=> r.RepairRequest)
                 .Where(r => r.CustomerId == customerId)
@@ -130,6 +134,7 @@ namespace Repositories.EmergencyRequestRepositories
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
                 .Include(r=> r.Vehicle)
+                .Include(r=>r.Technician)
                 .Include(r => r.MediaFiles)
                 .FirstOrDefaultAsync(r => r.EmergencyRequestId == id);
         }

@@ -239,7 +239,9 @@ namespace Services.EmergencyRequestService
                 RespondedAt = fr.RespondedAt,
                 AutoCanceledAt = fr.AutoCanceledAt,
                 CustomerName = fr.Customer?.UserName ?? "",
-                CustomerPhone = fr.Customer?.PhoneNumber ?? ""
+                CustomerPhone = fr.Customer?.PhoneNumber ?? "",
+                AssignedTechnicianName = fr.Technician?.LastName ?? "",
+                AssginedTecinicianPhone =fr.Technician?.PhoneNumber??""
             }).ToList();
 
 
@@ -498,6 +500,7 @@ namespace Services.EmergencyRequestService
                     EmergencyRequestId = emergency.EmergencyRequestId,
                     Status = "InProgress",
                     CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
                     BranchId = emergency.BranchId,
                     Message = "Cứu hộ đang được xử lý",
                     Timestamp = DateTime.UtcNow
@@ -718,7 +721,9 @@ namespace Services.EmergencyRequestService
                 Route = route?.Geometry,
                 Steps = route?.Steps,
                 DistanceKm = route?.DistanceKm,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
+                TechnicianName = emergency.Technician.LastName,
+                PhoneNumberTecnician = emergency.Technician.PhoneNumber
             };
 
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);
