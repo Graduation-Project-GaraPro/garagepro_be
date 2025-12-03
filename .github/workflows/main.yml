@@ -41,16 +41,17 @@ jobs:
           echo "TAG_LATEST=latest" >> $GITHUB_ENV
           echo "::set-output name=tags::${IMAGE}:${TIMESTAMP},${IMAGE}:sha-${SHORT_SHA},${IMAGE}:latest"
 
-      - name: Build and push Docker image (with cache)
+      - name: Build and push Docker image (multi-arch, with cache)
         uses: docker/build-push-action@v4
         with:
-          context: .
-          file: ./Garage_pro_api/Dockerfile       # đổi đường dẫn nếu Dockerfile nằm ở vị trí khác
+          context: ./Garage_pro_api
+          file: ./Garage_pro_api/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.IMAGE }}:${{ env.TAG_TS }},${{ env.IMAGE }}:${{ env.TAG_SHA }},${{ env.IMAGE }}:${{ env.TAG_LATEST }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
 
       - name: Output image tags
         run: |
