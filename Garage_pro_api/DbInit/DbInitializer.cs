@@ -1457,41 +1457,23 @@ namespace Garage_pro_api.DbInit
             {
                 var colors = new List<VehicleColor>
                 {
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "White",
-                        HexCode = "#FFFFFF",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Black",
-                        HexCode = "#000000",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Silver",
-                        HexCode = "#C0C0C0",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Red",
-                        HexCode = "#FF0000",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleColor
-                    {
-                        ColorID = Guid.NewGuid(),
-                        ColorName = "Blue",
-                        HexCode = "#0000FF",
-                        CreatedAt = DateTime.UtcNow
-                    }
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White",  HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black",  HexCode = "#000000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray",   HexCode = "#808080", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red",    HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue",   HexCode = "#0000FF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Green",  HexCode = "#008000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Yellow", HexCode = "#FFFF00", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Orange", HexCode = "#FFA500", CreatedAt = DateTime.UtcNow },
+              //      new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Purple", HexCode = "#800080", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Brown",  HexCode = "#A52A2A", CreatedAt = DateTime.UtcNow },
+            //        new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Beige",  HexCode = "#F5F5DC", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gold",   HexCode = "#FFD700", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Pink",   HexCode = "#FFC0CB", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Navy",   HexCode = "#000080", CreatedAt = DateTime.UtcNow },
+          //          new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Teal",   HexCode = "#008080", CreatedAt = DateTime.UtcNow },
+          //          new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Maroon", HexCode = "#800000", CreatedAt = DateTime.UtcNow }
                 };
 
                 _context.VehicleColors.AddRange(colors);
@@ -1719,7 +1701,58 @@ namespace Garage_pro_api.DbInit
                 }
             }
         }
+        private async Task SeedVehicleModelColorsAsync()
+        {
+            if (!_context.VehicleModelColors.Any())
+            {
+                // Get required Vehicle Models
+                var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
+                var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
+                var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
+                var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
+                var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
 
+                // Get required Vehicle Colors
+                var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
+                var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
+                var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
+                var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
+                var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
+
+                // Ensure all required entities exist before seeding the join table
+                if (camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null &&
+                    whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null)
+                {
+                    var modelColors = new List<VehicleModelColor>
+            {
+                // Toyota Camry is available in White, Black, and Silver
+                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = whiteColor.ColorID },
+                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = blackColor.ColorID },
+                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = silverColor.ColorID },
+
+                // Honda Civic is available in Black and Red
+                new VehicleModelColor { ModelID = civicModel.ModelID, ColorID = blackColor.ColorID },
+                new VehicleModelColor { ModelID = civicModel.ModelID, ColorID = redColor.ColorID },
+
+                // Ford Focus is available in Silver and Blue
+                new VehicleModelColor { ModelID = focusModel.ModelID, ColorID = silverColor.ColorID },
+                new VehicleModelColor { ModelID = focusModel.ModelID, ColorID = blueColor.ColorID },
+
+                // BMW 3 Series is available in Red and Black
+                new VehicleModelColor { ModelID = series3Model.ModelID, ColorID = redColor.ColorID },
+                new VehicleModelColor { ModelID = series3Model.ModelID, ColorID = blackColor.ColorID },
+
+                // Mercedes C-Class is available in Blue, White, and Silver
+                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = blueColor.ColorID },
+                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = whiteColor.ColorID },
+                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = silverColor.ColorID }
+            };
+
+                    _context.VehicleModelColors.AddRange(modelColors);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
         private async Task SeedPromotionalCampaignsWithServicesAsync()
         {
             if (!_context.PromotionalCampaigns.Any())

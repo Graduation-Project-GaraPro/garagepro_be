@@ -33,6 +33,7 @@ namespace Dtos.Emergency
 
             // Tùy chọn thêm nếu muốn hiển thị tiến độ
             public string? AssignedTechnicianName { get; set; }
+            public string? AssginedTecinicianPhone { get; set; }
             public decimal? EmergencyFee { get; set; }
         }
 
