@@ -269,9 +269,14 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/listview
         [HttpGet("listview")]
         [EnableQuery]
-        public async Task<IActionResult> GetListView()
+        public async Task<IActionResult> GetListView(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortBy = "ReceiveDate",
+            [FromQuery] string sortOrder = "Desc",
+            [FromQuery] RoBoardFiltersDto filters = null)
         {
-            var listView = await _repairOrderService.GetListViewAsync();
+            var listView = await _repairOrderService.GetListViewAsync(filters, sortBy, sortOrder, page, pageSize);
             return Ok(listView);
         }
         

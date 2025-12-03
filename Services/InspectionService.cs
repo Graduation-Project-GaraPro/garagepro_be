@@ -690,10 +690,14 @@ namespace Services
                     if (goodServicesInspectionTotal > 0)
                     {
                         quotationEntity.TotalAmount += goodServicesInspectionTotal;
+                        
+                        // Update RO cost: Good services
+                        if (quotationEntity.RepairOrder != null)
+                        {
+                            quotationEntity.RepairOrder.Cost += goodServicesInspectionTotal;
+                        }
                     }
 
-                    // DO NOT update RO cost here - customer response will handle it
-                    // Manager only creates quotation and shows preview to customer
 
                     await _dbContext.SaveChangesAsync();
 

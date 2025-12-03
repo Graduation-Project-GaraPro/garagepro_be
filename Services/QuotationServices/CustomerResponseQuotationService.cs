@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -90,7 +90,7 @@ namespace Services.QuotationServices
                     
                     if (quotation.RepairOrder != null)
                     {
-                        quotation.RepairOrder.Cost = quotation.InspectionFee;
+                        quotation.RepairOrder.Cost += quotation.InspectionFee;
                     }
                     
                     quotation.Status = status;
@@ -268,7 +268,6 @@ namespace Services.QuotationServices
 
             quotation.TotalAmount = totalAmount;
             
-            // Update RO cost with final total (replace, not add)
             if (quotation.RepairOrder != null)
             {
                 quotation.RepairOrder.Cost += totalAmount;
@@ -301,20 +300,16 @@ namespace Services.QuotationServices
         {
             foreach (var quotationService in quotation.QuotationServices)
             {
-                
                 var service = await _serviceRepository.GetByIdAsync(quotationService.ServiceId);
 
                 if (service != null)
                 {
-                    
                     var selectedParts = quotationService.QuotationServiceParts
                         .Where(qsp => qsp.IsSelected)
                         .ToList();
 
-                    
                     if (!service.IsAdvanced && selectedParts.Count > 1)
                     {
-                        // Keep only the first selected part and deselect the rest
                         for (int i = 1; i < selectedParts.Count; i++)
                         {
                             selectedParts[i].IsSelected = false;

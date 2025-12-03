@@ -929,25 +929,27 @@ namespace Services
             }
 
             // Rule 4: In Progress → Completed requires:
-            // - At least one quotation (any status), AND
-            // - EITHER: Has a "good quotation" (all services marked as Good) OR all jobs completed
+            // - EITHER: Has a "Good" status quotation (no repair needed) OR
+            // - Has quotation AND all jobs completed
             if (targetStatus.StatusName == "Completed")
             {
-                // Check if there's at least one quotation (any status)
+                // Check for Good status quotation (all services are good, no repair needed)
+                bool hasGoodStatusQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Good);
+
+                // If has Good quotation, allow completion immediately
+                if (hasGoodStatusQuotation)
+                {
+                    return true;
+                }
+
+                // Otherwise, check if there's at least one quotation (any status)
                 bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
                 
                 if (!hasAnyQuotation)
                 {
                     return false; // Must have at least one quotation
                 }
-
-                // Check for good quotation: approved AND all services have IsGood = true
-                bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
-                    q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
-                    q.QuotationServices != null &&
-                    q.QuotationServices.Any() &&
-                    q.QuotationServices.All(qs => qs.IsGood == true)
-                );
 
                 // Check if all jobs are completed (if jobs exist)
                 bool allJobsCompleted = true;
@@ -960,8 +962,8 @@ namespace Services
                     allJobsCompleted = !incompleteJobs.Any();
                 }
 
-                // Allow completion if has good quotation OR all jobs completed
-                if (!hasGoodQuotation && !allJobsCompleted)
+                // Allow completion if all jobs completed
+                if (!allJobsCompleted)
                 {
                     return false;
                 }
@@ -998,27 +1000,28 @@ namespace Services
             // In Progress → Completed validation message
             if (targetStatus.StatusName == "Completed")
             {
+                bool hasGoodStatusQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Good);
+                
+                if (hasGoodStatusQuotation)
+                {
+                    return "Can complete: Has Good quotation (no repair needed)";
+                }
+
                 bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
                 
                 if (!hasAnyQuotation)
                 {
                     return "Cannot complete: No quotation exists for this repair order";
                 }
-
-                bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
-                    q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
-                    q.QuotationServices != null &&
-                    q.QuotationServices.Any() &&
-                    q.QuotationServices.All(qs => qs.IsGood == true)
-                );
                 
                 var incompleteJobs = repairOrder.Jobs?
                     .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
                     .ToList() ?? new List<Job>();
 
-                if (!hasGoodQuotation && incompleteJobs.Any())
+                if (incompleteJobs.Any())
                 {
-                    return $"Cannot complete: No good quotation and {incompleteJobs.Count} job(s) incomplete. Either get a good quotation or complete all jobs.";
+                    return $"Cannot complete: {incompleteJobs.Count} job(s) incomplete. Complete all jobs to finish the repair order.";
                 }
             }
 
