@@ -3,7 +3,7 @@ name: Build & Push Docker Image (garagepro_be)
 on:
   push:
     branches:
-      - deploy
+      - deploy1
   workflow_dispatch:
 
 permissions:
