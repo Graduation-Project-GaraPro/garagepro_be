@@ -11,5 +11,6 @@ namespace Dtos.PayOsDtos
         public long PaymentId { get; set; }
         public long OrderCode { get; set; }
         public string CheckoutUrl { get; set; } = null!;
+        public string PaymentUrl { get; set; } = null!;
     }
 }

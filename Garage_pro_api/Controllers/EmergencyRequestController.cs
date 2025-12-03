@@ -32,9 +32,7 @@ namespace Garage_pro_api.Controllers
             _userService = userService;
         }
 
-        /// <summary>
-        ///  Tìm các gara gần nhất theo tọa độ.
-        /// </summary>
+       
         [HttpGet("nearby-branches")]
         public async Task<IActionResult> GetNearestBranches([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] int count = 5)
         {
@@ -52,9 +50,7 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Tạo yêu cầu cứu hộ mới.
-        /// </summary>
+       
         [HttpPost("create")]
         [Authorize(Roles = "Customer")] // Chỉ khách hàng đã đăng nhập mới gửi được
         public async Task<IActionResult> CreateEmergency([FromBody] CreateEmergencyRequestDto dto)
@@ -148,9 +144,6 @@ namespace Garage_pro_api.Controllers
             return Ok(request);
         }
 
-        /// <summary>
-        /// Lấy danh sách yêu cầu cứu hộ của khách hàng.
-        /// </summary>
         [HttpGet("customer/{customerId}")]
         public async Task<IActionResult> GetByCustomer(string customerId)
         {
@@ -161,9 +154,7 @@ namespace Garage_pro_api.Controllers
             return Ok(requests);
         }
 
-        /// <summary>
-        ///  Lấy chi tiết yêu cầu cứu hộ theo ID.
-        /// </summary>
+       
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -259,21 +250,9 @@ namespace Garage_pro_api.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (DbUpdateException dbEx)
-            {
-                // Log chi tiết lỗi database để debug
-                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
-                if (dbEx.InnerException != null)
-                {
-                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
-                }
-                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
-            }
             catch (Exception ex)
             {
-                // Log chi tiết lỗi để debug
-                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"Inner exception: {ex.InnerException.Message}");

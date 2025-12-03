@@ -104,6 +104,27 @@ namespace Garage_pro_api.Controllers.Vehicle
             }
         }
 
+        [HttpPost("customer")]
+        [Authorize(Roles = "Manager,Admin")]
+        public async Task<IActionResult> CreateVehicleForCustomer(CreateVehicleForCustomerDto vehicleDto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var createdVehicle = await _vehicleService.CreateVehicleForCustomerAsync(vehicleDto);
+                return CreatedAtAction(nameof(GetVehicleById), new { id = createdVehicle.VehicleID }, createdVehicle);
+            }
+            catch (Exception ex)
+            {
+                var msg = ex.Message ?? string.Empty;
+                if (msg.Contains("already exists", StringComparison.OrdinalIgnoreCase))
+                    return Conflict(new { message = msg });
+                return StatusCode(500, new { message = msg });
+            }
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteVehicle(Guid id)
         {

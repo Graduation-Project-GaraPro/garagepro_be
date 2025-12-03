@@ -287,7 +287,7 @@ namespace Garage_pro_api.Controllers
                 Token = accessToken,
                 ExpiresIn = policy.SessionTimeout * 60, // giây, khớp với access token
                 UserId = user.Id,
-                FullName = user.FullName,
+                FullName = user.FullName ?? user.LastName + " " + user.FirstName,
                 Email = user.Email,
                 BranchId = user.BranchId,
                 Roles = await _userManager.GetRolesAsync(user),

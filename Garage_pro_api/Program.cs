@@ -107,6 +107,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        opt.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
 
@@ -476,6 +477,7 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
@@ -566,15 +568,39 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();
+    var notificationService = provider.GetRequiredService<INotificationService>();
     var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService, dbContext);
+
+    var quotationHubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
+    var fcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+    return new Services.InspectionService(
+        inspectionRepository,
+        repairOrderRepository,
+        quotationService,
+        technicianAssignmentHubContext,
+        inspectionHubContext,
+        notificationService,
+        dbContext,
+        quotationHubContext,
+        fcmService,
+        userService
+    );
 });
+
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
-// Technician services
-builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+// Technician repository and services
+builder.Services.AddScoped<Repositories.InspectionAndRepair.ITechnicianRepository, Repositories.InspectionAndRepair.TechnicianRepository>();
+builder.Services.AddScoped<ITechnicianService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var userRepository = provider.GetRequiredService<IUserRepository>();
+    var technicianRepository = provider.GetRequiredService<Repositories.InspectionAndRepair.ITechnicianRepository>();
+    return new TechnicianService(jobRepository, userRepository, technicianRepository);
+});
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
@@ -678,8 +704,9 @@ builder.Services.AddCors(options =>
                 "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
                 "http://10.0.2.2:7113",
 "http://103.216.119.34:3000",
-                "http://103.216.119.34:3001"
-
+                "http://103.216.119.34:3001",
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -783,6 +810,7 @@ app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
 app.MapHub<RepairOrderArchiveHub>("/api/archivehub");
+app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");

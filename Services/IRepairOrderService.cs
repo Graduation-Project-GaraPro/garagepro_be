@@ -54,6 +54,7 @@ namespace Services
         Task<ArchiveOperationResultDto> ArchiveRepairOrderAsync(ArchiveRepairOrderDto archiveDto);
         Task<ArchiveOperationResultDto> RestoreRepairOrderAsync(RestoreRepairOrderDto restoreDto);
         Task<RoBoardListViewDto> GetArchivedRepairOrdersAsync(RoBoardFiltersDto filters = null, string sortBy = "ArchivedAt", string sortOrder = "Desc", int page = 1, int pageSize = 50);
+        Task<ArchivedRepairOrderDetailDto> GetArchivedRepairOrderDetailAsync(Guid repairOrderId);
         Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId);
         #endregion
 

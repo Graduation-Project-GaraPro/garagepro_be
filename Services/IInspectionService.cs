@@ -24,5 +24,7 @@ namespace Services
         Task<IEnumerable<CompletedInspectionDto>> GetCompletedInspectionsWithDetailsAsync();
         Task<bool> AssignInspectionToTechnicianAsync(Guid inspectionId, Guid technicianId);
         Task<QuotationDto> ConvertInspectionToQuotationAsync(ConvertInspectionToQuotationDto convertDto);
+        Task<InspectionDto> CreateManagerInspectionAsync(CreateManagerInspectionDto createManagerInspectionDto);
+        Task<IEnumerable<AvailableServiceDto>> GetAvailableServicesForInspectionAsync(Guid repairOrderId);
     }
 }

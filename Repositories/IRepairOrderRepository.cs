@@ -29,6 +29,7 @@ namespace Repositories
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);
         Task<IEnumerable<RepairOrder>> GetRepairOrdersForKanbanAsync(RoBoardFiltersDto filters = null);
         Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
+        Task<RepairOrder?> GetRepairOrderWithFullDetailsIncludingArchivedAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync();
 
         // Status update operations for drag-drop
