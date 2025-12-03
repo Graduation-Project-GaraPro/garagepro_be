@@ -11,5 +11,6 @@ namespace Services
         Task<IEnumerable<RoBoardCustomerDto>> GetAllCustomersAsync();
         Task<RoBoardCustomerDto> GetCustomerByIdAsync(string customerId);
         Task<RoBoardCustomerDto> CreateCustomerAsync(CreateCustomerDto createCustomerDto);
+        Task<RoBoardCustomerDto> QuickCreateCustomerAsync(QuickCreateCustomerDto quickCreateCustomerDto);
     }
 }

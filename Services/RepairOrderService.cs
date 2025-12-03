@@ -928,20 +928,28 @@ namespace Services
                 return false;
             }
 
-            // Rule 4: In Progress → Completed requires either:
-            // - All jobs completed, OR
-            // - Has at least one "good quotation" (approved + all services are IsGood)
+            // Rule 4: In Progress → Completed requires:
+            // - At least one quotation (any status), AND
+            // - EITHER: Has a "good quotation" (all services marked as Good) OR all jobs completed
             if (targetStatus.StatusName == "Completed")
             {
-                // Check for good quotation: approved AND all services have IsGood = true
-                bool hasGoodQuotation = repairOrder.Quotations != null && 
-                    repairOrder.Quotations.Any(q => 
-                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
-                        q.QuotationServices != null &&
-                        q.QuotationServices.Any() &&
-                        q.QuotationServices.All(qs => qs.IsGood == true)
-                    );
+                // Check if there's at least one quotation (any status)
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
+                
+                if (!hasAnyQuotation)
+                {
+                    return false; // Must have at least one quotation
+                }
 
+                // Check for good quotation: approved AND all services have IsGood = true
+                bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
+                    q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                    q.QuotationServices != null &&
+                    q.QuotationServices.Any() &&
+                    q.QuotationServices.All(qs => qs.IsGood == true)
+                );
+
+                // Check if all jobs are completed (if jobs exist)
                 bool allJobsCompleted = true;
                 if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
                 {
@@ -952,7 +960,7 @@ namespace Services
                     allJobsCompleted = !incompleteJobs.Any();
                 }
 
-                // Allow completion if either condition is met
+                // Allow completion if has good quotation OR all jobs completed
                 if (!hasGoodQuotation && !allJobsCompleted)
                 {
                     return false;
@@ -990,25 +998,27 @@ namespace Services
             // In Progress → Completed validation message
             if (targetStatus.StatusName == "Completed")
             {
-                // Check for good quotation: approved AND all services have IsGood = true
-                bool hasGoodQuotation = repairOrder.Quotations != null && 
-                    repairOrder.Quotations.Any(q => 
-                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
-                        q.QuotationServices != null &&
-                        q.QuotationServices.Any() &&
-                        q.QuotationServices.All(qs => qs.IsGood == true)
-                    );
-
-                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
+                
+                if (!hasAnyQuotation)
                 {
-                    var incompleteJobs = repairOrder.Jobs
-                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
-                        .ToList();
+                    return "Cannot complete: No quotation exists for this repair order";
+                }
 
-                    if (incompleteJobs.Any() && !hasGoodQuotation)
-                    {
-                        return $"Cannot complete: {incompleteJobs.Count} job(s) incomplete and no good quotation (all services must be marked as Good)";
-                    }
+                bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
+                    q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                    q.QuotationServices != null &&
+                    q.QuotationServices.Any() &&
+                    q.QuotationServices.All(qs => qs.IsGood == true)
+                );
+                
+                var incompleteJobs = repairOrder.Jobs?
+                    .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                    .ToList() ?? new List<Job>();
+
+                if (!hasGoodQuotation && incompleteJobs.Any())
+                {
+                    return $"Cannot complete: No good quotation and {incompleteJobs.Count} job(s) incomplete. Either get a good quotation or complete all jobs.";
                 }
             }
 
@@ -1039,42 +1049,44 @@ namespace Services
             // In Progress → Completed requirements
             if (targetStatus.StatusName == "Completed")
             {
-                // Check for good quotation: approved AND all services have IsGood = true
-                bool hasGoodQuotation = repairOrder.Quotations != null && 
-                    repairOrder.Quotations.Any(q => 
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
+
+                if (!hasAnyQuotation)
+                {
+                    requirements.Add("REQUIRED: Create at least one quotation (any status)");
+                }
+                else
+                {
+                    bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
                         q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
                         q.QuotationServices != null &&
                         q.QuotationServices.Any() &&
                         q.QuotationServices.All(qs => qs.IsGood == true)
                     );
 
-                if (!hasGoodQuotation)
-                {
-                    requirements.Add("Option 1: Get a 'good quotation' (approved quotation where all services are marked as Good/IsGood)");
-                }
-
-                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
-                {
-                    var incompleteJobs = repairOrder.Jobs
-                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
-                        .ToList();
-
-                    if (incompleteJobs.Any())
+                    if (!hasGoodQuotation)
                     {
-                        if (!hasGoodQuotation)
+                        requirements.Add("OPTION 1: Get a 'good quotation' (approved quotation where all services are marked as Good/IsGood)");
+                    }
+
+                    if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                    {
+                        var incompleteJobs = repairOrder.Jobs
+                            .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                            .ToList();
+
+                        if (incompleteJobs.Any())
                         {
-                            requirements.Add("Option 2: Complete all jobs:");
-                        }
-                        foreach (var job in incompleteJobs)
-                        {
-                            requirements.Add($"  - Job '{job.JobName}' (Current: {job.Status})");
+                            if (!hasGoodQuotation)
+                            {
+                                requirements.Add("OPTION 2: Complete all jobs:");
+                            }
+                            foreach (var job in incompleteJobs)
+                            {
+                                requirements.Add($"  - Job '{job.JobName}' (Current: {job.Status})");
+                            }
                         }
                     }
-                }
-
-                if (!hasGoodQuotation && (!repairOrder.Jobs?.Any() ?? true))
-                {
-                    requirements.Add("Either create a good quotation (all services marked as Good), or assign and complete jobs");
                 }
             }
 
@@ -1147,19 +1159,24 @@ namespace Services
                     return result;
                 }
 
-                // Validation: Only completed and fully paid RO can be archived
-                var completedStatus = await _orderStatusRepository.GetAllAsync();
-                var completedStatusId = completedStatus.FirstOrDefault(s => s.StatusName == "Completed")?.OrderStatusId;
+                // Validation: Only completed/cancelled RO can be archived
+                var allStatuses = await _orderStatusRepository.GetAllAsync();
+                var completedStatusId = allStatuses.FirstOrDefault(s => s.StatusName == "Completed")?.OrderStatusId;
 
-                if (repairOrder.StatusId != completedStatusId)
+                // Allow archiving if RO is completed OR cancelled
+                bool isCompleted = repairOrder.StatusId == completedStatusId;
+                bool isCancelled = repairOrder.IsCancelled;
+
+                if (!isCompleted && !isCancelled)
                 {
                     result.Success = false;
-                    result.Message = "Only completed repair orders can be archived";
-                    result.Errors.Add("Repair order must be in 'Completed' status");
+                    result.Message = "Only completed or cancelled repair orders can be archived";
+                    result.Errors.Add("Repair order must be in 'Completed' status or marked as cancelled");
                     return result;
                 }
 
-                if (repairOrder.PaidStatus != BusinessObject.Enums.PaidStatus.Paid)
+                // Only check payment status for completed orders (not for cancelled)
+                if (isCompleted && repairOrder.PaidStatus != BusinessObject.Enums.PaidStatus.Paid)
                 {
                     result.Success = false;
                     result.Message = "Only fully paid repair orders can be archived";
