@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject.Branches;
+using BusinessObject.Customers;
+using BusinessObject.Enums;
 using DataAccessLayer;
 using Dtos.Branches;
 using Microsoft.EntityFrameworkCore;
@@ -396,6 +398,8 @@ namespace Services.BranchServices
                     });
                 }
 
+                await EnsureNoConflictingRepairRequestsAsync(branch, dto.OperatingHours.ToList());
+
                 // === Update Operating Hours (diff) ===
                 foreach (var ohDto in dto.OperatingHours)
                 {
@@ -438,6 +442,8 @@ namespace Services.BranchServices
                 throw new ApplicationException("Error updating branch: " + ex.Message, ex);
             }
         }
+
+
 
 
 
@@ -620,5 +626,72 @@ namespace Services.BranchServices
 
             return result;
         }
+
+        private async Task EnsureNoConflictingRepairRequestsAsync(
+            Branch branch,
+            IList<OperatingHourDto> newOperatingHours)
+        {
+            var now = DateTime.UtcNow;
+
+            // Chỉ lấy các request đã được accept và còn trong tương lai
+            var futureAcceptedRequests = await _context.RepairRequests
+                .Where(r => r.BranchId == branch.BranchId
+                            && r.Status == RepairRequestStatus.Accept
+                            && r.RequestDate >= now)
+                .ToListAsync();
+
+            foreach (var request in futureAcceptedRequests)
+            {
+                // Map từ System.DayOfWeek sang DayOfWeekEnum custom
+                DayOfWeekEnum dayEnum = request.RequestDate.DayOfWeek switch
+                {
+                    DayOfWeek.Monday => DayOfWeekEnum.Monday,
+                    DayOfWeek.Tuesday => DayOfWeekEnum.Tuesday,
+                    DayOfWeek.Wednesday => DayOfWeekEnum.Wednesday,
+                    DayOfWeek.Thursday => DayOfWeekEnum.Thursday,
+                    DayOfWeek.Friday => DayOfWeekEnum.Friday,
+                    DayOfWeek.Saturday => DayOfWeekEnum.Saturday,
+                    DayOfWeek.Sunday => DayOfWeekEnum.Sunday,
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+
+                var oldOh = branch.OperatingHours
+                    .FirstOrDefault(o => o.DayOfWeek == dayEnum);
+
+                var newOh = newOperatingHours
+                    .FirstOrDefault(o => o.DayOfWeek == dayEnum);
+
+                // Nếu trước đó không có giờ mở cửa cho ngày này thì bỏ qua
+                if (oldOh == null || !oldOh.IsOpen || !oldOh.OpenTime.HasValue || !oldOh.CloseTime.HasValue)
+                    continue;
+
+                var bookingTime = request.RequestDate.TimeOfDay;
+
+                bool wasWithinOld =
+                    bookingTime >= oldOh.OpenTime.Value &&
+                    bookingTime <= oldOh.CloseTime.Value;
+
+                // Giờ mới: nếu không set hoặc IsOpen=false thì coi như đóng
+                bool isWithinNew = newOh != null &&
+                                   newOh.IsOpen &&
+                                   newOh.OpenTime.HasValue &&
+                                   newOh.CloseTime.HasValue &&
+                                   bookingTime >= newOh.OpenTime.Value &&
+                                   bookingTime <= newOh.CloseTime.Value;
+
+                
+                if (wasWithinOld && !isWithinNew)
+                {
+                    
+                    var msg =
+                        $"Cannot update operating hours because there is an accepted repair request " +
+                        $"on {request.RequestDate:dddd, yyyy-MM-dd 'at' HH:mm} " +
+                        $"that would fall outside the new opening hours.";
+
+                    throw new ApplicationException(msg);
+                }
+            }
+        }
+
     }
 }
