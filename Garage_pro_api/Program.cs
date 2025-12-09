@@ -235,6 +235,15 @@ builder.Services.AddAuthentication(options =>
         OnMessageReceived = context =>
         {
             Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+                Console.WriteLine($"SignalR WebSocket: Token from query string for {path}");
+            }
             return Task.CompletedTask;
         },
         OnTokenValidated = async context =>

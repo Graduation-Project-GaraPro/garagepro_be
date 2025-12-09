@@ -1,4 +1,5 @@
-﻿using BusinessObject.Notifications;
+﻿using BusinessObject.InspectionAndRepair;
+using BusinessObject.Notifications;
 using Dtos.InspectionAndRepair;
 using Microsoft.AspNetCore.SignalR;
 using Repositories.Notifiactions;
@@ -47,7 +48,7 @@ namespace Services.Notifications
                 Content = $"You have been assigned a new job: {jobName} ({serviceName})",
                 Type = NotificationType.Message,
                 Status = NotificationStatus.Unread,
-                Target = $"/technician/taskManagement",
+                Target = $"/technician/inspectionAndRepair/repair/repairProgress?id={jobId}",
                 TimeSent = DateTime.UtcNow
             };
 
@@ -181,7 +182,7 @@ namespace Services.Notifications
                 Content = $"You have been assigned a new inspection: {customerConcern}",
                 Type = NotificationType.Message,
                 Status = NotificationStatus.Unread,
-                Target = $"/technician/inspectionAndRepair/inspection",
+                Target = $"/technician/inspectionAndRepair/inspection/checkVehicle?id={inspectionId}",
                 TimeSent = DateTime.UtcNow
             };
 
@@ -216,7 +217,7 @@ namespace Services.Notifications
                 Content = $"Job '{jobName}' is {daysOverdue} day(s) overdue! Deadline was {deadline:dd/MM/yyyy}. Please complete it as soon as possible.",
                 Type = NotificationType.Warning,
                 Status = NotificationStatus.Unread,
-                Target = $"/technician/taskManagement",
+                Target = $"/technician/inspectionAndRepair/repair/repairProgress?id={jobId}",
                 TimeSent = DateTime.UtcNow
             };
 

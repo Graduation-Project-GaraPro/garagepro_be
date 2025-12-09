@@ -40,7 +40,7 @@ namespace Services.InspectionAndRepair
         {
             var jobs = await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
 
-            var now = DateTime.UtcNow.Date;
+            var now = DateTimeOffset.UtcNow;
             var validStatuses = new[]
             {
         JobStatus.New,
@@ -146,7 +146,7 @@ namespace Services.InspectionAndRepair
                     EntityId = job.RepairOrderId,
                     Screen = AppScreen.RepairProgressDetailFragment
                 };
-                //await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
+                await _fcmService.SendFcmMessageAsync(user?.DeviceId, FcmNotification);
 
             }
             // Send notification
