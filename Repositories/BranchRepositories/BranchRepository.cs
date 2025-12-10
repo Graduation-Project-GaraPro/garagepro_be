@@ -29,7 +29,8 @@ namespace Repositories.BranchRepositories
             return await _context.Branches
                 .Include(b => b.BranchServices).ThenInclude(bs => bs.Service)
                 .Include(b => b.OperatingHours)
-                .Include(b => b.Staffs)             
+                .Include(b => b.Staffs)
+                .Include(b => b.RepairRequests)
                 .FirstOrDefaultAsync(b => b.BranchId == id);
         }
 

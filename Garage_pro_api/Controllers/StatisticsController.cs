@@ -81,7 +81,7 @@ namespace Controllers
                     .Select(g => new RepairOrderTrendDto
                     {
                         Period = g.Key?.ToString("yyyy-MM-dd") ?? "Unknown",
-                        TotalRevenue = g.Sum(x => x.PaidAmount),
+                        TotalRevenue = g.Sum(x => x.Cost),
                         OrderCount = g.Count()
                     }).ToList(),
                 "yearly" => roSummaries
@@ -90,7 +90,7 @@ namespace Controllers
                     .Select(g => new RepairOrderTrendDto
                     {
                         Period = g.Key?.ToString() ?? "Unknown",
-                        TotalRevenue = g.Sum(x => x.PaidAmount),
+                        TotalRevenue = g.Sum(x => x.Cost),
                         OrderCount = g.Count()
                     }).ToList(),
                 _ => // monthly
@@ -100,21 +100,21 @@ namespace Controllers
                     .Select(g => new RepairOrderTrendDto
                     {
                         Period = $"{g.Key.Year}-{g.Key.Month:00}",
-                        TotalRevenue = g.Sum(x => x.PaidAmount),
+                        TotalRevenue = g.Sum(x => x.Cost),
                         OrderCount = g.Count()
                     }).ToList()
             };
 
             // Top orders by paid amount for this period (take top 10)
             var topOrders = roSummaries
-                .OrderByDescending(r => r.PaidAmount)
+                .OrderByDescending(r => r.Cost)
                 .Take(10)
                 .Select(r => new TopOrderDto
                 {
                     RepairOrderId = r.RepairOrderId,
                     ShortId = r.RepairOrderId.ToString().Substring(0, 8),
                     Date = r.CompletionDate,
-                    Amount = r.PaidAmount,
+                    Amount = r.Cost,
                     BranchName = "", // fill if you have branch query; for now blank
                     CustomerName = "", // blank unless you project it in DTO
                     PaidStatus = r.PaidStatus

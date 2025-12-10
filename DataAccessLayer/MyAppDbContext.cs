@@ -148,6 +148,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .HasMaxLength(20);
+
             });
 
             modelBuilder.Entity<QuotationService>(entity =>
@@ -724,6 +725,9 @@ namespace DataAccessLayer
              .IsRequired(false)
              .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<RepairOrder>()
+            .Property(r => r.CarPickupStatus)
+            .HasConversion<int>();
 
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)

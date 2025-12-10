@@ -110,6 +110,35 @@ namespace Repositories
             await _context.SaveChangesAsync();
             return repairOrder;
         }
+        public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
+        {
+            try
+            {
+                var repairOrder = await _context.RepairOrders
+                    .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+
+                if (repairOrder == null)
+                    throw new KeyNotFoundException($"RepairOrder with Id = {repairOrderId} does not exist.");
+
+                
+                if (repairOrder.UserId != userId)
+                    throw new UnauthorizedAccessException("You do not have permission to update this RepairOrder.");
+
+                
+                if (!repairOrder.IsArchived)
+                    throw new InvalidOperationException("Car pickup status can only be updated when the RepairOrder is archived.");
+
+                repairOrder.CarPickupStatus = status;
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
 
         public async Task<bool> DeleteAsync(Guid repairOrderId)
         {
