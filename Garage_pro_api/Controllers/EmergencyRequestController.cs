@@ -296,10 +296,12 @@ namespace Garage_pro_api.Controllers
                 var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
                 await _technicianEmergencyService.UpdateEmergencyStatusAsync(assignTechnicianPayload.emergencyId, BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned, technicianId: assignTechnicianPayload.technicianUserId.ToString());
                 
-                if(result)
+                Console.WriteLine("Assignment result: " + result);
+                if (result)
                 {
                     var user = await _userService.GetUserByIdAsync(assignTechnicianPayload.technicianUserId.ToString());
 
+                    Console.WriteLine("Sending FCM notification to technician:");
 
                     if (user != null && user.DeviceId != null)
                     {
