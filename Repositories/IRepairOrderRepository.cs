@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
 using Dtos.RoBoard;
-using DataAccessLayer; // Add this for MyAppDbContext
+using DataAccessLayer;
+using BusinessObject.Enums; // Add this for MyAppDbContext
 
 namespace Repositories
 {
@@ -20,6 +21,7 @@ namespace Repositories
         Task<RepairOrder?> GetByIdArchivedAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
+        Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status);
         Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);

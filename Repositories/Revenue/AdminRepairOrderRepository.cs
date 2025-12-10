@@ -39,8 +39,8 @@ namespace Repositories.Revenue
                 .AsNoTracking()
                 .Where(r =>
                     !startDate.HasValue ||
-                    ((r.CompletionDate != null && r.CompletionDate >= startDate && r.CompletionDate <= endDate)
-                     || (r.CompletionDate == null && r.ReceiveDate != null && r.ReceiveDate >= startDate && r.ReceiveDate <= endDate))
+                    ((r.ArchivedAt != null && r.ArchivedAt >= startDate && r.ArchivedAt <= endDate)
+                     || (r.CompletionDate == null && r.CompletionDate >= startDate && r.CompletionDate <= endDate))
                 )
                 .OrderByDescending(r => r.CreatedAt)
                 .Skip(page * pageSize)
@@ -89,7 +89,11 @@ namespace Repositories.Revenue
         {
             var q = _context.RepairOrders
                 .AsNoTracking()
-                .Where(r => r.CompletionDate != null && r.CompletionDate >= start && r.CompletionDate <= end);
+                .Where(r =>     
+                        (r.ArchivedAt != null && r.ArchivedAt >= start && r.ArchivedAt <= end)
+                        ||       
+                        (r.CompletionDate != null && r.CompletionDate >= start && r.CompletionDate <= end)
+                    );
 
             if (branchId.HasValue)
                 q = q.Where(r => r.BranchId == branchId.Value);
@@ -110,6 +114,7 @@ namespace Repositories.Revenue
                 RepairOrderId = r.RepairOrderId,
                 CompletionDate = r.CompletionDate,
                 PaidAmount = r.PaidAmount,
+                Cost = r.Cost,
                 EstimatedAmount = r.EstimatedAmount,
                 StatusId = r.StatusId,
                 BranchId = r.BranchId,
