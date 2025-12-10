@@ -1,9 +1,9 @@
-name: Build & Push Docker Image (garagepro_be)
+name: Build, Push & Deploy (garagepro_be)
 
 on:
   push:
     branches:
-      - deploy1
+      - deploy2
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,9 @@ permissions:
 
 jobs:
   build-and-push:
+    name: Build & Push Docker Image
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -39,23 +41,86 @@ jobs:
           echo "TAG_TS=${TIMESTAMP}" >> $GITHUB_ENV
           echo "TAG_SHA=sha-${SHORT_SHA}" >> $GITHUB_ENV
           echo "TAG_LATEST=latest" >> $GITHUB_ENV
-          echo "::set-output name=tags::${IMAGE}:${TIMESTAMP},${IMAGE}:sha-${SHORT_SHA},${IMAGE}:latest"
 
-      - name: Build and push Docker image (multi-arch, with cache)
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           file: ./Garage_pro_api/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ env.IMAGE }}:${{ env.TAG_TS }},${{ env.IMAGE }}:${{ env.TAG_SHA }},${{ env.IMAGE }}:${{ env.TAG_LATEST }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.TAG_TS }}
+            ${{ env.IMAGE }}:${{ env.TAG_SHA }}
+            ${{ env.IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
       - name: Output image tags
         run: |
-          echo "Pushed images:"
-          echo "${{ env.IMAGE }}:${{ env.TAG_TS }}"
-          echo "${{ env.IMAGE }}:${{ env.TAG_SHA }}"
-          echo "${{ env.IMAGE }}:${{ env.TAG_LATEST }}"
+          echo "✅ Pushed images:"
+          echo "📦 ${{ env.IMAGE }}:${{ env.TAG_TS }}"
+          echo "📦 ${{ env.IMAGE }}:${{ env.TAG_SHA }}"
+          echo "📦 ${{ env.IMAGE }}:latest"
+
+  deploy:
+    name: Deploy to VPS
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Starting deployment..."
+            
+            # Navigate to project directory
+            cd ${{ secrets.VPS_PROJECT_PATH || '/deploy/api' }}
+            
+            echo "🛑 Stopping current containers..."
+            docker compose down -v
+            
+            echo "🗑️ Removing old images..."
+            docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/garagepro_api:latest || true
+            
+            echo "⬇️ Pulling latest image..."
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/garagepro_api:latest
+            
+            echo "🔄 Starting new containers..."
+            docker compose up -d
+            
+            echo "🧹 Cleaning up unused images..."
+            docker image prune -af
+            
+            echo "✅ Deployment completed!"
+            
+            echo "📊 Container status:"
+            docker compose ps
+            
+            echo "📝 Recent logs:"
+            docker compose logs --tail=50 garagepro-api
+
+      - name: Verify Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd ${{ secrets.VPS_PROJECT_PATH || '/deploy/api' }}
+            
+            # Check if container is running
+            if docker compose ps | grep -q "garagepro-api.*Up"; then
+              echo "✅ Container is running successfully!"
+              exit 0
+            else
+              echo "❌ Container failed to start!"
+              docker compose logs garagepro-api
+              exit 1
+            fi
