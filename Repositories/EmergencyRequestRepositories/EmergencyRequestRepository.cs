@@ -81,16 +81,43 @@ namespace Repositories.EmergencyRequestRepositories
 
         public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
         {
-            var emergency = await GetByIdAsync(emergencyId);
-            if (emergency == null) return false;
+            // 1. Find emergency
+            var emergency = await _context.RequestEmergencies
+                .FirstOrDefaultAsync(e => e.EmergencyRequestId == emergencyId);
 
+            if (emergency == null)
+                return false;
+
+            // 2. Check emergency status
+            if (emergency.Status != EmergencyStatus.Accepted)
+                throw new InvalidOperationException("Only emergencies with 'Accepted' status can be assigned.");
+
+            // 3. Check that technician exists
+            var technicianExists = await _context.Users
+                .AnyAsync(u => u.Id == technicianId);
+
+            if (!technicianExists)
+                throw new InvalidOperationException("Technician does not exist.");
+
+            // 4. Ensure technician is not in another active emergency
+            var technicianHasActiveEmergency = await _context.RequestEmergencies
+                .AnyAsync(e =>
+                    e.TechnicianId == technicianId &&
+                    (e.Status == EmergencyStatus.Assigned ||
+                     e.Status == EmergencyStatus.InProgress ||
+                     e.Status == EmergencyStatus.Towing));
+
+            if (technicianHasActiveEmergency)
+                throw new InvalidOperationException("Technician is already handling another emergency.");
+
+            // 5. Assign technician
             emergency.TechnicianId = technicianId;
             emergency.Status = EmergencyStatus.Assigned;
-            
 
             await _context.SaveChangesAsync();
             return true;
         }
+
 
 
 
