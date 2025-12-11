@@ -350,6 +350,18 @@ namespace Services
 
             return createdRepairOrder;
         }
+        public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
+        {
+            try
+            {
+                await _repairOrderRepository.UpdateCarPickupStatusAsync(repairOrderId, userId, status);
+            }
+            catch
+            {
+                
+                throw; // ném lại cho Controller xử lý
+            }
+        }
 
         public async Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder)
         {

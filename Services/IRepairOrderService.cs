@@ -1,4 +1,5 @@
 using BusinessObject;
+using BusinessObject.Enums;
 using Dtos.RepairOrder;
 using Dtos.RoBoard;
 using System;
@@ -23,6 +24,7 @@ namespace Services
         Task<RoBoardCardDto?> GetRepairOrderCardAsync(Guid repairOrderId);
         Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder, List<Guid> selectedServiceIds = null);
         Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder);
+        Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status);
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);

@@ -81,16 +81,43 @@ namespace Repositories.EmergencyRequestRepositories
 
         public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
         {
-            var emergency = await GetByIdAsync(emergencyId);
-            if (emergency == null) return false;
+            // 1. Find emergency
+            var emergency = await _context.RequestEmergencies
+                .FirstOrDefaultAsync(e => e.EmergencyRequestId == emergencyId);
 
+            if (emergency == null)
+                return false;
+
+            // 2. Check emergency status
+            if (emergency.Status != EmergencyStatus.Accepted)
+                throw new InvalidOperationException("Only emergencies with 'Accepted' status can be assigned.");
+
+            // 3. Check that technician exists
+            var technicianExists = await _context.Users
+                .AnyAsync(u => u.Id == technicianId);
+
+            if (!technicianExists)
+                throw new InvalidOperationException("Technician does not exist.");
+
+            // 4. Ensure technician is not in another active emergency
+            var technicianHasActiveEmergency = await _context.RequestEmergencies
+                .AnyAsync(e =>
+                    e.TechnicianId == technicianId &&
+                    (e.Status == EmergencyStatus.Assigned ||
+                     e.Status == EmergencyStatus.InProgress ||
+                     e.Status == EmergencyStatus.Towing));
+
+            if (technicianHasActiveEmergency)
+                throw new InvalidOperationException("Technician is already handling another emergency.");
+
+            // 5. Assign technician
             emergency.TechnicianId = technicianId;
             emergency.Status = EmergencyStatus.Assigned;
-            
 
             await _context.SaveChangesAsync();
             return true;
         }
+
 
 
 
@@ -111,7 +138,10 @@ namespace Repositories.EmergencyRequestRepositories
                 e.CustomerId == customerId &&
                 e.VehicleId == vehicleId &&
                 (e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending
-                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted));
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.InProgress
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Towing
+                 || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned));
         }
 
         public async Task<IEnumerable<RequestEmergency>> GetByCustomerAsync(string customerId)
@@ -120,6 +150,7 @@ namespace Repositories.EmergencyRequestRepositories
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
                 .Include(r=>r.Vehicle)
+                .Include(r=>r.Technician)
                 .Include(r => r.MediaFiles)
                 .Include(r=> r.RepairRequest)
                 .Where(r => r.CustomerId == customerId)
@@ -132,6 +163,7 @@ namespace Repositories.EmergencyRequestRepositories
                 .Include(r => r.Branch)
                 .Include(r => r.Customer)
                 .Include(r=> r.Vehicle)
+                .Include(r=>r.Technician)
                 .Include(r => r.MediaFiles)
                 .FirstOrDefaultAsync(r => r.EmergencyRequestId == id);
         }

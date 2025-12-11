@@ -238,6 +238,15 @@ builder.Services.AddAuthentication(options =>
         OnMessageReceived = context =>
         {
             Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+                Console.WriteLine($"SignalR WebSocket: Token from query string for {path}");
+            }
             return Task.CompletedTask;
         },
         OnTokenValidated = async context =>
@@ -567,10 +576,27 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();
+    var notificationService = provider.GetRequiredService<INotificationService>();
     var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService, dbContext);
+
+    var quotationHubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
+    var fcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+    return new Services.InspectionService(
+        inspectionRepository,
+        repairOrderRepository,
+        quotationService,
+        technicianAssignmentHubContext,
+        inspectionHubContext,
+        notificationService,
+        dbContext,
+        quotationHubContext,
+        fcmService,
+        userService
+    );
 });
+
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
@@ -681,6 +707,7 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://192.168.1.61:5117",
                 "http://10.224.41.46:5117",
                 "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
                 "http://10.0.2.2:7113",
