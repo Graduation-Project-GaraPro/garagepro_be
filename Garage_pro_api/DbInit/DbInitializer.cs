@@ -60,7 +60,7 @@ namespace Garage_pro_api.DbInit
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
 
             // Seed Vehicle Specifications
