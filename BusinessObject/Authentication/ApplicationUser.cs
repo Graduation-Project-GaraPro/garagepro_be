@@ -34,8 +34,7 @@ namespace BusinessObject.Authentication
         // Legacy properties
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
-        public string FullName { get; set; } = string.Empty;
-
+        public string FullName => $"{FirstName} {LastName}";
         public DateTime? LastLogin { get; set; }
         public string? Avatar { get; set; }
         public DateTime? DateOfBirth { get; set; }
