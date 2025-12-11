@@ -83,7 +83,7 @@ jobs:
             cd ${{ secrets.VPS_PROJECT_PATH || '/deploy/api' }}
             
             echo "🛑 Stopping current containers..."
-            docker compose down -v
+            docker compose down
             
             echo "🗑️ Removing old images..."
             docker rmi ${{ secrets.DOCKERHUB_USERNAME }}/garagepro_api:latest || true
