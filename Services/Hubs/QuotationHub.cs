@@ -32,6 +32,18 @@ namespace Services.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Quotation_{quotationId}");
         }
 
+        // Managers join to receive customer response notifications
+        public async Task JoinManagersGroup()
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, "Managers");
+            Console.WriteLine($"[QuotationHub] Connection {Context.ConnectionId} joined Managers group");
+        }
+
+        public async Task LeaveManagersGroup()
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Managers");
+        }
+
         public override async Task OnConnectedAsync()
         {
             await base.OnConnectedAsync();

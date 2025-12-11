@@ -20,7 +20,7 @@ using Repositories;
 using Repositories.BranchRepositories;
 using Repositories.CampaignRepositories;
 using Repositories.Customers;
-using Repositories.PartCategoryRepositories;
+
 using Repositories.PartRepositories;
 using Repositories.PolicyRepositories;
 using Repositories.QuotationRepositories;
@@ -490,12 +490,11 @@ builder.Services.AddScoped<IServiceService, ServiceService>();
 builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 
-builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
-builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
-
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
 builder.Services.AddScoped<IPartService, PartService>();
+builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
+builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
 
 builder.Services.AddHostedService<LogCleanupService>();
 

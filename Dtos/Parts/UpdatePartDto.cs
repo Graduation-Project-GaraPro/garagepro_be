@@ -7,8 +7,6 @@ namespace Dtos.Parts
         [Required(ErrorMessage = "PartCategoryId is required")]
         public Guid PartCategoryId { get; set; }
 
-        public Guid? BranchId { get; set; }
-
         [Required(ErrorMessage = "Name is required")]
         [MaxLength(100, ErrorMessage = "Name cannot exceed 100 characters")]
         public string Name { get; set; } = string.Empty;
