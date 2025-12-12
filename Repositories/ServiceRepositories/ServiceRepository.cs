@@ -42,6 +42,7 @@ namespace Repositories.ServiceRepositories
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
                 
                 .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
+                .AsSplitQuery()
 
 
                 .FirstOrDefaultAsync(s => s.ServiceId == id);
@@ -58,7 +59,7 @@ namespace Repositories.ServiceRepositories
                 .Include(s => s.PromotionalCampaignServices)
                 .Include(s => s.QuotationServices)
                 .Include(s => s.RequestServices)
-
+                .AsSplitQuery()
                 .AsQueryable();
             // nếu muốn Include category luôn:
             // return _context.Services.Include(s => s.ServiceCategory).AsQueryable();
