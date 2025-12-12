@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Services.FCMServices;
 using BusinessObject.FcmDataModels;
 using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 
 namespace Services
 {
@@ -669,6 +670,30 @@ namespace Services
 
         private RoBoardCardDto MapToRoBoardCardDto(RepairOrder repairOrder)
         {
+            var technicianNames = new List<string>();
+            
+            // Get technician names from inspections
+            if (repairOrder.Inspections != null)
+            {
+                var inspectionTechNames = repairOrder.Inspections
+                    .Where(i => i.Technician?.User != null)
+                    .Select(i => $"{i.Technician.User.FirstName} {i.Technician.User.LastName}".Trim())
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct();
+                technicianNames.AddRange(inspectionTechNames);
+            }
+            
+            if (repairOrder.Jobs != null)
+            {
+                var jobTechNames = repairOrder.Jobs
+                    .SelectMany(j => j.JobTechnicians ?? new List<JobTechnician>())
+                    .Where(jt => jt.Technician?.User != null)
+                    .Select(jt => $"{jt.Technician.User.FirstName} {jt.Technician.User.LastName}".Trim())
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct();
+                technicianNames.AddRange(jobTechNames);
+            }
+            
             return new RoBoardCardDto
             {
                 RepairOrderId = repairOrder.RepairOrderId,
@@ -688,6 +713,7 @@ namespace Services
                 Customer = MapToRoBoardCustomerDto(repairOrder.User),
                 Branch = MapToRoBoardBranchDto(repairOrder.Branch),
                 AssignedLabels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                TechnicianNames = technicianNames.Distinct().ToList(), // Remove any duplicates
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 UpdatedAt = repairOrder.UpdatedAt,
                 // Archive Management

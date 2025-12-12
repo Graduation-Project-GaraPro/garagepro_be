@@ -7,7 +7,6 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
     public class PartCategoriesController : ControllerBase
     {
         private readonly IPartCategoryService _partCategoryService;
