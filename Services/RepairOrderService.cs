@@ -10,13 +10,13 @@ using Dtos.RepairOrder;
 using Dtos.RoBoard;
 using Dtos.Vehicles;
 using Microsoft.AspNetCore.SignalR;
-using Services.Hubs; // Update namespace
+using Services.Hubs;
 using Repositories;
-using Repositories.ServiceRepositories; // Add this for service repository
+using Repositories.ServiceRepositories; 
 using Microsoft.EntityFrameworkCore;
 using Services.FCMServices;
 using BusinessObject.FcmDataModels;
-using BusinessObject.Enums; // Add this for ToListAsync
+using BusinessObject.Enums;
 
 namespace Services
 {
@@ -26,12 +26,11 @@ namespace Services
         private readonly IOrderStatusRepository _orderStatusRepository;
         private readonly IFcmService _fcmService;
         private readonly ILabelRepository _labelRepository;
-        private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
-        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; // Update namespace
-        private readonly IServiceRepository _serviceRepository; // Add service repository
-        private readonly IUserService _userService; // Add service repository
+        private readonly IHubContext<RepairOrderHub> _hubContext; 
+        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; 
+        private readonly IServiceRepository _serviceRepository; 
+        private readonly IUserService _userService; 
 
-        // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
         {
             { "Pending", "Orders waiting to be processed" },
@@ -45,13 +44,13 @@ namespace Services
             ILabelRepository labelRepository,
             IHubContext<RepairOrderHub> hubContext,
             IUserService userService,
-            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService) // Add service repository parameter
+            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService)
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
             _hubContext = hubContext;
-            _serviceRepository = serviceRepository; // Initialize service repository
+            _serviceRepository = serviceRepository;
             _fcmService = fcmService;
             _userService = userService;
             _archivedhubContext = archivedhubContext;

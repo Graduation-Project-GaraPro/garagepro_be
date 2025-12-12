@@ -33,6 +33,7 @@ namespace Repositories
                     .ThenInclude(jp => jp.Part)
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
+                        .ThenInclude(t => t.User)
                 .Include(j => j.Repair)
                 .FirstOrDefaultAsync(j => j.JobId == jobId);
         }
@@ -119,6 +120,7 @@ namespace Repositories
                     .ThenInclude(jp => jp.Part)
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
+                        .ThenInclude(t => t.User)
                 .Where(j => j.RepairOrderId == repairOrderId)
                 .OrderBy(j => j.CreatedAt)
                 .ToListAsync();
@@ -285,6 +287,7 @@ namespace Repositories
                         .ThenInclude(v => v.Model)
                 .Include(j => j.JobTechnicians)
                     .ThenInclude(jt => jt.Technician)
+                        .ThenInclude(t => t.User)
                 .FirstOrDefaultAsync(j => j.JobId == jobId);
         }
         public async Task<bool> AssignTechnicianToJobAsync(Guid jobId, Guid technicianId)
@@ -724,25 +727,30 @@ namespace Repositories
 
             foreach (var job in jobs)
             {
+                // Check if job is already assigned to any technician
+                var existingAssignments = await _context.JobTechnicians
+                    .Where(jt => jt.JobId == job.JobId)
+                    .ToListAsync();
+
+                // Remove all existing assignments (allows reassignment to same or different technician)
+                if (existingAssignments.Any())
+                {
+                    _context.JobTechnicians.RemoveRange(existingAssignments);
+                }
+
+                // Add new technician assignment
+                var jobTechnician = new JobTechnician
+                {
+                    JobId = job.JobId,
+                    TechnicianId = technicianId
+                };
+                _context.JobTechnicians.Add(jobTechnician);
+
                 // Update job status from Pending to New when assigned
                 job.Status = JobStatus.New;
                 job.AssignedByManagerId = managerId;
                 job.AssignedAt = timestamp;
                 job.UpdatedAt = timestamp;
-
-                // Add technician assignment
-                var existingAssignment = await _context.JobTechnicians
-                    .FirstOrDefaultAsync(jt => jt.JobId == job.JobId && jt.TechnicianId == technicianId);
-
-                if (existingAssignment == null)
-                {
-                    var jobTechnician = new JobTechnician
-                    {
-                        JobId = job.JobId,
-                        TechnicianId = technicianId
-                    };
-                    _context.JobTechnicians.Add(jobTechnician);
-                }
             }
 
             try
