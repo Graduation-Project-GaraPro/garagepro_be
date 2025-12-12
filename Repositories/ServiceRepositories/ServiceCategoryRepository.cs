@@ -52,6 +52,7 @@ namespace Repositories.ServiceRepositories
                             .ThenInclude(p => p.Parts)
                 .Include(c => c.ChildServiceCategories)
                 .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId)
+                .AsSplitQuery()
                 .AsQueryable();
 
             // 🔹 Lọc theo childServiceCategoryId
@@ -105,6 +106,7 @@ namespace Repositories.ServiceRepositories
                 .Include(c => c.ParentServiceCategory)
                 .Include(c => c.ChildServiceCategories)
                 .Include(c => c.Services)
+                .AsSplitQuery()
                 .AsQueryable();
 
             // 🔹 Nếu có parentServiceCategoryId → chỉ lấy theo parent đó
@@ -150,6 +152,7 @@ namespace Repositories.ServiceRepositories
                 .Include(sc => sc.Services)
                 .Include(sc => sc.ChildServiceCategories)
                     .ThenInclude(c => c.Services)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(sc => sc.ServiceCategoryId == id);
         }
 
@@ -161,7 +164,8 @@ namespace Repositories.ServiceRepositories
         {
             var query = _context.ServiceCategories
                 .Include(c => c.Services)
-                    .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)                       
+                    .ThenInclude(s => s.ServicePartCategories).ThenInclude(s => s.PartCategory).ThenInclude(p => p.Parts)
+                   .AsSplitQuery()
                 .AsQueryable();
 
             // Filter theo category
