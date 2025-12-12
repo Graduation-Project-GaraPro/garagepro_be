@@ -61,6 +61,11 @@ namespace Dtos.RoBoard
    
         public List<RoBoardLabelDto> AssignedLabels { get; set; } = new List<RoBoardLabelDto>();
         
+        /// <summary>
+        /// List of technician names working on this repair order (from inspections and jobs)
+        /// </summary>
+        public List<string> TechnicianNames { get; set; } = new List<string>();
+        
         public int OrderIndex { get; set; }
         
         public bool IsOverdue => EstimatedCompletionDate.HasValue && 

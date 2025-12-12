@@ -18,7 +18,6 @@ namespace Dtos.RepairOrder
         [Required]
         public RoType RoType { get; set; }
         
-        // New property to display the string name of the RoType
         public string RoTypeName => RoType.ToString();
         
         public DateTime? EstimatedCompletionDate { get; set; }
@@ -75,7 +74,6 @@ namespace Dtos.RepairOrder
         public int CompletedJobs { get; set; }
         public decimal ProgressPercentage { get; set; }
         
-        // Labels
         public List<RoBoardLabelDto> Labels { get; set; } = new List<RoBoardLabelDto>();
         
         // Cancel Management
