@@ -893,6 +893,20 @@ using (var scope = app.Services.CreateScope())
                 logger.LogError(ex, "Unexpected error while seeding database.");
                 throw;
             }
+
+            // --- CALL DbInitializer.Initialize() HERE ---
+            try
+            {
+                var dbInitializer = services.GetRequiredService<DbInitializer>();
+                logger.LogInformation("Running DbInitializer.Initialize() to seed additional data...");
+                await dbInitializer.Initialize();
+                logger.LogInformation("DbInitializer.Initialize() completed.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while running DbInitializer.Initialize().");
+                throw;
+            }
         }
         else
         {
@@ -908,5 +922,6 @@ using (var scope = app.Services.CreateScope())
         throw; // nếu bạn muốn app tiếp tục even on error, remove this throw
     }
 }
+
 
 app.Run();
