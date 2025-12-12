@@ -23,16 +23,56 @@ namespace Services.PartCategoryServices
             return parts.Select(MapToDto);
         }
 
+        public async Task<PartPagedResultDto> GetPagedPartsAsync(PaginationDto paginationDto)
+        {
+            var (items, totalCount) = await _partRepository.GetPagedAsync(paginationDto.Page, paginationDto.PageSize);
+            var totalPages = (int)Math.Ceiling(totalCount / (double)paginationDto.PageSize);
+
+            return new PartPagedResultDto
+            {
+                Items = items.Select(MapToDto).ToList(),
+                TotalCount = totalCount,
+                Page = paginationDto.Page,
+                PageSize = paginationDto.PageSize,
+                TotalPages = totalPages,
+                HasPreviousPage = paginationDto.Page > 1,
+                HasNextPage = paginationDto.Page < totalPages
+            };
+        }
+
         public async Task<IEnumerable<PartDto>> GetPartsByBranchAsync(Guid branchId)
         {
             var parts = await _partRepository.GetByBranchIdAsync(branchId);
             return parts.Select(MapToDto);
         }
 
+        public async Task<PartPagedResultDto> GetPagedPartsByBranchAsync(Guid branchId, PaginationDto paginationDto)
+        {
+            var (items, totalCount) = await _partRepository.GetPagedByBranchAsync(branchId, paginationDto.Page, paginationDto.PageSize);
+            var totalPages = (int)Math.Ceiling(totalCount / (double)paginationDto.PageSize);
+
+            return new PartPagedResultDto
+            {
+                Items = items.Select(MapToDto).ToList(),
+                TotalCount = totalCount,
+                Page = paginationDto.Page,
+                PageSize = paginationDto.PageSize,
+                TotalPages = totalPages,
+                HasPreviousPage = paginationDto.Page > 1,
+                HasNextPage = paginationDto.Page < totalPages
+            };
+        }
+
         public async Task<PartDto> GetPartByIdAsync(Guid id)
         {
             var part = await _partRepository.GetByIdAsync(id);
             return part != null ? MapToDto(part) : null;
+        }
+
+        public async Task<EditPartDto> GetPartForEditAsync(Guid id)
+        {
+            var part = await _partRepository.GetByIdAsync(id);
+            return part != null ? MapToEditDto(part) : null;
         }
 
         public async Task<PartDto> CreatePartAsync(CreatePartDto dto)
@@ -50,19 +90,19 @@ namespace Services.PartCategoryServices
             return MapToDto(created);
         }
 
-        public async Task<PartDto> UpdatePartAsync(Guid id, UpdatePartDto dto)
+        public async Task<EditPartDto> UpdatePartAsync(Guid id, UpdatePartDto dto)
         {
             var existingPart = await _partRepository.GetByIdAsync(id);
             if (existingPart == null) return null;
 
             existingPart.PartCategoryId = dto.PartCategoryId;
-            existingPart.BranchId = dto.BranchId;
+            // BranchId is NOT updated - it remains unchanged to preserve original branch assignment
             existingPart.Name = dto.Name;
             existingPart.Price = dto.Price;
             existingPart.Stock = dto.Stock;
 
             var updated = await _partRepository.UpdateAsync(existingPart);
-            return MapToDto(updated);
+            return MapToEditDto(updated);
         }
 
         public async Task<bool> DeletePartAsync(Guid id)
@@ -98,6 +138,23 @@ namespace Services.PartCategoryServices
             };
         }
 
+        public async Task<IEnumerable<PartDto>> GetPartsForServiceAsync(Guid serviceId)
+        {
+            var parts = await _partRepository.GetPartsForServiceAsync(serviceId);
+            return parts.Select(MapToDto);
+        }
+
+        public async Task<bool> UpdateServicePartCategoriesAsync(Guid serviceId, List<Guid> partCategoryIds)
+        {
+            return await _partRepository.UpdateServicePartCategoriesAsync(serviceId, partCategoryIds);
+        }
+
+        public async Task<ServicePartCategoryDto> GetServicePartCategoriesAsync(Guid serviceId)
+        {
+            var serviceWithCategories = await _partRepository.GetServiceWithPartCategoriesAsync(serviceId);
+            return serviceWithCategories;
+        }
+
         private PartDto MapToDto(Part part)
         {
             return new PartDto
@@ -107,6 +164,21 @@ namespace Services.PartCategoryServices
                 PartCategoryName = part.PartCategory?.CategoryName ?? "",
                 BranchId = part.BranchId,
                 BranchName = part.Branch?.BranchName ?? "",
+                Name = part.Name,
+                Price = part.Price,
+                Stock = part.Stock,
+                CreatedAt = part.CreatedAt,
+                UpdatedAt = part.UpdatedAt
+            };
+        }
+
+        private EditPartDto MapToEditDto(Part part)
+        {
+            return new EditPartDto
+            {
+                PartId = part.PartId,
+                PartCategoryId = part.PartCategoryId,
+                PartCategoryName = part.PartCategory?.CategoryName ?? "",
                 Name = part.Name,
                 Price = part.Price,
                 Stock = part.Stock,

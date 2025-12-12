@@ -60,7 +60,7 @@ namespace Garage_pro_api.DbInit
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
 
             // Seed Vehicle Specifications
@@ -444,6 +444,7 @@ namespace Garage_pro_api.DbInit
                                 "Manager", new[]
                                 {
 
+                                    "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
                                     //"USER_VIEW", "JOB_MANAGE", "JOB_VIEW",
                                     //"BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
                                     //"VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"

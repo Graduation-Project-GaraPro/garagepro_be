@@ -11,7 +11,7 @@ using Dtos.Services;
 
 using Microsoft.EntityFrameworkCore;
 using Repositories.BranchRepositories;
-using Repositories.PartCategoryRepositories;
+using Repositories.PartRepositories;
 using Repositories.PartRepositories;
 using Repositories.ServiceRepositories;
 
@@ -151,10 +151,11 @@ namespace Services.ServiceServices
 
                 if (dto.PartCategoryIds?.Any() == true)
                 {
-                    var validPartIds = await _partCategoryRepository.Query()
+                    var allPartCategories = await _partCategoryRepository.GetAllAsync();
+                    var validPartIds = allPartCategories
                         .Where(p => dto.PartCategoryIds.Contains(p.LaborCategoryId))
                         .Select(p => p.LaborCategoryId)
-                        .ToListAsync();
+                        .ToList();
 
                     var invalidPartIds = dto.PartCategoryIds.Except(validPartIds).ToList();
                     if (invalidPartIds.Any())
@@ -246,10 +247,11 @@ namespace Services.ServiceServices
                 // Check Part Category hợp lệ
                 if (partCategoryIds.Any())
                 {
-                    var validPartIds = await _partCategoryRepository.Query()
+                    var allPartCategories = await _partCategoryRepository.GetAllAsync();
+                    var validPartIds = allPartCategories
                         .Where(p => partCategoryIds.Contains(p.LaborCategoryId))   // nếu PK là LaborCategoryId
                         .Select(p => p.LaborCategoryId)
-                        .ToListAsync();
+                        .ToList();
 
                     var invalidPartIds = partCategoryIds.Except(validPartIds).ToList();
                     if (invalidPartIds.Any())

@@ -34,7 +34,6 @@ namespace Dtos.RoBoard
         
         public DateTime? UpdatedAt { get; set; }
         
-        // Archive Management
         public bool IsArchived { get; set; }
         
         public DateTime? ArchivedAt { get; set; }
@@ -43,34 +42,27 @@ namespace Dtos.RoBoard
         
         public string ArchivedBy { get; set; }
         
-        // Cancellation Management
         public bool IsCancelled { get; set; }
         
         public DateTime? CancelledAt { get; set; }
         
         public string CancelReason { get; set; }
         
-        // Current status information
         public int StatusId { get; set; }
         
         public string StatusName { get; set; }
         
-        // Vehicle information for display
         public RoBoardVehicleDto Vehicle { get; set; }
         
-        // Customer information for display
         public RoBoardCustomerDto Customer { get; set; }
         
-        // Branch information
         public RoBoardBranchDto Branch { get; set; }
         
-        // Current labels assigned to this repair order
+   
         public List<RoBoardLabelDto> AssignedLabels { get; set; } = new List<RoBoardLabelDto>();
         
-        // Priority or order within the column
         public int OrderIndex { get; set; }
         
-        // Additional display properties
         public bool IsOverdue => EstimatedCompletionDate.HasValue && 
                                 EstimatedCompletionDate.Value < DateTime.UtcNow && 
                                 CompletionDate == null;

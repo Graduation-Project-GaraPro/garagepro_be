@@ -22,6 +22,13 @@ namespace Garage_pro_api.Controllers
             _jobService = jobService;
         }
 
+        private string GetTechnicianName(Job job)
+        {
+            return job.JobTechnicians?.FirstOrDefault()?.Technician?.User != null 
+                ? $"{job.JobTechnicians.FirstOrDefault().Technician.User.FirstName} {job.JobTechnicians.FirstOrDefault().Technician.User.LastName}".Trim() 
+                : "Unassigned";
+        }
+
         // GET: api/Job
         [HttpGet]
         [EnableQuery]
@@ -60,6 +67,7 @@ namespace Garage_pro_api.Controllers
                     UpdatedAt = job.UpdatedAt,
                     AssignedByManagerId = job.AssignedByManagerId,
                     AssignedAt = job.AssignedAt,
+                    TechnicianName = GetTechnicianName(job),
                     Parts = jobPartDtos.ToList()
                 };
                 
@@ -107,6 +115,7 @@ namespace Garage_pro_api.Controllers
                 UpdatedAt = job.UpdatedAt,
                 AssignedByManagerId = job.AssignedByManagerId,
                 AssignedAt = job.AssignedAt,
+                TechnicianName = GetTechnicianName(job),
                 Parts = jobPartDtos.ToList()
             };
 
@@ -151,6 +160,7 @@ namespace Garage_pro_api.Controllers
                     UpdatedAt = job.UpdatedAt,
                     AssignedByManagerId = job.AssignedByManagerId,
                     AssignedAt = job.AssignedAt,
+                    TechnicianName = GetTechnicianName(job),
                     Parts = jobPartDtos.ToList()
                 };
                 
@@ -359,39 +369,6 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred while assigning jobs: {ex.Message}");
             }
         }
-
-        //// PUT: api/Job/{id}/reassign/{technicianId}
-        //[HttpPut("{id}/reassign/{technicianId}")]
-        //[Authorize(Policy = "BOOKING_MANAGE")]
-        //public async Task<ActionResult> ReassignJobToTechnician(Guid id, Guid technicianId)
-        //{
-        //    // Get the current user (manager) ID
-        //    var managerId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        //    if (string.IsNullOrEmpty(managerId))
-        //    {
-        //        return BadRequest("Manager ID not found in token");
-        //    }
-
-        //    try
-        //    {
-        //        var result = await _jobService.ReassignJobToTechnicianAsync(id, technicianId, managerId);
-        //        if (!result)
-        //        {
-        //            return NotFound("Job not found or could not be reassigned");
-        //        }
-
-        //        return NoContent();
-        //    }
-        //    catch (InvalidOperationException ex)
-        //    {
-        //        return BadRequest(ex.Message);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        return StatusCode(500, $"An error occurred while reassigning the job: {ex.Message}");
-        //    }
-        //}
-       
 
         // GET: api/Job/{id}/parts
         [HttpGet("{id}/parts")]
