@@ -11,6 +11,7 @@ namespace Services.PartCategoryServices
         Task<PartCategoryPagedResultDto> GetPagedPartCategoriesAsync(PaginationDto paginationDto);
         Task<PartCategoryPagedResultDto> SearchPartCategoriesAsync(PartCategorySearchDto searchDto);
         Task<PartCategoryDto> GetPartCategoryByIdAsync(Guid id);
+        Task<IEnumerable<PartCategoryWithPartsDto>> GetAllWithPartsAsync();
         Task<PartCategoryDto> CreatePartCategoryAsync(CreatePartCategoryDto dto);
         Task<PartCategoryDto> UpdatePartCategoryAsync(Guid id, UpdatePartCategoryDto dto);
         Task<bool> DeletePartCategoryAsync(Guid id);
