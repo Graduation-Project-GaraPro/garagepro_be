@@ -1,5 +1,6 @@
 ﻿using BusinessObject.Enums;
 using BusinessObject.FcmDataModels;
+using Dtos.InspectionAndRepair;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -137,6 +138,37 @@ namespace Garage_pro_api.Controllers
                 return NotFound("Notification not found or you don't have permission");
 
             return NoContent();
+        }
+        //API chung cho tat ca thong bao
+        [HttpPost("send-general")]
+        public async Task<IActionResult> SendGeneralNotification([FromBody] SendNotificationRequest request)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(request.UserId))
+                    return BadRequest("UserId is required");
+
+                if (string.IsNullOrWhiteSpace(request.Content))
+                    return BadRequest("Content is required");
+
+                if (string.IsNullOrWhiteSpace(request.Target))
+                    return BadRequest("Target URL is required");
+
+                await _notificationService.SendGeneralNotificationAsync(
+                    request.UserId,
+                    request.Content,
+                    request.Type,
+                    request.Target,
+                    request.Title ?? "Notification",
+                    request.Metadata
+                );
+
+                return Ok(new { message = "Notification sent successfully" });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
     }
 }

@@ -245,5 +245,55 @@ namespace Services.Notifications
 
             Console.WriteLine($"[NotificationService] Job overdue notification sent to User_{userId} - {daysOverdue} days overdue");
         }
+        //Ham chung cho tat cac ca loại thong bao
+        public async Task SendGeneralNotificationAsync(
+            string userId,
+            string content,
+            NotificationType type,
+            string target,
+            string title = "Notification",
+            Dictionary<string, object> metadata = null)
+        {
+            var notification = new Notification
+            {
+                NotificationID = Guid.NewGuid(),
+                UserID = userId,
+                Content = content,
+                Type = type,
+                Status = NotificationStatus.Unread,
+                Target = target,
+                TimeSent = DateTime.UtcNow
+            };
+
+            await _notificationRepository.CreateNotificationAsync(notification);
+
+            var payload = new Dictionary<string, object>
+            {
+                ["NotificationId"] = notification.NotificationID,
+                ["Type"] = "GENERAL_NOTIFICATION",
+                ["Title"] = title,
+                ["Content"] = notification.Content,
+                ["Target"] = notification.Target,
+                ["TimeSent"] = notification.TimeSent,
+                ["Status"] = notification.Status.ToString(),
+                ["NotificationType"] = type.ToString()
+            };
+
+            if (metadata != null)
+            {
+                foreach (var item in metadata)
+                {
+                    payload[item.Key] = item.Value;
+                }
+            }
+
+            await _notificationHubContext.Clients
+                .Group($"User_{userId}")
+                .SendAsync("ReceiveNotification", payload);
+
+            await SendUnreadCountUpdateAsync(userId);
+
+            Console.WriteLine($"[NotificationService] General notification sent to User_{userId}");
+        }
     }
 }
