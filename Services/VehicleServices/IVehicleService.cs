@@ -16,6 +16,7 @@ namespace Services.VehicleServices
         Task<IEnumerable<VehicleDto>> GetUserVehiclesAsync(string userId);
         Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto);
         Task<VehicleDto> CreateVehicleAsync(CreateVehicleDto createVehicleDto, string userId);
+        Task<VehicleDto> CreateVehicleForCustomerAsync(CreateVehicleForCustomerDto createVehicleDto);
         Task<VehicleDto> UpdateVehicleAsync(Guid vehicleId, UpdateVehicleDto updateVehicleDto);
         Task<bool> DeleteVehicleAsync(Guid vehicleId);
         Task<bool> VehicleExistsAsync(Guid vehicleId);

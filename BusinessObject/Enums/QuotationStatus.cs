@@ -17,6 +17,9 @@ namespace BusinessObject.Enums
         Rejected,
         
         [Display(Name = "Expired")]
-        Expired
+        Expired,
+        
+        [Display(Name = "Good")]
+        Good // All services in inspection are Good - view only, no payment needed
     }
 }

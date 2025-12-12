@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace Dtos.Emergency
 {
@@ -59,6 +60,15 @@ namespace Dtos.Emergency
         public double DistanceKm { get; set; }
         public int DurationMinutes { get; set; }
         public JsonElement Geometry { get; set; }
+        public List<RouteStepDto> Steps { get; set; }
+    }
+
+    public class RouteStepDto
+    {
+        public string Instruction { get; set; }
+        public double DistanceMeters { get; set; }
+        public double DurationSeconds { get; set; }
+        public string Name { get; set; }
     }
 
 

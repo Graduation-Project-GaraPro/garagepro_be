@@ -89,6 +89,7 @@ using BusinessObject.PayOsModels;
 using Services.PayOsClients;
 using Services.BillServices;
 using Services.DeadlineServices;
+using BusinessObject.Customers;
 var builder = WebApplication.CreateBuilder(args);
 
 // OData Model Configuration
@@ -106,6 +107,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        opt.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
 
@@ -167,6 +169,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<QuotationProfile>();
     cfg.AddProfile<RepairOrderBillProfile>();
     cfg.AddProfile<RepairOrderArchivedProfile>();
+    cfg.AddProfile<TechemergencyProfile>();
 });
 
 builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
@@ -373,7 +376,8 @@ builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
     var repo = provider.GetRequiredService<IInspectionTechnicianRepository>();
     var mapper = provider.GetRequiredService<IMapper>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
-    return new InspectionTechnicianService(repo, mapper, repairOrderService);
+    var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService, inspectionHubContext);
 });
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
@@ -430,6 +434,9 @@ builder.Services.AddScoped<IEmergencyRequestService, EmergencyRequestService>();
 
 builder.Services.AddScoped<ICustomerResponseQuotationService, CustomerResponseQuotationService>();
 
+// Quotation tree selection service for hierarchical navigation
+builder.Services.AddScoped<IQuotationTreeSelectionService, QuotationTreeSelectionService>();
+
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationRepository, Repositories.QuotationRepositories.QuotationRepository>();
 builder.Services.AddScoped<Repositories.QuotationRepositories.IQuotationServiceRepository, Repositories.QuotationRepositories.QuotationServiceRepository>();
 // Update to use the new QuotationServicePartRepository
@@ -446,7 +453,7 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     //var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
     //var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
     var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
-   // var jobService = provider.GetRequiredService<Services.IJobService>();
+                                                                          // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
 
@@ -479,6 +486,7 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
@@ -542,6 +550,10 @@ builder.Services.AddScoped<IPromotionalCampaignService, PromotionalCampaignServi
 
 
 
+builder.Services.AddScoped<ITechnicianEmergencyService, TechnicianEmergencyService>();
+
+
+
 builder.Services.AddScoped<IRevenueService, RevenueService>();
 
 
@@ -565,14 +577,39 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();  
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService);
+    var notificationService = provider.GetRequiredService<INotificationService>();
+    var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
+
+    var quotationHubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
+    var fcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+    return new Services.InspectionService(
+        inspectionRepository,
+        repairOrderRepository,
+        quotationService,
+        technicianAssignmentHubContext,
+        inspectionHubContext,
+        notificationService,
+        dbContext,
+        quotationHubContext,
+        fcmService,
+        userService
+    );
 });
+
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
-// Technician services
-builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+// Technician repository and services
+builder.Services.AddScoped<Repositories.InspectionAndRepair.ITechnicianRepository, Repositories.InspectionAndRepair.TechnicianRepository>();
+builder.Services.AddScoped<ITechnicianService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var userRepository = provider.GetRequiredService<IUserRepository>();
+    var technicianRepository = provider.GetRequiredService<Repositories.InspectionAndRepair.ITechnicianRepository>();
+    return new TechnicianService(jobRepository, userRepository, technicianRepository);
+});
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
@@ -585,7 +622,11 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
     var userRepository = provider.GetRequiredService<IUserRepository>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
     var vehicleService = provider.GetRequiredService<IVehicleService>();
-    
+    var requestHub = provider.GetRequiredService<IHubContext<RepairRequestHub>>();
+    var iFcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+
     return new Services.Customer.RepairRequestService(
         unitOfWork,
         cloudinaryService,
@@ -593,7 +634,10 @@ builder.Services.AddScoped<Services.Customer.IRepairRequestService>(provider =>
         repairRequestRepository,
         userRepository,
         repairOrderService,
-        vehicleService
+        vehicleService,
+        requestHub,
+        iFcmService,
+        userService
     );
 });
 
@@ -664,9 +708,14 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://192.168.1.61:5117",
                 "http://10.224.41.46:5117",
-                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
-                "http://10.0.2.2:7113" 
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113",
+"http://103.216.119.34:3000",
+                "http://103.216.119.34:3001",
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -677,21 +726,56 @@ builder.Services.AddCors(options =>
 RepairRequestAppConfig.Initialize(builder.Configuration);
 
 // Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5117, listenOptions =>
-    {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
+//builder.WebHost.ConfigureKestrel(options =>
+//{
+//    options.ListenAnyIP(5117, listenOptions =>
+//    {
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
+//    });
 
-    options.ListenAnyIP(7113, listenOptions =>
-    {
-        listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
-    });
-});
+//    options.ListenAnyIP(7113, listenOptions =>
+//    {
+//        listenOptions.UseHttps();
+//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
+//    });
+//});
 
 var app = builder.Build();
+
+// --- Apply migrations + seed DB (run once on startup) ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        // 1) Áp migration (tạo DB + schema nếu cần)
+        var db = services.GetRequiredService<MyAppDbContext>();
+        logger.LogInformation("Applying pending migrations (if any)...");
+        db.Database.Migrate();
+        logger.LogInformation("Migrations applied.");
+
+        // 2) Gọi DbInitializer để seed dữ liệu (bạn đã register DbInitializer)
+        var dbInitializer = services.GetRequiredService<DbInitializer>();
+        logger.LogInformation("Seeding database...");
+        // Nếu DbInitializer chỉ có phương thức sync Initialize(), gọi nó.
+        // Nếu bạn muốn async, implement InitializeAsync() trong DbInitializer và await nó.
+        // Dưới đây giả sử Initialize() là sync. Nếu async, dùng: await dbInitializer.InitializeAsync();
+        dbInitializer.Initialize();
+        logger.LogInformation("Database seeding finished.");
+    }
+    catch (Exception ex)
+    {
+        // Nếu đang chạy trong container và DB chưa sẵn sàng, Log lỗi rõ ràng để debug
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        // Tuỳ bạn: nếu muốn dừng app khi không seed được, bỏ comment dòng dưới:
+        // throw;
+    }
+}
+// --- End migrations + seeding ---
+
+
 app.UseCors("AllowFrontendAndAndroid");
 
 // Configure the HTTP request pipeline.
@@ -718,11 +802,11 @@ app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
 app.MapHub<PermissionHub>("/hubs/permissions");
 app.MapHub<InspectionHub>("/hubs/inspection");
-app.MapHub<JobHub>("/hubs/job");            
+app.MapHub<JobHub>("/hubs/job");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
 app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
-
+app.MapHub<RepairRequestHub>("/hubs/repairRequest");
 app.UseAuthentication();
 
 app.UseMiddleware<UserActivityMiddleware>();
@@ -734,6 +818,8 @@ app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<RepairOrderArchiveHub>("/api/archivehub");
+app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
@@ -754,7 +840,7 @@ using (var scope = app.Services.CreateScope())
             RequireSpecialChar = true,
             RequireNumber = true,
             RequireUppercase = true,
-            SessionTimeout = 30,
+            SessionTimeout = 300,
             MaxLoginAttempts = 5,
             AccountLockoutTime = 15,
             PasswordExpiryDays = 90,

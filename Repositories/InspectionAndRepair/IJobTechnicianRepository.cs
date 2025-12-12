@@ -13,6 +13,8 @@ namespace Repositories.InspectionAndRepair
     public interface IJobTechnicianRepository
     {
         Task<List<Job>> GetJobsByTechnicianAsync(string userId);
+        Task<List<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId);
+        //Task UpdateJobAsync(Job job);
         Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null);
         Task<Technician?> GetTechnicianByUserIdAsync(string userId);
 

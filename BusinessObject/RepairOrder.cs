@@ -93,6 +93,8 @@ namespace BusinessObject
         public virtual FeedBack? FeedBack { get; set; }
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
 
+        public CarPickupStatus CarPickupStatus { get; set; } = CarPickupStatus.None;
+
         // ?? One-to-many (VoucherUsage)
         public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();

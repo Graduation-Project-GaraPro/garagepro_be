@@ -54,7 +54,7 @@ namespace Repositories.Customers
             .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
                 .Include(r => r.Customer)
-                .Include(r=>r.RequestEmergency)
+                .Include(r=>r.RequestEmergency).AsSplitQuery()
                 .ToListAsync();
         }
 
@@ -71,7 +71,7 @@ namespace Repositories.Customers
         .ThenInclude(rs => rs.RequestParts)
             .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
-                .Include(r => r.Customer)
+                .Include(r => r.Customer).AsSplitQuery()
                 .Where(r => r.BranchId == branchId)
                 .ToListAsync();
         }
@@ -86,7 +86,7 @@ namespace Repositories.Customers
         .ThenInclude(rs => rs.RequestParts)
             .ThenInclude(rp => rp.Part)
                 .Include(r => r.RepairImages)
-                .Include(r=> r.RequestEmergency)      
+                .Include(r=> r.RequestEmergency).AsSplitQuery()
                 .Where(r => r.UserID == userId)
                 .ToListAsync();
         }
@@ -96,7 +96,7 @@ namespace Repositories.Customers
             return await _context.RepairRequests
                 .Include(r => r.RepairImages)
                 .Include(r => r.RequestServices)
-                    .ThenInclude(rs => rs.RequestParts)
+                    .ThenInclude(rs => rs.RequestParts).AsSplitQuery()
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
         public async Task<RepairRequest> GetByIdAsync(Guid id)
@@ -109,8 +109,8 @@ namespace Repositories.Customers
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.RequestParts)
-                        .ThenInclude(rp => rp.Part)
-                
+                        .ThenInclude(rp => rp.Part).AsSplitQuery()
+
                                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);
         }
 
@@ -125,7 +125,6 @@ namespace Repositories.Customers
                 .Include(r => r.RequestServices)
                     .ThenInclude(rs => rs.Service)
                 .Include(r => r.RepairImages)
-                .Include(r => r.RepairOrder)
                 .Include(r => r.Customer)
                 
                 .FirstOrDefaultAsync(r => r.RepairRequestID == id);

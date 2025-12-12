@@ -153,7 +153,7 @@ namespace Dtos.RoBoard
         public DateTime? Birthday { get; set; }
         
         [Required(ErrorMessage = "Phone number is required")]
-        [Phone(ErrorMessage = "Invalid phone number format")]
+        [RegularExpression(@"^[0-9+\-\(\)\s]{10,20}$", ErrorMessage = "Phone number must be 10-20 digits and can include +, -, (), spaces")]
         [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
         public string PhoneNumber { get; set; }
         
@@ -163,6 +163,30 @@ namespace Dtos.RoBoard
         
         // Computed property for FullName
         public string FullName => $"{FirstName} {LastName}";
+    }
+
+    public class QuickCreateCustomerDto
+    {
+        [Required(ErrorMessage = "First name is required")]
+        [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
+        public string FirstName { get; set; }
+        
+        [Required(ErrorMessage = "Last name is required")]
+        [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
+        public string LastName { get; set; }
+        
+        [Required(ErrorMessage = "Phone number is required")]
+        [RegularExpression(@"^0[0-9]{9,19}$", ErrorMessage = "Phone number must start with 0 and contain 10-20 digits")]
+        [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        public string PhoneNumber { get; set; }
+        
+        // Optional fields
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [MaxLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        public string Email { get; set; }
+        
+        [DataType(DataType.Date)]
+        public DateTime? Birthday { get; set; }
     }
 
     public class UpdateCustomerDto
@@ -178,7 +202,7 @@ namespace Dtos.RoBoard
         public DateTime? Birthday { get; set; }
         
         [Required(ErrorMessage = "Phone number is required")]
-        [Phone(ErrorMessage = "Invalid phone number format")]
+        [RegularExpression(@"^[0-9+\-\(\)\s]{10,20}$", ErrorMessage = "Phone number must be 10-20 digits and can include +, -, (), spaces")]
         [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
         public string PhoneNumber { get; set; }
         

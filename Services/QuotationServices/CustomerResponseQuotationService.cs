@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -58,7 +58,7 @@ namespace Services.QuotationServices
 
             try
             {
-                // 1. Lấy quotation
+                
                 var quotation = await _quotationRepository.GetByIdAsync(responseDto.QuotationId);
                 if (quotation == null)
                     throw new ArgumentException($"Quotation with ID {responseDto.QuotationId} not found.");
@@ -72,10 +72,10 @@ namespace Services.QuotationServices
                 {
                     await ValidateCustomerResponseAsync(quotation, responseDto);
 
-                    // Xử lý service + part + promotion
+                   
                     await ProcessServiceAndPartSelectionAsync(quotation, responseDto);
 
-                    // Tính lại tổng
+                   
                     await RecalculateQuotationTotalAsync(quotation);
 
                     quotation.Status = status;
@@ -84,6 +84,15 @@ namespace Services.QuotationServices
                 }
                 else if (status == QuotationStatus.Rejected)
                 {
+                    
+                    quotation.TotalAmount = quotation.InspectionFee;
+                    
+                    
+                    if (quotation.RepairOrder != null)
+                    {
+                        quotation.RepairOrder.Cost += quotation.InspectionFee;
+                    }
+                    
                     quotation.Status = status;
                     quotation.CustomerResponseAt = DateTime.UtcNow;
                     quotation.CustomerNote = responseDto.CustomerNote;
@@ -102,6 +111,9 @@ namespace Services.QuotationServices
                 await SendQuotationUpdateNotificationAsync(quotation);
 
                 await NotifyPromotionsAppliedAsync(quotation);
+
+                
+                await NotifyManagersOfCustomerResponseAsync(quotation, status);
                 return _mapper.Map<QuotationDto>(quotation);
             }
             catch
@@ -113,7 +125,7 @@ namespace Services.QuotationServices
 
         private async Task ValidateCustomerResponseAsync(Quotation quotation, CustomerQuotationResponseDto responseDto)
         {
-            // Kiểm tra các dịch vụ bắt buộc phải được chọn
+            
             var requiredServices = quotation.QuotationServices.Where(qs => qs.IsRequired).ToList();
             var selectedServiceIds = responseDto.SelectedServices.Select(s => s.QuotationServiceId).ToHashSet();
 
@@ -144,7 +156,7 @@ namespace Services.QuotationServices
                     var isPromotionApplicable = await _promotionalCampaignRepo.IsPromotionApplicableForServiceAsync(
                         selectedService.AppliedPromotionId.Value,
                         quotationService.ServiceId,
-                        quotationService.Price);
+                        quotationService.Price + quotationService.QuotationServiceParts.Sum(x => x.Price));
 
                     if (!isPromotionApplicable)
                     {
@@ -174,29 +186,7 @@ namespace Services.QuotationServices
                     {
                         quotationService.AppliedPromotionId = serviceDto.AppliedPromotionId.Value;
 
-                        // Tính toán discount value
-                        var promotional = await _promotionalCampaignRepo.GetByIdAsync(serviceDto.AppliedPromotionId.Value);
-                        if (promotional != null)
-                        {
-                            if (promotional.UsageLimit <= 0)
-                                throw new Exception("Promotion has reached usage limit.");
-
-                            // Tính discount
-                            var discountValue = _promotionalCampaignRepo.CalculateActualDiscountValue(
-                                promotional,
-                                quotationService.Price);
-
-                            // Giảm limit
-                            promotional.UsageLimit--;
-                            promotional.UsedCount++;
-
-                            // Lưu lại vào DB
-                             _promotionalCampaignRepo.Update(promotional);
-                            
-
-                            quotationService.DiscountValue = discountValue;
-                        }
-
+                      
                     }
                     else
                     {
@@ -212,7 +202,7 @@ namespace Services.QuotationServices
                 }
                 else
                 {
-                    // Nếu dịch vụ không được chọn, reset promotion và bỏ chọn tất cả phụ tùng
+                   
                     quotationService.AppliedPromotionId = null;
                     quotationService.DiscountValue = 0;
 
@@ -223,7 +213,7 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Kiểm tra và điều chỉnh lựa chọn phụ tùng nếu cần
+            
             await ValidateAndCorrectPartSelectionAsync(quotation);
         }
 
@@ -231,25 +221,58 @@ namespace Services.QuotationServices
         {
             decimal totalAmount = 0;
 
-            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected))
+            // Only calculate for selected services that are NOT Good
+            foreach (var quotationService in quotation.QuotationServices.Where(qs => qs.IsSelected && !qs.IsGood))
             {
                 // Tính giá dịch vụ sau discount
-                var servicePrice = quotationService.Price - quotationService.DiscountValue;
-                totalAmount += servicePrice;
+                //var servicePrice = quotationService.Price - quotationService.DiscountValue;
+                //totalAmount += servicePrice;
                 decimal partTotals = 0;
                 // Tính giá phụ tùng được chọn
                 foreach (var part in quotationService.QuotationServiceParts.Where(p => p.IsSelected))
                 {
-                    totalAmount += part.Price * part.Quantity;
+                   
                     partTotals += part.Price * part.Quantity; 
                 }
 
+                // Tính toán discount value
+                if(quotationService.AppliedPromotionId.HasValue)
+                {
+                    var promotional = await _promotionalCampaignRepo.GetByIdAsync(quotationService.AppliedPromotionId.Value);
+                    if (promotional != null)
+                    {
+                        if (promotional.UsageLimit <= 0)
+                            throw new Exception("Promotion has reached usage limit.");
+
+                        // Tính discount
+                        var discountValue = _promotionalCampaignRepo.CalculateActualDiscountValue(
+                            promotional,
+                            quotationService.Price + partTotals);
+
+                        // Giảm limit
+                        promotional.UsageLimit--;
+                        promotional.UsedCount++;
+
+                        // Lưu lại vào DB
+                        _promotionalCampaignRepo.Update(promotional);
+
+
+                        quotationService.DiscountValue = discountValue;
+                    }
+                }    
+                
                 var finalPrice = quotationService.Price + partTotals - quotationService.DiscountValue;
+                totalAmount += finalPrice;
                 quotationService.FinalPrice = finalPrice;
             }
 
             quotation.TotalAmount = totalAmount;
-            quotation.RepairOrder.Cost += totalAmount;
+            
+            if (quotation.RepairOrder != null)
+            {
+                quotation.RepairOrder.Cost += totalAmount;
+            }
+            
             quotation.UpdatedAt = DateTime.UtcNow;
         }
         private async Task SendQuotationUpdateNotificationAsync(Quotation quotation)
@@ -272,25 +295,21 @@ namespace Services.QuotationServices
 
 
 
-        /// Validates and corrects part selection based on whether services are advanced or not.
+        
         private async Task ValidateAndCorrectPartSelectionAsync(Quotation quotation)
         {
             foreach (var quotationService in quotation.QuotationServices)
             {
-                // Load the full service information to check if it's advanced
                 var service = await _serviceRepository.GetByIdAsync(quotationService.ServiceId);
 
                 if (service != null)
                 {
-                    // Get all selected parts for this service
                     var selectedParts = quotationService.QuotationServiceParts
                         .Where(qsp => qsp.IsSelected)
                         .ToList();
 
-                    // If it's not an advanced service, ensure only one part is selected
                     if (!service.IsAdvanced && selectedParts.Count > 1)
                     {
-                        // Keep only the first selected part and deselect the rest
                         for (int i = 1; i < selectedParts.Count; i++)
                         {
                             selectedParts[i].IsSelected = false;
@@ -303,11 +322,11 @@ namespace Services.QuotationServices
 
         private async Task NotifyPromotionsAppliedAsync(Quotation quotation)
         {
-            // Only on approved quotations
+            
             if (quotation.Status != QuotationStatus.Approved)
                 return;
 
-            // Ensure QuotationServices and AppliedPromotion are loaded in GetByIdAsync
+            
             if (quotation.QuotationServices == null || !quotation.QuotationServices.Any())
                 return;
 
@@ -331,12 +350,12 @@ namespace Services.QuotationServices
                 Services = servicesWithPromo
             };
 
-            // 1) Send to global promotions dashboard group
+            
             await _promotionalHub.Clients
                 .Group("promotions-dashboard")
                 .SendAsync("PromotionAppliedToQuotation", payload);
 
-            // 2) Also send to each promotion-specific group
+            
             var promotionIds = servicesWithPromo
                 .Where(s => s.AppliedPromotionId.HasValue)
                 .Select(s => s.AppliedPromotionId!.Value)
@@ -352,7 +371,37 @@ namespace Services.QuotationServices
             }
         }
 
+        private async Task NotifyManagersOfCustomerResponseAsync(Quotation quotation, QuotationStatus status)
+        {
+            var customerName = quotation.User != null 
+                ? $"{quotation.User.FirstName} {quotation.User.LastName}".Trim() 
+                : "Unknown Customer";
 
+            var selectedServicesCount = quotation.QuotationServices?.Count(qs => qs.IsSelected) ?? 0;
+            var totalServicesCount = quotation.QuotationServices?.Count ?? 0;
+
+            await _quotationHubContext.Clients
+                .Group("Managers")
+                .SendAsync("CustomerRespondedToQuotation", new
+                {
+                    QuotationId = quotation.QuotationId,
+                    RepairOrderId = quotation.RepairOrderId,
+                    InspectionId = quotation.InspectionId,
+                    CustomerId = quotation.UserId,
+                    CustomerName = customerName,
+                    Status = status.ToString(),
+                    TotalAmount = quotation.TotalAmount,
+                    SelectedServicesCount = selectedServicesCount,
+                    TotalServicesCount = totalServicesCount,
+                    CustomerNote = quotation.CustomerNote,
+                    RespondedAt = quotation.CustomerResponseAt ?? DateTime.UtcNow,
+                    Message = status == QuotationStatus.Approved 
+                        ? $"Customer {customerName} approved quotation (${quotation.TotalAmount:F2})"
+                        : $"Customer {customerName} rejected quotation"
+                });
+
+            Console.WriteLine($"[CustomerResponseQuotationService] Sent CustomerRespondedToQuotation to Managers group for Quotation {quotation.QuotationId}");
+        }
 
     }
 }

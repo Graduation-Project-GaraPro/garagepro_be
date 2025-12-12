@@ -19,7 +19,9 @@ namespace Repositories.ServiceRepositories
             int pageNumber,
             int pageSize,
             Guid? childServiceCategoryId = null,
-            string? searchTerm = null);
+            string? searchTerm = null,
+            Guid? branchId = null
+            );
 
         Task<IEnumerable<ServiceCategory>> GetAllCategoriesWithFilterAsync(
             Guid? parentServiceCategoryId = null,

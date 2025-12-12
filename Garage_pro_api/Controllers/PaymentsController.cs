@@ -30,13 +30,14 @@ namespace Garage_pro_api.Controllers
         private readonly IQrCodeService _qrCodeService;
         private readonly IRepairOrderPaymentService _paymentService;
 
-        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService)
+        public PaymentsController(IPaymentService service, IPayOsClient payos, IWebhookInboxRepository webhookInboxRepo, UserManager<ApplicationUser> userManager, IQrCodeService qrCodeService, IRepairOrderPaymentService paymentService)
         {
             _service = service;
             _payos = payos;
             _webhookInboxRepo = webhookInboxRepo;
             _userManager = userManager;
             _qrCodeService = qrCodeService;
+            _paymentService = paymentService;
         }
 
         [HttpGet("{repairOrderId:guid}/payment")]
@@ -158,8 +159,8 @@ namespace Garage_pro_api.Controllers
                 if (paidPayment != null) 
                     return BadRequest($"Payment {paidPayment.PaymentId} already paid");
 
-                // Calculate the amount to pay (estimated amount minus already paid amount)
-                var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
+                // Calculate the amount to pay (actual cost from approved quotations)
+                var amountToPay = repairOrder.Cost;
 
                 // Create the payment record
                 var payment = await _service.CreateManualPaymentAsync(repairOrderId, userId, amountToPay, dto.Method, ct);
@@ -168,7 +169,7 @@ namespace Garage_pro_api.Controllers
                 string? qrCodeData = null;
                 if (dto.Method == PaymentMethod.PayOs)
                 {
-                    qrCodeData = await _qrCodeService.GeneratePaymentQrCodeAsync(repairOrderId, amountToPay, dto.Description ?? "Payment for repair order");
+                    qrCodeData = await _qrCodeService.GeneratePaymentQrCodeAsync(repairOrderId, amountToPay, "Payment for repair order");
                 }
                 
                 var response = new { 
@@ -184,7 +185,9 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return BadRequest(new { Message = ex.Message });
+                Console.WriteLine($"[PaymentsController] Error creating QR payment: {ex.Message}");
+                Console.WriteLine($"[PaymentsController] Stack trace: {ex.StackTrace}");
+                return BadRequest(new { Message = ex.Message, Error = ex.ToString() });
             }
         }
 
@@ -214,7 +217,7 @@ namespace Garage_pro_api.Controllers
                     return Forbid("Only managers can create QR payments for repair orders");
 
                 // Create PayOS payment link using the reusable service
-                var result = await _service.CreateManagerPayOsPaymentAsync(repairOrderId, userId, dto.Description, ct);
+                var result = await _service.CreateManagerPayOsPaymentAsync(repairOrderId, userId, null, ct);
 
                 var response = new
                 {

@@ -23,6 +23,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class RepairOrderController : ControllerBase
     {
         private readonly IRepairOrderService _repairOrderService;
@@ -169,7 +170,7 @@ namespace Garage_pro_api.Controllers
                     }
 
                 }
-                // Tính toán chi phí kh?n c?p n?u có
+                // Tï¿½nh toï¿½n chi phï¿½ kh?n c?p n?u cï¿½
               
 
                     // Create a new repair order based on the simplified DTO
@@ -268,9 +269,14 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/listview
         [HttpGet("listview")]
         [EnableQuery]
-        public async Task<IActionResult> GetListView()
+        public async Task<IActionResult> GetListView(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortBy = "ReceiveDate",
+            [FromQuery] string sortOrder = "Desc",
+            [FromQuery] RoBoardFiltersDto filters = null)
         {
-            var listView = await _repairOrderService.GetListViewAsync();
+            var listView = await _repairOrderService.GetListViewAsync(filters, sortBy, sortOrder, page, pageSize);
             return Ok(listView);
         }
         
@@ -357,10 +363,39 @@ namespace Garage_pro_api.Controllers
         // GET: api/RepairOrder/archived
         [HttpGet("archived")]
         [EnableQuery]
-        public async Task<IActionResult> GetArchivedRepairOrders([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        public async Task<IActionResult> GetArchivedRepairOrders(
+            [FromQuery] Guid? branchId = null,
+            [FromQuery] int page = 1, 
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string sortBy = "ArchivedAt",
+            [FromQuery] string sortOrder = "Desc")
         {
-            var archivedOrders = await _repairOrderService.GetArchivedRepairOrdersAsync(null, "ArchivedAt", "Desc", page, pageSize);
+            var filters = new RoBoardFiltersDto
+            {
+                OnlyArchived = true
+            };
+
+            if (branchId.HasValue)
+            {
+                filters.BranchIds = new List<Guid> { branchId.Value };
+            }
+
+            var archivedOrders = await _repairOrderService.GetArchivedRepairOrdersAsync(filters, sortBy, sortOrder, page, pageSize);
             return Ok(archivedOrders);
+        }
+
+        // GET: api/RepairOrder/archived/{id}
+        [HttpGet("archived/{id}")]
+        public async Task<IActionResult> GetArchivedRepairOrderDetail(Guid id)
+        {
+            var archivedDetail = await _repairOrderService.GetArchivedRepairOrderDetailAsync(id);
+            
+            if (archivedDetail == null)
+            {
+                return NotFound(new { message = "Archived repair order not found or repair order is not archived" });
+            }
+
+            return Ok(archivedDetail);
         }
         
         // POST: api/RepairOrder/cancel
@@ -407,6 +442,27 @@ namespace Garage_pro_api.Controllers
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+            }
+        }
+
+        // GET: api/RepairOrder/{id}/customer-vehicle-info
+        [HttpGet("{id}/customer-vehicle-info")]
+        public async Task<IActionResult> GetCustomerVehicleInfo(Guid id)
+        {
+            try
+            {
+                var info = await _repairOrderService.GetCustomerVehicleInfoAsync(id);
+                
+                if (info == null)
+                {
+                    return NotFound(new { message = "Repair order not found" });
+                }
+
+                return Ok(info);
             }
             catch (Exception ex)
             {

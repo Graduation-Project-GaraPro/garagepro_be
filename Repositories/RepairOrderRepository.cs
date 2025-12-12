@@ -32,12 +32,26 @@ namespace Repositories
         public async Task<RepairOrder?> GetByIdAsync(Guid repairOrderId)
         {
             return await _context.RepairOrders
+                .AsNoTracking()
+                .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
+                .Include(ro=>ro.Inspections).ThenInclude(r=>r.ServiceInspections)
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                .Include(ro => ro.User)
+                .Include(ro => ro.RepairOrderServices)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
+        }
+
+        public async Task<RepairOrder?> GetByIdArchivedAsync(Guid repairOrderId)
+        {
+            return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                 .Include(ro => ro.Labels)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                 .Include(ro => ro.User)
-                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && ro.IsArchived);
         }
 
         public async Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId)
@@ -96,6 +110,35 @@ namespace Repositories
             await _context.SaveChangesAsync();
             return repairOrder;
         }
+        public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
+        {
+            try
+            {
+                var repairOrder = await _context.RepairOrders
+                    .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+
+                if (repairOrder == null)
+                    throw new KeyNotFoundException($"RepairOrder with Id = {repairOrderId} does not exist.");
+
+                
+                if (repairOrder.UserId != userId)
+                    throw new UnauthorizedAccessException("You do not have permission to update this RepairOrder.");
+
+                
+                if (!repairOrder.IsArchived)
+                    throw new InvalidOperationException("Car pickup status can only be updated when the RepairOrder is archived.");
+
+                repairOrder.CarPickupStatus = status;
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                throw;
+            }
+        }
+
 
         public async Task<bool> DeleteAsync(Guid repairOrderId)
         {
@@ -161,16 +204,60 @@ namespace Repositories
                 .Include(ro => ro.Labels) // Include assigned labels for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Color)
                 .Include(ro => ro.User)
                 .Include(ro => ro.RepairOrderServices)
                     .ThenInclude(ros => ros.Service)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.RepairOrderServiceParts)
+                        .ThenInclude(rosp => rosp.Part)
                 .Include(ro => ro.Inspections)
+                    .ThenInclude(i => i.Technician)
+                        .ThenInclude(t => t.User)
                 .Include(ro => ro.Jobs)
                     .ThenInclude(j => j.JobTechnicians)
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
                 .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
+        }
+
+        public async Task<RepairOrder?> GetRepairOrderWithFullDetailsIncludingArchivedAsync(Guid repairOrderId)
+        {
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                    .ThenInclude(os => os.Labels)
+                .Include(ro => ro.Labels) // Include assigned labels for this repair order
+                .Include(ro => ro.Branch)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Color)
+                .Include(ro => ro.User)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.Service)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.RepairOrderServiceParts)
+                        .ThenInclude(rosp => rosp.Part)
+                .Include(ro => ro.Inspections)
+                    .ThenInclude(i => i.Technician)
+                        .ThenInclude(t => t.User)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
+                .Include(ro => ro.Payments)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
         }
 
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()

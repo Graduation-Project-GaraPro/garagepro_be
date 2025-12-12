@@ -1,6 +1,14 @@
 .git
-.vs
+
 bin
 obj
 Dockerfile
 docker-compose.yml
+
+**/node_modules
+
+.github
+*.log
+*.user
+*.suo
+*.vs

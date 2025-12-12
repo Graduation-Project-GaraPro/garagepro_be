@@ -18,7 +18,8 @@ namespace BusinessObject.Enums
         Order,
         Repair,
         Message,
-        System
+        System,
+        Emergency
     }
 
     public enum AppScreen
@@ -26,6 +27,9 @@ namespace BusinessObject.Enums
         QuotationDetailFragment,
         RepairProgressDetailFragment,
         RepairOrderArchivedDetailFragment,
-        HomeFragment
+        HomeFragment,
+        RepairRequestDetailFragment,
+        ReportsFragment
+
     }
 }

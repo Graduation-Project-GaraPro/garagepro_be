@@ -1,4 +1,5 @@
 using BusinessObject;
+using BusinessObject.Enums;
 using Dtos.RepairOrder;
 using Dtos.RoBoard;
 using System;
@@ -23,6 +24,7 @@ namespace Services
         Task<RoBoardCardDto?> GetRepairOrderCardAsync(Guid repairOrderId);
         Task<RepairOrder> CreateRepairOrderAsync(RepairOrder repairOrder, List<Guid> selectedServiceIds = null);
         Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder);
+        Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status);
         Task<bool> DeleteRepairOrderAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersAsync();
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);
@@ -54,6 +56,7 @@ namespace Services
         Task<ArchiveOperationResultDto> ArchiveRepairOrderAsync(ArchiveRepairOrderDto archiveDto);
         Task<ArchiveOperationResultDto> RestoreRepairOrderAsync(RestoreRepairOrderDto restoreDto);
         Task<RoBoardListViewDto> GetArchivedRepairOrdersAsync(RoBoardFiltersDto filters = null, string sortBy = "ArchivedAt", string sortOrder = "Desc", int page = 1, int pageSize = 50);
+        Task<ArchivedRepairOrderDetailDto> GetArchivedRepairOrderDetailAsync(Guid repairOrderId);
         Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId);
         #endregion
 
@@ -82,6 +85,15 @@ namespace Services
         /// <param name="repairOrder">The RepairOrder entity to map</param>
         /// <returns>A RepairOrderDto</returns>
         RepairOrderDto MapToRepairOrderDto(RepairOrder repairOrder);
+        #endregion
+
+        #region Customer and Vehicle Info
+        /// <summary>
+        /// Gets customer and vehicle information for a repair order
+        /// </summary>
+        /// <param name="repairOrderId">The ID of the repair order</param>
+        /// <returns>Customer and vehicle information DTO</returns>
+        Task<Dtos.RepairOrder.RoCustomerVehicleInfoDto> GetCustomerVehicleInfoAsync(Guid repairOrderId);
         #endregion
     }
 }

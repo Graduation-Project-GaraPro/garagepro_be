@@ -75,6 +75,9 @@ namespace Dtos.RepairOrder
         public int CompletedJobs { get; set; }
         public decimal ProgressPercentage { get; set; }
         
+        // Labels
+        public List<RoBoardLabelDto> Labels { get; set; } = new List<RoBoardLabelDto>();
+        
         // Cancel Management
         public bool IsCancelled { get; set; }
         public DateTime? CancelledAt { get; set; }

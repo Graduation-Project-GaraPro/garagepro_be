@@ -19,7 +19,11 @@ namespace Services
         private readonly IHubContext<JobHub> _jobHubContext;
         private readonly INotificationService _notificationService;
 
-        public JobService(IJobRepository jobRepository, IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, IHubContext<JobHub> jobHubContext, INotificationService notificationService)
+        public JobService(
+            IJobRepository jobRepository, 
+            IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, 
+            IHubContext<JobHub> jobHubContext, 
+            INotificationService notificationService)
         {
             _jobRepository = jobRepository;
             _technicianAssignmentHubContext = technicianAssignmentHubContext;
@@ -203,62 +207,7 @@ namespace Services
 
             return result;
         }
-
-        //public async Task<bool> ReassignJobToTechnicianAsync(Guid jobId, Guid newTechnicianId, string managerId)
-        //{
-        //    if (jobId == Guid.Empty)
-        //        throw new ArgumentException("Job ID is required", nameof(jobId));
-
-        //    if (newTechnicianId == Guid.Empty)
-        //        throw new ArgumentException("Technician ID is required", nameof(newTechnicianId));
-
-        //    if (string.IsNullOrWhiteSpace(managerId))
-        //        throw new ArgumentException("Manager ID is required", nameof(managerId));
-
-        //    if (!await _jobRepository.TechnicianExistsAsync(newTechnicianId))
-        //        throw new InvalidOperationException($"Technician with ID {newTechnicianId} not found.");
-
-        //    var result = await _jobRepository.ReassignJobToTechnicianAsync(jobId, newTechnicianId, managerId);
-
-        //    if (result)
-        //    {
-        //        var job = await _jobRepository.GetJobByIdAsync(jobId);
-        //        var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(newTechnicianId);
-
-        //        if (job != null)
-        //        {
-        //            // SignalR JobHub
-        //            await _jobHubContext.Clients
-        //                .Group($"Technician_{newTechnicianId}")
-        //                .SendAsync("JobReassigned", new
-        //                {
-        //                    JobId = jobId,
-        //                    TechnicianId = newTechnicianId,
-        //                    JobName = job.JobName,
-        //                    ServiceName = job.Service?.ServiceName,
-        //                    RepairOrderId = job.RepairOrderId,
-        //                    Status = job.Status.ToString(),
-        //                    ReassignedAt = DateTime.UtcNow,
-        //                    Message = "A job has been reassigned to you"
-        //                });
-
-        //            // GỬI NOTIFICATION
-        //            if (!string.IsNullOrEmpty(userId))
-        //            {
-        //                await _notificationService.SendJobReassignedNotificationAsync(
-        //                    userId,
-        //                    jobId,
-        //                    job.JobName,
-        //                    job.Service?.ServiceName ?? "N/A"
-        //                );
-        //            }
-
-        //            Console.WriteLine($"[JobService] Job {jobId} reassigned to User {userId}");
-        //        }
-        //    }
-
-        //    return result;
-        //}
+       
 
         public async Task<IEnumerable<Technician>> GetTechniciansByBranchIdAsync(Guid branchId)
         {
@@ -352,12 +301,173 @@ namespace Services
         // Status Management
         public async Task<bool> UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, string? changeNote = null)
         {
-            return await _jobRepository.UpdateJobStatusAsync(jobId, newStatus, changeNote);
+            // Get job details before update
+            var job = await _jobRepository.GetJobByIdAsync(jobId);
+            if (job == null) return false;
+
+            var oldStatus = job.Status;
+            
+            // Update status in repository
+            var result = await _jobRepository.UpdateJobStatusAsync(jobId, newStatus, changeNote);
+            
+            if (result)
+            {
+                // Send SignalR notification to Job group
+                await _jobHubContext.Clients
+                    .Group($"Job_{jobId}")
+                    .SendAsync("JobStatusChanged", new
+                    {
+                        JobId = jobId,
+                        JobName = job.JobName,
+                        RepairOrderId = job.RepairOrderId,
+                        OldStatus = oldStatus.ToString(),
+                        NewStatus = newStatus.ToString(),
+                        ChangeNote = changeNote,
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = $"Job status changed from {oldStatus} to {newStatus}"
+                    });
+
+                // Send notification to RepairOrder group
+                await _jobHubContext.Clients
+                    .Group($"RepairOrder_{job.RepairOrderId}")
+                    .SendAsync("JobStatusChanged", new
+                    {
+                        JobId = jobId,
+                        JobName = job.JobName,
+                        RepairOrderId = job.RepairOrderId,
+                        OldStatus = oldStatus.ToString(),
+                        NewStatus = newStatus.ToString(),
+                        ChangeNote = changeNote,
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = $"Job status changed from {oldStatus} to {newStatus}"
+                    });
+
+                // If job has assigned technicians, notify them
+                if (job.JobTechnicians != null && job.JobTechnicians.Any())
+                {
+                    foreach (var jobTech in job.JobTechnicians)
+                    {
+                        await _jobHubContext.Clients
+                            .Group($"Technician_{jobTech.TechnicianId}")
+                            .SendAsync("JobStatusChanged", new
+                            {
+                                JobId = jobId,
+                                JobName = job.JobName,
+                                RepairOrderId = job.RepairOrderId,
+                                TechnicianId = jobTech.TechnicianId,
+                                OldStatus = oldStatus.ToString(),
+                                NewStatus = newStatus.ToString(),
+                                ChangeNote = changeNote,
+                                UpdatedAt = DateTime.UtcNow,
+                                Message = $"Job status changed from {oldStatus} to {newStatus}"
+                            });
+                    }
+                }
+
+                // Notify Managers group
+                await _jobHubContext.Clients
+                    .Group("Managers")
+                    .SendAsync("JobStatusChanged", new
+                    {
+                        JobId = jobId,
+                        JobName = job.JobName,
+                        RepairOrderId = job.RepairOrderId,
+                        OldStatus = oldStatus.ToString(),
+                        NewStatus = newStatus.ToString(),
+                        ChangeNote = changeNote,
+                        UpdatedAt = DateTime.UtcNow,
+                        Message = $"Job status changed from {oldStatus} to {newStatus}"
+                    });
+
+                Console.WriteLine($"[JobService] Job {jobId} status changed from {oldStatus} to {newStatus}");
+            }
+            
+            return result;
         }
 
         public async Task<bool> BatchUpdateStatusAsync(List<(Guid JobId, JobStatus NewStatus, string? ChangeNote)> updates)
         {
-            return await _jobRepository.BatchUpdateStatusAsync(updates);
+            if (updates == null || !updates.Any()) return true;
+
+            // Get all jobs before update to capture old statuses
+            var jobIds = updates.Select(u => u.JobId).ToList();
+            var jobs = new Dictionary<Guid, Job>();
+            
+            foreach (var jobId in jobIds)
+            {
+                var job = await _jobRepository.GetJobByIdAsync(jobId);
+                if (job != null)
+                {
+                    jobs[jobId] = job;
+                }
+            }
+
+            // Perform batch update
+            var result = await _jobRepository.BatchUpdateStatusAsync(updates);
+            
+            if (result)
+            {
+                // Send SignalR notifications for each updated job
+                foreach (var update in updates)
+                {
+                    if (jobs.TryGetValue(update.JobId, out var job))
+                    {
+                        var oldStatus = job.Status;
+                        var payload = new
+                        {
+                            JobId = update.JobId,
+                            JobName = job.JobName,
+                            RepairOrderId = job.RepairOrderId,
+                            OldStatus = oldStatus.ToString(),
+                            NewStatus = update.NewStatus.ToString(),
+                            ChangeNote = update.ChangeNote,
+                            UpdatedAt = DateTime.UtcNow,
+                            Message = $"Job status changed from {oldStatus} to {update.NewStatus}"
+                        };
+
+                        // Notify Job group
+                        await _jobHubContext.Clients
+                            .Group($"Job_{update.JobId}")
+                            .SendAsync("JobStatusChanged", payload);
+
+                        // Notify RepairOrder group
+                        await _jobHubContext.Clients
+                            .Group($"RepairOrder_{job.RepairOrderId}")
+                            .SendAsync("JobStatusChanged", payload);
+
+                        // Notify assigned technicians
+                        if (job.JobTechnicians != null && job.JobTechnicians.Any())
+                        {
+                            foreach (var jobTech in job.JobTechnicians)
+                            {
+                                await _jobHubContext.Clients
+                                    .Group($"Technician_{jobTech.TechnicianId}")
+                                    .SendAsync("JobStatusChanged", new
+                                    {
+                                        payload.JobId,
+                                        payload.JobName,
+                                        payload.RepairOrderId,
+                                        TechnicianId = jobTech.TechnicianId,
+                                        payload.OldStatus,
+                                        payload.NewStatus,
+                                        payload.ChangeNote,
+                                        payload.UpdatedAt,
+                                        payload.Message
+                                    });
+                            }
+                        }
+
+                        // Notify Managers group
+                        await _jobHubContext.Clients
+                            .Group("Managers")
+                            .SendAsync("JobStatusChanged", payload);
+                    }
+                }
+
+                Console.WriteLine($"[JobService] Batch updated {updates.Count} job statuses with SignalR notifications");
+            }
+            
+            return result;
         }
 
         // Service Methods
@@ -371,6 +481,10 @@ namespace Services
         {
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
+
+            // Cannot assign job if it's already in progress
+            if (job.Status == JobStatus.InProgress)
+                return false;
 
             // Job can be assigned when status is Pending or New
             return job.Status == JobStatus.Pending || job.Status == JobStatus.New;

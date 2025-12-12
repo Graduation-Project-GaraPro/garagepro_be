@@ -8,11 +8,15 @@ using BusinessObject.Authentication;
 using BusinessObject.Branches;
 using Dtos.RepairOrder;
 using Dtos.RoBoard;
+using Dtos.Vehicles;
 using Microsoft.AspNetCore.SignalR;
 using Services.Hubs; // Update namespace
 using Repositories;
 using Repositories.ServiceRepositories; // Add this for service repository
-using Microsoft.EntityFrameworkCore; // Add this for ToListAsync
+using Microsoft.EntityFrameworkCore;
+using Services.FCMServices;
+using BusinessObject.FcmDataModels;
+using BusinessObject.Enums; // Add this for ToListAsync
 
 namespace Services
 {
@@ -20,9 +24,12 @@ namespace Services
     {
         private readonly IRepairOrderRepository _repairOrderRepository;
         private readonly IOrderStatusRepository _orderStatusRepository;
+        private readonly IFcmService _fcmService;
         private readonly ILabelRepository _labelRepository;
         private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
+        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; // Update namespace
         private readonly IServiceRepository _serviceRepository; // Add service repository
+        private readonly IUserService _userService; // Add service repository
 
         // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
@@ -37,13 +44,17 @@ namespace Services
             IOrderStatusRepository orderStatusRepository,
             ILabelRepository labelRepository,
             IHubContext<RepairOrderHub> hubContext,
-            IServiceRepository serviceRepository) // Add service repository parameter
+            IUserService userService,
+            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService) // Add service repository parameter
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
             _hubContext = hubContext;
             _serviceRepository = serviceRepository; // Initialize service repository
+            _fcmService = fcmService;
+            _userService = userService;
+            _archivedhubContext = archivedhubContext;
         }
 
         #region Kanban Board Operations
@@ -186,6 +197,17 @@ namespace Services
                     if (_hubContext != null)
                     {
                         await _hubContext.Clients.All.SendAsync("RepairOrderMoved", updateDto.RepairOrderId, updateDto.NewStatusId, result.UpdatedCard);
+
+                        //await _JobhubContext
+                        //             .Clients
+                        //             .Group($"RepairOrder_{updateDto.RepairOrderId}")
+                        //             .SendAsync(
+                        //                 "RepairOrderMoved",
+                        //                 updateDto.RepairOrderId
+
+                        //);
+
+
                     }
                 }
                 else
@@ -327,6 +349,18 @@ namespace Services
             }
 
             return createdRepairOrder;
+        }
+        public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
+        {
+            try
+            {
+                await _repairOrderRepository.UpdateCarPickupStatusAsync(repairOrderId, userId, status);
+            }
+            catch
+            {
+                
+                throw; // ném lại cho Controller xử lý
+            }
         }
 
         public async Task<RepairOrder> UpdateRepairOrderAsync(RepairOrder repairOrder)
@@ -701,6 +735,31 @@ namespace Services
                 CancelReason = repairOrder.CancelReason
             };
 
+            // Add vehicle details
+            if (repairOrder.Vehicle != null)
+            {
+                dto.Vehicle = new Dtos.Vehicles.VehicleDto
+                {
+                    VehicleID = repairOrder.Vehicle.VehicleId,
+                    BrandID = repairOrder.Vehicle.BrandId,
+                    UserID = repairOrder.Vehicle.UserId,
+                    ModelID = repairOrder.Vehicle.ModelId,
+                    ColorID = repairOrder.Vehicle.ColorId,
+                    LicensePlate = repairOrder.Vehicle.LicensePlate ?? "",
+                    VIN = repairOrder.Vehicle.VIN ?? "",
+                    Year = repairOrder.Vehicle.Year,
+                    Odometer = repairOrder.Vehicle.Odometer,
+                    LastServiceDate = repairOrder.Vehicle.LastServiceDate,
+                    NextServiceDate = repairOrder.Vehicle.NextServiceDate,
+                    WarrantyStatus = repairOrder.Vehicle.WarrantyStatus ?? "",
+                    CreatedAt = repairOrder.Vehicle.CreatedAt,
+                    UpdatedAt = repairOrder.Vehicle.UpdatedAt,
+                    BrandName = repairOrder.Vehicle.Brand?.BrandName ?? "Unknown",
+                    ModelName = repairOrder.Vehicle.Model?.ModelName ?? "Unknown",
+                    ColorName = repairOrder.Vehicle.Color?.ColorName ?? "Unknown"
+                };
+            }
+
             // Add technician names (from jobs)
             if (repairOrder.Jobs != null)
             {
@@ -723,10 +782,16 @@ namespace Services
                 dto.ProgressPercentage = dto.TotalJobs > 0 ? (decimal)(dto.CompletedJobs * 100) / dto.TotalJobs : 0;
             }
 
+            // Add labels
+            if (repairOrder.Labels != null && repairOrder.Labels.Any())
+            {
+                dto.Labels = repairOrder.Labels.Select(MapToRoBoardLabelDto).ToList();
+            }
+
             return dto;
         }
 
-        private RoBoardListItemDto MapToRoBoardListItemDto(RepairOrder repairOrder, int rowNumber)
+        private RoBoardListItemDto MapToRoBoardListItemDto(RepairOrder repairOrder, int rowNumber, bool includeLabels = true)
         {
             return new RoBoardListItemDto
             {
@@ -735,13 +800,16 @@ namespace Services
                 ReceiveDate = repairOrder.ReceiveDate,
                 EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
                 CompletionDate = repairOrder.CompletionDate,
+                Cost = repairOrder.Cost,
                 EstimatedAmount = repairOrder.EstimatedAmount,
                 PaidAmount = repairOrder.PaidAmount,
                 PaidStatus = repairOrder.PaidStatus,
                 StatusId = repairOrder.StatusId,
                 StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
                 StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
-                Labels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                Labels = includeLabels 
+                    ? (repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>())
+                    : new List<RoBoardLabelDto>(),
                 CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
                 CustomerEmail = repairOrder.User?.Email ?? "",
                 CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
@@ -847,25 +915,69 @@ namespace Services
 
         private async Task<bool> ApplyBusinessRules(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            // Business rule: Can't move from "Completed" back to other statuses
-            if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
+
+            // Rule 1: Completed can move back to In Progress only if not fully paid
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
+            {
+                // Allow if not fully paid
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    return false; // Fully paid, cannot move back
+                }
+                return true; // Not fully paid, allow moving back
+            }
+
+            // Rule 2: Can't move from Completed to Pending
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "Pending")
             {
                 return false;
             }
 
-            // Business rule: Can't complete RO if it has incomplete jobs
+            // Rule 3: Pending cannot move directly to Completed (must go through In Progress first)
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                return false;
+            }
+
+            // Rule 4: In Progress → Completed requires:
+            // - EITHER: Has a "Good" status quotation (no repair needed) OR
+            // - Has quotation AND all jobs completed
             if (targetStatus.StatusName == "Completed")
             {
+                // Check for Good status quotation (all services are good, no repair needed)
+                bool hasGoodStatusQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Good);
+
+                // If has Good quotation, allow completion immediately
+                if (hasGoodStatusQuotation)
+                {
+                    return true;
+                }
+
+                // Otherwise, check if there's at least one quotation (any status)
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
+                
+                if (!hasAnyQuotation)
+                {
+                    return false; // Must have at least one quotation
+                }
+
+                // Check if all jobs are completed (if jobs exist)
+                bool allJobsCompleted = true;
                 if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
                 {
                     var incompleteJobs = repairOrder.Jobs
                         .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
                         .ToList();
 
-                    if (incompleteJobs.Any())
-                    {
-                        return false;
-                    }
+                    allJobsCompleted = !incompleteJobs.Any();
+                }
+
+                // Allow completion if all jobs completed
+                if (!allJobsCompleted)
+                {
+                    return false;
                 }
             }
 
@@ -874,23 +986,54 @@ namespace Services
 
         private string GetBusinessRuleMessage(RepairOrder repairOrder, OrderStatus targetStatus)
         {
-            if (repairOrder.OrderStatus?.StatusName == "Completed" && targetStatus.StatusName != "Completed")
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
+
+            // Completed → In Progress validation message
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
             {
-                return "Cannot move completed orders back to previous statuses";
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    return "Cannot move back to In Progress: Order is fully paid";
+                }
             }
 
+            // Completed → Pending validation message
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "Pending")
+            {
+                return "Cannot move completed order back to Pending status";
+            }
+
+            // Pending → Completed validation message
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                return "Cannot complete order directly from Pending. Move to In Progress first";
+            }
+
+            // In Progress → Completed validation message
             if (targetStatus.StatusName == "Completed")
             {
-                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                bool hasGoodStatusQuotation = repairOrder.Quotations != null && 
+                    repairOrder.Quotations.Any(q => q.Status == BusinessObject.Enums.QuotationStatus.Good);
+                
+                if (hasGoodStatusQuotation)
                 {
-                    var incompleteJobs = repairOrder.Jobs
-                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
-                        .ToList();
+                    return "Can complete: Has Good quotation (no repair needed)";
+                }
 
-                    if (incompleteJobs.Any())
-                    {
-                        return $"Cannot complete repair order: {incompleteJobs.Count} job(s) are not completed";
-                    }
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
+                
+                if (!hasAnyQuotation)
+                {
+                    return "Cannot complete: No quotation exists for this repair order";
+                }
+                
+                var incompleteJobs = repairOrder.Jobs?
+                    .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                    .ToList() ?? new List<Job>();
+
+                if (incompleteJobs.Any())
+                {
+                    return $"Cannot complete: {incompleteJobs.Count} job(s) incomplete. Complete all jobs to finish the repair order.";
                 }
             }
 
@@ -900,28 +1043,63 @@ namespace Services
         private List<string> GetBusinessRuleRequirements(RepairOrder repairOrder, OrderStatus targetStatus)
         {
             var requirements = new List<string>();
+            var currentStatusName = repairOrder.OrderStatus?.StatusName;
 
-            // REMOVED: Payment requirement - now allowing completion with outstanding payments
-            // if (targetStatus.StatusName == "Completed" && repairOrder.PaidAmount < repairOrder.EstimatedAmount)
-            // {
-            //     var outstanding = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
-            //     requirements.Add($"Complete payment of ${outstanding:F2} required");
-            // }
+            // Completed → In Progress requirements
+            if (currentStatusName == "Completed" && targetStatus.StatusName == "In Progress")
+            {
+                if (repairOrder.PaidAmount >= repairOrder.Cost)
+                {
+                    requirements.Add("Order is fully paid and cannot be moved back to In Progress");
+                }
+            }
 
-            // Requirement: All jobs must be completed before completing RO
+            // Pending → Completed requirements
+            if (currentStatusName == "Pending" && targetStatus.StatusName == "Completed")
+            {
+                requirements.Add("Move order to 'In Progress' status first");
+                requirements.Add("Then complete all jobs or get quotation approval");
+            }
+
+            // In Progress → Completed requirements
             if (targetStatus.StatusName == "Completed")
             {
-                if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
-                {
-                    var incompleteJobs = repairOrder.Jobs
-                        .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
-                        .ToList();
+                bool hasAnyQuotation = repairOrder.Quotations != null && repairOrder.Quotations.Any();
 
-                    if (incompleteJobs.Any())
+                if (!hasAnyQuotation)
+                {
+                    requirements.Add("REQUIRED: Create at least one quotation (any status)");
+                }
+                else
+                {
+                    bool hasGoodQuotation = repairOrder.Quotations.Any(q => 
+                        q.Status == BusinessObject.Enums.QuotationStatus.Approved &&
+                        q.QuotationServices != null &&
+                        q.QuotationServices.Any() &&
+                        q.QuotationServices.All(qs => qs.IsGood == true)
+                    );
+
+                    if (!hasGoodQuotation)
                     {
-                        foreach (var job in incompleteJobs)
+                        requirements.Add("OPTION 1: Get a 'good quotation' (approved quotation where all services are marked as Good/IsGood)");
+                    }
+
+                    if (repairOrder.Jobs != null && repairOrder.Jobs.Any())
+                    {
+                        var incompleteJobs = repairOrder.Jobs
+                            .Where(j => j.Status != BusinessObject.Enums.JobStatus.Completed)
+                            .ToList();
+
+                        if (incompleteJobs.Any())
                         {
-                            requirements.Add($"Job '{job.JobName}' must be completed (Current status: {job.Status})");
+                            if (!hasGoodQuotation)
+                            {
+                                requirements.Add("OPTION 2: Complete all jobs:");
+                            }
+                            foreach (var job in incompleteJobs)
+                            {
+                                requirements.Add($"  - Job '{job.JobName}' (Current: {job.Status})");
+                            }
                         }
                     }
                 }
@@ -996,6 +1174,31 @@ namespace Services
                     return result;
                 }
 
+                // Validation: Only completed/cancelled RO can be archived
+                var allStatuses = await _orderStatusRepository.GetAllAsync();
+                var completedStatusId = allStatuses.FirstOrDefault(s => s.StatusName == "Completed")?.OrderStatusId;
+
+                // Allow archiving if RO is completed OR cancelled
+                bool isCompleted = repairOrder.StatusId == completedStatusId;
+                bool isCancelled = repairOrder.IsCancelled;
+
+                if (!isCompleted && !isCancelled)
+                {
+                    result.Success = false;
+                    result.Message = "Only completed or cancelled repair orders can be archived";
+                    result.Errors.Add("Repair order must be in 'Completed' status or marked as cancelled");
+                    return result;
+                }
+
+                // Only check payment status for completed orders (not for cancelled)
+                if (isCompleted && repairOrder.PaidStatus != BusinessObject.Enums.PaidStatus.Paid)
+                {
+                    result.Success = false;
+                    result.Message = "Only fully paid repair orders can be archived";
+                    result.Errors.Add($"Current payment status: {repairOrder.PaidStatus}. Please complete payment before archiving");
+                    return result;
+                }
+
                 // Archive the repair order
                 var archiveSuccess = await _repairOrderRepository.ArchiveRepairOrderAsync(
                     archiveDto.RepairOrderId, archiveDto.ArchiveReason, archiveDto.ArchivedByUserId);
@@ -1006,6 +1209,32 @@ namespace Services
                     result.IsArchived = true;
                     result.ArchivedAt = DateTime.UtcNow;
                     result.Message = "Repair order archived successfully";
+
+                    await _hubContext.Clients.All.SendAsync(
+                                "RepairOrderArchived",
+                                archiveDto.RepairOrderId
+                            );
+
+                    await _archivedhubContext
+                            .Clients
+                            .Group($"RepairOrderArchive_{repairOrder.UserId}")
+                            .SendAsync("RepairOrderArchived", archiveDto.RepairOrderId);
+
+                    var user = await _userService.GetUserByIdAsync(repairOrder.UserId);
+
+                    if (user != null && user.DeviceId != null)
+                    {
+                        var FcmNotification = new FcmDataPayload
+                        {
+                            Type = NotificationType.Repair,
+                            Title = "Repair Order Completed",
+                            Body = "Your repair order has been completed. Thank you for using our service.",
+                            EntityKey = EntityKeyType.repairOrderId,
+                            EntityId = repairOrder.RepairOrderId,
+                            Screen = AppScreen.RepairOrderArchivedDetailFragment
+                        };
+                        await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+                    }
                 }
                 else
                 {
@@ -1105,7 +1334,7 @@ namespace Services
 
             var listView = new RoBoardListViewDto
             {
-                Items = pagedItems.Select((ro, index) => MapToRoBoardListItemDto(ro, ((page - 1) * pageSize) + index + 1)).ToList(),
+                Items = pagedItems.Select((ro, index) => MapToRoBoardListItemDto(ro, ((page - 1) * pageSize) + index + 1, includeLabels: false)).ToList(),
                 Pagination = new RoBoardListPaginationDto
                 {
                     CurrentPage = page,
@@ -1122,6 +1351,124 @@ namespace Services
             };
 
             return listView;
+        }
+
+        public async Task<ArchivedRepairOrderDetailDto> GetArchivedRepairOrderDetailAsync(Guid repairOrderId)
+        {
+            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsIncludingArchivedAsync(repairOrderId);
+            
+            if (repairOrder == null || !repairOrder.IsArchived)
+            {
+                return null;
+            }
+
+            var archivedByUser = !string.IsNullOrEmpty(repairOrder.ArchivedByUserId) 
+                ? await _userService.GetUserByIdAsync(repairOrder.ArchivedByUserId) 
+                : null;
+
+            // Map Vehicle manually
+            var vehicleDto = repairOrder.Vehicle != null ? new Dtos.Vehicles.VehicleDto
+            {
+                VehicleID = repairOrder.Vehicle.VehicleId,
+                UserID = repairOrder.Vehicle.UserId,
+                BrandID = repairOrder.Vehicle.BrandId,
+                ModelID = repairOrder.Vehicle.ModelId,
+                ColorID = repairOrder.Vehicle.ColorId,
+                LicensePlate = repairOrder.Vehicle.LicensePlate,
+                VIN = repairOrder.Vehicle.VIN,
+                Year = repairOrder.Vehicle.Year,
+                Odometer = repairOrder.Vehicle.Odometer,
+                BrandName = repairOrder.Vehicle.Brand?.BrandName ?? "Unknown",
+                ModelName = repairOrder.Vehicle.Model?.ModelName ?? "Unknown",
+                ColorName = repairOrder.Vehicle.Color?.ColorName ?? "Unknown"
+            } : null;
+
+            return new ArchivedRepairOrderDetailDto
+            {
+                RepairOrderId = repairOrder.RepairOrderId,
+                ReceiveDate = repairOrder.ReceiveDate,
+                RoType = repairOrder.RoType,
+                EstimatedCompletionDate = repairOrder.EstimatedCompletionDate,
+                CompletionDate = repairOrder.CompletionDate,
+                Cost = repairOrder.Cost,
+                EstimatedAmount = repairOrder.EstimatedAmount,
+                PaidAmount = repairOrder.PaidAmount,
+                PaidStatus = repairOrder.PaidStatus,
+                EstimatedRepairTime = repairOrder.EstimatedRepairTime,
+                Note = repairOrder.Note,
+                CreatedAt = repairOrder.CreatedAt,
+                UpdatedAt = repairOrder.UpdatedAt,
+                IsArchived = repairOrder.IsArchived,
+                ArchivedAt = repairOrder.ArchivedAt,
+                ArchivedByUserId = repairOrder.ArchivedByUserId,
+                ArchivedByUserName = archivedByUser != null ? $"{archivedByUser.FirstName} {archivedByUser.LastName}".Trim() : "Unknown",
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason,
+                BranchId = repairOrder.BranchId,
+                BranchName = repairOrder.Branch?.BranchName ?? "Unknown",
+                StatusId = repairOrder.StatusId,
+                StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
+                StatusColor = repairOrder.OrderStatus?.Labels?.FirstOrDefault()?.HexCode ?? "#808080",
+                UserId = repairOrder.UserId,
+                CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown",
+                CustomerEmail = repairOrder.User?.Email ?? "",
+                CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+                VehicleId = repairOrder.VehicleId,
+                Vehicle = vehicleDto,
+                Labels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                Services = repairOrder.RepairOrderServices?.Select(s => new ArchivedRepairOrderServiceDto
+                {
+                    RepairOrderServiceId = s.RepairOrderServiceId,
+                    ServiceName = s.Service?.ServiceName ?? "Unknown",
+                    ServiceDescription = s.Service?.Description ?? "",
+                    ServicePrice = s.Service?.Price ?? 0,
+                    Quantity = 1,
+                    Parts = s.RepairOrderServiceParts?.Select(p => new ArchivedRepairOrderServicePartDto
+                    {
+                        RepairOrderServicePartId = p.RepairOrderServicePartId,
+                        PartName = p.Part?.Name ?? "Unknown",
+                        PartCode = "N/A",
+                        PartPrice = p.Part?.Price ?? 0,
+                        Quantity = p.Quantity
+                    }).ToList() ?? new List<ArchivedRepairOrderServicePartDto>()
+                }).ToList() ?? new List<ArchivedRepairOrderServiceDto>(),
+                Inspections = repairOrder.Inspections?.Select(i => new ArchivedInspectionDto
+                {
+                    InspectionId = i.InspectionId,
+                    InspectionTypeName = "Inspection",
+                    TechnicianName = i.Technician?.User != null ? $"{i.Technician.User.FirstName} {i.Technician.User.LastName}".Trim() : "Unassigned",
+                    StartTime = null,
+                    EndTime = null,
+                    Status = i.Status.ToString(),
+                    Notes = i.Note
+                }).ToList() ?? new List<ArchivedInspectionDto>(),
+                Jobs = repairOrder.Jobs?.Select(j => new ArchivedJobDto
+                {
+                    JobId = j.JobId,
+                    JobName = j.JobName ?? "Unknown",
+                    TechnicianName = j.JobTechnicians?.FirstOrDefault()?.Technician?.User != null 
+                        ? $"{j.JobTechnicians.FirstOrDefault().Technician.User.FirstName} {j.JobTechnicians.FirstOrDefault().Technician.User.LastName}".Trim() 
+                        : "Unassigned",
+                    StartTime = null,
+                    EndTime = null,
+                    Status = j.Status.ToString(),
+                    Notes = j.Note
+                }).ToList() ?? new List<ArchivedJobDto>(),
+                Payments = repairOrder.Payments?.Select(p => new ArchivedPaymentDto
+                {
+                    PaymentId = Guid.NewGuid(),
+                    Amount = p.Amount,
+                    PaymentMethod = p.Method.ToString(),
+                    PaymentDate = p.PaymentDate,
+                    Notes = p.ProviderDesc ?? ""
+                }).ToList() ?? new List<ArchivedPaymentDto>(),
+                TotalJobs = repairOrder.Jobs?.Count ?? 0,
+                CompletedJobs = repairOrder.Jobs?.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? 0,
+                ProgressPercentage = repairOrder.Jobs?.Count > 0 
+                    ? (decimal)repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) / repairOrder.Jobs.Count * 100 
+                    : 0
+            };
         }
 
         public async Task<bool> IsRepairOrderArchivedAsync(Guid repairOrderId)
@@ -1259,6 +1606,45 @@ namespace Services
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region Customer and Vehicle Info
+
+        public async Task<Dtos.RepairOrder.RoCustomerVehicleInfoDto> GetCustomerVehicleInfoAsync(Guid repairOrderId)
+        {
+            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            
+            if (repairOrder == null)
+                return null;
+
+            var dto = new Dtos.RepairOrder.RoCustomerVehicleInfoDto
+            {
+                // Repair Order Info
+                RepairOrderId = repairOrder.RepairOrderId,
+                ReceiveDate = repairOrder.ReceiveDate,
+                StatusName = repairOrder.OrderStatus?.StatusName ?? "Unknown",
+
+                // Customer Info
+                CustomerId = repairOrder.User?.Id ?? "",
+                CustomerFirstName = repairOrder.User?.FirstName ?? "",
+                CustomerLastName = repairOrder.User?.LastName ?? "",
+                CustomerEmail = repairOrder.User?.Email ?? "",
+                CustomerPhone = repairOrder.User?.PhoneNumber ?? "",
+
+                // Vehicle Info
+                VehicleId = repairOrder.Vehicle?.VehicleId ?? Guid.Empty,
+                LicensePlate = repairOrder.Vehicle?.LicensePlate ?? "",
+                VIN = repairOrder.Vehicle?.VIN ?? "",
+                Year = repairOrder.Vehicle?.Year,
+                Odometer = repairOrder.Vehicle?.Odometer,
+                BrandName = repairOrder.Vehicle?.Brand?.BrandName ?? "Unknown",
+                ModelName = repairOrder.Vehicle?.Model?.ModelName ?? "Unknown",
+                ColorName = repairOrder.Vehicle?.Color?.ColorName ?? "Unknown"
+            };
+
+            return dto;
         }
 
         #endregion

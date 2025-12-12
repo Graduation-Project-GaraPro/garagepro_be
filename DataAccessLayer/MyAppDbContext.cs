@@ -42,6 +42,7 @@ namespace DataAccessLayer
         public DbSet<Service> Services { get; set; }
         public DbSet<ServiceCategory> ServiceCategories { get; set; }
         public DbSet<Inspection> Inspections { get; set; }
+        public DbSet<InspectionType> InspectionTypes { get; set; }
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }
@@ -49,9 +50,7 @@ namespace DataAccessLayer
         public DbSet<FeedBack> FeedBacks { get; set; }
         public DbSet<Quotation> Quotations { get; set; }
         public DbSet<QuotationService> QuotationServices { get; set; }
-        // Removed QuotationParts DbSet as the entity was removed
-        // public DbSet<QuotationPart> QuotationParts { get; set; }
-        // Add the new QuotationServicePart entity
+
 
         public DbSet<WebhookInbox> WebhookInboxes { get; set; }
 
@@ -149,6 +148,7 @@ namespace DataAccessLayer
                 entity.Property(e => e.Status)
                       .HasConversion<string>()
                       .HasMaxLength(20);
+
             });
 
             modelBuilder.Entity<QuotationService>(entity =>
@@ -713,6 +713,11 @@ namespace DataAccessLayer
             modelBuilder.Entity<RepairRequest>()
                 .Ignore(rr => rr.RepairOrder);
 
+            modelBuilder.Entity<RepairRequest>().HasIndex(r => new { r.VehicleID, r.RequestDate })
+              .HasDatabaseName("UX_RepairRequests_VehicleRequestDate_Active")
+              .IsUnique()
+              .HasFilter("[Status] IN (0,1,2)");
+
             modelBuilder.Entity<RepairOrder>()
              .HasOne(ro => ro.RepairRequest)
              .WithOne()
@@ -720,6 +725,9 @@ namespace DataAccessLayer
              .IsRequired(false)
              .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<RepairOrder>()
+            .Property(r => r.CarPickupStatus)
+            .HasConversion<int>();
 
             modelBuilder.Entity<RepairOrder>()
                 .HasOne(ro => ro.User)
@@ -1094,6 +1102,14 @@ namespace DataAccessLayer
                       .HasForeignKey(v => v.RepairOrderId)
                       .OnDelete(DeleteBehavior.Restrict);
             });
+
+
+            modelBuilder.Entity<RequestEmergency>()
+                .HasOne(r => r.Technician)
+                .WithMany()
+                .HasForeignKey(r => r.TechnicianId)
+                .OnDelete(DeleteBehavior.Restrict);
+
         }
 
     }

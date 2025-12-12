@@ -3,6 +3,20 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# Environment files
+.env
+.env.local
+.env.production
+
+# AppSettings - Ignore all environment-specific configs
+Garage_pro_api/appsettings.Development.json
+Garage_pro_api/appsettings.Production.json
+appsettings.Staging.json
+appsettings.Local.json
+Garage_pro_api/appsettings.*.json
+!appsettings.json
+!appsettings.Example.json
+
 # dotenv files
 .env
 
@@ -486,3 +500,4 @@ $RECYCLE.BIN/
 # Ignore all launchSettings.json files in any project
 **/Properties/launchSettings.json
 
+Garage_pro_api/Keys/garapro-firebase-firebase-adminsdk-fbsvc-292a41367b.json

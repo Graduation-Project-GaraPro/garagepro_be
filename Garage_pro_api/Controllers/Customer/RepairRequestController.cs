@@ -22,28 +22,7 @@ namespace Garage_pro_api.Controllers.Customer
             _repairRequestService = repairRequestService;
         }
 
-        // POST: api/RepairRequests
-        [HttpPost]
-        public async Task<IActionResult> CreateRepairRequest([FromBody] CreateRequestDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            // Lấy userId từ token
-            try
-            {              
-                    var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
-                    if (string.IsNullOrEmpty(userId))
-                        return Unauthorized();
-
-                    var createdRequest = await _repairRequestService.CreateRepairRequestAsync(dto, userId);
-                return Ok(createdRequest);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+       
 
         [HttpGet("arrival-availability/{branchId:guid}")]
         [AllowAnonymous]
@@ -68,7 +47,7 @@ namespace Garage_pro_api.Controllers.Customer
                 var dto = JsonConvert.DeserializeObject<CreateRepairRequestWithImageDto>(dtoJson);
                 dto.Images = images;
 
-                // ✅ Thực hiện validate thủ công
+                
                 var validationContext = new ValidationContext(dto);
                 var validationResults = new List<ValidationResult>();
 
@@ -92,30 +71,7 @@ namespace Garage_pro_api.Controllers.Customer
         }
 
 
-        //Put: api/RepairRequest/{requestId}
-        [HttpPut("{requestId}")]
-        public async Task<IActionResult> UpdateRepairRequest(Guid requestId, [FromBody] UpdateRepairRequestDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-            try
-            {
-                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
-              ?? User.FindFirstValue("sub"); // hoặc tên claim chứa idUser
-                if (string.IsNullOrEmpty(userId))
-                    return Unauthorized();
-                // Gọi service update
-                var updatedRequest = await _repairRequestService.UpdateRepairRequestAsync(requestId, dto, userId);
-                //  Lấy lại repairRequest vừa update
-                //var updatedRequest = await _repairRequestService.GetByIdAsync(requestId);           
-                // Trả về client
-                return Ok(updatedRequest);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-        }
+        
 
         // GET: api/RepairRequests/{id}
         [HttpGet("{id}")]

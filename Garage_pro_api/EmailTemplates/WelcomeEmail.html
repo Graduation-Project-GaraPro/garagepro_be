@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to GaragePro</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+        }
+
+        .email-wrapper {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .content {
+            padding: 40px 30px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .intro-text {
+            color: #4a5568;
+            margin-bottom: 30px;
+            font-size: 15px;
+        }
+
+        .credentials-box {
+            background: linear-gradient(to right, #f8f9fa 0%, #ffffff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 28px;
+            margin: 30px 0;
+        }
+
+            .credentials-box h3 {
+                margin: 0 0 20px 0;
+                color: #2c3e50;
+                font-size: 16px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+
+        .credential-row {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+            .credential-row:last-child {
+                border-bottom: none;
+            }
+
+        .credential-label {
+            color: #718096;
+            font-size: 14px;
+            width: 140px;
+            font-weight: 500;
+        }
+
+        .credential-value {
+            color: #2d3748;
+            font-size: 14px;
+            font-weight: 600;
+            flex: 1;
+        }
+
+        .alert-box {
+            background-color: #fff8e6;
+            border-left: 4px solid #f59e0b;
+            padding: 18px;
+            margin: 30px 0;
+            border-radius: 4px;
+        }
+
+            .alert-box p {
+                margin: 0;
+                color: #92400e;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+            }
+
+        .alert-icon {
+            font-size: 18px;
+            margin-right: 10px;
+        }
+
+        .features-section {
+            background-color: #f8fafc;
+            border-radius: 8px;
+            padding: 28px;
+            margin: 30px 0;
+        }
+
+            .features-section h3 {
+                margin: 0 0 18px 0;
+                color: #2c3e50;
+                font-size: 16px;
+                font-weight: 600;
+            }
+
+        .features-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+            .features-list li {
+                padding: 10px 0;
+                color: #4a5568;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+            }
+
+        .feature-icon {
+            font-size: 18px;
+            margin-right: 12px;
+            min-width: 24px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 25px 0;
+            font-weight: 600;
+            font-size: 15px;
+            transition: transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+            .cta-button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            }
+
+        .closing {
+            margin-top: 30px;
+            color: #4a5568;
+            font-size: 15px;
+        }
+
+        .signature {
+            margin-top: 25px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+
+            .footer p {
+                margin: 8px 0;
+                font-size: 13px;
+                color: #718096;
+            }
+
+        .divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-wrapper">
+        <div class="header">
+            <div class="logo">GARAGE PRO</div>
+            <h1>Welcome to GaragePro</h1>
+        </div>
+
+        <div class="content">
+            <div class="greeting">Hello {{CustomerFullName}},</div>
+
+            <p class="intro-text">
+                Thank you for choosing GaragePro as your trusted partner for vehicle repair and maintenance.
+                We're excited to have you on board! Your account has been successfully created and is ready to use.
+            </p>
+
+            <div class="credentials-box">
+                <h3>Account Credentials</h3>
+                <div class="credential-row">
+                    <div class="credential-label">Username</div>
+                    <div class="credential-value">{{Username}}</div>
+                </div>
+                <div class="credential-row">
+                    <div class="credential-label">Phone Number</div>
+                    <div class="credential-value">{{PhoneNumber}}</div>
+                </div>
+                <div class="credential-row">
+                    <div class="credential-label">Email Address</div>
+                    <div class="credential-value">{{Email}}</div>
+                </div>
+                <div class="credential-row">
+                    <div class="credential-label">Temporary Password</div>
+                    <div class="credential-value">{{Password}}</div>
+                </div>
+            </div>
+
+            <div class="alert-box">
+                <p>
+                    <span class="alert-icon">🔒</span>
+                    <strong>Security Reminder:</strong> Please change your password immediately after your first login to ensure your account remains secure.
+                </p>
+            </div>
+
+            <div class="features-section">
+                <h3>What You Can Do With Your Account</h3>
+                <ul class="features-list">
+                    <li>
+                        <span class="feature-icon">📊</span>
+                        <span>Track repair orders and service progress in real-time</span>
+                    </li>
+                    <li>
+                        <span class="feature-icon">💰</span>
+                        <span>View, review, and approve service quotations</span>
+                    </li>
+                    <li>
+                        <span class="feature-icon">📅</span>
+                        <span>Schedule and manage service appointments online</span>
+                    </li>
+                    <li>
+                        <span class="feature-icon">🔔</span>
+                        <span>Receive instant notifications about your vehicle status</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <p class="closing">
+                Our garage is dedicated to providing you with exceptional service. If you have any questions
+                or need assistance getting started, please don't hesitate to reach out.
+            </p>
+
+            <div class="signature">
+                Best regards,<br>
+                <strong>The GaragePro Team</strong>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>This is an automated message from GaragePro. Please do not reply to this email.</p>
+            <p>For support inquiries, please contact us through your account dashboard.</p>
+            <p>&copy; {{Year}} GaragePro. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -32,6 +32,36 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(requests);
         }
 
+
+
+
+        [HttpGet("branches/{branchId:guid}/arrival-time-slots")]
+        public async Task<ActionResult<IReadOnlyList<string>>> GetArrivalTimeSlotsAsync(
+        Guid branchId,
+        [FromQuery] DateOnly? date)
+        {
+            var targetDate = date ?? DateOnly.FromDateTime(DateTime.Now);
+
+            try
+            {
+                var slots = await _repairRequestService.GetArrivalTimeSlotsAsync(branchId, targetDate);
+                return Ok(slots);
+            }
+            catch (Exception ex)
+            {
+                // V� d?: service ?ang throw "Branch not found"
+                if (ex.Message.Contains("Branch not found", StringComparison.OrdinalIgnoreCase))
+                    return NotFound(new { message = ex.Message });
+
+                // N?u mu?n custom more th� b?t ri�ng t?ng lo?i exception
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Error when getting arrival time slots",
+                    detail = ex.Message
+                });
+            }
+        }
+
         // GET: api/ManagerRepairRequest/branch/{branchId}
         [HttpGet("branch/{branchId}")]
         [EnableQuery] // Enable OData query support
@@ -53,29 +83,6 @@ namespace Garage_pro_api.Controllers.Customer
             return Ok(request);
         }
 
-        // PUT: api/ManagerRepairRequest/{id}/approve
-        [HttpPut("{id}/approve")]
-        public async Task<IActionResult> ApproveRepairRequest(Guid id)
-        {
-            var result = await _repairRequestService.ApproveRepairRequestAsync(id);
-            
-            if (!result)
-                return BadRequest("Failed to approve repair request. Request may not exist or is not in pending status.");
-
-            return Ok(new { Message = "Repair request approved successfully" });
-        }
-
-        // PUT: api/ManagerRepairRequest/{id}/reject
-        [HttpPut("{id}/reject")]
-        public async Task<IActionResult> RejectRepairRequest(Guid id)
-        {
-            var result = await _repairRequestService.RejectRepairRequestAsync(id);
-            
-            if (!result)
-                return BadRequest("Failed to reject repair request. Request may not exist or is not in pending status.");
-
-            return Ok(new { Message = "Repair request rejected successfully" });
-        }
 
         // POST: api/ManagerRepairRequest/{id}/convert-to-ro
         [HttpPost("{id}/convert-to-ro")]
@@ -85,6 +92,26 @@ namespace Garage_pro_api.Controllers.Customer
             {
                 var repairOrderDto = await _repairRequestService.ConvertToRepairOrderAsync(id, dto);
                 return Ok(repairOrderDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { Message = ex.Message });
+            }
+        }
+
+        // POST: api/ManagerRepairRequest/{id}/cancel
+        [HttpPost("{id}/cancel-on-behalf")]
+        public async Task<IActionResult> CancelRepairRequest(Guid id)
+        {
+            try
+            {
+                var managerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(managerId))
+                    return Unauthorized(new { Message = "Manager ID not found in token" });
+
+                var result = await _repairRequestService.ManagerCancelRepairRequestAsync(id, managerId);
+                return Ok(new { Message = "Repair request cancelled successfully", Success = result });
+                //return Ok(new { Message = "Repair request cancelled successfully"});
             }
             catch (Exception ex)
             {

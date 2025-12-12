@@ -1,8 +1,13 @@
+using Azure.Core;
+using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
 using Dtos.Emergency;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Services;
 using Services.EmergencyRequestService;
+using Services.FCMServices;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -16,15 +21,18 @@ namespace Garage_pro_api.Controllers
     public class EmergencyRequestController : ControllerBase
     {
         private readonly IEmergencyRequestService _service;
-
-        public EmergencyRequestController(IEmergencyRequestService service)
+        private readonly ITechnicianEmergencyService _technicianEmergencyService;
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
+        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService, IFcmService fcmService, IUserService userService)
         {
             _service = service;
+            _technicianEmergencyService = technicianEmergencyService;
+            _fcmService = fcmService;
+            _userService = userService;
         }
 
-        /// <summary>
-        ///  Tìm các gara gần nhất theo tọa độ.
-        /// </summary>
+       
         [HttpGet("nearby-branches")]
         public async Task<IActionResult> GetNearestBranches([FromQuery] double latitude, [FromQuery] double longitude, [FromQuery] int count = 5)
         {
@@ -42,9 +50,7 @@ namespace Garage_pro_api.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Tạo yêu cầu cứu hộ mới.
-        /// </summary>
+       
         [HttpPost("create")]
         [Authorize(Roles = "Customer")] // Chỉ khách hàng đã đăng nhập mới gửi được
         public async Task<IActionResult> CreateEmergency([FromBody] CreateEmergencyRequestDto dto)
@@ -72,8 +78,8 @@ namespace Garage_pro_api.Controllers
                     return BadRequest(new { message = ex.Message });
                 if (ex is InvalidOperationException && ex.Message.Contains("Active emergency", StringComparison.OrdinalIgnoreCase))
                     return Conflict(new { message = ex.Message });
-                if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
-                    return StatusCode(429, new { message = ex.Message });
+             //   if (ex is InvalidOperationException && ex.Message.Contains("Too many requests", StringComparison.OrdinalIgnoreCase))
+             //       return StatusCode(429, new { message = ex.Message });
                 var inner = ex.InnerException;
                 while (inner != null)
                 {
@@ -138,9 +144,6 @@ namespace Garage_pro_api.Controllers
             return Ok(request);
         }
 
-        /// <summary>
-        /// Lấy danh sách yêu cầu cứu hộ của khách hàng.
-        /// </summary>
         [HttpGet("customer/{customerId}")]
         public async Task<IActionResult> GetByCustomer(string customerId)
         {
@@ -151,9 +154,7 @@ namespace Garage_pro_api.Controllers
             return Ok(requests);
         }
 
-        /// <summary>
-        ///  Lấy chi tiết yêu cầu cứu hộ theo ID.
-        /// </summary>
+       
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -249,21 +250,9 @@ namespace Garage_pro_api.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (DbUpdateException dbEx)
-            {
-                // Log chi tiết lỗi database để debug
-                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
-                if (dbEx.InnerException != null)
-                {
-                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
-                }
-                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
-            }
             catch (Exception ex)
             {
-                // Log chi tiết lỗi để debug
-                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
-                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                
                 if (ex.InnerException != null)
                 {
                     Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
@@ -294,7 +283,78 @@ namespace Garage_pro_api.Controllers
                 return StatusCode(500, $"An error occurred: {ex.Message}");
             }
         }
+        [HttpPost("assign-tech")]
+        [Authorize(Roles = "Manager")]
+        public async Task<IActionResult> AsignTechnician(AssignTechnicianPayload assignTechnicianPayload)
+        {
+            try
+            {
+                var managerUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+                if (string.IsNullOrEmpty(managerUserId))
+                    return Unauthorized("User not found in token.");
 
+                var result = await _service.AssignTechnicianToEmergencyAsync(assignTechnicianPayload.emergencyId, assignTechnicianPayload.technicianUserId);
+                await _technicianEmergencyService.UpdateEmergencyStatusAsync(assignTechnicianPayload.emergencyId, BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned, technicianId: assignTechnicianPayload.technicianUserId.ToString());
+                
+                Console.WriteLine("Assignment result: " + result);
+                if (result)
+                {
+                    var user = await _userService.GetUserByIdAsync(assignTechnicianPayload.technicianUserId.ToString());
 
+                    Console.WriteLine("Sending FCM notification to technician:");
+
+                    if (user != null && user.DeviceId != null)
+                    {
+                        var FcmNotification = new FcmDataPayload
+                        {
+                            Type = NotificationType.Emergency,
+                            Title = "Emergency case",
+                            Body = "New Emergency case for you",
+                            EntityKey = EntityKeyType.repairOrderId,
+                            EntityId = Guid.NewGuid(),
+                            Screen = AppScreen.ReportsFragment
+                        };
+                        await _fcmService.SendFcmMessageWithDataAsync(user?.DeviceId, FcmNotification);
+                    }
+                }    
+
+                
+                return Ok(new { Success = result });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (DbUpdateException dbEx)
+            {
+                // Log chi tiết lỗi database để debug
+                Console.WriteLine($"Database error in ApproveEmergency: {dbEx.Message}");
+                if (dbEx.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {dbEx.InnerException.Message}");
+                }
+                return StatusCode(500, $"Database error: {dbEx.InnerException?.Message ?? dbEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                // Log chi tiết lỗi để debug
+                Console.WriteLine($"Error in ApproveEmergency: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                }
+                return StatusCode(500, $"Unhandled error: {ex.InnerException?.Message ?? ex.Message}");
+            }
+        }
+        public class AssignTechnicianPayload
+        {
+            public Guid technicianUserId { get; set; }
+            public Guid emergencyId { get; set; }
+        }
     }
 }

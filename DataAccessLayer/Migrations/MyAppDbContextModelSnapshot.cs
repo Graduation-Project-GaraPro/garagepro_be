@@ -600,10 +600,13 @@ namespace DataAccessLayer.Migrations
 
                     b.HasIndex("UserID");
 
-                    b.HasIndex("VehicleID");
-
                     b.HasIndex("BranchId", "Status")
                         .HasDatabaseName("IX_Request_Branch_Status");
+
+                    b.HasIndex("VehicleID", "RequestDate")
+                        .IsUnique()
+                        .HasDatabaseName("UX_RepairRequests_VehicleRequestDate_Active")
+                        .HasFilter("[Status] IN (0,1,2)");
 
                     b.HasIndex("BranchId", "ArrivalWindowStart", "Status")
                         .HasDatabaseName("IX_Request_Branch_Arrival_Status");
@@ -898,6 +901,41 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("Automaker", "NameCar");
 
                     b.ToTable("VehicleLookups");
+                });
+
+            modelBuilder.Entity("BusinessObject.InspectionType", b =>
+                {
+                    b.Property<int>("InspectionTypeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("InspectionTypeId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<decimal>("InspectionFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TypeName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("InspectionTypeId");
+
+                    b.ToTable("InspectionTypes");
                 });
 
             modelBuilder.Entity("BusinessObject.Job", b =>
@@ -1432,6 +1470,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("InspectionFee")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<Guid?>("InspectionId")
                         .HasColumnType("uniqueidentifier");
 
@@ -1497,6 +1538,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<decimal>("FinalPrice")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<bool>("IsGood")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsRequired")
                         .HasColumnType("bit");
@@ -1579,6 +1623,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("CarPickupStatus")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("CompletionDate")
                         .HasColumnType("datetime2");
@@ -1804,6 +1851,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
+                    b.Property<string>("TechnicianId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<int>("Type")
                         .HasColumnType("int");
 
@@ -1819,6 +1869,8 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("RepairRequestId")
                         .IsUnique()
                         .HasFilter("[RepairRequestId] IS NOT NULL");
+
+                    b.HasIndex("TechnicianId");
 
                     b.HasIndex("VehicleId");
 
@@ -3138,7 +3190,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Authentication.ApplicationUser", "Customer")
-                        .WithMany()
+                        .WithMany("AssignedEmergencyRequests")
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3146,6 +3198,11 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
                         .WithOne("RequestEmergency")
                         .HasForeignKey("BusinessObject.RequestEmergency.RequestEmergency", "RepairRequestId");
+
+                    b.HasOne("BusinessObject.Authentication.ApplicationUser", "Technician")
+                        .WithMany()
+                        .HasForeignKey("TechnicianId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("BusinessObject.Vehicle", "Vehicle")
                         .WithMany()
@@ -3158,6 +3215,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Customer");
 
                     b.Navigation("RepairRequest");
+
+                    b.Navigation("Technician");
 
                     b.Navigation("Vehicle");
                 });
@@ -3435,6 +3494,8 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Authentication.ApplicationUser", b =>
                 {
+                    b.Navigation("AssignedEmergencyRequests");
+
                     b.Navigation("FeedBacks");
 
                     b.Navigation("Notifications");

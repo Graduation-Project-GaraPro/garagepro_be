@@ -91,7 +91,7 @@ namespace Repositories.RepairProgressRepositories
                 .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
                 .Include(rp => rp.User)
                 .Include(rp => rp.FeedBack)
-                .AsSplitQuery(); // EF Core 5+ – VERY helpful for this graph
+                .AsSplitQuery(); 
 
             var items = await itemsQuery
                 .OrderByDescending(ro => ro.CreatedAt) // keep ordering
@@ -145,9 +145,10 @@ namespace Repositories.RepairProgressRepositories
         {
             var query = _context.RepairOrders
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Where(ro => ro.UserId == userId
-                             && ro.StatusId == 3          // completed
-                             && ro.IsArchived)            // archived
+                             && ro.StatusId == 3          
+                             && ro.IsArchived)            
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -207,11 +208,16 @@ namespace Repositories.RepairProgressRepositories
         {
             var query = _context.RepairOrders
                 .AsNoTracking()
+                .AsSplitQuery()
                 .Where(ro => ro.RepairOrderId == repairOrderId
                              && ro.UserId == userId
                              && ro.StatusId == 3
                              && ro.IsArchived)
                 .Include(ro => ro.FeedBack)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
+                // nếu muốn có Service trên QuotationService:
+                //    .ThenInclude(qs => qs.Service)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Model)
@@ -224,14 +230,45 @@ namespace Repositories.RepairProgressRepositories
                         .ThenInclude(jt => jt.Technician)
                             .ThenInclude(t => t.User)
                 .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.Service)
+                .Include(ro => ro.Jobs)
                     .ThenInclude(j => j.JobParts)
                         .ThenInclude(jp => jp.Part);
 
             var entity = await query.FirstOrDefaultAsync();
             if (entity == null) return null;
 
-            return mapper.Map<RepairOrderArchivedDetailDto>(entity);
+            
+            var dto = mapper.Map<RepairOrderArchivedDetailDto>(entity);
+
+            
+            var allQuotationServices = entity.Quotations
+                .SelectMany(q => q.QuotationServices)
+                .ToList();
+
+           
+            foreach (var jobDto in dto.Jobs)
+            {
+               
+                var jobEntity = entity.Jobs.FirstOrDefault(j => j.JobId == jobDto.JobId);
+                if (jobEntity == null) continue;
+
+                var serviceId = jobEntity.ServiceId; 
+                                                     
+
+                var qs = allQuotationServices
+                    .FirstOrDefault(x => x.ServiceId == serviceId);
+
+                if (qs != null)
+                {                                                          
+                    jobDto.ServicePrice = qs.Price;
+                    jobDto.DiscountValue = qs.DiscountValue;
+                }
+            }
+
+            return dto;
         }
+
 
 
         public async Task<RepairOrderProgressDto?> GetRepairOrderProgressAsync(Guid repairOrderId, string userId)
@@ -246,6 +283,7 @@ namespace Repositories.RepairProgressRepositories
                 .Include(rp => rp.Jobs).ThenInclude(j => j.JobTechnicians).ThenInclude(jt => jt.Technician).ThenInclude(t => t.User)
                 .Include(rp => rp.Jobs).ThenInclude(j => j.Repair)
                 .Include(rp => rp.User)
+                .Include(rp => rp.Quotations).ThenInclude(q => q.QuotationServices)
                 .Include(rp => rp.FeedBack)
 
 
@@ -300,7 +338,12 @@ namespace Repositories.RepairProgressRepositories
                         JobName = j.JobName,
                         Status = j.Status.ToString(),
                         Deadline = j.Deadline,
-                        TotalAmount = j.TotalAmount,
+                        TotalAmount = j.TotalAmount
+                            - ro.Quotations
+                                .SelectMany(q => q.QuotationServices)
+                                .Where(qs => qs.ServiceId == j.ServiceId)
+                                .Select(qs => qs.DiscountValue)
+                                .FirstOrDefault(),
                         Note = j.Note ?? string.Empty,
                         Repair = j.Repair != null ? new Dtos.RepairProgressDto.RepairDto
                         {
@@ -344,7 +387,7 @@ namespace Repositories.RepairProgressRepositories
                                !ro.IsArchived);
         }
 
-        // Helper methods for progress calculation
+        
         private static decimal CalculateProgressPercentage(ICollection<Job> jobs)
         {
             if (jobs == null || !jobs.Any()) return 0;
@@ -353,7 +396,7 @@ namespace Repositories.RepairProgressRepositories
 
             var value = (decimal)completedJobs / jobs.Count * 100;
 
-            // Làm tròn về số chẵn
+            
             return Math.Round(value, 0, MidpointRounding.ToEven);
         }
 

@@ -21,6 +21,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Security.Authentication;
+using System.Globalization;
 
 namespace Services.EmergencyRequestService
 {
@@ -160,17 +161,15 @@ namespace Services.EmergencyRequestService
 
                 // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → All, id={fullRequest.EmergencyRequestId}");
+
 
                 // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
                 await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → customer-{fullRequest.CustomerId}, id={fullRequest.EmergencyRequestId}");
 
                 // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
                 await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
-                Console.WriteLine($"RT sent: EmergencyRequestCreated → branch-{fullRequest.BranchId}, id={fullRequest.EmergencyRequestId}");
             }
             catch (Exception ex)
             {
@@ -240,7 +239,9 @@ namespace Services.EmergencyRequestService
                 RespondedAt = fr.RespondedAt,
                 AutoCanceledAt = fr.AutoCanceledAt,
                 CustomerName = fr.Customer?.UserName ?? "",
-                CustomerPhone = fr.Customer?.PhoneNumber ?? ""
+                CustomerPhone = fr.Customer?.PhoneNumber ?? "",
+                AssignedTechnicianName = fr.Technician?.LastName ?? "",
+                AssginedTecinicianPhone =fr.Technician?.PhoneNumber??""
             }).ToList();
 
 
@@ -499,6 +500,7 @@ namespace Services.EmergencyRequestService
                     EmergencyRequestId = emergency.EmergencyRequestId,
                     Status = "InProgress",
                     CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
                     BranchId = emergency.BranchId,
                     Message = "Cứu hộ đang được xử lý",
                     Timestamp = DateTime.UtcNow
@@ -571,88 +573,109 @@ namespace Services.EmergencyRequestService
 
         public async Task<RouteDto> GetRouteAsync(double fromLat, double fromLon, double toLat, double toLon)
         {
-            // ===== 0. HTTP CLIENT SETUP (BYPASS SSL) =====
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
-            };
+            // --- Read environment variables ---
+            var token = Environment.GetEnvironmentVariable("MAPBOX_TOKEN");
+            if (string.IsNullOrWhiteSpace(token))
+                throw new InvalidOperationException("Missing MAPBOX_TOKEN environment variable.");
 
-            using var http = new HttpClient(handler);
-            http.Timeout = TimeSpan.FromSeconds(10);
-            http.DefaultRequestHeaders.UserAgent.ParseAdd("garagepro-osrm-client");
-            http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+            var profile = Environment.GetEnvironmentVariable("MAPBOX_PROFILE");
+            if (string.IsNullOrWhiteSpace(profile))
+                profile = "driving-traffic";
 
-            // OSRM yêu cầu thứ tự LON,LAT
+            // --- Build coordinates string ---
             var coords = string.Join(";", new[]
             {
-                fromLon.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + fromLat.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                toLon.ToString(System.Globalization.CultureInfo.InvariantCulture) + "," + toLat.ToString(System.Globalization.CultureInfo.InvariantCulture)
-            });
-            var baseUrl = Environment.GetEnvironmentVariable("OSRM_BASE_URL");
-            string urlHttps, urlHttp;
-            if (!string.IsNullOrWhiteSpace(baseUrl))
-            {
-                var b = baseUrl.TrimEnd('/');
-                urlHttps = b + $"/route/v1/driving/{coords}?overview=full&geometries=geojson";
-                urlHttp = urlHttps;
-            }
-            else
-            {
-                urlHttps = $"https://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson";
-                urlHttp = $"http://router.project-osrm.org/route/v1/driving/{coords}?overview=full&geometries=geojson";
-            }
+        $"{fromLon.ToString(CultureInfo.InvariantCulture)},{fromLat.ToString(CultureInfo.InvariantCulture)}",
+        $"{toLon.ToString(CultureInfo.InvariantCulture)},{toLat.ToString(CultureInfo.InvariantCulture)}"
+    });
 
-            HttpResponseMessage res = null;
-            var preferHttp = string.Equals(Environment.GetEnvironmentVariable("OSRM_PREFER_HTTP"), "1", StringComparison.OrdinalIgnoreCase);
+            // --- Build URL ---
+            var url =
+                $"https://api.mapbox.com/directions/v5/mapbox/{profile}/{coords}" +
+                "?alternatives=false&geometries=geojson&overview=full&language=vi&steps=true&access_token="+token;
 
-            try
+            // --- HttpClient (consider using IHttpClientFactory in production) ---
+            using var http = new HttpClient
             {
-                // Thử HTTPS trước hoặc HTTP nếu prefer
-                if (!preferHttp)
-                    res = await http.GetAsync(urlHttps);
-                else
-                    res = await http.GetAsync(urlHttp);
-            }
-            catch (HttpRequestException)
-            {
-                // Nếu thất bại, fallback
-                if (!preferHttp)
-                    res = await http.GetAsync(urlHttp);
-                else
-                    res = await http.GetAsync(urlHttps);
-            }
+                Timeout = TimeSpan.FromSeconds(10)
+            };
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("garagepro-mapbox-client");
+            http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 
+            // --- Execute request ---
+            var res = await http.GetAsync(url);
+
+            // Read content ONCE
+            var raw = await res.Content.ReadAsStringAsync();
+
+            // --- Handle HTTP error ---
             if (!res.IsSuccessStatusCode)
             {
-                var raw = await res.Content.ReadAsStringAsync();
-                throw new InvalidOperationException($"OSRM API error. HTTP {res.StatusCode}: {raw}");
+                throw new InvalidOperationException(
+                    $"Mapbox Directions error. HTTP {(int)res.StatusCode}: {raw}"
+                );
             }
 
-            var json = await res.Content.ReadAsStringAsync();
-            using var doc = JsonDocument.Parse(json);
+            // --- Parse successful JSON ---
+            using var doc = JsonDocument.Parse(raw);
+
             var root = doc.RootElement;
 
-            if (root.TryGetProperty("code", out var codeEl) && !string.Equals(codeEl.GetString(), "Ok", StringComparison.OrdinalIgnoreCase))
+            if (!root.TryGetProperty("routes", out var routes) ||
+                routes.ValueKind != JsonValueKind.Array ||
+                routes.GetArrayLength() == 0)
             {
-                var msg = root.TryGetProperty("message", out var msgEl) ? msgEl.GetString() : "Unknown error";
-                throw new InvalidOperationException($"OSRM Error: {codeEl.GetString()} - {msg}");
+                throw new InvalidOperationException("Mapbox returned empty routes.");
             }
 
-            if (!root.TryGetProperty("routes", out var routes) || routes.ValueKind != JsonValueKind.Array || routes.GetArrayLength() == 0)
-                throw new InvalidOperationException("OSRM returned 'Ok' but routes[] is empty.");
             var route = routes[0];
-            if (!route.TryGetProperty("distance", out var distanceEl) || distanceEl.ValueKind != JsonValueKind.Number)
-                throw new InvalidOperationException("Missing or invalid distance.");
-            if (!route.TryGetProperty("duration", out var durationEl) || durationEl.ValueKind != JsonValueKind.Number)
-                throw new InvalidOperationException("Missing or invalid duration.");
-            var geometry = route.TryGetProperty("geometry", out var geoEl) ? geoEl : default;
+            var distance = route.GetProperty("distance").GetDouble();
+            var duration = route.GetProperty("duration").GetDouble();
+            var geometryEl = route.GetProperty("geometry");
+
+            var steps = new List<Dtos.Emergency.RouteStepDto>();
+            if (route.TryGetProperty("legs", out var legs) &&
+                legs.ValueKind == JsonValueKind.Array &&
+                legs.GetArrayLength() > 0)
+            {
+                var leg = legs[0];
+                if (leg.TryGetProperty("steps", out var stepsEl) && stepsEl.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var st in stepsEl.EnumerateArray())
+                    {
+                        double sd = st.TryGetProperty("distance", out var sde) && sde.ValueKind == JsonValueKind.Number ? sde.GetDouble() : 0.0;
+                        double su = st.TryGetProperty("duration", out var sue) && sue.ValueKind == JsonValueKind.Number ? sue.GetDouble() : 0.0;
+                        string name = st.TryGetProperty("name", out var sne) && sne.ValueKind == JsonValueKind.String ? sne.GetString() : null;
+                        string instruction = null;
+                        if (st.TryGetProperty("maneuver", out var man) && man.ValueKind == JsonValueKind.Object && man.TryGetProperty("instruction", out var ins) && ins.ValueKind == JsonValueKind.String)
+                        {
+                            instruction = ins.GetString();
+                        }
+                        steps.Add(new Dtos.Emergency.RouteStepDto
+                        {
+                            Instruction = instruction ?? name ?? string.Empty,
+                            DistanceMeters = sd,
+                            DurationSeconds = su,
+                            Name = name ?? string.Empty
+                        });
+                    }
+                }
+            }
+
+            // Clone geometry to avoid disposed JsonDocument issues
+            var geometry = JsonDocument.Parse(geometryEl.GetRawText()).RootElement;
+
+            // --- Build DTO ---
             return new RouteDto
             {
-                DistanceKm = Math.Round(distanceEl.GetDouble() / 1000.0, 3),
-                DurationMinutes = (int)Math.Ceiling(durationEl.GetDouble() / 60.0),
-                Geometry = geometry
+                DistanceKm = Math.Round(distance / 1000.0, 3),
+                DurationMinutes = (int)Math.Ceiling(duration / 60.0),
+                Geometry = geometry,
+                Steps = steps
             };
         }
+
+
 
 
 
@@ -670,6 +693,8 @@ namespace Services.EmergencyRequestService
             if (emergency == null) throw new ArgumentException("Emergency not found");
             if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress)
                 throw new InvalidOperationException("Emergency must be accepted or in-progress to update location.");
+            if (string.IsNullOrEmpty(emergency.TechnicianId) || !string.Equals(emergency.TechnicianId, technicianUserId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Only the assigned technician can update location for this emergency.");
 
             RouteDto? route = null;
             if (location.RecomputeRoute)
@@ -694,8 +719,11 @@ namespace Services.EmergencyRequestService
                 Bearing = location.Bearing,
                 EtaMinutes = route?.DurationMinutes,
                 Route = route?.Geometry,
+                Steps = route?.Steps,
                 DistanceKm = route?.DistanceKm,
-                Timestamp = DateTime.UtcNow
+                Timestamp = DateTime.UtcNow,
+                TechnicianName = emergency.Technician.LastName,
+                PhoneNumberTecnician = emergency.Technician.PhoneNumber
             };
 
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);
@@ -704,6 +732,11 @@ namespace Services.EmergencyRequestService
             Console.WriteLine($"RT sent: TechnicianLocationUpdated → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
 
             return true;
+        }
+
+        public async Task<bool> AssignTechnicianToEmergencyAsync(Guid emergencyId, Guid technicianUserId)
+        {
+            return await _repository.AssignTechnicianAsync(emergencyId, technicianUserId);
         }
     }
 }

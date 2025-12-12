@@ -92,4 +92,36 @@ namespace Dtos.Vehicles
         
         
     }
+
+    public class CreateVehicleForCustomerDto
+    {
+        [Required]
+        public string CustomerUserId { get; set; }
+
+        [Required]
+        public Guid BrandID { get; set; }
+
+        [Required]
+        public Guid ModelID { get; set; }
+
+        [Required]
+        public Guid ColorID { get; set; }
+
+        [Required]
+        [StringLength(20)]
+        [RegularExpression(@"^[0-9]{2}[A-Z]{1,2}-[0-9]{4,5}$",
+            ErrorMessage = "Invalid license plate format")]
+        public string LicensePlate { get; set; }
+
+        [StringLength(17, MinimumLength = 17)]
+        [RegularExpression(@"^[A-HJ-NPR-Z0-9]{17}$",
+            ErrorMessage = "VIN must be 17 characters, excluding I, O, Q")]
+        public string? VIN { get; set; }
+        
+        [Required]
+        [Range(1886, 2030)]
+        public int Year { get; set; }
+        
+        public long? Odometer { get; set; }
+    }
 }

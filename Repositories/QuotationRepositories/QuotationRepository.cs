@@ -36,15 +36,25 @@ namespace Repositories.QuotationRepositories
 
 
         public async Task<(List<Quotation>, int)> GetQuotationsByUserIdAsync(
-        string userId,
-        int pageNumber,
-        int pageSize,
-        QuotationStatus? status)
+    string userId,
+    int pageNumber,
+    int pageSize,
+    QuotationStatus? status)
         {
+            var allowedStatuses = new[]
+            {
+            QuotationStatus.Good,
+            QuotationStatus.Approved,
+            QuotationStatus.Sent,
+            QuotationStatus.Rejected,
+            QuotationStatus.Expired,
+
+        };
+
             var query = _context.Quotations
                 .Include(q => q.User)
-                .Include(q => q.Vehicle).ThenInclude(v=>v.Brand)
-                .Include(q => q.Vehicle).ThenInclude(v=>v.Model)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Brand)
+                .Include(q => q.Vehicle).ThenInclude(v => v.Model)
                 .Include(q => q.RepairOrder)
                 .Include(q => q.Inspection)
                 .Include(q => q.QuotationServices)
@@ -52,11 +62,21 @@ namespace Repositories.QuotationRepositories
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.QuotationServiceParts)
                         .ThenInclude(qsp => qsp.Part)
+                .AsSplitQuery()
                 .Where(q => q.UserId == userId);
 
+            // Nếu có truyền status → lọc đúng status
             if (status.HasValue)
+            {
                 query = query.Where(q => q.Status == status.Value);
+            }
+            else
+            {
+                // Không truyền status → mặc định lấy 3 trạng thái
+                query = query.Where(q => allowedStatuses.Contains(q.Status));
+            }
 
+            // Sắp xếp theo CreatedAt mới nhất
             query = query.OrderByDescending(q => q.CreatedAt);
 
             var totalCount = await query.CountAsync();
@@ -67,6 +87,7 @@ namespace Repositories.QuotationRepositories
 
             return (quotations, totalCount);
         }
+
 
 
         public async Task<List<QuotationDto>> GetQuotationsByRepairRequestIdAsync(String userId, Guid repairRequestId)
@@ -132,7 +153,7 @@ namespace Repositories.QuotationRepositories
                     .ThenInclude(qs => qs.Service)
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.QuotationServiceParts)
-                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory)
+                        .ThenInclude(qsp => qsp.Part).ThenInclude(p=>p.PartCategory).AsSplitQuery()
                 .FirstOrDefaultAsync(q => q.QuotationId == quotationId);
         }
 

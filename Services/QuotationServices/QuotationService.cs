@@ -117,6 +117,8 @@ namespace Services.QuotationServices
 
             // Create quotation services and calculate total
             decimal totalAmount = 0;
+            bool allServicesGood = true; // Track if all services are Good
+            
             if (createQuotationDto.QuotationServices != null)
             {
                 foreach (var serviceDto in createQuotationDto.QuotationServices)
@@ -128,35 +130,43 @@ namespace Services.QuotationServices
                         throw new ArgumentException($"Service with ID {serviceDto.ServiceId} not found.");
                     }
 
-                    // Calculate service total (price * quantity) - using default quantity of 1
-                    decimal serviceTotal = service.Price * 1;
-                    totalAmount += serviceTotal;
+                    // Track if any service is NOT Good
+                    if (!serviceDto.IsGood)
+                    {
+                        allServicesGood = false;
+                    }
 
-                    var quotationService = new QuotationService // This is the entity
+                    // Only add to total if service is NOT Good
+                    if (!serviceDto.IsGood)
+                    {
+                        decimal serviceTotal = service.Price * 1;
+                        totalAmount += serviceTotal;
+                    }
+
+                    var quotationService = new QuotationService // entity
                     {
                         QuotationId = createdQuotation.QuotationId,
                         ServiceId = serviceDto.ServiceId,
                         IsSelected = serviceDto.IsSelected,
-                        IsRequired = serviceDto.IsRequired, // Set the IsRequired flag
-                        Price = service.Price // Store the actual service price at the time of quotation creation
+                        IsRequired = serviceDto.IsRequired, // Set IsRequired 
+                        IsGood = serviceDto.IsGood, // Set IsGood
+                        Price = service.Price // Store the actual service price
                     };
 
                     await _quotationServiceRepository.CreateAsync(quotationService);
-                    // Don't add to the collection directly, let the repository handle the relationship
 
-                    // Create quotation service parts for this service
-                    if (serviceDto.QuotationServiceParts != null)
+                    // Create quotation service parts for this service when service is NOT Good
+                    if (!serviceDto.IsGood && serviceDto.QuotationServiceParts != null)
                     {
                         foreach (var partDto in serviceDto.QuotationServiceParts)
                         {
-                            // Get the actual part to retrieve its price
+                            // Get the actual part to retrieve price
                             var part = await _partRepository.GetByIdAsync(partDto.PartId);
                             if (part == null)
                             {
                                 throw new ArgumentException($"Part with ID {partDto.PartId} not found.");
                             }
 
-                            // Calculate part total (price * quantity) - using default quantity of 1
                             decimal partTotal = part.Price * 1;
                             totalAmount += partTotal;
 
@@ -164,8 +174,8 @@ namespace Services.QuotationServices
                             {
                                 QuotationServiceId = quotationService.QuotationServiceId,
                                 PartId = partDto.PartId,
-                                IsSelected = partDto.IsSelected, // Use the IsSelected from DTO (pre-selected by technician or manager)
-                                Price = part.Price, // Store the actual part price at the time of quotation creation
+                                IsSelected = partDto.IsSelected, // Use the IsSelected from DTO (goi y part cua tech)
+                                Price = part.Price,
                                 Quantity = partDto.Quantity
                             };
 
@@ -176,40 +186,51 @@ namespace Services.QuotationServices
                 }
             }
 
-            // Update the quotation with the calculated total amount
+            // Update the quotation with the calculated total amount and status
             createdQuotation.TotalAmount = totalAmount;
+            
+            // If all services are Good, set quotation status to Good (view-only, no payment)
+            if (allServicesGood && createQuotationDto.QuotationServices.Any())
+            {
+                createdQuotation.Status = QuotationStatus.Good;
+
+                await _quotationHubContext
+                       .Clients
+                       .Group($"User_{createQuotationDto.UserId}")
+                       .SendAsync("QuotationCreated", new
+                       {
+                           createdQuotation.QuotationId,
+                           createdQuotation.UserId,
+                           createdQuotation.RepairOrderId,
+                           createdQuotation.TotalAmount,
+                           createdQuotation.Status,
+                           createdQuotation.CreatedAt,
+                           createQuotationDto.Note
+                       });
+
+                var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
+
+                if (user != null && user.DeviceId != null)
+                {
+                    var FcmNotification = new FcmDataPayload
+                    {
+                        Type = NotificationType.Repair,
+                        Title = "New Quotation Available",
+                        Body = "A new quotation has been created for your repair job. Tap to view details.",
+                        EntityKey = EntityKeyType.quotationId,
+                        EntityId = createdQuotation.QuotationId,
+                        Screen = AppScreen.QuotationDetailFragment
+                    };
+                    await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+                }
+            }
+            
             await _quotationRepository.UpdateAsync(createdQuotation);
 
 
-            await _quotationHubContext
-            .Clients
-            .Group($"User_{createQuotationDto.UserId}")
-            .SendAsync("QuotationCreated", new
-            {
-                createdQuotation.QuotationId,
-                createdQuotation.UserId,
-                createdQuotation.RepairOrderId,
-                createdQuotation.TotalAmount,
-                createdQuotation.Status,
-                createdQuotation.CreatedAt,
-                createQuotationDto.Note
-            });
 
-            var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
 
-            if (user != null && user.DeviceId != null)
-            {
-                var FcmNotification = new FcmDataPayload
-                {
-                    Type = NotificationType.Repair,
-                    Title = "New Quotation Available",
-                    Body = "A new quotation has been created for your repair job. Tap to view details.",
-                    EntityKey = EntityKeyType.quotationId,
-                    EntityId = createdQuotation.QuotationId,
-                    Screen = AppScreen.QuotationDetailFragment
-                };
-                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
-            }
+           
 
 
             // Reload the quotation with all related data to ensure we have the complete object
@@ -356,6 +377,38 @@ namespace Services.QuotationServices
             }
 
             var updatedQuotation = await _quotationRepository.UpdateAsync(existingQuotation);
+
+
+            await _quotationHubContext
+            .Clients
+            .Group($"User_{updatedQuotation.UserId}")
+            .SendAsync("QuotationCreated", new
+            {
+                updatedQuotation.QuotationId,
+                updatedQuotation.UserId,
+                updatedQuotation.RepairOrderId,
+                updatedQuotation.TotalAmount,
+                updatedQuotation.Status,
+                updatedQuotation.CreatedAt,
+                updatedQuotation.Note
+            });
+
+            var user = await _userService.GetUserByIdAsync(updatedQuotation.UserId);
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Repair,
+                    Title = "Quotation Available",
+                    Body = "A new quotation has been created for your repair job. Tap to view details.",
+                    EntityKey = EntityKeyType.quotationId,
+                    EntityId = updatedQuotation.QuotationId,
+                    Screen = AppScreen.QuotationDetailFragment
+                };
+                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+            }
+
             return _mapper.Map<QuotationDto>(updatedQuotation);
         }
 
@@ -687,7 +740,7 @@ namespace Services.QuotationServices
                     JobName = $"{quotationService.Service?.ServiceName ?? "Service"} - Quotation {quotation.QuotationId.ToString().Substring(0, 8)}",
                     Status = JobStatus.Pending,
                     TotalAmount = quotationService.Price,
-                    Note = $"Auto-generated from approved quotation {quotation.QuotationId}",
+                    Note = $"Auto-generated from approved quotation",
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -740,6 +793,31 @@ namespace Services.QuotationServices
             if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
             {
                 throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
+            }
+
+            // Validation 1: Check if this quotation has already been copied to jobs
+            var existingJobsFromQuotation = await _jobService.GetJobsByRepairOrderIdAsync(quotation.RepairOrderId.Value);
+            var quotationNote = $"Auto-generated from approved quotation {quotation.QuotationId}";
+            
+            if (existingJobsFromQuotation.Any(j => j.Note != null && j.Note.Contains(quotation.QuotationId.ToString())))
+            {
+                throw new InvalidOperationException($"This quotation has already been copied to jobs. Each quotation can only create jobs once.");
+            }
+
+            // Validation 2: Check for duplicate services in existing jobs
+            var selectedServices = quotation.QuotationServices.Where(qs => qs.IsSelected).ToList();
+            var existingServiceIds = existingJobsFromQuotation.Select(j => j.ServiceId).ToHashSet();
+            
+            var duplicateServices = selectedServices
+                .Where(qs => existingServiceIds.Contains(qs.ServiceId))
+                .Select(qs => qs.Service?.ServiceName ?? "Unknown Service")
+                .ToList();
+
+            if (duplicateServices.Any())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create jobs: The following services already exist in jobs: {string.Join(", ", duplicateServices)}. " +
+                    $"Each service can only have one job in the system.");
             }
 
             try

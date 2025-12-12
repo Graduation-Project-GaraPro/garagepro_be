@@ -13,6 +13,8 @@ using Repositories.UnitOfWork;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 using Azure.Core;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
 
 namespace Services.PaymentServices
 {
@@ -27,6 +29,7 @@ namespace Services.PaymentServices
 
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly string _baseUrl;
+        private readonly IHubContext<RepairOrderHub> _repairOrderHubContext;
 
         public PaymentService(
                 IPaymentRepository repo,
@@ -35,7 +38,8 @@ namespace Services.PaymentServices
                 IRepairOrderRepository repoRepairOrder,
                 IConfiguration config,
                 IUnitOfWork unitOfWork,
-                IHttpContextAccessor httpContextAccessor)
+                IHttpContextAccessor httpContextAccessor,
+                IHubContext<RepairOrderHub> repairOrderHubContext)
         {
             _repo = repo;
             _payos = payos;
@@ -43,6 +47,7 @@ namespace Services.PaymentServices
             _unitOfWork = unitOfWork;
             _repoRepairOrder = repoRepairOrder;
             _httpContextAccessor = httpContextAccessor;
+            _repairOrderHubContext = repairOrderHubContext;
 
             var request = _httpContextAccessor.HttpContext?.Request;
 
@@ -308,7 +313,6 @@ namespace Services.PaymentServices
                 throw new Exception($"Repair order with ID {repairOrderId} not found");
             }
 
-            // Check if repair order status is Completed (StatusId = 3)
             if (repairOrder.StatusId != 3)
             {
                 throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
@@ -321,78 +325,121 @@ namespace Services.PaymentServices
                 throw new Exception($"All jobs in repair order must be completed before payment can be created");
             }
 
-            // 3. Check if there's already a paid payment
+            // 3. Check if repair order is already fully paid
+            if (repairOrder.PaidStatus == PaidStatus.Paid)
+            {
+                throw new Exception("Repair order is already fully paid. Cannot create another payment.");
+            }
+
+            // 4. Check if there's already a paid payment
             var paidPayment = await _repo.GetByConditionAsync(
                 p => p.RepairOrderId == repairOrderId && p.Status == PaymentStatus.Paid, ct);
             if (paidPayment != null) throw new Exception($"Payment {paidPayment.PaymentId} already paid");
 
-            // 4. Create payment record
+            // 5. Create payment record
             var payment = new Payment
             {
+                PaymentId = GeneratePaymentId(),
                 RepairOrderId = repairOrderId,
-                UserId = managerId, // Manager ID
+                UserId = repairOrder.UserId,
                 Amount = amount,
                 Method = method,
-                Status = method == PaymentMethod.Cash ? PaymentStatus.Paid : PaymentStatus.Unpaid, // Cash payments are immediately paid, PayOs payments are unpaid until customer pays
-                PaymentDate = method == PaymentMethod.Cash ? DateTime.UtcNow : DateTime.MinValue, // Set payment date only for cash payments
+                Status = method == PaymentMethod.Cash ? PaymentStatus.Paid : PaymentStatus.Unpaid,
+                PaymentDate = method == PaymentMethod.Cash ? DateTime.UtcNow : DateTime.MinValue,
                 UpdatedAt = DateTime.UtcNow
             };
 
-            // 5. Add payment to database
+            // 6. Add payment to database
             await _repo.AddAsync(payment);
             await _repo.SaveChangesAsync(ct);
 
-            // 6. Update repair order paid status (only for cash payments)
+            // 7. Update repair order paid status (only for Cash - PayOS updates when webhook processed)
             if (method == PaymentMethod.Cash)
             {
-                repairOrder.PaidAmount += amount;
-                if (repairOrder.PaidAmount >= repairOrder.EstimatedAmount)
-                {
-                    repairOrder.PaidStatus = PaidStatus.Paid;
-                }
-                else
-                {
-                    // Keep as Unpaid for partial payments since there's no Partial status in the enum
-                    repairOrder.PaidStatus = PaidStatus.Unpaid;
-                }
-
+                repairOrder.PaidStatus = PaidStatus.Paid;
+                repairOrder.PaidAmount = repairOrder.Cost;
                 await _repoRepairOrder.UpdateAsync(repairOrder);
-                await _repoRepairOrder.Context.SaveChangesAsync(ct);
             }
+
+            // 8. Send SignalR notifications
+            var paymentNotification = new
+            {
+                PaymentId = payment.PaymentId,
+                RepairOrderId = repairOrderId,
+                Amount = amount,
+                Method = method.ToString(),
+                Status = payment.Status.ToString(),
+                PaidStatus = repairOrder.PaidStatus.ToString(),
+                ProcessedBy = managerId,
+                ProcessedAt = DateTime.UtcNow,
+                CustomerName = repairOrder.User?.FirstName + " " + repairOrder.User?.LastName,
+                VehicleInfo = $"{repairOrder.Vehicle?.Brand?.BrandName} {repairOrder.Vehicle?.Model?.ModelName} ({repairOrder.Vehicle?.LicensePlate})",
+                Message = $"{method} payment created successfully"
+            };
+
+            // Notify all managers
+            await _repairOrderHubContext.Clients
+                .Group("Managers")
+                .SendAsync("PaymentReceived", paymentNotification);
+
+            // Notify specific repair order watchers
+            await _repairOrderHubContext.Clients
+                .Group($"RepairOrder_{repairOrderId}")
+                .SendAsync("PaymentReceived", paymentNotification);
+
+            // Notify customer
+            if (!string.IsNullOrEmpty(repairOrder.UserId))
+            {
+                await _repairOrderHubContext.Clients
+                    .Group($"Customer_{repairOrder.UserId}")
+                    .SendAsync("PaymentReceived", paymentNotification);
+            }
+
+            // Also trigger the PayRepairOrder event for board updates
+            await _repairOrderHubContext.Clients.All
+                .SendAsync("RepairOrderPaid", repairOrderId.ToString());
+
+            Console.WriteLine($"[PaymentService] {method} payment {payment.PaymentId} created for RO {repairOrderId}");
 
             return payment;
         }
 
         public async Task<CreatePaymentLinkResult> CreateManagerPayOsPaymentAsync(Guid repairOrderId, string managerId, string? description = null, CancellationToken ct = default)
         {
-            // 1. Get repair order and validate
-            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
+            await using var transaction = await _db.Database.BeginTransactionAsync(ct);
+            
+            try
+            {
+                // 1. Get repair order and validate
+                var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
             if (repairOrder == null)
             {
                 throw new Exception($"Repair order with ID {repairOrderId} not found");
             }
 
-            // Check if repair order status is Completed (StatusId = 3)
             if (repairOrder.StatusId != 3)
             {
                 throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
             }
 
-            // Check if all jobs are completed
             var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
             if (!allJobsCompleted)
             {
                 throw new Exception($"All jobs in repair order must be completed before payment can be created");
             }
 
-            // 2. Calculate amount to pay
-            var amountToPay = repairOrder.EstimatedAmount - repairOrder.PaidAmount;
-            if (amountToPay <= 0)
+            if (repairOrder.PaidStatus == PaidStatus.Paid)
             {
-                throw new Exception("Repair order is already fully paid");
+                throw new Exception("Repair order is already fully paid. Cannot create another payment.");
             }
 
-            // 3. Check if there's already a paid payment
+            var amountToPay = repairOrder.Cost;
+            if (amountToPay <= 0)
+            {
+                throw new Exception("Repair order cost is invalid");
+            }
+
+            // check if there's already a paid payment
             var paidPayment = await _repo.GetByConditionAsync(
                 p => p.RepairOrderId == repairOrderId && p.Status == PaymentStatus.Paid, ct);
             if (paidPayment != null)
@@ -400,7 +447,7 @@ namespace Services.PaymentServices
                 throw new Exception($"Payment {paidPayment.PaymentId} already paid");
             }
 
-            // 4. Check for existing unpaid PayOS payment
+            // Check existing unpaid PayOS payment
             var existingOpen = await _repo.GetByConditionAsync(
                 p => p.RepairOrderId == repairOrderId && 
                      p.Method == PaymentMethod.PayOs &&
@@ -408,19 +455,30 @@ namespace Services.PaymentServices
             
             if (existingOpen != null)
             {
-                return new CreatePaymentLinkResult 
-                { 
-                    PaymentId = existingOpen.PaymentId, 
-                    OrderCode = existingOpen.PaymentId, 
-                    CheckoutUrl = existingOpen.CheckoutUrl 
-                };
+                // If existing payment has valid CheckoutUrl, return it
+                if (!string.IsNullOrEmpty(existingOpen.CheckoutUrl))
+                {
+                    Console.WriteLine($"[PaymentService] Returning existing payment link for payment {existingOpen.PaymentId}");
+                    return new CreatePaymentLinkResult 
+                    { 
+                        PaymentId = existingOpen.PaymentId, 
+                        OrderCode = existingOpen.PaymentId, 
+                        CheckoutUrl = existingOpen.CheckoutUrl 
+                    };
+                }
+                
+                // If CheckoutUrl is null (PayOS failed before), delete and create new
+                Console.WriteLine($"[PaymentService] Existing payment {existingOpen.PaymentId} has null CheckoutUrl, deleting and creating new one");
+                _db.Payments.Remove(existingOpen);
+                await _db.SaveChangesAsync(ct);
             }
 
             // 5. Create payment record
             var payment = new Payment
             {
+                PaymentId = GeneratePaymentId(),
                 RepairOrderId = repairOrderId,
-                UserId = repairOrder.UserId, // Customer's user ID for payment tracking
+                UserId = repairOrder.UserId, 
                 Amount = amountToPay,
                 Method = PaymentMethod.PayOs,
                 Status = PaymentStatus.Unpaid,
@@ -431,21 +489,20 @@ namespace Services.PaymentServices
             await _repo.AddAsync(payment);
             await _repo.SaveChangesAsync(ct);
 
-            // 6. Ensure payment is saved and has ID
             if (payment.PaymentId <= 0)
             {
                 throw new InvalidOperationException("Payment ID is not generated properly");
             }
 
-            // 7. Prepare URLs for PayOS - Manager web flow
+            // URLs for PayOS
             var returnUrl = $"{_baseUrl}/manager/payment/success?orderCode={payment.PaymentId}&repairOrderId={repairOrderId}";
             var cancelUrl = $"{_baseUrl}/api/payments/cancel?orderCode={payment.PaymentId}&reason=user_cancel";
 
-            // 8. Create PayOS payment link
+            // Create PayOS payment link
             var payOsRequest = new CreatePaymentLinkRequest(
                 orderCode: payment.PaymentId,
                 amount: (int)Math.Round(amountToPay, MidpointRounding.AwayFromZero),
-                description: description ?? $"Payment for repair order {repairOrderId}",
+                description:$"Payment for order",
                 cancelUrl: cancelUrl,
                 returnUrl: returnUrl
             );
@@ -477,25 +534,29 @@ namespace Services.PaymentServices
             await _repo.UpdateAsync(payment, ct);
             await _repo.SaveChangesAsync(ct);
 
-            // 11. Return result
-            return new CreatePaymentLinkResult
+                await transaction.CommitAsync(ct);               
+                return new CreatePaymentLinkResult
+                {
+                    PaymentId = payment.PaymentId,
+                    OrderCode = payOsResponse.data.orderCode,
+                    CheckoutUrl = payOsResponse.data.checkoutUrl
+                };
+            }
+            catch
             {
-                PaymentId = payment.PaymentId,
-                OrderCode = payOsResponse.data.orderCode,
-                CheckoutUrl = payOsResponse.data.checkoutUrl
-            };
+                await transaction.RollbackAsync(ct);
+                throw;
+            }
         }
 
         public async Task<PaymentPreviewDto> GetPaymentPreviewAsync(Guid repairOrderId, CancellationToken ct = default)
         {
-            // Get repair order with all related data
             var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
             if (repairOrder == null)
             {
                 throw new Exception($"Repair order with ID {repairOrderId} not found");
             }
 
-            // Check if repair order status is Completed (StatusId = 3)
             if (repairOrder.StatusId != 3)
             {
                 throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
@@ -507,7 +568,6 @@ namespace Services.PaymentServices
                 RepairOrderCost = repairOrder.Cost,
                 EstimatedAmount = repairOrder.EstimatedAmount,
                 PaidAmount = repairOrder.PaidAmount,
-                // Customer and vehicle information
                 CustomerName = repairOrder.User != null ? $"{repairOrder.User.FirstName} {repairOrder.User.LastName}".Trim() : "Unknown Customer",
                 VehicleInfo = repairOrder.Vehicle != null ? $"{repairOrder.Vehicle.Brand?.BrandName ?? "Unknown Brand"} {repairOrder.Vehicle.Model?.ModelName ?? "Unknown Model"} ({repairOrder.Vehicle.LicensePlate ?? "No Plate"})" : "Unknown Vehicle"
             };
@@ -670,7 +730,7 @@ namespace Services.PaymentServices
             {
                 RepairOrderId = repairOrder.RepairOrderId,
                 CustomerName = repairOrder.User?.UserName ?? "Unknown Customer",
-                VehicleInfo = $"{repairOrder.Vehicle?.Brand} {repairOrder.Vehicle?.Model} ({repairOrder.Vehicle?.LicensePlate})",
+                VehicleInfo = $"{repairOrder.Vehicle?.Brand?.BrandName ?? "Unknown Brand"} {repairOrder.Vehicle?.Model?.ModelName ?? "Unknown Model"} ({repairOrder.Vehicle?.LicensePlate ?? "No Plate"})",
                 RepairOrderCost = repairOrder.Cost,
                 TotalDiscount = totalDiscount,
                 AmountToPay = repairOrder.Cost - totalDiscount,
@@ -687,10 +747,66 @@ namespace Services.PaymentServices
         {
             var payment = await _repo.GetByIdAsync(paymentId) ?? throw new KeyNotFoundException("Payment not found");
             if (amount.HasValue) payment.Amount = amount.Value;
+            
+            var oldStatus = payment.Status;
             payment.Status = PaymentStatus.Paid;
+            payment.PaymentDate = DateTime.UtcNow;
             payment.UpdatedAt = DateTime.UtcNow;
+            
             await _repo.UpdateAsync(payment, ct);
             await _repo.SaveChangesAsync(ct);
+
+            // Update repair order paid status
+            var repairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(payment.RepairOrderId);
+            if (repairOrder != null)
+            {
+                // When payment is marked as paid, update RO to Paid immediately
+                repairOrder.PaidStatus = PaidStatus.Paid;
+                repairOrder.PaidAmount = repairOrder.Cost; // Set to full cost
+
+                // Update and save (UpdateAsync already calls SaveChangesAsync)
+                await _repoRepairOrder.UpdateAsync(repairOrder);
+
+                // Send SignalR notifications
+                var paymentNotification = new
+                {
+                    PaymentId = payment.PaymentId,
+                    RepairOrderId = payment.RepairOrderId,
+                    Amount = payment.Amount,
+                    Method = payment.Method.ToString(),
+                    OldStatus = oldStatus.ToString(),
+                    NewStatus = "Paid",
+                    PaidStatus = repairOrder.PaidStatus.ToString(),
+                    UpdatedAt = DateTime.UtcNow,
+                    CustomerName = repairOrder.User?.FirstName + " " + repairOrder.User?.LastName,
+                    VehicleInfo = $"{repairOrder.Vehicle?.Brand?.BrandName} {repairOrder.Vehicle?.Model?.ModelName} ({repairOrder.Vehicle?.LicensePlate})",
+                    Message = "Payment confirmed and processed"
+                };
+
+                // Notify all managers
+                await _repairOrderHubContext.Clients
+                    .Group("Managers")
+                    .SendAsync("PaymentConfirmed", paymentNotification);
+
+                // Notify specific repair order watchers
+                await _repairOrderHubContext.Clients
+                    .Group($"RepairOrder_{payment.RepairOrderId}")
+                    .SendAsync("PaymentConfirmed", paymentNotification);
+
+                // Notify customer
+                if (!string.IsNullOrEmpty(repairOrder.UserId))
+                {
+                    await _repairOrderHubContext.Clients
+                        .Group($"Customer_{repairOrder.UserId}")
+                        .SendAsync("PaymentConfirmed", paymentNotification);
+                }
+
+                // Also trigger the PayRepairOrder event for board updates
+                await _repairOrderHubContext.Clients.All
+                    .SendAsync("RepairOrderPaid", payment.RepairOrderId.ToString());
+
+                Console.WriteLine($"[PaymentService] Payment {paymentId} marked as paid for RO {payment.RepairOrderId}");
+            }
         }
 
         public async Task MarkCancelledAsync(long paymentId, CancellationToken ct = default)

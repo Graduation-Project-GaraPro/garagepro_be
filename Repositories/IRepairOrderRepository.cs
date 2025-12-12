@@ -5,7 +5,8 @@ using System.Threading.Tasks;
 using BusinessObject;
 using BusinessObject.Authentication;
 using Dtos.RoBoard;
-using DataAccessLayer; // Add this for MyAppDbContext
+using DataAccessLayer;
+using BusinessObject.Enums; // Add this for MyAppDbContext
 
 namespace Repositories
 {
@@ -16,8 +17,11 @@ namespace Repositories
         Task<RepairOrder?> GetRepairOrderForPaymentAsync(Guid repairOrderId, string userId);
         // Basic CRUD operations
         Task<RepairOrder?> GetByIdAsync(Guid repairOrderId);
+
+        Task<RepairOrder?> GetByIdArchivedAsync(Guid repairOrderId);
         Task<RepairOrder> CreateAsync(RepairOrder repairOrder);
         Task<RepairOrder> UpdateAsync(RepairOrder repairOrder);
+        Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status);
         Task<bool> AnyAsync(Expression<Func<RepairOrder, bool>> predicate);
         Task<bool> DeleteAsync(Guid repairOrderId);
         Task<bool> ExistsAsync(Guid repairOrderId);
@@ -27,6 +31,7 @@ namespace Repositories
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByStatusAsync(int statusId);
         Task<IEnumerable<RepairOrder>> GetRepairOrdersForKanbanAsync(RoBoardFiltersDto filters = null);
         Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
+        Task<RepairOrder?> GetRepairOrderWithFullDetailsIncludingArchivedAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync();
 
         // Status update operations for drag-drop

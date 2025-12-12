@@ -20,8 +20,6 @@ services:
     build:
       context: .
       dockerfile: Garage_pro_api/Dockerfile
-      args:
-        ENVIRONMENT: Production
     image: garagepro-api
     container_name: garagepro-api
     depends_on:
@@ -29,6 +27,41 @@ services:
         condition: service_healthy
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      # Load tất cả biến từ .env
+      - ConnectionStrings__DefaultConnection=${ConnectionStrings__DefaultConnection}
+      - Firebase__ProjectId=${Firebase__ProjectId}
+      - Firebase__ServiceAccount__type=${Firebase__ServiceAccount__type}
+      - Firebase__ServiceAccount__project_id=${Firebase__ServiceAccount__project_id}
+      - Firebase__ServiceAccount__private_key_id=${Firebase__ServiceAccount__private_key_id}
+      - Firebase__ServiceAccount__private_key=${Firebase__ServiceAccount__private_key}
+      - Firebase__ServiceAccount__client_email=${Firebase__ServiceAccount__client_email}
+      - Firebase__ServiceAccount__client_id=${Firebase__ServiceAccount__client_id}
+      - Goong__ApiKey=${Goong__ApiKey}
+      - RequestLimits__MaxActiveRequestsPerUser=${RequestLimits__MaxActiveRequestsPerUser}
+      - RequestLimits__MaxRequestsPerVehiclePerDay=${RequestLimits__MaxRequestsPerVehiclePerDay}
+      - RequestLimits__CreateCooldownMinutes=${RequestLimits__CreateCooldownMinutes}
+      - Jwt__Key=${Jwt__Key}
+      - Jwt__Issuer=${Jwt__Issuer}
+      - Jwt__Audience=${Jwt__Audience}
+      - Jwt__ExpireMinutes=${Jwt__ExpireMinutes}
+      - PayOs__ClientId=${PayOs__ClientId}
+      - PayOs__ApiKey=${PayOs__ApiKey}
+      - PayOs__ChecksumKey=${PayOs__ChecksumKey}
+      - PayOs__BaseUrl=${PayOs__BaseUrl}
+      - App__BaseUrl=${App__BaseUrl}
+      - Email__From=${Email__From}
+      - Email__Password=${Email__Password}
+      - Email__Smtp=${Email__Smtp}
+      - Email__Port=${Email__Port}
+      - Authentication__Google__ClientId=${Authentication__Google__ClientId}
+      - Authentication__Google__ClientSecret=${Authentication__Google__ClientSecret}
+      - CloudinarySettings__CloudName=${CloudinarySettings__CloudName}
+      - CloudinarySettings__ApiKey=${CloudinarySettings__ApiKey}
+      - CloudinarySettings__ApiSecret=${CloudinarySettings__ApiSecret}
+      - MAPBOX_TOKEN=${MAPBOX_TOKEN}
+      - MAPBOX_PROFILE=${MAPBOX_PROFILE}
+    env_file:
+      - .env
     ports:
       - "5000:8080"
     networks:

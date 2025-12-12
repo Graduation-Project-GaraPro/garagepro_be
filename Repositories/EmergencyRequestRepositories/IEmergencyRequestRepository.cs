@@ -16,9 +16,21 @@ namespace Repositories.EmergencyRequestRepositories
             Task<RequestEmergency?> GetByIdAsync(Guid id);
             Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5);
             Task<List<RequestEmergency>> GetAllEmergencyAsync();
-           
-            Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
+
+                Task<bool> UpdateEmergencyStatusAsync(
+                        Guid emergencyRequestId,
+                        RequestEmergency.EmergencyStatus newStatus,
+                        string? rejectReason = null,
+                        string? technicianId = null
+                    );
+            Task<RequestEmergency?> GetCurrentEmergencyForTechnicianAsync(string technicianId);
+            Task<List<RequestEmergency>> GetEmergencyListForTechnicianAsync(string technicianId);
+
+            Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId);
+
+        Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
             Task<bool> AnyActiveAsync(string customerId, Guid vehicleId);
+        Task<bool> AssignTechnicianAsync(Guid technicianUserId, Guid emergencyId);
     }
     }
 

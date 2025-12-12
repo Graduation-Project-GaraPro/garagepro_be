@@ -50,7 +50,9 @@ namespace BusinessObject.Authentication
         //feedback 
         public virtual ICollection<FeedBack> FeedBacks { get; set; } = new List<FeedBack>();
 
-        
+        public virtual ICollection<RequestEmergency.RequestEmergency> AssignedEmergencyRequests { get; set; }
+         = new List<RequestEmergency.RequestEmergency>();
+
         // Branch relationship
         public Guid? BranchId { get; set; }  // Nullable nếu user chưa được gán chi nhánh
         public virtual Branch Branch { get; set; }

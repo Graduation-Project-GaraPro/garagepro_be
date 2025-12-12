@@ -11,18 +11,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Services;
+using Microsoft.AspNetCore.SignalR;
+using Services.Hubs;
 
 public class InspectionTechnicianService : IInspectionTechnicianService
 {
     private readonly IInspectionTechnicianRepository _repo;
     private readonly IMapper _mapper;
     private readonly IRepairOrderService _repairOrderService;
+    private readonly IHubContext<InspectionHub> _inspectionHubContext;
 
-    public InspectionTechnicianService(IInspectionTechnicianRepository repo, IMapper mapper, IRepairOrderService repairOrderService)
+    public InspectionTechnicianService(
+        IInspectionTechnicianRepository repo, 
+        IMapper mapper, 
+        IRepairOrderService repairOrderService,
+        IHubContext<InspectionHub> inspectionHubContext)
     {
         _repo = repo;
         _mapper = mapper;
         _repairOrderService = repairOrderService;
+        _inspectionHubContext = inspectionHubContext;
     }
     public async Task<List<InspectionTechnicianDto>> GetInspectionsByTechnicianAsync(string userId)
     {
@@ -75,6 +83,26 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         inspection.UpdatedAt = DateTime.UtcNow;
 
         await _repo.SaveChangesAsync();
+
+        // Send SignalR notification to managers
+        var technicianName = technician.User != null 
+            ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() 
+            : "Unknown Technician";
+
+        await _inspectionHubContext.Clients
+            .Group("Managers")
+            .SendAsync("InspectionStarted", new
+            {
+                InspectionId = id,
+                RepairOrderId = inspection.RepairOrderId,
+                TechnicianId = technician.TechnicianId,
+                TechnicianName = technicianName,
+                CustomerConcern = inspection.CustomerConcern,
+                StartedAt = DateTime.UtcNow,
+                Message = "Technician has started the inspection"
+            });
+
+        Console.WriteLine($"[InspectionTechnicianService] Sent InspectionStarted to Managers group for Inspection {id}");
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
@@ -290,19 +318,39 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         {
             inspection.Status = InspectionStatus.Completed;
         }
-        else if (inspection.Status == InspectionStatus.New)
+        else if (inspection.Status == InspectionStatus.New || inspection.Status == InspectionStatus.Pending)
         {
             inspection.Status = InspectionStatus.InProgress;
         }
 
         await _repo.SaveChangesAsync();
 
-        // neu inspect xong ma khach khong lam thi lay gia cua inspection luu vao cost cua RO
+        // Send SignalR notification only when inspection completes
         if (previousStatus != InspectionStatus.Completed && inspection.Status == InspectionStatus.Completed)
         {
-            // ham cap nhat cost
-            await _repairOrderService.UpdateCostFromInspectionAsync(inspection.RepairOrderId);
+            var technicianName = technician.User != null 
+                ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() 
+                : "Unknown Technician";
+
+            await _inspectionHubContext.Clients
+                .Group("Managers")
+                .SendAsync("InspectionCompleted", new
+                {
+                    InspectionId = id,
+                    RepairOrderId = inspection.RepairOrderId,
+                    TechnicianId = technician.TechnicianId,
+                    TechnicianName = technicianName,
+                    CustomerConcern = inspection.CustomerConcern,
+                    Finding = inspection.Finding,
+                    ServiceCount = inspection.ServiceInspections?.Count ?? 0,
+                    PartCount = inspection.PartInspections?.Count ?? 0,
+                    CompletedAt = DateTime.UtcNow,
+                    Message = "Inspection completed and ready for quotation"
+                });
+
+            Console.WriteLine($"[InspectionTechnicianService] Sent InspectionCompleted to Managers group for Inspection {id}");
         }
+
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
