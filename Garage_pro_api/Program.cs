@@ -829,7 +829,7 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
     Console.WriteLine("Applying pending migrations...");
-    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+     dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
     if (!dbContext.SecurityPolicies.Any())
     {
