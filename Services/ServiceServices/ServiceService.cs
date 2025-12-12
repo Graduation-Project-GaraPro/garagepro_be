@@ -95,8 +95,10 @@ namespace Services.ServiceServices
 
             //  Lấy dữ liệu phân trang
             var pagedEntities = await query
+                .OrderBy(s=>s.CreatedAt)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .AsSplitQuery()
                 .ToListAsync();
 
             var services = _mapper.Map<IEnumerable<ServiceDto>>(pagedEntities);

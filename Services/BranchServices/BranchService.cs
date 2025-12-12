@@ -590,9 +590,11 @@ namespace Services.BranchServices
             var totalCount = await query.CountAsync();
 
             var branches = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+                 .OrderBy(b => b.BranchName) // or CreatedAt, Name, etc.
+                 .Skip((page - 1) * pageSize)
+                 .Take(pageSize)
+                 .AsSplitQuery()
+                 .ToListAsync();
 
             return (_mapper.Map<IEnumerable<BranchReadDto>>(branches), totalCount);
         }
