@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using BusinessObject;
 using DataAccessLayer;
+using Dtos.Parts;
 using Microsoft.EntityFrameworkCore;
 
 namespace Repositories.PartRepositories
@@ -42,6 +43,43 @@ namespace Repositories.PartRepositories
                 .Where(p => p.BranchId == branchId)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
+        }
+
+        public async Task<(IEnumerable<Part> items, int totalCount)> GetPagedAsync(int page, int pageSize)
+        {
+            var query = _context.Parts
+                .Include(p => p.PartCategory)
+                .Include(p => p.Branch)
+                .AsQueryable();
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(p => p.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
+        public async Task<(IEnumerable<Part> items, int totalCount)> GetPagedByBranchAsync(Guid branchId, int page, int pageSize)
+        {
+            var query = _context.Parts
+                .Include(p => p.PartCategory)
+                .Include(p => p.Branch)
+                .Where(p => p.BranchId == branchId)
+                .AsQueryable();
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .OrderBy(p => p.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
         }
 
         public async Task<Part> CreateAsync(Part part)
@@ -146,6 +184,61 @@ namespace Repositories.PartRepositories
                 .ToListAsync();
 
             return (items, totalCount);
+        }
+
+        public async Task<IEnumerable<Part>> GetPartsForServiceAsync(Guid serviceId)
+        {
+            return await _context.Parts
+                .Include(p => p.PartCategory)
+                .Include(p => p.Branch)
+                .Where(p => p.PartCategory.ServicePartCategories.Any(spc => spc.ServiceId == serviceId))
+                .OrderBy(p => p.Name)
+                .ToListAsync();
+        }
+
+        public async Task<bool> UpdateServicePartCategoriesAsync(Guid serviceId, List<Guid> partCategoryIds)
+        {
+            // Remove existing relationships
+            var existingRelationships = await _context.ServicePartCategories
+                .Where(spc => spc.ServiceId == serviceId)
+                .ToListAsync();
+
+            _context.ServicePartCategories.RemoveRange(existingRelationships);
+
+            // Add new relationships
+            var newRelationships = partCategoryIds.Select(categoryId => new ServicePartCategory
+            {
+                ServiceId = serviceId,
+                PartCategoryId = categoryId
+            });
+
+            _context.ServicePartCategories.AddRange(newRelationships);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<ServicePartCategoryDto> GetServiceWithPartCategoriesAsync(Guid serviceId)
+        {
+            var service = await _context.Services
+                .Include(s => s.ServicePartCategories)
+                .ThenInclude(spc => spc.PartCategory)
+                .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
+
+            if (service == null) return null;
+
+            return new ServicePartCategoryDto
+            {
+                ServiceId = service.ServiceId,
+                ServiceName = service.ServiceName,
+                PartCategories = service.ServicePartCategories.Select(spc => new PartCategoryDto
+                {
+                    LaborCategoryId = spc.PartCategory.LaborCategoryId,
+                    CategoryName = spc.PartCategory.CategoryName,
+                    Description = spc.PartCategory.Description,
+                    CreatedAt = spc.PartCategory.CreatedAt,
+                    UpdatedAt = spc.PartCategory.UpdatedAt
+                }).ToList()
+            };
         }
     }
 }

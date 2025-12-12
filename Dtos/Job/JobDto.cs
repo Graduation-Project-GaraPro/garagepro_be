@@ -35,6 +35,9 @@ namespace Dtos.Job
         public string? AssignedByManagerId { get; set; }
         public DateTime? AssignedAt { get; set; }
         
+        // Technician information
+        public string? TechnicianName { get; set; }
+        
         // Parts associated with this job
         public ICollection<JobPartDto> Parts { get; set; } = new List<JobPartDto>();
     }

@@ -19,6 +19,6 @@ namespace Services.Notifications
         Task<bool> MarkAllNotificationsAsReadAsync(string userId);
         Task<bool> DeleteNotificationAsync(Guid notificationId, string userId);
         Task SendJobOverdueNotificationAsync(string userId, Guid jobId, string jobName, string serviceName, DateTime deadline, int daysOverdue);
-
+        Task SendGeneralNotificationAsync(string userId, string content, NotificationType type, string target, string title = "Notification", Dictionary<string, object> metadata = null);    
     }
 }
