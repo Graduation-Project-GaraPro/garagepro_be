@@ -665,7 +665,7 @@ builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
 builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
@@ -829,7 +829,7 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
     Console.WriteLine("Applying pending migrations...");
-     dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
 
     if (!dbContext.SecurityPolicies.Any())
     {
