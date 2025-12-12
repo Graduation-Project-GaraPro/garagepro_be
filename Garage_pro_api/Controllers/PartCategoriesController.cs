@@ -1,4 +1,5 @@
-﻿using Dtos.Parts;
+﻿using BusinessObject;
+using Dtos.Parts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.PartCategoryServices;
@@ -7,7 +8,7 @@ namespace Garage_pro_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Manager")]
+    
     public class PartCategoriesController : ControllerBase
     {
         private readonly IPartCategoryService _partCategoryService;
@@ -30,6 +31,13 @@ namespace Garage_pro_api.Controllers
             {
                 return StatusCode(500, new { message = "Error retrieving part categories", detail = ex.Message });
             }
+        }
+
+        [HttpGet("for-service")]
+        public async Task<ActionResult<IEnumerable<PartCategoryWithPartsDto>>> GetAllForService()
+        {
+            var result = await _partCategoryService.GetAllWithPartsAsync();
+            return Ok(result);
         }
 
         // GET: api/partcategories/paged
