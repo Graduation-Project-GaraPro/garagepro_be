@@ -39,8 +39,7 @@ namespace Repositories.Revenue
                 .AsNoTracking()
                 .Where(r =>
                     !startDate.HasValue ||
-                    ((r.ArchivedAt != null && r.ArchivedAt >= startDate && r.ArchivedAt <= endDate)
-                     || (r.CompletionDate == null && r.CompletionDate >= startDate && r.CompletionDate <= endDate))
+                   (r.ArchivedAt != null && r.ArchivedAt >= startDate && r.ArchivedAt <= endDate)
                 )
                 .OrderByDescending(r => r.CreatedAt)
                 .Skip(page * pageSize)
@@ -91,8 +90,7 @@ namespace Repositories.Revenue
                 .AsNoTracking()
                 .Where(r =>     
                         (r.ArchivedAt != null && r.ArchivedAt >= start && r.ArchivedAt <= end)
-                        ||       
-                        (r.CompletionDate != null && r.CompletionDate >= start && r.CompletionDate <= end)
+                       
                     );
 
             if (branchId.HasValue)
@@ -112,7 +110,7 @@ namespace Repositories.Revenue
             return await q.Select(r => new RepairOrderSummaryDto
             {
                 RepairOrderId = r.RepairOrderId,
-                CompletionDate = r.CompletionDate,
+                CompletionDate = r.ArchivedAt,
                 PaidAmount = r.PaidAmount,
                 Cost = r.Cost,
                 EstimatedAmount = r.EstimatedAmount,
@@ -128,9 +126,9 @@ namespace Repositories.Revenue
             var q = _context.Jobs
                 .AsNoTracking()
                 .Where(j => j.RepairOrder != null
-                            && j.RepairOrder.CompletionDate != null
-                            && j.RepairOrder.CompletionDate >= start
-                            && j.RepairOrder.CompletionDate <= end);
+                            && j.RepairOrder.ArchivedAt != null
+                            && j.RepairOrder.ArchivedAt >= start
+                            && j.RepairOrder.ArchivedAt <= end);
 
             if (branchId.HasValue)
                 q = q.Where(j => j.RepairOrder.BranchId == branchId.Value);
