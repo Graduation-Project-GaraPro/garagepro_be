@@ -89,9 +89,9 @@ namespace Services.EmergencyRequestService
                 throw new InvalidOperationException("Too many requests. Please wait before creating another emergency.");
             }
 
-            var hasActive = await _repository.AnyActiveAsync(userId, dto.VehicleId);
+            var hasActive = await _repository.AnyActiveAsync(userId);
             if (hasActive)
-                throw new InvalidOperationException("Active emergency already exists for this vehicle.");
+                throw new InvalidOperationException("Active emergency already exists for this user.");
 
 
             var vehicle = await _vehicleRepository.GetByIdAsync(dto.VehicleId);

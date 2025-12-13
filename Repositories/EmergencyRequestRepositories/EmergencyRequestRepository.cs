@@ -133,11 +133,10 @@ namespace Repositories.EmergencyRequestRepositories
                  .ToListAsync();
         }
 
-        public async Task<bool> AnyActiveAsync(string customerId, Guid vehicleId)
+        public async Task<bool> AnyActiveAsync(string customerId)
         {
             return await _context.RequestEmergencies.AnyAsync(e =>
                 e.CustomerId == customerId &&
-                e.VehicleId == vehicleId &&
                 (e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Pending
                  || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Accepted
                  || e.Status == BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.InProgress

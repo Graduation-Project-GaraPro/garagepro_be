@@ -10,6 +10,7 @@ using DataAccessLayer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using BusinessObject.Customers;
+using BusinessObject.RequestEmergency;
 
 namespace Garage_pro_api.DbInit
 {
@@ -56,6 +57,7 @@ namespace Garage_pro_api.DbInit
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
+            await SeedPriceEmergenciesAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
@@ -1705,54 +1707,38 @@ namespace Garage_pro_api.DbInit
         }
         private async Task SeedVehicleModelColorsAsync()
         {
-            if (!_context.VehicleModelColors.Any())
+            var models = await _context.VehicleModels.ToListAsync();
+            var colors = await _context.VehicleColors.ToListAsync();
+            if (models.Count == 0 || colors.Count == 0) return;
+
+            var existingPairs = await _context.VehicleModelColors
+                .Select(x => new { x.ModelID, x.ColorID })
+                .ToListAsync();
+            var set = new HashSet<(Guid, Guid)>(existingPairs.Select(e => (e.ModelID, e.ColorID)));
+
+            var preferredNames = new[] { "White", "Black", "Silver", "Blue", "Red" };
+            var preferred = colors.Where(c => preferredNames.Contains(c.ColorName)).ToList();
+            if (preferred.Count == 0) preferred = colors.Take(Math.Min(5, colors.Count)).ToList();
+
+            var toAdd = new List<VehicleModelColor>();
+            foreach (var m in models)
             {
-                // Get required Vehicle Models
-                var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
-                var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
-                var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
-                var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
-                var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
-
-                // Get required Vehicle Colors
-                var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
-                var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
-                var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
-                var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
-                var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
-
-                // Ensure all required entities exist before seeding the join table
-                if (camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null &&
-                    whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null)
+                var chosen = preferred.Count > 0 ? preferred : colors;
+                foreach (var c in chosen)
                 {
-                    var modelColors = new List<VehicleModelColor>
-            {
-                // Toyota Camry is available in White, Black, and Silver
-                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = whiteColor.ColorID },
-                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = blackColor.ColorID },
-                new VehicleModelColor { ModelID = camryModel.ModelID, ColorID = silverColor.ColorID },
-
-                // Honda Civic is available in Black and Red
-                new VehicleModelColor { ModelID = civicModel.ModelID, ColorID = blackColor.ColorID },
-                new VehicleModelColor { ModelID = civicModel.ModelID, ColorID = redColor.ColorID },
-
-                // Ford Focus is available in Silver and Blue
-                new VehicleModelColor { ModelID = focusModel.ModelID, ColorID = silverColor.ColorID },
-                new VehicleModelColor { ModelID = focusModel.ModelID, ColorID = blueColor.ColorID },
-
-                // BMW 3 Series is available in Red and Black
-                new VehicleModelColor { ModelID = series3Model.ModelID, ColorID = redColor.ColorID },
-                new VehicleModelColor { ModelID = series3Model.ModelID, ColorID = blackColor.ColorID },
-
-                // Mercedes C-Class is available in Blue, White, and Silver
-                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = blueColor.ColorID },
-                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = whiteColor.ColorID },
-                new VehicleModelColor { ModelID = cClassModel.ModelID, ColorID = silverColor.ColorID }
-            };
-
-                    _context.VehicleModelColors.AddRange(modelColors);
-                    await _context.SaveChangesAsync();
+                    var key = (m.ModelID, c.ColorID);
+                    if (!set.Contains(key))
+                    {
+                        toAdd.Add(new VehicleModelColor { ModelID = m.ModelID, ColorID = c.ColorID });
+                        set.Add(key);
+                    }
                 }
+            }
+
+            if (toAdd.Count > 0)
+            {
+                _context.VehicleModelColors.AddRange(toAdd);
+                await _context.SaveChangesAsync();
             }
         }
         private async Task SeedPromotionalCampaignsWithServicesAsync()
@@ -1844,6 +1830,22 @@ namespace Garage_pro_api.DbInit
                     _context.PromotionalCampaignServices.AddRange(promoCampaignServices);
                     await _context.SaveChangesAsync();
                 }
+            }
+        }
+
+        private async Task SeedPriceEmergenciesAsync()
+        {
+            if (!_context.PriceEmergencies.Any())
+            {
+                var now = DateTime.UtcNow;
+                var prices = new List<PriceEmergency>
+                {
+                    new PriceEmergency { PriceId = Guid.NewGuid(), BasePrice = 50000m, PricePerKm = 10000m, DateCreated = now.AddDays(-14) },
+                    new PriceEmergency { PriceId = Guid.NewGuid(), BasePrice = 60000m, PricePerKm = 12000m, DateCreated = now.AddDays(-7) },
+                    new PriceEmergency { PriceId = Guid.NewGuid(), BasePrice = 70000m, PricePerKm = 15000m, DateCreated = now }
+                };
+                _context.PriceEmergencies.AddRange(prices);
+                await _context.SaveChangesAsync();
             }
         }
 
