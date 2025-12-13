@@ -180,19 +180,16 @@ namespace Garage_pro_api.Controllers
                     RoType = createRoDto.RoType,
                     ReceiveDate = createRoDto.ReceiveDate,
                     EstimatedCompletionDate = createRoDto.EstimatedCompletionDate,
-                    EstimatedAmount = totalEstimatedAmount, // Calculated from services
+                    EstimatedAmount = totalEstimatedAmount, 
                     Note = createRoDto.Note,
-                    // Removed LabelId as labels should be accessed through OrderStatus
-                    // LabelId = createRoDto.LabelId,
-                    EstimatedRepairTime = totalEstimatedTime, // Calculated from services
+                    EstimatedRepairTime = totalEstimatedTime,
                     UserId = createRoDto.CustomerId,
                     StatusId = statusId,
-                    BranchId = user.BranchId.Value, // Get branch ID from authenticated user
-                    RepairRequestId = createRoDto.RepairRequestId, // Use provided RepairRequestId or null
-                    PaidStatus = PaidStatus.Unpaid, // Default paid status
-                    // Other fields will use their default values
-                    Cost = 0, // Auto-generated
-                    CreatedAt = DateTime.UtcNow // Auto-generated
+                    BranchId = user.BranchId.Value, 
+                    RepairRequestId = createRoDto.RepairRequestId,
+                    PaidStatus = PaidStatus.Unpaid, 
+                    Cost = 0, 
+                    CreatedAt = DateTime.UtcNow 
                 };
 
                 var createdRepairOrder = await _repairOrderService.CreateRepairOrderAsync(repairOrder, createRoDto.SelectedServiceIds);
@@ -305,6 +302,8 @@ namespace Garage_pro_api.Controllers
         }
 
         // POST: api/RepairOrder/status/update
+        // - Creating inspections (Pending → In Progress, Completed → In Progress if not fully paid)
+        // - Creating quotations (Pending → In Progress, Completed → In Progress if not fully paid)
         [AllowAnonymous]
         [HttpPost("status/update")]
         public async Task<IActionResult> UpdateRepairOrderStatus([FromBody] UpdateRoBoardStatusDto updateDto)

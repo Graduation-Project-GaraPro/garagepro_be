@@ -28,6 +28,15 @@ namespace Services
             return await _labelRepository.GetByOrderStatusIdAsync(orderStatusId);
         }
 
+        public async Task<IEnumerable<Label>> GetDefaultLabelsByOrderStatusIdAsync(int orderStatusId)
+        {
+            // Validate that order status exists
+            if (!await _orderStatusRepository.ExistsAsync(orderStatusId))
+                throw new KeyNotFoundException($"Order status with ID {orderStatusId} not found");
+
+            return await _labelRepository.GetDefaultByOrderStatusIdAsync(orderStatusId);
+        }
+
         public async Task<Label?> GetLabelByIdAsync(Guid id)
         {
             return await _labelRepository.GetByIdAsync(id);
