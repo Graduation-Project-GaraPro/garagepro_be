@@ -6,6 +6,7 @@ namespace Repositories
     {
         Task<IEnumerable<Label>> GetAllAsync();
         Task<IEnumerable<Label>> GetByOrderStatusIdAsync(int orderStatusId);
+        Task<IEnumerable<Label>> GetDefaultByOrderStatusIdAsync(int orderStatusId);
         Task<Label?> GetByIdAsync(Guid id);
         Task<IEnumerable<Label>> GetByIdsAsync(List<Guid> ids);
         Task<Label?> GetDefaultLabelByStatusIdAsync(int orderStatusId);

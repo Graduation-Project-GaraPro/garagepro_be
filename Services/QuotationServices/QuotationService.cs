@@ -227,6 +227,33 @@ namespace Services.QuotationServices
             
             await _quotationRepository.UpdateAsync(createdQuotation);
 
+            // Auto-update repair order status to "In Progress"
+            if (createQuotationDto.RepairOrderId.HasValue)
+            {
+                var repairOrder = await _repairOrderRepository.GetByIdAsync(createQuotationDto.RepairOrderId.Value);
+                if (repairOrder != null)
+                {
+                    if (repairOrder.StatusId == 1) 
+                    {
+                        await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                            createQuotationDto.RepairOrderId.Value, 
+                            2 
+                        );
+                    }
+                    else if (repairOrder.StatusId == 3) 
+                    {                       
+                        // Only move back to In Progress if not paid
+                        if (repairOrder.PaidStatus == PaidStatus.Unpaid)
+                        {
+                            await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                                createQuotationDto.RepairOrderId.Value, 
+                                2
+                            );
+                        }
+                    }
+                }
+            }
+
 
 
 
@@ -835,12 +862,8 @@ namespace Services.QuotationServices
             }
         }
 
-        /// <summary>
         /// Creates revision jobs for an updated quotation
-        /// </summary>
-        /// <param name="quotationId">The ID of the quotation</param>
-        /// <param name="revisionReason">The reason for the revision</param>
-        /// <returns>True if successful, false otherwise</returns>
+
         public async Task<bool> CreateRevisionJobsAsync(Guid quotationId, string revisionReason)
         {
             var quotation = await _quotationRepository.GetByIdAsync(quotationId);
@@ -855,6 +878,76 @@ namespace Services.QuotationServices
             await GenerateJobsFromQuotationAsync(quotation);
 
             return true;
+        }
+
+
+        // Checks if a repair order can be completed (all quotations are Good and repair order is In Progress)
+        public async Task<bool> CanCompleteRepairOrderAsync(Guid repairOrderId)
+        {
+            try
+            {
+                // Get all quotations for this repair order
+                var quotations = await _quotationRepository.GetByRepairOrderIdAsync(repairOrderId);
+                
+                if (!quotations.Any())
+                {
+                    return false;
+                }
+
+                // Check if ALL quotations are Good status
+                var allQuotationsAreGood = quotations.All(q => q.Status == QuotationStatus.Good);
+                
+                if (!allQuotationsAreGood)
+                {
+                    return false;
+                }
+
+                // Get the repair order to check current status
+                var repairOrder = await _repairOrderRepository.GetByIdAsync(repairOrderId);
+                
+                // Can complete if repair order exists and is In Progress
+                return repairOrder != null && repairOrder.StatusId == 2; 
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ERROR] Failed to check if RepairOrder {repairOrderId} can be completed: {ex.Message}");
+                return false;
+            }
+        }
+
+
+        // Manually completes a repair order when all quotations are Good
+        public async Task CompleteRepairOrderWithGoodQuotationsAsync(Guid repairOrderId)
+        {
+            // First check if it can be completed
+            var canComplete = await CanCompleteRepairOrderAsync(repairOrderId);
+            if (!canComplete)
+            {
+                throw new InvalidOperationException("Repair order cannot be completed. Either not all quotations are Good or repair order is not In Progress.");
+            }
+
+            // Get quotations and repair order
+            var quotations = await _quotationRepository.GetByRepairOrderIdAsync(repairOrderId);
+            var repairOrder = await _repairOrderRepository.GetByIdAsync(repairOrderId);
+
+            if (repairOrder == null)
+            {
+                throw new ArgumentException("Repair order not found");
+            }
+
+            // Update repair order to Completed status
+            await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(repairOrderId, 3); 
+            
+            // Set completion date and repair order status
+            repairOrder.CompletionDate = DateTime.UtcNow;
+            repairOrder.StatusId = 3;
+
+            // Calculate total cost from Good quotations (inspection fees)
+            var totalInspectionFees = quotations.Sum(q => q.InspectionFee);
+            repairOrder.Cost = totalInspectionFees;
+            repairOrder.PaidAmount = totalInspectionFees;
+            
+            await _repairOrderRepository.UpdateAsync(repairOrder);
         }
     }
 }

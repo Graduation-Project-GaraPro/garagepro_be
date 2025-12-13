@@ -6,6 +6,7 @@ namespace Services
     {
         Task<IEnumerable<Label>> GetAllLabelsAsync();
         Task<IEnumerable<Label>> GetLabelsByOrderStatusIdAsync(int orderStatusId); // Changed from Guid to int
+        Task<IEnumerable<Label>> GetDefaultLabelsByOrderStatusIdAsync(int orderStatusId);
         Task<Label?> GetLabelByIdAsync(Guid id);
         Task<Label> CreateLabelAsync(Label label);
         Task<Label> UpdateLabelAsync(Label label);
