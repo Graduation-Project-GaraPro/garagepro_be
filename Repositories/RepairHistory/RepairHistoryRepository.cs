@@ -31,7 +31,6 @@ namespace Repositories.RepairHistory
 
         public async Task<Technician> GetTechnicianWithCompletedJobsAsync(Guid technicianId)
         {
-            // Bước 1: Lấy danh sách JobIds completed
             var completedJobIds = await _context.JobTechnicians
                 .AsNoTracking()
                 .Where(jt => jt.TechnicianId == technicianId &&
@@ -42,7 +41,6 @@ namespace Repositories.RepairHistory
 
             if (!completedJobIds.Any())
             {
-                // Return empty technician nếu không có jobs
                 return new Technician
                 {
                     TechnicianId = technicianId,
@@ -50,7 +48,6 @@ namespace Repositories.RepairHistory
                 };
             }
 
-            // Bước 2: Load Jobs với Projection
             var jobs = await _context.Jobs
                 .AsNoTracking()
                 .Where(j => completedJobIds.Contains(j.JobId))
@@ -110,7 +107,6 @@ namespace Repositories.RepairHistory
                 })
                 .ToListAsync();
 
-            // Bước 3: Load JobParts riêng
             var jobParts = await _context.JobParts
                 .AsNoTracking()
                 .Where(jp => completedJobIds.Contains(jp.JobId))
@@ -123,7 +119,6 @@ namespace Repositories.RepairHistory
                 })
                 .ToListAsync();
 
-            // Bước 4: Load RepairOrderServices riêng
             var repairOrderIds = jobs.Select(j => j.RepairOrderId).Distinct().ToList();
             var repairOrderServices = await _context.RepairOrderServices
                 .AsNoTracking()
@@ -138,19 +133,16 @@ namespace Repositories.RepairHistory
                 })
                 .ToListAsync();
 
-            // Bước 5: Count RepairOrders per Vehicle
             var vehicleIds = jobs.Select(j => j.RepairOrder.Vehicle.VehicleId).Distinct().ToList();
             var repairOrderCounts = await _context.RepairOrders
                 .AsNoTracking()
-                .Where(ro => vehicleIds.Contains(ro.VehicleId) && !ro.IsArchived)
+                .Where(ro => vehicleIds.Contains(ro.VehicleId))
                 .GroupBy(ro => ro.VehicleId)
                 .Select(g => new { VehicleId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.VehicleId, x => x.Count);
 
-            // Bước 6: Gán collections vào jobs
             foreach (var job in jobs)
             {
-                // Gán JobParts
                 job.JobParts = jobParts
                     .Where(jp => jp.JobId == job.JobId)
                     .Select(jp => new JobPart
@@ -165,7 +157,6 @@ namespace Repositories.RepairHistory
                     })
                     .ToList();
 
-                // Gán RepairOrderServices
                 job.RepairOrder.RepairOrderServices = repairOrderServices
                     .Where(ros => ros.RepairOrderId == job.RepairOrderId)
                     .Select(ros => new RepairOrderService
@@ -181,7 +172,6 @@ namespace Repositories.RepairHistory
                     })
                     .ToList();
 
-                // Gán RepairOrders count
                 if (repairOrderCounts.TryGetValue(job.RepairOrder.Vehicle.VehicleId, out var count))
                 {
                     job.RepairOrder.Vehicle.RepairOrders = Enumerable
@@ -190,8 +180,6 @@ namespace Repositories.RepairHistory
                         .ToList();
                 }
             }
-
-            // Return Technician với JobTechnicians
             return new Technician
             {
                 TechnicianId = technicianId,

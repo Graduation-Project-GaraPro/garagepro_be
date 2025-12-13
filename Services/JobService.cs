@@ -165,7 +165,6 @@ namespace Services
 
             if (result)
             {
-                // LẤY USERID TỪ TECHNICIANID
                 var userId = await _jobRepository.GetUserIdByTechnicianIdAsync(technicianId);
 
                 foreach (var jobId in jobIds)
@@ -174,7 +173,6 @@ namespace Services
 
                     if (job != null)
                     {
-                        // Gửi SignalR JobHub (real-time job update)
                         await _jobHubContext.Clients
                             .Group($"Technician_{technicianId}")
                             .SendAsync("JobAssigned", new
@@ -189,7 +187,6 @@ namespace Services
                                 Message = "You have been assigned a new job"
                             });
 
-                        // GỬI NOTIFICATION (LƯU DB + SIGNALR)
                         if (!string.IsNullOrEmpty(userId))
                         {
                             await _notificationService.SendJobAssignedNotificationAsync(
