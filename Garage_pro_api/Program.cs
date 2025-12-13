@@ -665,7 +665,7 @@ builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
 builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), 
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
         sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
@@ -725,55 +725,10 @@ builder.Services.AddCors(options =>
 
 RepairRequestAppConfig.Initialize(builder.Configuration);
 
-// Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
-//builder.WebHost.ConfigureKestrel(options =>
-//{
-//    options.ListenAnyIP(5117, listenOptions =>
-//    {
-//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-//    });
-
-//    options.ListenAnyIP(7113, listenOptions =>
-//    {
-//        listenOptions.UseHttps();
-//        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
-//    });
-//});
 
 var app = builder.Build();
 
-// --- Apply migrations + seed DB (run once on startup) ---
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var logger = services.GetRequiredService<ILogger<Program>>();
 
-    try
-    {
-        // 1) Áp migration (tạo DB + schema nếu cần)
-        var db = services.GetRequiredService<MyAppDbContext>();
-        logger.LogInformation("Applying pending migrations (if any)...");
-        db.Database.Migrate();
-        logger.LogInformation("Migrations applied.");
-
-        // 2) Gọi DbInitializer để seed dữ liệu (bạn đã register DbInitializer)
-        var dbInitializer = services.GetRequiredService<DbInitializer>();
-        logger.LogInformation("Seeding database...");
-        // Nếu DbInitializer chỉ có phương thức sync Initialize(), gọi nó.
-        // Nếu bạn muốn async, implement InitializeAsync() trong DbInitializer và await nó.
-        // Dưới đây giả sử Initialize() là sync. Nếu async, dùng: await dbInitializer.InitializeAsync();
-        dbInitializer.Initialize();
-        logger.LogInformation("Database seeding finished.");
-    }
-    catch (Exception ex)
-    {
-        // Nếu đang chạy trong container và DB chưa sẵn sàng, Log lỗi rõ ràng để debug
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
-        // Tuỳ bạn: nếu muốn dừng app khi không seed được, bỏ comment dòng dưới:
-        // throw;
-    }
-}
-// --- End migrations + seeding ---
 
 
 app.UseCors("AllowFrontendAndAndroid");
@@ -824,39 +779,149 @@ app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
-//Initialize database
+// Initialize database
+// Initialize database (idempotent: create+apply+seed only when DB is absent / not applied)
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
-    Console.WriteLine("Applying pending migrations...");
-    // dbContext.Database.Migrate(); // Commented out to avoid conflict with existing tables
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var config = services.GetRequiredService<IConfiguration>();
+    var maxAttempts = 5;
+    var delayBetweenAttemptsMs = 3000;
 
-    if (!dbContext.SecurityPolicies.Any())
+    try
     {
-        dbContext.SecurityPolicies.Add(new SecurityPolicy
-        {
-            Id = Guid.NewGuid(),
-            MinPasswordLength = 8,
-            RequireSpecialChar = true,
-            RequireNumber = true,
-            RequireUppercase = true,
-            SessionTimeout = 300,
-            MaxLoginAttempts = 5,
-            AccountLockoutTime = 15,
-            PasswordExpiryDays = 90,
-            EnableBruteForceProtection = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+        var dbContext = services.GetRequiredService<MyAppDbContext>();
 
-        dbContext.SaveChanges();
+        // Retry loop to wait for DB server ready (useful in containers)
+        int attempt = 0;
+        bool connected = false;
+        while (attempt < maxAttempts && !connected)
+        {
+            attempt++;
+            try
+            {
+                logger.LogInformation("DB connect attempt {Attempt}/{MaxAttempts}", attempt, maxAttempts);
+                connected = dbContext.Database.CanConnect();
+                if (!connected)
+                {
+                    logger.LogWarning("Cannot connect to database yet. Waiting {Delay}ms before retry...", delayBetweenAttemptsMs);
+                    System.Threading.Thread.Sleep(delayBetweenAttemptsMs);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Exception while trying to connect to DB on attempt {Attempt}", attempt);
+                System.Threading.Thread.Sleep(delayBetweenAttemptsMs);
+            }
+        }
+
+        // If cannot connect at all, treat as "DB not present" (we'll let Migrate try and fail with clearer error)
+        if (!connected)
+        {
+            logger.LogWarning("Unable to connect to database after {MaxAttempts} attempts. Will attempt to call Migrate() once and let it fail if necessary.", maxAttempts);
+        }
+
+        // Decide: if DB has no applied migrations, we will apply migrations + seed.
+        // If DB already has applied migrations (i.e. previously setup), we skip everything.
+        var appliedMigrations = dbContext.Database.GetAppliedMigrations();
+        bool hasAppliedMigrations = appliedMigrations != null && appliedMigrations.Any();
+
+        if (!hasAppliedMigrations)
+        {
+            logger.LogInformation("No applied migrations found. Applying migrations and seeding (if needed).");
+
+            // Apply migrations (will create DB if needed)
+            try
+            {
+                dbContext.Database.Migrate();
+                logger.LogInformation("Database migrations applied successfully.");
+            }
+            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
+            {
+                logger.LogError(sqlEx, "SQL exception while applying migrations. Number={Number}, Procedure={Procedure}, Line={LineNumber}",
+                    sqlEx.Number, sqlEx.Procedure, sqlEx.LineNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled exception while applying migrations.");
+                throw;
+            }
+
+            // Seed minimal data only if table is empty (idempotent)
+            try
+            {
+                if (!dbContext.SecurityPolicies.Any())
+                {
+                    logger.LogInformation("Seeding default SecurityPolicy...");
+                    dbContext.SecurityPolicies.Add(new SecurityPolicy
+                    {
+                        Id = Guid.NewGuid(),
+                        MinPasswordLength = 8,
+                        RequireSpecialChar = true,
+                        RequireNumber = true,
+                        RequireUppercase = true,
+                        SessionTimeout = 300,
+                        MaxLoginAttempts = 5,
+                        AccountLockoutTime = 15,
+                        PasswordExpiryDays = 90,
+                        EnableBruteForceProtection = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+
+                    dbContext.SaveChanges();
+                    logger.LogInformation("Default SecurityPolicy seeded.");
+                }
+                else
+                {
+                    logger.LogInformation("SecurityPolicy already exists. Skipping seeding.");
+                }
+            }
+            catch (DbUpdateException dbUpdateEx)
+            {
+                logger.LogError(dbUpdateEx, "DbUpdateException while seeding database.");
+                if (dbUpdateEx.InnerException != null)
+                {
+                    logger.LogError("Inner exception: {Inner}", dbUpdateEx.InnerException.Message);
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error while seeding database.");
+                throw;
+            }
+
+            // --- CALL DbInitializer.Initialize() HERE ---
+            try
+            {
+                var dbInitializer = services.GetRequiredService<DbInitializer>();
+                logger.LogInformation("Running DbInitializer.Initialize() to seed additional data...");
+                await dbInitializer.Initialize();
+                logger.LogInformation("DbInitializer.Initialize() completed.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while running DbInitializer.Initialize().");
+                throw;
+            }
+        }
+        else
+        {
+            logger.LogInformation("Database already has applied migrations (count={Count}). Skipping migrations and seeding.",
+                appliedMigrations.Count());
+        }
+    }
+    catch (Exception ex)
+    {
+        // Final catch-all for any unexpected errors in initialization
+        var logger2 = services.GetRequiredService<ILogger<Program>>();
+        logger2.LogError(ex, "Critical error during database initialization.");
+        throw; // nếu bạn muốn app tiếp tục even on error, remove this throw
     }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
 
 app.Run();

@@ -31,6 +31,13 @@ namespace Repositories.PartRepositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<PartCategory>> GetAllWithPartsAsync()
+        {
+            return await _context.PartCategories
+                .Include(pc => pc.Parts)
+                .ToListAsync();
+        }
+
         public async Task<(IEnumerable<PartCategory> items, int totalCount)> GetPagedAsync(int page, int pageSize)
         {
             var query = _context.PartCategories.AsQueryable();

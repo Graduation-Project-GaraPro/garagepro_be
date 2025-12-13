@@ -97,7 +97,7 @@ namespace Services.VehicleServices
             var vehiclesExits = await _vehicleRepository.GetByUserIdAsync(userId);
 
             var vin = createVehicleDto.VIN;
-            if (!string.IsNullOrWhiteSpace(vin) && vehiclesExits.Any(v => v.VIN == vin))
+            if (vehiclesExits.Any(v => v.VIN == vin))
             {
                 throw new Exception("VIN already exists for this user");
             }
@@ -132,28 +132,52 @@ namespace Services.VehicleServices
         {
             var existingVehicle = await _vehicleRepository.GetByIdAsync(vehicleId);
             if (existingVehicle == null)
-            {
                 throw new ArgumentException($"Vehicle with ID {vehicleId} not found.");
-            }
 
             var userVehicles = await _vehicleRepository.GetByUserIdAsync(existingVehicle.UserId);
-            var normalizedLicense = (updateVehicleDto.LicensePlate ?? string.Empty).ToUpper();
-            var normalizedVin = updateVehicleDto.VIN?.Trim().ToUpper();
 
-            if (!string.IsNullOrWhiteSpace(normalizedVin) &&
-                userVehicles.Any(v => v.VehicleId != existingVehicle.VehicleId && string.Equals(v.VIN ?? string.Empty, normalizedVin, StringComparison.OrdinalIgnoreCase)))
+            // Normalize input
+            var normalizedLicense = (updateVehicleDto.LicensePlate ?? string.Empty).Trim().ToUpperInvariant();
+            var normalizedVin = (updateVehicleDto.VIN ?? string.Empty).Trim().ToUpperInvariant();
+
+            // Check VIN duplicate only if VIN is provided
+            if (!string.IsNullOrWhiteSpace(normalizedVin))
             {
-                throw new ApplicationException("VIN đã tồn tại cho một xe khác của bạn. Vui lòng kiểm tra.");
+                bool vinExists = userVehicles.Any(v =>
+                    v.VehicleId != existingVehicle.VehicleId &&
+                    !string.IsNullOrWhiteSpace(v.VIN) &&
+                    string.Equals(v.VIN.Trim(), normalizedVin, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (vinExists)
+                    throw new ApplicationException("VIN already exists for another vehicle. Please check.");
             }
 
-            if (!string.IsNullOrWhiteSpace(normalizedLicense) &&
-                userVehicles.Any(v => v.VehicleId != existingVehicle.VehicleId && string.Equals(v.LicensePlate ?? string.Empty, normalizedLicense, StringComparison.OrdinalIgnoreCase)))
+            // Check License Plate duplicate only if license is provided
+            if (!string.IsNullOrWhiteSpace(normalizedLicense))
             {
-                throw new ApplicationException("Biển số đã tồn tại cho một xe khác của bạn. Vui lòng kiểm tra.");
+                bool licenseExists = userVehicles.Any(v =>
+                    v.VehicleId != existingVehicle.VehicleId &&
+                    !string.IsNullOrWhiteSpace(v.LicensePlate) &&
+                    string.Equals(v.LicensePlate.Trim(), normalizedLicense, StringComparison.OrdinalIgnoreCase)
+                );
+
+                if (licenseExists)
+                    throw new ApplicationException("License plate already exists for another vehicle. Please check.");
             }
 
+            // Map updates
             _mapper.Map(updateVehicleDto, existingVehicle);
+
+            // Apply normalized values only if provided
+            if (!string.IsNullOrWhiteSpace(normalizedVin))
+                existingVehicle.VIN = normalizedVin;
+
+            if (!string.IsNullOrWhiteSpace(normalizedLicense))
+                existingVehicle.LicensePlate = normalizedLicense;
+
             existingVehicle.UpdatedAt = DateTime.UtcNow;
+
 
             var updatedVehicle = await _vehicleRepository.UpdateAsync(existingVehicle);
             return _mapper.Map<VehicleDto>(updatedVehicle);

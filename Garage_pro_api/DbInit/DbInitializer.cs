@@ -55,7 +55,7 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            
+            await SeedVehicleModelColorsAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
@@ -1326,6 +1326,7 @@ namespace Garage_pro_api.DbInit
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedInspectionTypesAsync()
         {

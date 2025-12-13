@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 using BusinessObject;
 using Dtos.Parts;
 using Repositories.PartRepositories;
@@ -11,10 +12,12 @@ namespace Services.PartCategoryServices
     public class PartCategoryService : IPartCategoryService
     {
         private readonly IPartCategoryRepository _partCategoryRepository;
+        private readonly IMapper _mapper;
 
-        public PartCategoryService(IPartCategoryRepository partCategoryRepository)
+        public PartCategoryService(IPartCategoryRepository partCategoryRepository, IMapper mapper)
         {
             _partCategoryRepository = partCategoryRepository;
+            _mapper = mapper;
         }
 
         public async Task<IEnumerable<PartCategoryDto>> GetAllPartCategoriesAsync()
@@ -38,6 +41,12 @@ namespace Services.PartCategoryServices
                 HasPreviousPage = paginationDto.Page > 1,
                 HasNextPage = paginationDto.Page < totalPages
             };
+        }
+
+        public async Task<IEnumerable<PartCategoryWithPartsDto>> GetAllWithPartsAsync()
+        {
+            var categories = await _partCategoryRepository.GetAllWithPartsAsync();
+            return _mapper.Map<IEnumerable<PartCategoryWithPartsDto>>(categories);
         }
 
         public async Task<PartCategoryPagedResultDto> SearchPartCategoriesAsync(PartCategorySearchDto searchDto)
