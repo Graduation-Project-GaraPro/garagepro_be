@@ -857,6 +857,10 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
+                // Cancellation Management
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason
 
             };
         }

@@ -131,6 +131,13 @@ namespace Dtos.RoBoard
         public DateTime? ArchivedAt { get; set; }
         
         public string ArchiveReason { get; set; }
+        
+        // Cancellation Management
+        public bool IsCancelled { get; set; }
+        
+        public DateTime? CancelledAt { get; set; }
+        
+        public string CancelReason { get; set; }
     }
     
     public class RoBoardListPaginationDto
