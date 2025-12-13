@@ -1,3 +1,4 @@
+using BusinessObject.InspectionAndRepair;
 using BusinessObject.RequestEmergency;
 using DataAccessLayer;
 using Dtos.Emergency;
@@ -248,6 +249,27 @@ namespace Repositories.EmergencyRequestRepositories
             {
                 throw new InvalidOperationException("Cannot assign technician to a pending emergency request.");
             }
+            // 2. Check emergency status
+            if (request.Status != EmergencyStatus.Accepted)
+                throw new InvalidOperationException("Only emergencies with 'Accepted' status can be assigned.");
+
+            // 3. Check that technician exists
+            var technicianExists = await _context.Users
+                .AnyAsync(u => u.Id == technicianUserId.ToString());
+
+            if (!technicianExists)
+                throw new InvalidOperationException("Technician does not exist.");
+
+            // 4. Ensure technician is not in another active emergency
+            var technicianHasActiveEmergency = await _context.RequestEmergencies
+                .AnyAsync(e =>
+                    e.TechnicianId == technicianUserId.ToString() &&
+                    (e.Status == EmergencyStatus.Assigned ||
+                     e.Status == EmergencyStatus.InProgress ||
+                     e.Status == EmergencyStatus.Towing));
+
+            if (technicianHasActiveEmergency)
+                throw new InvalidOperationException("Technician is already handling another emergency.");
             request.TechnicianId = technicianUserId.ToString();
             request.Status = BusinessObject.RequestEmergency.RequestEmergency.EmergencyStatus.Assigned;
             _context.RequestEmergencies.Update(request);
