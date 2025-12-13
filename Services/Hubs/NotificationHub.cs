@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 namespace Services.Hubs
 {
     [Authorize]
+
     public class NotificationHub : Hub
     {
         public override async Task OnConnectedAsync()

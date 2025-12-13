@@ -107,6 +107,47 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        // POST: api/Inspections/manager
+        [HttpPost("manager")]
+        [Authorize(Policy = "JOB_MANAGE")]
+        public async Task<ActionResult<InspectionDto>> CreateManagerInspection(CreateManagerInspectionDto createManagerInspectionDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var createdInspection = await _inspectionService.CreateManagerInspectionAsync(createManagerInspectionDto);
+                return CreatedAtAction(nameof(GetInspectionById), new { id = createdInspection.InspectionId }, createdInspection);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // GET: api/Inspections/available-services/{repairOrderId}
+        [HttpGet("available-services/{repairOrderId}")]
+        [Authorize(Policy = "JOB_VIEW")]
+        public async Task<ActionResult<IEnumerable<AvailableServiceDto>>> GetAvailableServicesForInspection(Guid repairOrderId)
+        {
+            try
+            {
+                var availableServices = await _inspectionService.GetAvailableServicesForInspectionAsync(repairOrderId);
+                return Ok(availableServices);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving available services", error = ex.Message });
+            }
+        }
+
         // POST: api/Inspections/convert-to-quotation
         [HttpPost("convert-to-quotation")]
         //[Authorize(Policy = "BOOKING_MANAGE")]

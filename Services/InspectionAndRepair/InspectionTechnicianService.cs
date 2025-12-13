@@ -351,7 +351,6 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             Console.WriteLine($"[InspectionTechnicianService] Sent InspectionCompleted to Managers group for Inspection {id}");
         }
 
-       
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
@@ -594,5 +593,15 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
         AttachSuggestedParts(dto, inspection);
         return dto;
+    }
+    public async Task<TechnicianDto?> GetTechnicianByUserIdAsync(string userId)
+    {
+        var technician = await _repo.GetTechnicianByUserIdAsync(userId);
+        if (technician == null) return null;
+
+        return new TechnicianDto
+        {
+            TechnicianId = technician.TechnicianId
+        };
     }
 }

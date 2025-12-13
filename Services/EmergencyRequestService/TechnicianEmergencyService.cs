@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static BusinessObject.RequestEmergency.RequestEmergency;
+using Services.Hubs;
 
 namespace Services.EmergencyRequestService
 {
@@ -46,6 +47,7 @@ namespace Services.EmergencyRequestService
 
             return result;
         }
+
         public async Task<bool> UpdateEmergencyStatusAsync(
             Guid emergencyRequestId,
             RequestEmergency.EmergencyStatus newStatus,

@@ -20,7 +20,7 @@ using Repositories;
 using Repositories.BranchRepositories;
 using Repositories.CampaignRepositories;
 using Repositories.Customers;
-using Repositories.PartCategoryRepositories;
+
 using Repositories.PartRepositories;
 using Repositories.PolicyRepositories;
 using Repositories.QuotationRepositories;
@@ -107,6 +107,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(opt =>
     {
         opt.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        opt.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
     });
 
 
@@ -237,6 +238,15 @@ builder.Services.AddAuthentication(options =>
         OnMessageReceived = context =>
         {
             Console.WriteLine("Authorization header: " + context.Request.Headers["Authorization"]);
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/notificationHub"))
+            {
+                context.Token = accessToken;
+                Console.WriteLine($"SignalR WebSocket: Token from query string for {path}");
+            }
             return Task.CompletedTask;
         },
         OnTokenValidated = async context =>
@@ -443,7 +453,7 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
     //var EmergencyRequestRepository =provider.GetRequiredService<Repositories.EmergencyRequestRepositories.IEmergencyRequestRepository>();
     //var RepairRequestRepository = provider.GetRequiredService<IRepairRequestRepository>();
     var jobService = provider.GetRequiredService<Services.IJobService>(); // Add this
-   // var jobService = provider.GetRequiredService<Services.IJobService>();
+                                                                          // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
 
@@ -476,6 +486,7 @@ builder.Services.AddScoped<DynamicAuthenticationService>();
 
 builder.Services.AddScoped<DynamicAuthenticationService>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<IEmailTemplateService, EmailTemplateService>();
 
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 
@@ -488,12 +499,11 @@ builder.Services.AddScoped<IServiceService, ServiceService>();
 builder.Services.AddScoped<IServiceCategoryRepository, ServiceCategoryRepository>();
 builder.Services.AddScoped<IServiceCategoryService, ServiceCategoryService>();
 
-builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
-builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
-
 builder.Services.AddScoped<IOperatingHourRepository, OperatingHourRepository>();
 builder.Services.AddScoped<IPartRepository, PartRepository>();
 builder.Services.AddScoped<IPartService, PartService>();
+builder.Services.AddScoped<IPartCategoryRepository, PartCategoryRepository>();
+builder.Services.AddScoped<IPartCategoryService, PartCategoryService>();
 
 builder.Services.AddHostedService<LogCleanupService>();
 
@@ -566,15 +576,39 @@ builder.Services.AddScoped<IInspectionService>(provider =>
     var quotationService = provider.GetRequiredService<Services.QuotationServices.IQuotationService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
-    var notifiactionService = provider.GetRequiredService<INotificationService>();
+    var notificationService = provider.GetRequiredService<INotificationService>();
     var dbContext = provider.GetRequiredService<DataAccessLayer.MyAppDbContext>();
-    return new Services.InspectionService(inspectionRepository, repairOrderRepository, quotationService, technicianAssignmentHubContext, inspectionHubContext, notifiactionService, dbContext);
+
+    var quotationHubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
+    var fcmService = provider.GetRequiredService<IFcmService>();
+    var userService = provider.GetRequiredService<IUserService>();
+
+    return new Services.InspectionService(
+        inspectionRepository,
+        repairOrderRepository,
+        quotationService,
+        technicianAssignmentHubContext,
+        inspectionHubContext,
+        notificationService,
+        dbContext,
+        quotationHubContext,
+        fcmService,
+        userService
+    );
 });
+
 
 builder.Services.AddScoped<IGeocodingService, GoongGeocodingService>();
 
-// Technician services
-builder.Services.AddScoped<ITechnicianService, TechnicianService>();
+// Technician repository and services
+builder.Services.AddScoped<Repositories.InspectionAndRepair.ITechnicianRepository, Repositories.InspectionAndRepair.TechnicianRepository>();
+builder.Services.AddScoped<ITechnicianService>(provider =>
+{
+    var jobRepository = provider.GetRequiredService<IJobRepository>();
+    var userRepository = provider.GetRequiredService<IUserRepository>();
+    var technicianRepository = provider.GetRequiredService<Repositories.InspectionAndRepair.ITechnicianRepository>();
+    return new TechnicianService(jobRepository, userRepository, technicianRepository);
+});
 
 // Repair Request services - Adding missing registrations
 builder.Services.AddScoped<Repositories.Customers.IRepairRequestRepository, Repositories.Customers.RepairRequestRepository>();
@@ -631,7 +665,8 @@ builder.Services.AddScoped<AuditSaveChangesInterceptor>();
 
 builder.Services.AddDbContext<MyAppDbContext>((sp, options) =>
 {
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"),
+        sqlOptions => sqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery));
     options.AddInterceptors(sp.GetRequiredService<AuditSaveChangesInterceptor>());
 });
 
@@ -673,9 +708,14 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.96:5117",
                 "http://192.168.1.98:5117",
                 "http://10.42.97.46:5117",
+                "http://192.168.1.61:5117",
                 "http://10.224.41.46:5117",
-                "https://garagepro-admin-frontend-3fppkotu6-tiens-projects-21f26798.vercel.app",
-                "http://10.0.2.2:7113" 
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113",
+"http://103.216.119.34:3000",
+                "http://103.216.119.34:3001",
+                "https://garagepro-admin-frontend-my0ge47we-tiens-projects-21f26798.vercel.app",
+                "http://10.0.2.2:7113"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
@@ -685,22 +725,12 @@ builder.Services.AddCors(options =>
 
 RepairRequestAppConfig.Initialize(builder.Configuration);
 
-// Cấu hình Kestrel lắng nghe mọi IP với HTTP & HTTPS
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5117, listenOptions =>
-    {
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1;
-    });
-
-    options.ListenAnyIP(7113, listenOptions =>
-    {
-        listenOptions.UseHttps();
-        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http1; 
-    });
-});
 
 var app = builder.Build();
+
+
+
+
 app.UseCors("AllowFrontendAndAndroid");
 
 // Configure the HTTP request pipeline.
@@ -727,7 +757,7 @@ app.MapHub<LogHub>("/logHub");
 app.MapHub<RepairHub>("/hubs/repair");
 app.MapHub<PermissionHub>("/hubs/permissions");
 app.MapHub<InspectionHub>("/hubs/inspection");
-app.MapHub<JobHub>("/hubs/job");            
+app.MapHub<JobHub>("/hubs/job");
 app.MapHub<NotificationHub>("/notificationHub");
 app.MapHub<QuotationHub>("/hubs/quotation");
 app.MapHub<PromotionalHub>(PromotionalHub.HubUrl);
@@ -743,40 +773,155 @@ app.UseSecurityPolicyEnforcement();
 app.MapControllers();
 // Add this line to map the SignalR hub
 app.MapHub<Services.Hubs.RepairOrderHub>("/api/repairorderhub");
+app.MapHub<RepairOrderArchiveHub>("/api/archivehub");
+app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
 
-//Initialize database
+// Initialize database
+// Initialize database (idempotent: create+apply+seed only when DB is absent / not applied)
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<MyAppDbContext>();
-    if (!dbContext.SecurityPolicies.Any())
-    {
-        dbContext.SecurityPolicies.Add(new BusinessObject.Policies.SecurityPolicy
-        {
-            Id = Guid.NewGuid(),
-            MinPasswordLength = 8,
-            RequireSpecialChar = true,
-            RequireNumber = true,
-            RequireUppercase = true,
-            SessionTimeout = 30, // phút cho access token
-            MaxLoginAttempts = 5,
-            AccountLockoutTime = 15,
-            PasswordExpiryDays = 90,
-            EnableBruteForceProtection = true,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
-        });
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    var config = services.GetRequiredService<IConfiguration>();
+    var maxAttempts = 5;
+    var delayBetweenAttemptsMs = 3000;
 
-        dbContext.SaveChanges();
+    try
+    {
+        var dbContext = services.GetRequiredService<MyAppDbContext>();
+
+        // Retry loop to wait for DB server ready (useful in containers)
+        int attempt = 0;
+        bool connected = false;
+        while (attempt < maxAttempts && !connected)
+        {
+            attempt++;
+            try
+            {
+                logger.LogInformation("DB connect attempt {Attempt}/{MaxAttempts}", attempt, maxAttempts);
+                connected = dbContext.Database.CanConnect();
+                if (!connected)
+                {
+                    logger.LogWarning("Cannot connect to database yet. Waiting {Delay}ms before retry...", delayBetweenAttemptsMs);
+                    System.Threading.Thread.Sleep(delayBetweenAttemptsMs);
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Exception while trying to connect to DB on attempt {Attempt}", attempt);
+                System.Threading.Thread.Sleep(delayBetweenAttemptsMs);
+            }
+        }
+
+        // If cannot connect at all, treat as "DB not present" (we'll let Migrate try and fail with clearer error)
+        if (!connected)
+        {
+            logger.LogWarning("Unable to connect to database after {MaxAttempts} attempts. Will attempt to call Migrate() once and let it fail if necessary.", maxAttempts);
+        }
+
+        // Decide: if DB has no applied migrations, we will apply migrations + seed.
+        // If DB already has applied migrations (i.e. previously setup), we skip everything.
+        var appliedMigrations = dbContext.Database.GetAppliedMigrations();
+        bool hasAppliedMigrations = appliedMigrations != null && appliedMigrations.Any();
+
+        if (!hasAppliedMigrations)
+        {
+            logger.LogInformation("No applied migrations found. Applying migrations and seeding (if needed).");
+
+            // Apply migrations (will create DB if needed)
+            try
+            {
+                dbContext.Database.Migrate();
+                logger.LogInformation("Database migrations applied successfully.");
+            }
+            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
+            {
+                logger.LogError(sqlEx, "SQL exception while applying migrations. Number={Number}, Procedure={Procedure}, Line={LineNumber}",
+                    sqlEx.Number, sqlEx.Procedure, sqlEx.LineNumber);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unhandled exception while applying migrations.");
+                throw;
+            }
+
+            // Seed minimal data only if table is empty (idempotent)
+            try
+            {
+                if (!dbContext.SecurityPolicies.Any())
+                {
+                    logger.LogInformation("Seeding default SecurityPolicy...");
+                    dbContext.SecurityPolicies.Add(new SecurityPolicy
+                    {
+                        Id = Guid.NewGuid(),
+                        MinPasswordLength = 8,
+                        RequireSpecialChar = true,
+                        RequireNumber = true,
+                        RequireUppercase = true,
+                        SessionTimeout = 300,
+                        MaxLoginAttempts = 5,
+                        AccountLockoutTime = 15,
+                        PasswordExpiryDays = 90,
+                        EnableBruteForceProtection = true,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    });
+
+                    dbContext.SaveChanges();
+                    logger.LogInformation("Default SecurityPolicy seeded.");
+                }
+                else
+                {
+                    logger.LogInformation("SecurityPolicy already exists. Skipping seeding.");
+                }
+            }
+            catch (DbUpdateException dbUpdateEx)
+            {
+                logger.LogError(dbUpdateEx, "DbUpdateException while seeding database.");
+                if (dbUpdateEx.InnerException != null)
+                {
+                    logger.LogError("Inner exception: {Inner}", dbUpdateEx.InnerException.Message);
+                }
+                throw;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Unexpected error while seeding database.");
+                throw;
+            }
+
+            // --- CALL DbInitializer.Initialize() HERE ---
+            try
+            {
+                var dbInitializer = services.GetRequiredService<DbInitializer>();
+                logger.LogInformation("Running DbInitializer.Initialize() to seed additional data...");
+                await dbInitializer.Initialize();
+                logger.LogInformation("DbInitializer.Initialize() completed.");
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while running DbInitializer.Initialize().");
+                throw;
+            }
+        }
+        else
+        {
+            logger.LogInformation("Database already has applied migrations (count={Count}). Skipping migrations and seeding.",
+                appliedMigrations.Count());
+        }
+    }
+    catch (Exception ex)
+    {
+        // Final catch-all for any unexpected errors in initialization
+        var logger2 = services.GetRequiredService<ILogger<Program>>();
+        logger2.LogError(ex, "Critical error during database initialization.");
+        throw; // nếu bạn muốn app tiếp tục even on error, remove this throw
     }
 }
 
-using (var scope = app.Services.CreateScope())
-{
-    var dbInitializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await dbInitializer.Initialize();
-}
 
 app.Run();

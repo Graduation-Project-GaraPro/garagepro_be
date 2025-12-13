@@ -166,6 +166,23 @@ namespace Repositories.InspectionAndRepair
             return jobs;
         }
 
+        public async Task<List<Job>> GetJobsByRepairOrderIdAsync(Guid repairOrderId)
+        {
+            var jobs = await _context.Jobs
+                .AsNoTracking()
+                .Where(j => j.RepairOrderId == repairOrderId)
+                .Select(j => new Job
+                {
+                    JobId = j.JobId,
+                    JobName = j.JobName,
+                    Status = j.Status,
+                    RepairOrderId = j.RepairOrderId
+                })
+                .ToListAsync();
+
+            return jobs;
+        }
+
         public async Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
@@ -197,6 +214,11 @@ namespace Repositories.InspectionAndRepair
                 await transaction.RollbackAsync();
                 throw;
             }
+        }
+        public async Task<Technician?> GetTechnicianByUserIdAsync(string userId)
+        {
+            return await _context.Technicians
+                .FirstOrDefaultAsync(t => t.UserId == userId);
         }
     }
 }

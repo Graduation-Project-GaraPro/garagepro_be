@@ -38,19 +38,26 @@ namespace Garage_pro_api.Controllers
         [HttpGet("{repairOrderId}/progress")]
         public async Task<ActionResult<RepairOrderProgressDto>> GetRepairOrderProgress(Guid repairOrderId)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                return Unauthorized();
-            }
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized();
+                }
 
-            var progress = await _repairProgressService.GetRepairOrderProgressAsync(repairOrderId, userId);
-            if (progress == null)
+                var progress = await _repairProgressService.GetRepairOrderProgressAsync(repairOrderId, userId);
+                if (progress == null)
+                {
+                    return NotFound(new { message = "Repair order not found or access denied" });
+                }
+
+                return Ok(progress);
+            }
+            catch (Exception ex)
             {
-                return NotFound("Repair order not found or access denied");
+                return BadRequest(new  {message= ex.Message });
             }
-
-            return Ok(progress);
         }
 
         [HttpGet("archived")]

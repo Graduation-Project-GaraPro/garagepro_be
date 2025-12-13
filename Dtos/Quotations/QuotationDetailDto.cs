@@ -20,10 +20,11 @@ namespace Dtos.Quotations
         public string Status { get; set; }
         public decimal TotalAmount { get; set; }
         public decimal DiscountAmount { get; set; }
+        public decimal InspectionFee { get; set; } // Fee for inspection service
         public string? Note { get; set; }
         public string? CustomerNote { get; set; }
         public DateTime? ExpiresAt { get; set; }
-
+        public string PhoneBranch { get; set; }
         public bool IsArchived { get; set; } = false;
 
         public DateTime? ArchivedAt { get; set; }

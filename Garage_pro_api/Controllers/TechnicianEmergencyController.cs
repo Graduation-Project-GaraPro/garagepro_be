@@ -1,11 +1,16 @@
 ﻿using System.Security.Claims;
 using BusinessObject;
+using BusinessObject.Enums;
+using BusinessObject.FcmDataModels;
 using BusinessObject.RequestEmergency;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Repositories.EmergencyRequestRepositories;
+using Services;
 using Services.EmergencyRequestService;
+using Services.FCMServices;
 
 namespace Garage_pro_api.Controllers
 {
@@ -16,10 +21,13 @@ namespace Garage_pro_api.Controllers
     {
 
         private readonly ITechnicianEmergencyService _technicianEmergencyService;
-
-        public TechnicianEmergencyController(ITechnicianEmergencyService technicianEmergencyService)
+        private readonly IFcmService _fcmService;
+        private readonly IUserService _userService;
+        public TechnicianEmergencyController(ITechnicianEmergencyService technicianEmergencyService, IFcmService fcmService, IUserService userService)
         {
             _technicianEmergencyService = technicianEmergencyService;
+            _fcmService = fcmService;
+            _userService = userService; 
         }
 
 
@@ -76,6 +84,26 @@ namespace Garage_pro_api.Controllers
 
             var success = await _technicianEmergencyService.AssignTechnicianAsync(request.EmergencyId, request.TechnicianId);
 
+
+            var user = await _userService.GetUserByIdAsync(request.TechnicianId);
+
+
+            if (user != null && user.DeviceId != null)
+            {
+                var FcmNotification = new FcmDataPayload
+                {
+                    Type = NotificationType.Emergency,
+                    Title = "Emergency case",
+                    Body = "New Emergency case for you",
+                    EntityKey = EntityKeyType.repairOrderId,
+                    EntityId = Guid.NewGuid(),
+                    Screen = AppScreen.ReportsFragment
+                };
+                await _fcmService.SendFcmMessageWithDataAsync(user?.DeviceId, FcmNotification);
+
+               
+            }
+
             if (!success)
                 return NotFound("Emergency request not found");
 
@@ -95,7 +123,7 @@ namespace Garage_pro_api.Controllers
             if (string.IsNullOrEmpty(technicianId))
                 return Unauthorized();
 
-            // Nếu bạn dùng Identity, có thể lấy TechnicianId từ User.Claims thay vì từ DTO
+            
             var success = await _technicianEmergencyService.UpdateEmergencyStatusAsync(
                 id,
                 dto.Status,
@@ -108,7 +136,7 @@ namespace Garage_pro_api.Controllers
             if (!success)
                 return NotFound(new { message = "Không tìm thấy yêu cầu cứu hộ." });
 
-            // Có thể trả NoContent nếu không cần data
+            
             return Ok(new { message = "Cập nhật trạng thái thành công." });
         }
     }

@@ -261,5 +261,38 @@ namespace Services.VehicleServices
             await _vehicleRepository.UpdateAsync(vehicle);
             return true;
         }
+
+        public async Task<VehicleDto> CreateVehicleForCustomerAsync(CreateVehicleForCustomerDto createVehicleDto)
+        {
+            var vehiclesExits = await _vehicleRepository.GetByUserIdAsync(createVehicleDto.CustomerUserId);
+            var vin = createVehicleDto.VIN;
+            
+            if (!string.IsNullOrWhiteSpace(vin) && vehiclesExits.Any(v => v.VIN == vin))
+            {
+                throw new Exception("VIN already exists for this customer");
+            }
+
+            if (vehiclesExits.Any(v => v.LicensePlate == createVehicleDto.LicensePlate))
+            {
+                throw new Exception("License plate already exists for this customer");
+            }
+
+            var vehicle = new Vehicle
+            {
+                BrandId = createVehicleDto.BrandID,
+                UserId = createVehicleDto.CustomerUserId,
+                ModelId = createVehicleDto.ModelID,
+                ColorId = createVehicleDto.ColorID,
+                LicensePlate = createVehicleDto.LicensePlate,
+                VIN = createVehicleDto.VIN,
+                Year = createVehicleDto.Year,
+                Odometer = createVehicleDto.Odometer,
+                LastServiceDate = DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            var createdVehicle = await _vehicleRepository.CreateAsync(vehicle);
+            return _mapper.Map<VehicleDto>(createdVehicle);
+        }
     }
 }

@@ -65,6 +65,7 @@ namespace Services.CampaignServices
                 .OrderByDescending(c => c.CreatedAt)
                 .Skip((page - 1) * limit)
                 .Take(limit)
+                .AsQueryable()
                 .ToListAsync();
 
             return (_mapper.Map<IEnumerable<PromotionalCampaignDto>>(campaigns), totalCount);

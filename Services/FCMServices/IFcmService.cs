@@ -10,6 +10,7 @@ namespace Services.FCMServices
     public interface IFcmService
     {
         Task SendFcmMessageAsync(string deviceToken, FcmDataPayload payload);
+        Task SendFcmMessageWithDataAsync(string deviceToken, FcmDataPayload payload);
 
     }
 }

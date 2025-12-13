@@ -15,6 +15,11 @@ namespace Dtos.RepairOrderArchivedDtos
         public DateTime? Deadline { get; set; }
         public decimal TotalAmount { get; set; }
 
+
+        public decimal ServicePrice {  get; set; }
+
+        public decimal DiscountValue {  get; set; } = 0;
+
         // Repair info – chỉ lấy StartTime, EndTime, Notes
         public RepairOrderArchivedRepairDto Repair { get; set; }
 

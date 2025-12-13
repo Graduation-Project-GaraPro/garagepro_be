@@ -34,7 +34,6 @@ namespace Dtos.RoBoard
         
         public DateTime? UpdatedAt { get; set; }
         
-        // Archive Management
         public bool IsArchived { get; set; }
         
         public DateTime? ArchivedAt { get; set; }
@@ -43,34 +42,32 @@ namespace Dtos.RoBoard
         
         public string ArchivedBy { get; set; }
         
-        // Cancellation Management
         public bool IsCancelled { get; set; }
         
         public DateTime? CancelledAt { get; set; }
         
         public string CancelReason { get; set; }
         
-        // Current status information
         public int StatusId { get; set; }
         
         public string StatusName { get; set; }
         
-        // Vehicle information for display
         public RoBoardVehicleDto Vehicle { get; set; }
         
-        // Customer information for display
         public RoBoardCustomerDto Customer { get; set; }
         
-        // Branch information
         public RoBoardBranchDto Branch { get; set; }
         
-        // Current labels assigned to this repair order
+   
         public List<RoBoardLabelDto> AssignedLabels { get; set; } = new List<RoBoardLabelDto>();
         
-        // Priority or order within the column
+        /// <summary>
+        /// List of technician names working on this repair order (from inspections and jobs)
+        /// </summary>
+        public List<string> TechnicianNames { get; set; } = new List<string>();
+        
         public int OrderIndex { get; set; }
         
-        // Additional display properties
         public bool IsOverdue => EstimatedCompletionDate.HasValue && 
                                 EstimatedCompletionDate.Value < DateTime.UtcNow && 
                                 CompletionDate == null;
@@ -153,7 +150,7 @@ namespace Dtos.RoBoard
         public DateTime? Birthday { get; set; }
         
         [Required(ErrorMessage = "Phone number is required")]
-        [Phone(ErrorMessage = "Invalid phone number format")]
+        [RegularExpression(@"^[0-9+\-\(\)\s]{10,20}$", ErrorMessage = "Phone number must be 10-20 digits and can include +, -, (), spaces")]
         [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
         public string PhoneNumber { get; set; }
         
@@ -163,6 +160,30 @@ namespace Dtos.RoBoard
         
         // Computed property for FullName
         public string FullName => $"{FirstName} {LastName}";
+    }
+
+    public class QuickCreateCustomerDto
+    {
+        [Required(ErrorMessage = "First name is required")]
+        [MaxLength(50, ErrorMessage = "First name cannot exceed 50 characters")]
+        public string FirstName { get; set; }
+        
+        [Required(ErrorMessage = "Last name is required")]
+        [MaxLength(50, ErrorMessage = "Last name cannot exceed 50 characters")]
+        public string LastName { get; set; }
+        
+        [Required(ErrorMessage = "Phone number is required")]
+        [RegularExpression(@"^0[0-9]{9,19}$", ErrorMessage = "Phone number must start with 0 and contain 10-20 digits")]
+        [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
+        public string PhoneNumber { get; set; }
+        
+        // Optional fields
+        [EmailAddress(ErrorMessage = "Invalid email format")]
+        [MaxLength(100, ErrorMessage = "Email cannot exceed 100 characters")]
+        public string Email { get; set; }
+        
+        [DataType(DataType.Date)]
+        public DateTime? Birthday { get; set; }
     }
 
     public class UpdateCustomerDto
@@ -178,7 +199,7 @@ namespace Dtos.RoBoard
         public DateTime? Birthday { get; set; }
         
         [Required(ErrorMessage = "Phone number is required")]
-        [Phone(ErrorMessage = "Invalid phone number format")]
+        [RegularExpression(@"^[0-9+\-\(\)\s]{10,20}$", ErrorMessage = "Phone number must be 10-20 digits and can include +, -, (), spaces")]
         [MaxLength(20, ErrorMessage = "Phone number cannot exceed 20 characters")]
         public string PhoneNumber { get; set; }
         

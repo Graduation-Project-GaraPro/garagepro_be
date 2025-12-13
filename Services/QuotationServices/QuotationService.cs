@@ -193,40 +193,44 @@ namespace Services.QuotationServices
             if (allServicesGood && createQuotationDto.QuotationServices.Any())
             {
                 createdQuotation.Status = QuotationStatus.Good;
+
+                await _quotationHubContext
+                       .Clients
+                       .Group($"User_{createQuotationDto.UserId}")
+                       .SendAsync("QuotationCreated", new
+                       {
+                           createdQuotation.QuotationId,
+                           createdQuotation.UserId,
+                           createdQuotation.RepairOrderId,
+                           createdQuotation.TotalAmount,
+                           createdQuotation.Status,
+                           createdQuotation.CreatedAt,
+                           createQuotationDto.Note
+                       });
+
+                var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
+
+                if (user != null && user.DeviceId != null)
+                {
+                    var FcmNotification = new FcmDataPayload
+                    {
+                        Type = NotificationType.Repair,
+                        Title = "New Quotation Available",
+                        Body = "A new quotation has been created for your repair job. Tap to view details.",
+                        EntityKey = EntityKeyType.quotationId,
+                        EntityId = createdQuotation.QuotationId,
+                        Screen = AppScreen.QuotationDetailFragment
+                    };
+                    await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
+                }
             }
             
             await _quotationRepository.UpdateAsync(createdQuotation);
 
 
-            await _quotationHubContext
-            .Clients
-            .Group($"User_{createQuotationDto.UserId}")
-            .SendAsync("QuotationCreated", new
-            {
-                createdQuotation.QuotationId,
-                createdQuotation.UserId,
-                createdQuotation.RepairOrderId,
-                createdQuotation.TotalAmount,
-                createdQuotation.Status,
-                createdQuotation.CreatedAt,
-                createQuotationDto.Note
-            });
 
-            var user = await _userService.GetUserByIdAsync(createdQuotation.UserId);
 
-            if (user != null && user.DeviceId != null)
-            {
-                var FcmNotification = new FcmDataPayload
-                {
-                    Type = NotificationType.Repair,
-                    Title = "New Quotation Available",
-                    Body = "A new quotation has been created for your repair job. Tap to view details.",
-                    EntityKey = EntityKeyType.quotationId,
-                    EntityId = createdQuotation.QuotationId,
-                    Screen = AppScreen.QuotationDetailFragment
-                };
-                await _fcmService.SendFcmMessageAsync(user.DeviceId, FcmNotification);
-            }
+           
 
 
             // Reload the quotation with all related data to ensure we have the complete object
@@ -736,7 +740,7 @@ namespace Services.QuotationServices
                     JobName = $"{quotationService.Service?.ServiceName ?? "Service"} - Quotation {quotation.QuotationId.ToString().Substring(0, 8)}",
                     Status = JobStatus.Pending,
                     TotalAmount = quotationService.Price,
-                    Note = $"Auto-generated from approved quotation {quotation.QuotationId}",
+                    Note = $"Auto-generated from approved quotation",
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -789,6 +793,31 @@ namespace Services.QuotationServices
             if (quotation.Status != BusinessObject.Enums.QuotationStatus.Approved)
             {
                 throw new InvalidOperationException("Only approved quotations can be copied to jobs.");
+            }
+
+            // Validation 1: Check if this quotation has already been copied to jobs
+            var existingJobsFromQuotation = await _jobService.GetJobsByRepairOrderIdAsync(quotation.RepairOrderId.Value);
+            var quotationNote = $"Auto-generated from approved quotation {quotation.QuotationId}";
+            
+            if (existingJobsFromQuotation.Any(j => j.Note != null && j.Note.Contains(quotation.QuotationId.ToString())))
+            {
+                throw new InvalidOperationException($"This quotation has already been copied to jobs. Each quotation can only create jobs once.");
+            }
+
+            // Validation 2: Check for duplicate services in existing jobs
+            var selectedServices = quotation.QuotationServices.Where(qs => qs.IsSelected).ToList();
+            var existingServiceIds = existingJobsFromQuotation.Select(j => j.ServiceId).ToHashSet();
+            
+            var duplicateServices = selectedServices
+                .Where(qs => existingServiceIds.Contains(qs.ServiceId))
+                .Select(qs => qs.Service?.ServiceName ?? "Unknown Service")
+                .ToList();
+
+            if (duplicateServices.Any())
+            {
+                throw new InvalidOperationException(
+                    $"Cannot create jobs: The following services already exist in jobs: {string.Join(", ", duplicateServices)}. " +
+                    $"Each service can only have one job in the system.");
             }
 
             try

@@ -292,16 +292,8 @@ namespace Garage_pro_api.Controllers
         {
             try
             {
-                var users = await _userService.GetTechniciansByBranchAsync(id);
-                return Ok(users.Select(u => new {
-                    u.Id,
-                    FullName = $"{u.FirstName} {u.LastName}",
-                    u.Email,
-                    u.IsActive,
-                    u.CreatedAt,
-                    u.LastLogin,
-                    u.BranchId
-                }));
+                var techniciansWithWorkload = await _branchService.GetTechniciansWithWorkloadByBranchAsync(id);
+                return Ok(techniciansWithWorkload);
             }
             catch (Exception ex)
             {

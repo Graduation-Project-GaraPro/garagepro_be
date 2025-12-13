@@ -55,13 +55,17 @@ namespace Garage_pro_api.DbInit
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
             await SeedVehiclesAsync();
-            
+            await SeedVehicleModelColorsAsync();
 
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
-            //await SeedRepairOrdersAsync();
+            await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
+
+            // Seed Vehicle Specifications
+            var vehicleSpecsSeeder = new VehicleSpecificationsSeeder(_context);
+            await vehicleSpecsSeeder.SeedAllSpecificationsDataAsync();
         }
 
         // 1. Seed Roles
@@ -440,6 +444,7 @@ namespace Garage_pro_api.DbInit
                                 "Manager", new[]
                                 {
 
+                                    "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
                                     //"USER_VIEW", "JOB_MANAGE", "JOB_VIEW",
                                     //"BRANCH_VIEW", "SERVICE_VIEW", "PROMO_VIEW",
                                     //"VEHICLE_VIEW", "VEHICLE_CREATE", "VEHICLE_UPDATE", "VEHICLE_SCHEDULE"
@@ -1289,7 +1294,7 @@ namespace Garage_pro_api.DbInit
                     if (technicianUser != null) branch.Staffs.Add(technicianUser);
 
                     // Gán dịch vụ
-                    var services = await _context.Services.Take(5).ToListAsync();
+                    var services = await _context.Services.Take(20).ToListAsync();
                     foreach (var service in services)
                     {
                         branch.BranchServices.Add(new BranchService
@@ -1321,6 +1326,7 @@ namespace Garage_pro_api.DbInit
                 await _context.SaveChangesAsync();
             }
         }
+
 
         private async Task SeedInspectionTypesAsync()
         {

@@ -26,5 +26,6 @@ namespace BusinessObject
 
         // Navigation properties
         public virtual ICollection<Part> Parts { get; set; }
+        public virtual ICollection<ServicePartCategory> ServicePartCategories { get; set; } = new List<ServicePartCategory>();
     }
 }

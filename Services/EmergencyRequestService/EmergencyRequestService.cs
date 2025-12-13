@@ -733,5 +733,10 @@ namespace Services.EmergencyRequestService
 
             return true;
         }
+
+        public async Task<bool> AssignTechnicianToEmergencyAsync(Guid emergencyId, Guid technicianUserId)
+        {
+            return await _repository.AssignTechnicianAsync(emergencyId, technicianUserId);
+        }
     }
 }

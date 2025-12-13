@@ -47,7 +47,7 @@ namespace Garage_pro_api.Controllers.Customer
                 var dto = JsonConvert.DeserializeObject<CreateRepairRequestWithImageDto>(dtoJson);
                 dto.Images = images;
 
-                // ✅ Thực hiện validate thủ công
+                
                 var validationContext = new ValidationContext(dto);
                 var validationResults = new List<ValidationResult>();
 

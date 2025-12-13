@@ -74,7 +74,7 @@ namespace BusinessObject.RequestEmergency
         public DateTime? AutoCanceledAt { get; set; }
 
 
-        public string? TechnicianId { get; set; }     
+        public string? TechnicianId { get; set; }
         public ApplicationUser? Technician { get; set; }
 
     }
