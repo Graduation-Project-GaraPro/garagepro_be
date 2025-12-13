@@ -1,12 +1,15 @@
-﻿using System;
+﻿using AutoMapper;
+using BusinessObject.RequestEmergency;
+using Dtos.EmergencyTechnicians;
+using Microsoft.AspNetCore.SignalR;
+using Repositories.EmergencyRequestRepositories;
+using Services.Hubs;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using AutoMapper;
-using BusinessObject.RequestEmergency;
-using Dtos.EmergencyTechnicians;
-using Repositories.EmergencyRequestRepositories;
+using static BusinessObject.RequestEmergency.RequestEmergency;
 
 namespace Services.EmergencyRequestService
 {
@@ -15,11 +18,14 @@ namespace Services.EmergencyRequestService
     {
         private readonly IEmergencyRequestRepository _repo;
         private readonly IMapper _mapper;
+        // private readonly IEmergencyRequestRepository _repository;
+        private readonly IHubContext<EmergencyRequestHub> _hubContext;
 
-        public TechnicianEmergencyService(IEmergencyRequestRepository repo, IMapper mapper)
+        public TechnicianEmergencyService(IEmergencyRequestRepository repo, IMapper mapper, IHubContext<EmergencyRequestHub> hubContext)
         {
             _repo = repo;
             _mapper = mapper;
+            _hubContext = hubContext;
         }
 
         public async Task<TechnicianEmergencyResultDto> GetTechnicianEmergenciesAsync(string technicianId)
@@ -53,7 +59,25 @@ namespace Services.EmergencyRequestService
                 rejectReason,
                 technicianId
             );
+            if (newStatus == EmergencyStatus.InProgress)
+            {
+                var emergency = await _repo.GetByIdAsync(emergencyRequestId);
+                if (emergency == null) return false;
 
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "InProgress",
+                    CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
+                    BranchId = emergency.BranchId,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestInProgress", payload);
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestInProgress", payload);
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestInProgress", payload);
+            }         
             return result;
         }
         public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
