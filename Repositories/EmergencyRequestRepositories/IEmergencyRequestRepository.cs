@@ -29,7 +29,7 @@ namespace Repositories.EmergencyRequestRepositories
             Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId);
 
         Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
-            Task<bool> AnyActiveAsync(string customerId, Guid vehicleId);
+            Task<bool> AnyActiveAsync(string customerId);
         Task<bool> AssignTechnicianAsync(Guid technicianUserId, Guid emergencyId);
     }
     }
