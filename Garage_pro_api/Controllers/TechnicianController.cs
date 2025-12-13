@@ -83,7 +83,7 @@ namespace Garage_pro_api.Controllers
                     var workloadDto = await _technicianService.GetTechnicianWorkloadAsync(technicianId.Value);
                     if (workloadDto == null)
                     {
-                        return NotFound("Technician not found");
+                        return NotFound(new { message = "Technician not found" });
                     }
                     return Ok(workloadDto);
                 }
@@ -95,8 +95,20 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while retrieving technician workload", error = ex.Message });
+                return StatusCode(500, new { message = "An error occurred while retrieving technician workload", error = ex.Message, stackTrace = ex.StackTrace });
             }
+        }
+        
+        // GET: api/Technician/workload-test (for debugging)
+        [HttpGet("workload-test")]
+        [AllowAnonymous]
+        public IActionResult TestWorkloadEndpoint()
+        {
+            return Ok(new { 
+                message = "Workload endpoint is accessible",
+                timestamp = DateTime.UtcNow,
+                endpoint = "/api/Technician/workload"
+            });
         }
 
         // POST: api/Technician/assign/jobs

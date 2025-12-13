@@ -31,6 +31,7 @@ namespace Repositories.BranchRepositories
                 .Include(b => b.OperatingHours)
                 .Include(b => b.Staffs)
                 .Include(b => b.RepairRequests)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(b => b.BranchId == id);
         }
 
@@ -40,12 +41,14 @@ namespace Repositories.BranchRepositories
                .Include(b => b.BranchServices).ThenInclude(bs => bs.Service)
                .Include(b => b.OperatingHours)
                .Include(b => b.Staffs)
+               .AsSplitQuery()
                .ToListAsync();
         }
         public IQueryable<Branch> Query()
         {
             return _context.Branches.Include(b => b.BranchServices).ThenInclude(bs => bs.Service)
                .Include(b => b.OperatingHours)
+               .AsSplitQuery()
                .Include(b => b.Staffs).AsQueryable();
             // có thể Include navigation nếu muốn, ví dụ:
             // return _context.Branches.Include(b => b.Services).AsQueryable();

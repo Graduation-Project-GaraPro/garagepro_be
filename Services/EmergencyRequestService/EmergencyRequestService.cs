@@ -100,19 +100,19 @@ namespace Services.EmergencyRequestService
             if (!string.Equals(vehicle.UserId, userId, StringComparison.Ordinal))
                 throw new InvalidOperationException("Vehicle does not belong to user.");
 
-            // Mapping từ DTO sang entity
+            // Map DTO to entity
             var emergencyRequest = _mapper.Map<RequestEmergency>(dto);
 
-            // Gán UserId từ tham số
+            // Assign UserId from parameter
             emergencyRequest.CustomerId = userId;
 
-            // Thêm thời gian hiện tại và trạng thái mặc định
+            // Add current time and default status
             emergencyRequest.RequestTime = DateTime.UtcNow;
             emergencyRequest.Status = RequestEmergency.EmergencyStatus.Pending;
             emergencyRequest.ResponseDeadline = emergencyRequest.RequestTime.AddMinutes(5);
             emergencyRequest.Address = await _geocodingService.ReverseGeocodeAsync(emergencyRequest.Latitude, emergencyRequest.Longitude);
 
-            // Lưu vào repository
+            // Save to repository
             var createdRequest = await _repository.CreateAsync(emergencyRequest);
 
             var fullRequest = await _repository.GetByIdAsync(createdRequest.EmergencyRequestId);
@@ -134,7 +134,7 @@ namespace Services.EmergencyRequestService
                 _cache.Set(cacheKey, fullRequest.EmergencyRequestId, TimeSpan.FromHours(1));
             }
 
-            // Gửi real-time notification qua SignalR khi tạo emergency mới
+            // Send real-time notification via SignalR when creating a new emergency
             try
             {
                 var notificationData = new
@@ -155,25 +155,25 @@ namespace Services.EmergencyRequestService
                     CustomerName = fullRequest.Customer?.UserName ?? "",
                     CustomerPhone = fullRequest.Customer?.PhoneNumber ?? "",
                     BranchName = fullRequest.Branch?.BranchName ?? "",
-                    Message = "Có yêu cầu cứu hộ mới",
+                    Message = "New emergency request",
                     Timestamp = DateTime.UtcNow
                 };
 
-                // Gửi đến tất cả clients (để admin/branch có thể thấy yêu cầu mới)
+                // Send to all clients (so admin/branch can see new requests)
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestCreated", notificationData);
 
 
-                // Gửi đến customer cụ thể (để customer biết yêu cầu đã được tạo thành công)
+                // Send to specific customer (so the customer knows the request was created)
                 await _hubContext.Clients.Group($"customer-{fullRequest.CustomerId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
 
-                // Gửi đến branch cụ thể (để branch nhận được thông báo yêu cầu mới)
+                // Send to specific branch (so the branch receives the new request)
                 await _hubContext.Clients.Group($"branch-{fullRequest.BranchId}")
                     .SendAsync("EmergencyRequestCreated", notificationData);
             }
             catch (Exception ex)
             {
-                // Log lỗi nhưng không làm gián đoạn quá trình tạo emergency
+                // Log errors but do not interrupt the emergency creation process
                 Console.WriteLine($"Error sending real-time notification: {ex.Message}");
             }
 
@@ -187,7 +187,7 @@ namespace Services.EmergencyRequestService
             int? etaMinutes = null;
             if (fr.DistanceToGarageKm.HasValue)
             {
-                const double avgSpeedKmh = 30.0; // giả định tốc độ trung bình trong đô thị
+                const double avgSpeedKmh = 30.0; // assumed average urban speed
                 etaMinutes = (int)Math.Ceiling(fr.DistanceToGarageKm.Value / avgSpeedKmh * 60.0);
             }
 
@@ -286,7 +286,7 @@ namespace Services.EmergencyRequestService
             if (emergency == null)
                 throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
 
-            // Kiểm tra các trường bắt buộc
+            // Validate required fields
             if (emergency.VehicleId == Guid.Empty)
                 throw new InvalidOperationException("Emergency request must have a valid VehicleId.");
             if (emergency.BranchId == Guid.Empty)
@@ -306,12 +306,12 @@ namespace Services.EmergencyRequestService
                 throw new InvalidOperationException("Manager not authorized to approve this branch.");
 
 
-            // Cập nhật trạng thái
+            // Update status
             emergency.Status = RequestEmergency.EmergencyStatus.Accepted;
             emergency.RespondedAt = DateTime.UtcNow;
 
-            // 2 Tính tiền tự động khi approve
-            var priceConfig = await _priceRepo.GetLatestPriceAsync(); // Lấy giá mới nhất
+            // Auto-calculate fee when approved
+            var priceConfig = await _priceRepo.GetLatestPriceAsync(); // Get latest price
             if (priceConfig != null && emergency.Branch != null && HasValidCoords(emergency.Branch.Latitude, emergency.Branch.Longitude))
             {
                 double distance = GetDistance(
@@ -332,7 +332,7 @@ namespace Services.EmergencyRequestService
             }
             await _repository.UpdateAsync(emergency);
 
-            // 2️⃣ Tạo RepairRequest tự động nếu chưa có
+            // Auto-create RepairRequest if missing
             var existingRepair = await _requestRepository.GetByEmergencyIdAsync(emergenciesId);
             if (existingRepair == null)
             {
@@ -346,7 +346,7 @@ namespace Services.EmergencyRequestService
                     BranchId = emergency.BranchId,
                     CreatedAt = emergency.RequestTime,
                     UserID = emergency.CustomerId,
-                    ArrivalWindowStart = DateTimeOffset.UtcNow, // Thêm trường bắt buộc này
+                    ArrivalWindowStart = DateTimeOffset.UtcNow, // Add this required field
                     EstimatedCost = emergency.EstimatedCost ?? 0
                 };
                 
@@ -356,7 +356,7 @@ namespace Services.EmergencyRequestService
                 }
                 catch (Exception ex)
                 {
-                    // Log chi tiết lỗi
+                    // Log detailed error
                     Console.WriteLine($"Error creating RepairRequest: {ex.Message}");
                     Console.WriteLine($"StackTrace: {ex.StackTrace}");
                     if (ex.InnerException != null)
@@ -367,7 +367,7 @@ namespace Services.EmergencyRequestService
                 }
             }
 
-            // 🔔 Gửi real-time notification qua SignalR
+            // Send real-time notification via SignalR
             try
             {
                 var notificationData = new
@@ -379,33 +379,33 @@ namespace Services.EmergencyRequestService
                     EstimatedCost = emergency.EstimatedCost,
                     DistanceToGarageKm = emergency.DistanceToGarageKm,
                     RespondedAt = emergency.RespondedAt,
-                    Message = "Yêu cầu cứu hộ đã được duyệt",
+                    Message = "Emergency request has been approved",
                     Timestamp = DateTime.UtcNow
                 };
 
-                // Gửi đến tất cả clients
+                // Send to all clients
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestApproved", notificationData);
                 Console.WriteLine($"RT sent: EmergencyRequestApproved → All, id={emergency.EmergencyRequestId}");
 
-                // Gửi đến customer cụ thể
+                // Send to specific customer
                 await _hubContext.Clients.Group($"customer-{emergency.CustomerId}")
                     .SendAsync("EmergencyRequestApproved", notificationData);
                 Console.WriteLine($"RT sent: EmergencyRequestApproved → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
 
-                // Gửi đến branch cụ thể
+                // Send to specific branch
                 await _hubContext.Clients.Group($"branch-{emergency.BranchId}")
                     .SendAsync("EmergencyRequestApproved", notificationData);
                 Console.WriteLine($"RT sent: EmergencyRequestApproved → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
             }
             catch (Exception ex)
             {
-                // Log lỗi nhưng không làm gián đoạn quá trình approve
+                // Log errors but do not interrupt the approval process
                 Console.WriteLine($"Error sending real-time notification: {ex.Message}");
             }
 
             return true;
         }
-        // Hàm tính khoảng cách giữa hai tọa độ
+        // Calculate distance between two coordinates
         private double GetDistance(double lat1, double lon1, double lat2, double lon2)
         {
             const double R = 6371; // km
@@ -435,7 +435,7 @@ namespace Services.EmergencyRequestService
             if (emergency == null)
                 throw new ArgumentException($"Emergency with ID {emergenciesId} not found.");
 
-            // Không được reject khi đã được xử lý
+            // Cannot reject when already processed
             if (emergency.Status != RequestEmergency.EmergencyStatus.Pending)
                 throw new InvalidOperationException("Cannot reject an emergency.");
 
@@ -445,7 +445,7 @@ namespace Services.EmergencyRequestService
 
             await _repository.UpdateAsync(emergency);
 
-            //  Gửi real-time notification qua SignalR
+            //  Send real-time notification via SignalR
             try
             {
                 var notificationData = new
@@ -456,24 +456,24 @@ namespace Services.EmergencyRequestService
                     BranchId = emergency.BranchId,
                     RejectReason = reason,
                     RespondedAt = emergency.RespondedAt,
-                    Message = "Yêu cầu cứu hộ đã bị từ chối",
+                    Message = "Emergency request has been rejected",
                     Timestamp = DateTime.UtcNow
                 };
 
-                // Gửi đến tất cả clients
+                // Send to all clients
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestRejected", notificationData);
 
-                // Gửi đến customer cụ thể
+                // Send to specific customer
                 await _hubContext.Clients.Group($"customer-{emergency.CustomerId}")
                     .SendAsync("EmergencyRequestRejected", notificationData);
 
-                // Gửi đến branch cụ thể
+                // Send to specific branch
                 await _hubContext.Clients.Group($"branch-{emergency.BranchId}")
                     .SendAsync("EmergencyRequestRejected", notificationData);
             }
             catch (Exception ex)
             {
-                // Log lỗi nhưng không làm gián đoạn quá trình reject
+                // Log errors but do not interrupt the rejection process
                 Console.WriteLine($"Error sending real-time notification: {ex.Message}");
             }
 
@@ -502,7 +502,7 @@ namespace Services.EmergencyRequestService
                     CustomerId = emergency.CustomerId,
                     TechnicianId = emergency.TechnicianId,
                     BranchId = emergency.BranchId,
-                    Message = "Cứu hộ đang được xử lý",
+                    Message = "Emergency is in progress",
                     Timestamp = DateTime.UtcNow
                 };
 
@@ -558,7 +558,7 @@ namespace Services.EmergencyRequestService
             return true;
         }
 
-        // Đảm bảo bạn đã có DTO này
+        // Ensure you already have this DTO
         /*
         namespace Dtos.Emergency
         {
@@ -592,7 +592,7 @@ namespace Services.EmergencyRequestService
             // --- Build URL ---
             var url =
                 $"https://api.mapbox.com/directions/v5/mapbox/{profile}/{coords}" +
-                "?alternatives=false&geometries=geojson&overview=full&language=vi&steps=true&access_token="+token;
+                "?alternatives=false&geometries=geojson&overview=full&language=en&steps=true&access_token="+token;
 
             // --- HttpClient (consider using IHttpClientFactory in production) ---
             using var http = new HttpClient

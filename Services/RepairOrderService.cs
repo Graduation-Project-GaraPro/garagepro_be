@@ -10,13 +10,14 @@ using Dtos.RepairOrder;
 using Dtos.RoBoard;
 using Dtos.Vehicles;
 using Microsoft.AspNetCore.SignalR;
-using Services.Hubs; // Update namespace
+using Services.Hubs;
 using Repositories;
-using Repositories.ServiceRepositories; // Add this for service repository
+using Repositories.ServiceRepositories; 
 using Microsoft.EntityFrameworkCore;
 using Services.FCMServices;
 using BusinessObject.FcmDataModels;
-using BusinessObject.Enums; // Add this for ToListAsync
+using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
 
 namespace Services
 {
@@ -26,12 +27,11 @@ namespace Services
         private readonly IOrderStatusRepository _orderStatusRepository;
         private readonly IFcmService _fcmService;
         private readonly ILabelRepository _labelRepository;
-        private readonly IHubContext<RepairOrderHub> _hubContext; // Update namespace
-        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; // Update namespace
-        private readonly IServiceRepository _serviceRepository; // Add service repository
-        private readonly IUserService _userService; // Add service repository
+        private readonly IHubContext<RepairOrderHub> _hubContext; 
+        private readonly IHubContext<RepairOrderArchiveHub> _archivedhubContext; 
+        private readonly IServiceRepository _serviceRepository; 
+        private readonly IUserService _userService; 
 
-        // 3 status tuong ung voi 3 column 
         private readonly Dictionary<string, string> _statusNames = new Dictionary<string, string>
         {
             { "Pending", "Orders waiting to be processed" },
@@ -45,13 +45,13 @@ namespace Services
             ILabelRepository labelRepository,
             IHubContext<RepairOrderHub> hubContext,
             IUserService userService,
-            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService) // Add service repository parameter
+            IServiceRepository serviceRepository, IHubContext<RepairOrderArchiveHub> archivedhubContext, IFcmService fcmService)
         {
             _repairOrderRepository = repairOrderRepository;
             _orderStatusRepository = orderStatusRepository;
             _labelRepository = labelRepository;
             _hubContext = hubContext;
-            _serviceRepository = serviceRepository; // Initialize service repository
+            _serviceRepository = serviceRepository;
             _fcmService = fcmService;
             _userService = userService;
             _archivedhubContext = archivedhubContext;
@@ -670,6 +670,30 @@ namespace Services
 
         private RoBoardCardDto MapToRoBoardCardDto(RepairOrder repairOrder)
         {
+            var technicianNames = new List<string>();
+            
+            // Get technician names from inspections
+            if (repairOrder.Inspections != null)
+            {
+                var inspectionTechNames = repairOrder.Inspections
+                    .Where(i => i.Technician?.User != null)
+                    .Select(i => $"{i.Technician.User.FirstName} {i.Technician.User.LastName}".Trim())
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct();
+                technicianNames.AddRange(inspectionTechNames);
+            }
+            
+            if (repairOrder.Jobs != null)
+            {
+                var jobTechNames = repairOrder.Jobs
+                    .SelectMany(j => j.JobTechnicians ?? new List<JobTechnician>())
+                    .Where(jt => jt.Technician?.User != null)
+                    .Select(jt => $"{jt.Technician.User.FirstName} {jt.Technician.User.LastName}".Trim())
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct();
+                technicianNames.AddRange(jobTechNames);
+            }
+            
             return new RoBoardCardDto
             {
                 RepairOrderId = repairOrder.RepairOrderId,
@@ -689,6 +713,7 @@ namespace Services
                 Customer = MapToRoBoardCustomerDto(repairOrder.User),
                 Branch = MapToRoBoardBranchDto(repairOrder.Branch),
                 AssignedLabels = repairOrder.Labels?.Select(MapToRoBoardLabelDto).ToList() ?? new List<RoBoardLabelDto>(),
+                TechnicianNames = technicianNames.Distinct().ToList(), // Remove any duplicates
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 UpdatedAt = repairOrder.UpdatedAt,
                 // Archive Management
@@ -832,6 +857,10 @@ namespace Services
                 UpdatedAt = repairOrder.UpdatedAt,
                 IsArchived = repairOrder.IsArchived,
                 ArchivedAt = repairOrder.ArchivedAt,
+                // Cancellation Management
+                IsCancelled = repairOrder.IsCancelled,
+                CancelledAt = repairOrder.CancelledAt,
+                CancelReason = repairOrder.CancelReason
 
             };
         }

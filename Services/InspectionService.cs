@@ -697,7 +697,7 @@ namespace Services
                         }
                     }
 
-                    // Store total inspection fee (sum of all services' inspection fees)
+                    // Store total inspection fee 
                     quotationEntity.InspectionFee = totalInspectionFee;
 
                     // Add Good services inspection fees to quotation total
@@ -705,8 +705,10 @@ namespace Services
                     {
                         quotationEntity.TotalAmount += goodServicesInspectionTotal;
                         
-                        // Update RO cost: Good services
-                        if (quotationEntity.RepairOrder != null)
+                        //  update RO cost if all services are Good 
+                        bool allServicesAreGood = quotationEntity.QuotationServices.All(qs => qs.IsGood);
+                        
+                        if (allServicesAreGood && quotationEntity.RepairOrder != null)
                         {
                             quotationEntity.RepairOrder.Cost += goodServicesInspectionTotal;
                         }

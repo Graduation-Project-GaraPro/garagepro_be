@@ -236,10 +236,6 @@ namespace DataAccessLayer.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<bool?>("Gender")
                         .HasColumnType("bit");
 
@@ -3301,7 +3297,7 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.ServicePartCategory", b =>
                 {
                     b.HasOne("BusinessObject.PartCategory", "PartCategory")
-                        .WithMany()
+                        .WithMany("ServicePartCategories")
                         .HasForeignKey("PartCategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3611,6 +3607,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
                 {
                     b.Navigation("Parts");
+
+                    b.Navigation("ServicePartCategories");
                 });
 
             modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>

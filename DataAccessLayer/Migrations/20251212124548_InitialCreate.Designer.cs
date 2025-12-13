@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251202065947_addunique")]
-    partial class addunique
+    [Migration("20251212124548_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -238,10 +238,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<bool?>("Gender")
                         .HasColumnType("bit");
@@ -1626,6 +1622,9 @@ namespace DataAccessLayer.Migrations
 
                     b.Property<DateTime?>("CancelledAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("CarPickupStatus")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("CompletionDate")
                         .HasColumnType("datetime2");
@@ -3301,7 +3300,7 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.ServicePartCategory", b =>
                 {
                     b.HasOne("BusinessObject.PartCategory", "PartCategory")
-                        .WithMany()
+                        .WithMany("ServicePartCategories")
                         .HasForeignKey("PartCategoryId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3611,6 +3610,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.PartCategory", b =>
                 {
                     b.Navigation("Parts");
+
+                    b.Navigation("ServicePartCategories");
                 });
 
             modelBuilder.Entity("BusinessObject.Policies.SecurityPolicy", b =>

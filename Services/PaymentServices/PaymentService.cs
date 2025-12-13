@@ -353,7 +353,7 @@ namespace Services.PaymentServices
             await _repo.AddAsync(payment);
             await _repo.SaveChangesAsync(ct);
 
-            // 7. Update repair order paid status (only for Cash - PayOS updates when webhook processed)
+            // 7. Update repair order paid status
             if (method == PaymentMethod.Cash)
             {
                 repairOrder.PaidStatus = PaidStatus.Paid;
@@ -395,7 +395,7 @@ namespace Services.PaymentServices
                     .SendAsync("PaymentReceived", paymentNotification);
             }
 
-            // Also trigger the PayRepairOrder event for board updates
+            // trigger the PayRepairOrder event
             await _repairOrderHubContext.Clients.All
                 .SendAsync("RepairOrderPaid", repairOrderId.ToString());
 

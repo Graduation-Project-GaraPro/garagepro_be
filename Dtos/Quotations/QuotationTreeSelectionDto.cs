@@ -3,10 +3,6 @@ using System.Collections.Generic;
 
 namespace Dtos.Quotations
 {
-    /// <summary>
-    /// DTO for hierarchical service category tree navigation
-    /// Used by managers when creating quotations
-    /// </summary>
     public class ServiceCategoryTreeNodeDto
     {
         public Guid ServiceCategoryId { get; set; }
@@ -18,10 +14,6 @@ namespace Dtos.Quotations
         public int ChildCategoryCount { get; set; }
     }
 
-    /// <summary>
-    /// DTO for service selection from tree
-    /// Manager selects service, then uses existing UI to add parts
-    /// </summary>
     public class ServiceForSelectionDto
     {
         public Guid ServiceId { get; set; }
@@ -34,10 +26,6 @@ namespace Dtos.Quotations
         public string ServiceCategoryName { get; set; }
     }
 
-    /// <summary>
-    /// Response DTO showing the complete tree structure
-    /// Used for initial load or breadcrumb navigation
-    /// </summary>
     public class ServiceCategoryTreeResponseDto
     {
         public Guid? CurrentCategoryId { get; set; }
@@ -47,9 +35,6 @@ namespace Dtos.Quotations
         public BreadcrumbDto Breadcrumb { get; set; }
     }
 
-    /// <summary>
-    /// Breadcrumb for navigation
-    /// </summary>
     public class BreadcrumbDto
     {
         public List<BreadcrumbItemDto> Items { get; set; }
@@ -62,9 +47,6 @@ namespace Dtos.Quotations
         public int Level { get; set; }
     }
 
-    /// <summary>
-    /// DTO for service details - minimal info for quotation creation
-    /// </summary>
     public class ServiceDetailsDto
     {
         public Guid ServiceId { get; set; }
@@ -73,18 +55,12 @@ namespace Dtos.Quotations
         public List<PartCategoryForSelectionDto> PartCategories { get; set; }
     }
 
-    /// <summary>
-    /// DTO for part category selection
-    /// </summary>
     public class PartCategoryForSelectionDto
     {
         public Guid PartCategoryId { get; set; }
         public string CategoryName { get; set; }
     }
 
-    /// <summary>
-    /// DTO for part selection
-    /// </summary>
     public class PartForSelectionDto
     {
         public Guid PartId { get; set; }
