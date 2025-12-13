@@ -131,6 +131,8 @@ namespace Garage_pro_api.Controllers
                 technicianId
             );
 
+
+
             if (!success)
                 return NotFound(new { message = "Not found Emergency" });
 
