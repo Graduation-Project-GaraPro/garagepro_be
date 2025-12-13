@@ -576,6 +576,15 @@ namespace Repositories
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Color)
                 .Include(ro => ro.User)
+                // Include technician data from inspections
+                .Include(ro => ro.Inspections)
+                    .ThenInclude(i => i.Technician)
+                        .ThenInclude(t => t.User)
+                // Include technician data from jobs
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
                 .Where(ro => ro.BranchId == branchId && !ro.IsArchived)
                 .OrderByDescending(ro => ro.CreatedAt)
                 .ToListAsync();

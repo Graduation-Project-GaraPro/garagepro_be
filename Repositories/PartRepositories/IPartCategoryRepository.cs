@@ -11,6 +11,9 @@ namespace Repositories.PartRepositories
         Task<PartCategory> GetByIdAsync(Guid id);
         Task<IEnumerable<PartCategory>> GetAllAsync();
         Task<(IEnumerable<PartCategory> items, int totalCount)> GetPagedAsync(int page, int pageSize);
+
+        Task<IEnumerable<PartCategory>> GetAllWithPartsAsync();
+
         Task<(IEnumerable<PartCategory> items, int totalCount)> SearchPartCategoriesAsync(
             string searchTerm, string sortBy, string sortOrder, int page, int pageSize);
         Task<PartCategory> CreateAsync(PartCategory category);
