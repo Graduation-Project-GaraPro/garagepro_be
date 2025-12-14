@@ -170,12 +170,24 @@ namespace Services
 
             var createdInspection = await _inspectionRepository.CreateAsync(inspection);
 
-            
-            var existingInspections = await _inspectionRepository.GetByRepairOrderIdAsync(createInspectionDto.RepairOrderId);
-            if (existingInspections.Count() == 1) // Chỉ có inspection vừa tạo
+            // Auto-update repair order status to "In Progress" (automatic, no notes)           
+            if (repairOrder.StatusId == 1)
             {
-
-                await _repairOrderRepository.UpdateRepairOrderStatusAsync(createInspectionDto.RepairOrderId, 2);
+                await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                    repairOrder, 
+                    2
+                );
+            }
+            else if (repairOrder.StatusId == 3) 
+            {
+                // Only move back to In Progress if not paid
+                if (repairOrder.PaidStatus == PaidStatus.Unpaid)
+                {
+                    await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                        repairOrder, 
+                        2
+                    );
+                }
             }
 
             return MapToDto(createdInspection);
@@ -330,11 +342,24 @@ namespace Services
 
                 var createdInspection = await _inspectionRepository.CreateAsync(inspection);
 
-                // 9. Nếu đây là inspection đầu tiên của RO → cập nhật trạng thái RO
-                var existingInspectionsAfterCreate = await _inspectionRepository.GetByRepairOrderIdAsync(createManagerInspectionDto.RepairOrderId);
-                if (existingInspectionsAfterCreate.Count() == 1)
+                // Auto-update repair order status to "In Progress" (automatic, no notes)
+                if (repairOrder.StatusId == 1) // 1 = Pending
                 {
-                    await _repairOrderRepository.UpdateRepairOrderStatusAsync(createManagerInspectionDto.RepairOrderId, 2);
+                    await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                        repairOrder, 
+                        2 // 2 = In Progress
+                    );
+                }
+                else if (repairOrder.StatusId == 3) // 3 = Completed
+                {
+                    // Only move back to In Progress if not paid
+                    if (repairOrder.PaidStatus == PaidStatus.Unpaid)
+                    {
+                        await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(
+                            repairOrder, 
+                            2 // 2 = In Progress
+                        );
+                    }
                 }
 
                 // Commit transaction
@@ -625,7 +650,7 @@ namespace Services
                     
                     if (!isGood)
                     {
-                        // Add parts for this service based on ServicePartCategories
+                        // Add parts
                         var servicePartCategoryIds = serviceInspection.Service.ServicePartCategories?.Select(spc => spc.PartCategoryId).ToList() ?? new List<Guid>();
                         var partInspections = inspection.PartInspections?.Where(pi => servicePartCategoryIds.Contains(pi.PartCategoryId)).ToList() ?? new List<PartInspection>();
                         
@@ -658,7 +683,7 @@ namespace Services
             //  calculate service/part totals
             var quotation = await _quotationService.CreateQuotationAsync(createQuotationDto);
 
-            // Calculate inspection fee PER SERVICE based on IsAdvanced flag
+            // Calculate inspection fee PER SERVICE based on IsAdvanced
             var quotationEntity = await _dbContext.Quotations
                 .Include(q => q.QuotationServices)
                     .ThenInclude(qs => qs.Service)
@@ -681,7 +706,6 @@ namespace Services
                     // Calculate inspection fee for EACH service based on its IsAdvanced flag
                     foreach (var quotationService in quotationEntity.QuotationServices)
                     {
-                        // Determine inspection fee for this specific service
                         decimal serviceInspectionFee = quotationService.Service.IsAdvanced
                             ? advancedInspectionType.InspectionFee
                             : basicInspectionType.InspectionFee;
@@ -697,7 +721,7 @@ namespace Services
                         }
                     }
 
-                    // Store total inspection fee (sum of all services' inspection fees)
+                    // Store total inspection fee 
                     quotationEntity.InspectionFee = totalInspectionFee;
 
                     // Add Good services inspection fees to quotation total
@@ -705,8 +729,10 @@ namespace Services
                     {
                         quotationEntity.TotalAmount += goodServicesInspectionTotal;
                         
-                        // Update RO cost: Good services
-                        if (quotationEntity.RepairOrder != null)
+                        //  update RO cost if all services are Good 
+                        bool allServicesAreGood = quotationEntity.QuotationServices.All(qs => qs.IsGood);
+                        
+                        if (allServicesAreGood && quotationEntity.RepairOrder != null)
                         {
                             quotationEntity.RepairOrder.Cost += goodServicesInspectionTotal;
                         }
@@ -722,6 +748,7 @@ namespace Services
 
             if(quotationEntity?.Status ==  QuotationStatus.Good)
             {
+
                 await _quotationHubContext
                        .Clients
                        .Group($"User_{createQuotationDto.UserId}")
@@ -858,5 +885,7 @@ namespace Services
 
             return availableServices;
         }
+
+
     }
 }

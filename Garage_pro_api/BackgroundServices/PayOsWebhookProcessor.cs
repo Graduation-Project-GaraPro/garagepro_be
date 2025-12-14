@@ -46,6 +46,7 @@ namespace Garage_pro_api.BackgroundServices
 
                     // 1) Lấy batch cần xử lý
                     var items = await db.WebhookInboxes
+                        .AsNoTracking()
                          .Where(x => (x.Status == WebhookStatus.Pending || x.Status == WebhookStatus.Failed)
                                      && x.Attempts < MaxAttempts)
                          .OrderBy(x => x.ReceivedAt)

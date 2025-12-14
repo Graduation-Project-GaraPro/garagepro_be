@@ -142,9 +142,26 @@ namespace Services.InspectionAndRepair
                 Message = $"Job status changed from {oldStatus} to {dto.JobStatus}"
             };
 
+          
+
+            Console.WriteLine($"[JobTechnicianService] Job {dto.JobId} status updated by technician: {oldStatus} → {dto.JobStatus}");
+
+            // auto completed RO if all jobs are completed
+            if (dto.JobStatus == JobStatus.Completed)
+            {
+                try
+                {
+                    await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
+                }
+            }
+
             var user = await _userService.GetUserByIdAsync(job.RepairOrder.Vehicle.User.Id);
 
-           
+
             if (user != null && user.DeviceId != null)
             {
                 var FcmNotification = new FcmDataPayload
@@ -194,20 +211,6 @@ namespace Services.InspectionAndRepair
                     Message = $"Technician updated job status from {oldStatus} to {dto.JobStatus}"
                 });
 
-            Console.WriteLine($"[JobTechnicianService] Job {dto.JobId} status updated by technician: {oldStatus} → {dto.JobStatus}");
-
-            // auto completed RO if all jobs are completed
-            if (dto.JobStatus == JobStatus.Completed)
-            {
-                try
-                {
-                    await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
-                }
-            }
 
             return true;
         }

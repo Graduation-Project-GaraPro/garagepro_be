@@ -44,6 +44,7 @@ namespace Services
         #region Business Rules and Validation
         Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId);
         Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId);
+        Task<IEnumerable<RoBoardLabelDto>> GetDefaultLabelsForStatusAsync(int statusId);
         #endregion
 
         #region Board Configuration

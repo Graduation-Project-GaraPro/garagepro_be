@@ -32,10 +32,13 @@ namespace Repositories
         Task<IEnumerable<RepairOrder>> GetRepairOrdersForKanbanAsync(RoBoardFiltersDto filters = null);
         Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId);
         Task<RepairOrder?> GetRepairOrderWithFullDetailsIncludingArchivedAsync(Guid repairOrderId);
+        Task<RepairOrder?> GetRepairOrderForUpdateAsync(Guid repairOrderId);
         Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync();
 
         // Status update operations for drag-drop
         Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string changeNote = null);
+        Task<bool> UpdateRepairOrderStatusAutomaticAsync(Guid repairOrderId, int newStatusId);
+        Task<bool> UpdateRepairOrderStatusAutomaticAsync(RepairOrder repairOrder, int newStatusId);
         Task<IEnumerable<RepairOrder>> BatchUpdateStatusAsync(List<UpdateRoBoardStatusDto> updates);
         
         // Label management for repair orders
@@ -56,6 +59,7 @@ namespace Repositories
         // Validation and business rules
         Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId);
         Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId);
+        Task<IEnumerable<Label>> GetDefaultLabelsForStatusAsync(int statusId);
 
         // User/Customer specific queries (User-centric architecture)
         Task<IEnumerable<RepairOrder>> GetRepairOrdersByUserIdAsync(string userId);

@@ -51,6 +51,25 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        // GET: api/label/default-by-orderstatus/{orderStatusId}
+        [HttpGet("default-by-orderstatus/{orderStatusId}")]
+        public async Task<IActionResult> GetDefaultLabelsByOrderStatusId(int orderStatusId)
+        {
+            try
+            {
+                var labels = await _labelService.GetDefaultLabelsByOrderStatusIdAsync(orderStatusId);
+                return Ok(labels);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while retrieving default labels", error = ex.Message });
+            }
+        }
+
         // GET: api/label/{id}
         [HttpGet("{id}")]
         public async Task<IActionResult> GetLabelById(Guid id)

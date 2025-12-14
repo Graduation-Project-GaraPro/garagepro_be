@@ -215,5 +215,44 @@ namespace Garage_pro_api.Controllers
 
             return NoContent();
         }
+
+        // GET: api/quotations/can-complete-repair-order/{repairOrderId}
+        [HttpGet("can-complete-repair-order/{repairOrderId}")]
+        public async Task<ActionResult<bool>> CanCompleteRepairOrder(Guid repairOrderId)
+        {
+            try
+            {
+                var canComplete = await _quotationService.CanCompleteRepairOrderAsync(repairOrderId);
+                return Ok(new { canComplete, repairOrderId });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred checking completion status", error = ex.Message });
+            }
+        }
+
+        // POST: api/quotations/complete-repair-order/{repairOrderId}
+        [HttpPost("complete-repair-order/{repairOrderId}")]
+        [Authorize(Roles = "Manager")] // Only managers can complete repair orders
+        public async Task<ActionResult> CompleteRepairOrder(Guid repairOrderId)
+        {
+            try
+            {
+                await _quotationService.CompleteRepairOrderWithGoodQuotationsAsync(repairOrderId);
+                return Ok(new { message = "Repair order completed successfully", repairOrderId });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred completing the repair order", error = ex.Message });
+            }
+        }
     }
 }

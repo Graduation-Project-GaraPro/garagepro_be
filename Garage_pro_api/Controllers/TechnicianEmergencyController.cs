@@ -134,10 +134,10 @@ namespace Garage_pro_api.Controllers
 
 
             if (!success)
-                return NotFound(new { message = "Không tìm thấy yêu cầu cứu hộ." });
+                return NotFound(new { message = "Not found Emergency" });
 
             
-            return Ok(new { message = "Cập nhật trạng thái thành công." });
+            return Ok(new { message = "Success" });
         }
     }
     public class AssignTechRequest

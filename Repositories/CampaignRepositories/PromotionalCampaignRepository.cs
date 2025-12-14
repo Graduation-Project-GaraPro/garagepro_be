@@ -31,6 +31,7 @@ namespace Repositories.CampaignRepositories
         public async Task<List<QuotationService>> GetQuotationServicesByCampaignAsync(Guid campaignId)
         {
             return await _context.QuotationServices
+                .AsSplitQuery()
                 .Include(qs => qs.Quotation)
                     .ThenInclude(q => q.User)
                 .Include(qs => qs.Service) // assuming you have Service navigation
@@ -75,7 +76,8 @@ namespace Repositories.CampaignRepositories
                              pc.StartDate <= now &&
                              pc.EndDate >= now &&
                              (pc.UsageLimit == null || pc.UsedCount < pc.UsageLimit) &&
-                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId))
+                             pc.PromotionalCampaignServices.Any(pcs => pcs.ServiceId == serviceId)).
+                             AsSplitQuery()
                 .ToListAsync();
         }
 
