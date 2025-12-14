@@ -2277,7 +2277,7 @@ namespace Garage_pro_api.DbInit
                     foreach (var campaign in campaigns)
                     {
                         // Lấy ngẫu nhiên 2 dịch vụ đầu tiên cho demo
-                        var selectedServices = services.Take(2).ToList();
+                        var selectedServices = services.Take(10).ToList();
 
                         foreach (var service in selectedServices)
                         {
