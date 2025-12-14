@@ -50,6 +50,7 @@ namespace Garage_pro_api.DbInit
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
             await SeedServicePartCategoriesAsync();
+            await UpdateAdvancedFlagFromPartCategoriesAsync();
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
@@ -1499,7 +1500,7 @@ namespace Garage_pro_api.DbInit
 
             if (toAdd.Count == 0) return;
 
-            _context.Services.AddRange(services);
+            _context.Services.AddRange(toAdd);
             await _context.SaveChangesAsync();
         }
 
@@ -1645,6 +1646,24 @@ namespace Garage_pro_api.DbInit
             // Map("Full Engine Diagnostic", "Sensors - MAF/MAP", "Sensors - O2");
 
             _context.ServicePartCategories.AddRange(mappings);
+            await _context.SaveChangesAsync();
+        }
+
+
+        private async Task UpdateAdvancedFlagFromPartCategoriesAsync()
+        {
+            // Service nào có > 1 PartCategory (distinct) => Advanced
+            var advancedServiceIds = await _context.ServicePartCategories
+                .GroupBy(x => x.ServiceId)
+                .Where(g => g.Select(x => x.PartCategoryId).Distinct().Count() > 1)
+                .Select(g => g.Key)
+                .ToListAsync();
+
+            var allServices = await _context.Services.ToListAsync();
+
+            foreach (var s in allServices)
+                s.IsAdvanced = advancedServiceIds.Contains(s.ServiceId);
+
             await _context.SaveChangesAsync();
         }
 
