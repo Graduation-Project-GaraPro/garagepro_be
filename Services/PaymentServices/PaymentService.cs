@@ -325,11 +325,34 @@ namespace Services.PaymentServices
                     throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
                 }
 
-                // Check if all jobs are completed
-                var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
-                if (!allJobsCompleted)
+                // Check payment eligibility: either all jobs completed OR no jobs but all quotations finalized
+                var hasJobs = repairOrder.Jobs?.Any() ?? false;
+                var hasQuotations = repairOrder.Quotations?.Any() ?? false;
+                
+                if (hasJobs)
                 {
-                    throw new Exception($"All jobs in repair order must be completed before payment can be created");
+                    // If there are jobs, all must be completed
+                    var allJobsCompleted = repairOrder.Jobs.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed);
+                    if (!allJobsCompleted)
+                    {
+                        throw new Exception($"All jobs in repair order must be completed before payment can be created");
+                    }
+                }
+                else if (hasQuotations)
+                {
+                    // If no jobs but has quotations, all quotations must have final status (Approved, Rejected, Expired, or Good)
+                    var finalStatuses = new[] { QuotationStatus.Approved, QuotationStatus.Rejected, QuotationStatus.Expired, QuotationStatus.Good };
+                    var allQuotationsFinalized = repairOrder.Quotations.All(q => finalStatuses.Contains(q.Status));
+                    if (!allQuotationsFinalized)
+                    {
+                        var pendingQuotations = repairOrder.Quotations.Where(q => !finalStatuses.Contains(q.Status)).ToList();
+                        throw new Exception($"All quotations must be finalized (Approved/Rejected/Expired/Good) before payment can be created. Pending quotations: {string.Join(", ", pendingQuotations.Select(q => q.QuotationId))}");
+                    }
+                }
+                else
+                {
+                    // No jobs and no quotations - this shouldn't happen for a completed repair order
+                    throw new Exception("Repair order has no jobs or quotations to process payment for");
                 }
 
                 // 3. Check if repair order is already fully paid
@@ -412,8 +435,6 @@ namespace Services.PaymentServices
                 await _repairOrderHubContext.Clients.All
                     .SendAsync("RepairOrderPaid", repairOrderId.ToString());
 
-                // Note: No notification sent for cash payments as managers are already aware of the transaction
-
                 Console.WriteLine($"[PaymentService] {method} payment {payment.PaymentId} created for RO {repairOrderId}");
 
                 return payment;
@@ -445,10 +466,34 @@ namespace Services.PaymentServices
                 throw new Exception($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
             }
 
-            var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
-            if (!allJobsCompleted)
+            // Check payment eligibility: either all jobs completed OR no jobs but all quotations finalized
+            var hasJobs = repairOrder.Jobs?.Any() ?? false;
+            var hasQuotations = repairOrder.Quotations?.Any() ?? false;
+            
+            if (hasJobs)
             {
-                throw new Exception($"All jobs in repair order must be completed before payment can be created");
+                // If there are jobs, all must be completed
+                var allJobsCompleted = repairOrder.Jobs.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed);
+                if (!allJobsCompleted)
+                {
+                    throw new Exception($"All jobs in repair order must be completed before payment can be created");
+                }
+            }
+            else if (hasQuotations)
+            {
+                // If no jobs but has quotations, all quotations must have final status (Approved, Rejected, Expired, or Good)
+                var finalStatuses = new[] { QuotationStatus.Approved, QuotationStatus.Rejected, QuotationStatus.Expired, QuotationStatus.Good };
+                var allQuotationsFinalized = repairOrder.Quotations.All(q => finalStatuses.Contains(q.Status));
+                if (!allQuotationsFinalized)
+                {
+                    var pendingQuotations = repairOrder.Quotations.Where(q => !finalStatuses.Contains(q.Status)).ToList();
+                    throw new Exception($"All quotations must be finalized (Approved/Rejected/Expired/Good) before payment can be created. Pending quotations: {string.Join(", ", pendingQuotations.Select(q => q.QuotationId))}");
+                }
+            }
+            else
+            {
+                // No jobs and no quotations - this shouldn't happen for a completed repair order
+                throw new Exception("Repair order has no jobs or quotations to process payment for");
             }
 
             if (repairOrder.PaidStatus == PaidStatus.Paid)

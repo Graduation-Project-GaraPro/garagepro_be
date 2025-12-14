@@ -251,15 +251,27 @@ namespace Repositories
 
         public async Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId)
         {
-            // Temporary simplified version to avoid RepairOrderLabels table issue
-            // TODO: Remove this after application restart
             return await _context.RepairOrders
                 .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                 .Include(ro => ro.Label) // Include assigned label for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Brand)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Model)
+                .Include(ro => ro.Vehicle)
+                    .ThenInclude(v => v.Color)
                 .Include(ro => ro.User)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.Service)
+                .Include(ro => ro.Jobs)
+                    .ThenInclude(j => j.JobTechnicians)
+                        .ThenInclude(jt => jt.Technician)
+                            .ThenInclude(t => t.User)
+                .Include(ro => ro.Quotations)
+                    .ThenInclude(q => q.QuotationServices)
+                .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
