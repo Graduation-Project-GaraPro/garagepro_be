@@ -18,17 +18,20 @@ namespace Services
         private readonly IHubContext<TechnicianAssignmentHub> _technicianAssignmentHubContext;
         private readonly IHubContext<JobHub> _jobHubContext;
         private readonly INotificationService _notificationService;
+        private readonly IRepairOrderService _repairOrderService;
 
         public JobService(
             IJobRepository jobRepository, 
             IHubContext<TechnicianAssignmentHub> technicianAssignmentHubContext, 
             IHubContext<JobHub> jobHubContext, 
-            INotificationService notificationService)
+            INotificationService notificationService,
+            IRepairOrderService repairOrderService)
         {
             _jobRepository = jobRepository;
             _technicianAssignmentHubContext = technicianAssignmentHubContext;
             _jobHubContext = jobHubContext;
             _notificationService = notificationService;
+            _repairOrderService = repairOrderService;
         }
 
         #region Basic CRUD Operations
@@ -377,6 +380,17 @@ namespace Services
                     });
 
                 Console.WriteLine($"[JobService] Job {jobId} status changed from {oldStatus} to {newStatus}");
+
+                // Auto-update RepairOrder progress when job status changes
+                try
+                {
+                    await _repairOrderService.UpdateRepairOrderProgressAsync(job.RepairOrderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[JobService] Error updating RepairOrder progress for RO {job.RepairOrderId}: {ex.Message}");
+                    // Don't fail the job status update if RepairOrder progress update fails
+                }
             }
             
             return result;
@@ -462,6 +476,21 @@ namespace Services
                 }
 
                 Console.WriteLine($"[JobService] Batch updated {updates.Count} job statuses with SignalR notifications");
+
+                // Auto-update RepairOrder progress for affected repair orders
+                var affectedRepairOrders = jobs.Values.Select(j => j.RepairOrderId).Distinct().ToList();
+                foreach (var repairOrderId in affectedRepairOrders)
+                {
+                    try
+                    {
+                        await _repairOrderService.UpdateRepairOrderProgressAsync(repairOrderId);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[JobService] Error updating RepairOrder progress for RO {repairOrderId}: {ex.Message}");
+                        // Don't fail the batch update if RepairOrder progress update fails
+                    }
+                }
             }
             
             return result;

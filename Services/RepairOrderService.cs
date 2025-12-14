@@ -701,6 +701,13 @@ namespace Services
                 AssignedLabels = repairOrder.Label != null ? new List<RoBoardLabelDto> { MapToRoBoardLabelDto(repairOrder.Label) } : new List<RoBoardLabelDto>(),
                 TechnicianNames = technicianNames.Distinct().ToList(), // Remove any duplicates
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
+                
+                // Progress calculation
+                TotalJobs = repairOrder.Jobs?.Count ?? 0,
+                CompletedJobs = repairOrder.Jobs?.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? 0,
+                ProgressPercentage = repairOrder.Jobs?.Count > 0 
+                    ? Math.Round((decimal)(repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) * 100) / repairOrder.Jobs.Count, 0)
+                    : 0,
                 UpdatedAt = repairOrder.UpdatedAt,
                 // Archive Management
                 IsArchived = repairOrder.IsArchived,
@@ -834,6 +841,13 @@ namespace Services
                 //    $"{repairOrder.Branch.Street}, {repairOrder.Branch.Ward}, {repairOrder.Branch.District}, {repairOrder.Branch.City}" : "",
                 DaysInCurrentStatus = (int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays,
                 StatusDuration = GetStatusDurationText((int)(DateTime.UtcNow - repairOrder.CreatedAt).TotalDays),
+                
+                // Progress calculation
+                TotalJobs = repairOrder.Jobs?.Count ?? 0,
+                CompletedJobs = repairOrder.Jobs?.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? 0,
+                ProgressPercentage = repairOrder.Jobs?.Count > 0 
+                    ? Math.Round((decimal)(repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed) * 100) / repairOrder.Jobs.Count, 0)
+                    : 0,
                 Priority = GetPriorityLevel(repairOrder),
                 CanEdit = true, // TODO: Apply user permissions
                 CanDelete = true, // TODO: Apply user permissions
@@ -1633,6 +1647,93 @@ namespace Services
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region Progress and Status Auto-Update
+
+        // Automatically updates RepairOrder status based on job completion progress
+
+        public async Task<bool> UpdateRepairOrderProgressAsync(Guid repairOrderId)
+        {
+            try
+            {
+                // Get repair order with jobs
+                var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+                if (repairOrder == null || repairOrder.IsArchived)
+                    return false;
+
+                // Skip if no jobs
+                if (repairOrder.Jobs == null || !repairOrder.Jobs.Any())
+                    return false;
+
+                var totalJobs = repairOrder.Jobs.Count;
+                var completedJobs = repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.Completed);
+                var inProgressJobs = repairOrder.Jobs.Count(j => j.Status == BusinessObject.Enums.JobStatus.InProgress);
+                
+                // Calculate progress percentage
+                var progressPercentage = (decimal)completedJobs / totalJobs * 100;
+
+                // Determine new status based on job progress
+                int newStatusId = repairOrder.StatusId; 
+                
+                if (completedJobs == 0 && inProgressJobs == 0)
+                {
+                    newStatusId = 1; 
+                }
+                else if (inProgressJobs > 0 && completedJobs < totalJobs)
+                {
+                    newStatusId = 2;
+                }
+                else if (completedJobs == totalJobs)
+                {
+                    newStatusId = 3; 
+                }
+
+                // Update status if it changed
+                if (newStatusId != repairOrder.StatusId)
+                {
+                    var statusUpdated = await _repairOrderRepository.UpdateRepairOrderStatusAutomaticAsync(repairOrderId, newStatusId);
+                    
+                    if (statusUpdated && _hubContext != null)
+                    {
+                        // Get updated repair order for notification
+                        var updatedRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+                        if (updatedRepairOrder != null)
+                        {
+                            var updatedCard = MapToRoBoardCardDto(updatedRepairOrder);
+                            
+                            // Send SignalR notification about status change
+                            await _hubContext.Clients.All.SendAsync("RepairOrderStatusUpdated", updatedCard);
+                            
+                            // Send progress update notification
+                            await _hubContext.Clients
+                                .Group($"RepairOrder_{repairOrderId}")
+                                .SendAsync("RepairOrderProgressUpdated", new
+                                {
+                                    RepairOrderId = repairOrderId,
+                                    TotalJobs = totalJobs,
+                                    CompletedJobs = completedJobs,
+                                    ProgressPercentage = Math.Round(progressPercentage, 0),
+                                    NewStatus = updatedRepairOrder.OrderStatus?.StatusName,
+                                    UpdatedAt = DateTime.UtcNow
+                                });
+
+                            Console.WriteLine($"[RepairOrderService] Updated RO {repairOrderId} status to {updatedRepairOrder.OrderStatus?.StatusName} (Progress: {Math.Round(progressPercentage, 0)}%)");
+                        }
+                    }
+                    
+                    return statusUpdated;
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RepairOrderService] Error updating progress for RO {repairOrderId}: {ex.Message}");
+                return false;
+            }
         }
 
         #endregion

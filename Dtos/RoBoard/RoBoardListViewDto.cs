@@ -103,6 +103,11 @@ namespace Dtos.RoBoard
         
         public string StatusDuration { get; set; } // "3 days", "2 weeks", etc.
         
+        // Progress calculation
+        public int TotalJobs { get; set; }
+        public int CompletedJobs { get; set; }
+        public decimal ProgressPercentage { get; set; }
+        
         public string Priority { get; set; } // High, Medium, Low based on business rules
         
         public decimal OutstandingAmount => EstimatedAmount - PaidAmount;
