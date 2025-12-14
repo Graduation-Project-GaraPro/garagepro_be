@@ -38,7 +38,7 @@ namespace BusinessObject
         // Navigation properties
         public virtual OrderStatus OrderStatus { get; set; } = null!;
         
-        // Many-to-many relationship with RepairOrders
+        // One-to-many relationship with RepairOrders (one label can be used by many ROs)
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
     }
 }

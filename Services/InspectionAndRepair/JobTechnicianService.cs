@@ -27,6 +27,7 @@ namespace Services.InspectionAndRepair
         private readonly IUserService _userService;
         private readonly IRepairOrderService _repairOrderService;
         private readonly IOrderStatusRepository _orderStatusRepository;
+        private readonly Services.Notifications.INotificationService _notificationService;
 
         public JobTechnicianService(
             IJobTechnicianRepository jobTechnicianRepository,
@@ -35,7 +36,8 @@ namespace Services.InspectionAndRepair
             IFcmService fcmService, 
             IUserService userService,
             IRepairOrderService repairOrderService,
-            IOrderStatusRepository orderStatusRepository)
+            IOrderStatusRepository orderStatusRepository,
+            Services.Notifications.INotificationService notificationService)
         {
             _jobTechnicianRepository = jobTechnicianRepository;
             _mapper = mapper;
@@ -44,6 +46,7 @@ namespace Services.InspectionAndRepair
             _userService = userService;
             _repairOrderService = repairOrderService;
             _orderStatusRepository = orderStatusRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<List<JobTechnicianDto>> GetJobsByTechnicianAsync(string userId)
@@ -263,6 +266,17 @@ namespace Services.InspectionAndRepair
                 if (result.Success)
                 {
                     Console.WriteLine($"[JobTechnicianService] RepairOrder {repairOrderId} auto-completed successfully");
+                    
+                    // Send notification to managers about RO completion
+                    try
+                    {
+                        await SendCompletionNotificationAsync(repairOrderId, true); // true = auto-completed
+                    }
+                    catch (Exception notificationEx)
+                    {
+                        Console.WriteLine($"[JobTechnicianService] Failed to send completion notification: {notificationEx.Message}");
+                    }
+                    
                     return true;
                 }
                 else
@@ -274,6 +288,35 @@ namespace Services.InspectionAndRepair
             catch (Exception ex)
             {
                 Console.WriteLine($"[JobTechnicianService] Exception while auto-completing RepairOrder {repairOrderId}: {ex.Message}");
+                throw;
+            }
+        }
+
+        private async Task SendCompletionNotificationAsync(Guid repairOrderId, bool isAutoCompleted)
+        {
+            try
+            {
+                // Get minimal repair order info for notification
+                var notificationInfo = await _repairOrderService.GetNotificationInfoAsync(repairOrderId);
+                if (notificationInfo == null)
+                {
+                    Console.WriteLine($"[JobTechnicianService] RepairOrder {repairOrderId} not found for notification");
+                    return;
+                }
+
+                await _notificationService.SendRepairOrderCompletedNotificationToManagersAsync(
+                    repairOrderId,
+                    notificationInfo.BranchId,
+                    notificationInfo.CustomerName,
+                    notificationInfo.VehicleInfo,
+                    isAutoCompleted
+                );
+
+                Console.WriteLine($"[JobTechnicianService] Completion notification sent for RepairOrder {repairOrderId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[JobTechnicianService] Error sending completion notification: {ex.Message}");
                 throw;
             }
         }

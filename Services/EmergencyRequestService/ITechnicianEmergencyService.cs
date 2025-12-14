@@ -12,7 +12,7 @@ namespace Services.EmergencyRequestService
 
         Task<TechnicianEmergencyResultDto> GetTechnicianEmergenciesAsync(string technicianId);
         Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId);
-
+        Task<EmergencyDetailDto> GetDetailAsync(string technicianId, Guid emergencyRequestId);
         Task<bool> UpdateEmergencyStatusAsync(
                Guid emergencyRequestId,
                RequestEmergency.EmergencyStatus newStatus,

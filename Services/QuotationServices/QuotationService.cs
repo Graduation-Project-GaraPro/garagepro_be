@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Repositories; // Add this using statement
 using Services;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Services.Hubs;
 using Services.FCMServices;
 using BusinessObject.FcmDataModels; // Add this using statement
@@ -31,6 +32,7 @@ namespace Services.QuotationServices
         private readonly IHubContext<QuotationHub> _quotationHubContext;
         private readonly IFcmService _fcmService;
         private readonly IUserService _userService;
+        private readonly Services.Notifications.INotificationService _notificationService;
         public QuotationManagementService(
         IQuotationRepository quotationRepository,
         IQuotationServiceRepository quotationServiceRepository,
@@ -40,6 +42,7 @@ namespace Services.QuotationServices
             quotationRepository,
             quotationServiceRepository,
             quotationServicePartRepository,
+            null,
             null,
             null,
             null,
@@ -64,6 +67,7 @@ namespace Services.QuotationServices
             // Add this parameter
              IFcmService fcmService,
             IUserService userService,
+            Services.Notifications.INotificationService notificationService,
         IMapper mapper)
         {
             _quotationRepository = quotationRepository;
@@ -76,6 +80,7 @@ namespace Services.QuotationServices
             _jobService = jobService;
             _fcmService = fcmService;
             _userService = userService;
+            _notificationService = notificationService;
             _mapper = mapper;
         }
 
@@ -726,10 +731,8 @@ namespace Services.QuotationServices
             return true;
         }
 
-        /// <summary>
-        /// Generates jobs from an approved quotation
-        /// </summary>
-        /// <param name="quotation">The approved quotation</param>
+
+        // Generates jobs from an approved quotation
         private async Task GenerateJobsFromQuotationAsync(Quotation quotation)
         {
             // Debug: Log quotation information
@@ -796,11 +799,9 @@ namespace Services.QuotationServices
             }
         }
 
-        /// <summary>
-        /// Copies an approved quotation to jobs
-        /// </summary>
-        /// <param name="quotationId">The ID of the quotation to copy to jobs</param>
-        /// <returns>True if successful, false otherwise</returns>
+ 
+        // Copies an approved quotation to jobs
+
         public async Task<bool> CopyQuotationToJobsAsync(Guid quotationId)
         {
             // Load quotation with all necessary navigation properties
@@ -948,6 +949,44 @@ namespace Services.QuotationServices
             repairOrder.PaidAmount = totalInspectionFees;
             
             await _repairOrderRepository.UpdateAsync(repairOrder);
+
+            // Send notification to managers about manual RO completion
+            if (_notificationService != null)
+            {
+                try
+                {
+                    // Get notification info using lightweight query
+                    var notificationInfo = await _repairOrderRepository.Context.RepairOrders
+                        .Where(ro => ro.RepairOrderId == repairOrderId)
+                        .Select(ro => new
+                        {
+                            BranchId = ro.BranchId,
+                            CustomerName = (ro.User.FirstName + " " + ro.User.LastName).Trim(),
+                            VehicleInfo = ro.Vehicle.Brand.BrandName + " " + ro.Vehicle.Model.ModelName + " (" + ro.Vehicle.LicensePlate + ")"
+                        })
+                        .FirstOrDefaultAsync();
+
+                    if (notificationInfo != null)
+                    {
+                        var customerName = string.IsNullOrEmpty(notificationInfo.CustomerName) ? "Unknown Customer" : notificationInfo.CustomerName;
+                        var vehicleInfo = string.IsNullOrEmpty(notificationInfo.VehicleInfo) || notificationInfo.VehicleInfo == " ()" ? "Unknown Vehicle" : notificationInfo.VehicleInfo;
+
+                        await _notificationService.SendRepairOrderCompletedNotificationToManagersAsync(
+                            repairOrderId,
+                            notificationInfo.BranchId,
+                            customerName,
+                            vehicleInfo,
+                            false // false = manually completed
+                        );
+
+                        Console.WriteLine($"[QuotationService] Manual completion notification sent for RepairOrder {repairOrderId}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[QuotationService] Failed to send completion notification: {ex.Message}");
+                }
+            }
         }
     }
 }

@@ -26,6 +26,7 @@ namespace Repositories.EmergencyRequestRepositories
             Task<RequestEmergency?> GetCurrentEmergencyForTechnicianAsync(string technicianId);
             Task<List<RequestEmergency>> GetEmergencyListForTechnicianAsync(string technicianId);
 
+            Task<RequestEmergency?> GetEmergencyDetailAsync(Guid emergencyRequestId);
             Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId);
 
         Task<RequestEmergency> UpdateAsync(RequestEmergency emergency);
