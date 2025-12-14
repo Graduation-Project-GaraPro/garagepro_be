@@ -16,15 +16,18 @@ namespace Services.InspectionAndRepair
         private readonly IRepairRepository _repairRepository;
         private readonly IMapper _mapper;
         private readonly IHubContext<RepairHub> _hubContext;
+        private readonly IRepairOrderService _repairOrderService;
 
         public RepairService(
             IRepairRepository repairRepository,
             IMapper mapper,
-            IHubContext<RepairHub> hubContext)
+            IHubContext<RepairHub> hubContext,
+            IRepairOrderService repairOrderService)
         {
             _repairRepository = repairRepository;
             _mapper = mapper;
             _hubContext = hubContext;
+            _repairOrderService = repairOrderService;
         }
 
         public async Task<RepairResponseDto> CreateRepairAsync(Guid technicianId, RepairCreateDto dto)
@@ -57,6 +60,17 @@ namespace Services.InspectionAndRepair
             await _repairRepository.AddRepairAsync(repair);
             job.Status = JobStatus.InProgress;
             await _repairRepository.SaveChangesAsync();
+
+            // Auto-update RepairOrder progress when job status changes to InProgress
+            try
+            {
+                await _repairOrderService.UpdateRepairOrderProgressAsync(job.RepairOrderId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RepairService] Error updating RepairOrder progress for RO {job.RepairOrderId}: {ex.Message}");
+                // Don't fail the repair creation if RepairOrder progress update fails
+            }
 
             var response = _mapper.Map<RepairResponseDto>(repair);
 

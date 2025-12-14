@@ -142,6 +142,34 @@ namespace Services.InspectionAndRepair
                 Message = $"Job status changed from {oldStatus} to {dto.JobStatus}"
             };
 
+          
+
+            Console.WriteLine($"[JobTechnicianService] Job {dto.JobId} status updated by technician: {oldStatus} → {dto.JobStatus}");
+
+            // Update RepairOrder progress for all status changes
+            try
+            {
+                await _repairOrderService.UpdateRepairOrderProgressAsync(job.RepairOrderId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[JobTechnicianService] Error updating RepairOrder progress for RO {job.RepairOrderId}: {ex.Message}");
+                // Don't fail the job status update if RepairOrder progress update fails
+            }
+
+            // auto completed RO if all jobs are completed
+            if (dto.JobStatus == JobStatus.Completed)
+            {
+                try
+                {
+                    await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
+                }
+            }
+
             var user = await _userService.GetUserByIdAsync(job.RepairOrder.Vehicle.User.Id);
 
            

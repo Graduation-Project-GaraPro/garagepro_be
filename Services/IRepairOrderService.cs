@@ -69,6 +69,10 @@ namespace Services
         Task<RoBoardStatusUpdateResultDto> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds);
         #endregion
 
+        #region Progress and Status Auto-Update
+        Task<bool> UpdateRepairOrderProgressAsync(Guid repairOrderId);
+        #endregion
+
         #region Cost Calculation Methods
         /// <summary>
         /// Updates the RepairOrder cost based on completed inspection services
