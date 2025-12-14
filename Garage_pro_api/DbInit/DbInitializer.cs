@@ -1656,7 +1656,7 @@ namespace Garage_pro_api.DbInit
             if (!_context.Branches.Any())
             {
                 var branches = new List<Branch>
-        {
+            {
             new Branch
             {
                 BranchName = "Central Garage - Hồ Chí Minh",
