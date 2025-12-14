@@ -44,7 +44,6 @@ namespace Garage_pro_api.DbInit
             await SeedPermissionCategoriesAsync();
             await SeedPermissionsAsync();
             await AssignPermissionsToRolesAsync();
-
             await SeedInspectionTypesAsync();
             await SeedPartCategoriesAsync();
             await SeedPartsAsync();
@@ -62,7 +61,7 @@ namespace Garage_pro_api.DbInit
             await SeedPromotionalCampaignsWithServicesAsync();
             //await SeedManyCustomersAndRepairOrdersAsync(customerCount: 15, totalOrdersTarget: 800);
 
-            await SeedRepairOrdersAsync();
+            //await SeedRepairOrdersAsync();
             // await SeedInspectionsAsync();
 
             // Seed Vehicle Specifications
@@ -100,13 +99,15 @@ namespace Garage_pro_api.DbInit
             {
                 ("0900000001", "System", "Admin", "Admin"),
                 ("0900000002", "System", "Manager", "Manager"),
-                ("0900000003", "System", "Manager1", "Manager"),
-                ("0900000004", "System", "Manager2", "Manager"),
-                ("0900000005", "Default", "Customer", "Customer"),
-                ("0900000006", "Default", "Technician", "Technician"),
-                ("0900000007", "Default", "Technician1", "Technician"),
-                ("0900000008", "Default", "Technician2", "Technician"),
-                ("0987654321", "Manager", "User", "Manager")
+                ("0900000003", "System", "Manager 1", "Manager"),
+                ("0900000004", "System", "Manager 2", "Manager"),
+                ("0900000005", "Default", "Customer 1", "Customer"),
+                ("0900000006", "Default", "Technician 1", "Technician"),
+                ("0900000007", "Default", "Technician 2", "Technician"),
+                ("0900000008", "Default", "Technician 3", "Technician"),
+                ("0900000009", "Default", "Customer 3", "Customer"),
+                ("0900000010", "Default", "Customer 4", "Customer"),
+
             };
 
             string defaultPassword = _configuration["AdminUser:Password"] ?? "String@1";
@@ -547,648 +548,1106 @@ namespace Garage_pro_api.DbInit
 
         private async Task SeedPartCategoriesAsync()
         {
-            if (!_context.PartCategories.Any())
+            // Nếu bạn muốn seed thêm mà không bị skip khi đã có vài cái:
+            // => không dùng Any() return; mà dùng Ensure theo từng category.
+            async Task EnsureAsync(string name, string desc)
             {
-                var categories = new List<PartCategory>
-        {
-            new PartCategory
-            {
-                CategoryName = "Front - Engine",
-                Description = "Components related to the front engine area."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Engine",
-                Description = "Components related to the rear engine area."
-            },
-            new PartCategory
-            {
-                CategoryName = "Front - Brakes",
-                Description = "Brake components located at the front of the vehicle."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Brakes",
-                Description = "Brake components located at the rear of the vehicle."
-            },
-            new PartCategory
-            {
-                CategoryName = "Front - Electrical System",
-                Description = "Electrical system components located at the front section."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Electrical System",
-                Description = "Electrical system components located at the rear section."
-            },
-            new PartCategory
-            {
-                CategoryName = "Front - Suspension",
-                Description = "Suspension components located in the front area."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Suspension",
-                Description = "Suspension components located in the rear area."
-            },
-            new PartCategory
-            {
-                CategoryName = "Front - Cooling System",
-                Description = "Cooling system components at the front of the vehicle."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Cooling System",
-                Description = "Cooling system components at the rear of the vehicle."
-            },
+                var exists = await _context.PartCategories.AnyAsync(x => x.CategoryName == name);
+                if (exists) return;
 
-            // --- Added detailed categories ---
-
-            // Steering System
-            new PartCategory
-            {
-                CategoryName = "Front - Steering System",
-                Description = "Components related to the front steering mechanisms such as rack, tie rods, and steering pump."
-            },
-
-            // Transmission / Drivetrain
-            new PartCategory
-            {
-                CategoryName = "Front - Transmission System",
-                Description = "Front-mounted transmission components including clutch, gearbox, and driveshaft sections."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Transmission System",
-                Description = "Rear drivetrain components including rear driveshaft section and differential."
-            },
-
-            // Fuel System
-            new PartCategory
-            {
-                CategoryName = "Front - Fuel System",
-                Description = "Fuel system components located at or near the engine such as injectors and fuel pressure regulators."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Fuel System",
-                Description = "Fuel tank, fuel pump, and rear-mounted fuel filters and lines."
-            },
-
-            // Intake & Exhaust
-            new PartCategory
-            {
-                CategoryName = "Front - Air Intake System",
-                Description = "Air intake components located in the front such as air filter box and intake ducts."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Exhaust System",
-                Description = "Exhaust components at the rear including muffler, resonator, and tailpipe."
-            },
-
-            // Body Parts
-            new PartCategory
-            {
-                CategoryName = "Front - Body Parts",
-                Description = "Front exterior parts such as bumper, headlights, grille, and hood."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Body Parts",
-                Description = "Rear exterior parts including rear bumper, trunk lid, and taillights."
-            },
-
-            // Interior Components
-            new PartCategory
-            {
-                CategoryName = "Front - Interior Components",
-                Description = "Interior components located in the front cabin such as dashboard, center console, and front seats."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Interior Components",
-                Description = "Interior components in the rear cabin including rear seats and rear panels."
-            },
-
-            // HVAC System
-            new PartCategory
-            {
-                CategoryName = "Front - HVAC System",
-                Description = "Front climate control elements such as blower motor, heater core, and evaporator."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - HVAC System",
-                Description = "Rear HVAC components including rear AC vents and rear evaporator unit."
-            },
-
-            // Safety Components
-            new PartCategory
-            {
-                CategoryName = "Front - Safety Components",
-                Description = "Front safety elements including airbags, sensors, and crash reinforcement structures."
-            },
-            new PartCategory
-            {
-                CategoryName = "Rear - Safety Components",
-                Description = "Rear safety systems including rear airbags, child seat anchors, and impact beams."
+                _context.PartCategories.Add(new PartCategory
+                {
+                    CategoryName = name,
+                    Description = desc
+                });
             }
-            };
 
-                    _context.PartCategories.AddRange(categories);
-                    await _context.SaveChangesAsync();
-                }
-            }
+            // ===== BRAKES =====
+            await EnsureAsync("Front - Brake Pads", "Front brake pads only");
+            await EnsureAsync("Rear - Brake Pads", "Rear brake pads only");
+            await EnsureAsync("Front - Brake Discs", "Front brake discs/rotors only");
+            await EnsureAsync("Rear - Brake Discs", "Rear brake discs/rotors only");
+            await EnsureAsync("Front - Brake Calipers", "Front brake calipers only");
+            await EnsureAsync("Rear - Brake Calipers", "Rear brake calipers only");
+            await EnsureAsync("Brake - Fluid", "Brake fluid only");
+            await EnsureAsync("Brake - Hoses & Lines", "Brake hoses/lines only");
+            await EnsureAsync("Brake - Master Cylinder", "Master cylinder only");
+
+            // ===== TIRES / WHEELS =====
+            await EnsureAsync("Front - Tires", "Front tires only");
+            await EnsureAsync("Rear - Tires", "Rear tires only");
+            await EnsureAsync("Front - Wheel Bearings", "Front wheel bearings only");
+            await EnsureAsync("Rear - Wheel Bearings", "Rear wheel bearings only");
+            await EnsureAsync("Wheel - Balancing Weights", "Balancing weights only");
+            await EnsureAsync("Wheel - Valve & TPMS", "Valve stems / TPMS sensors only");
+
+            // ===== SUSPENSION =====
+            await EnsureAsync("Front - Shock/Strut", "Front shocks/struts only");
+            await EnsureAsync("Rear - Shock", "Rear shocks only");
+            await EnsureAsync("Front - Control Arm", "Front control arms only");
+            await EnsureAsync("Rear - Control Arm", "Rear control arms only");
+            await EnsureAsync("Front - Ball Joint", "Front ball joints only");
+            await EnsureAsync("Bushings - Suspension", "Suspension bushings only");
+            await EnsureAsync("Stabilizer Link - Front", "Front stabilizer links only");
+            await EnsureAsync("Stabilizer Link - Rear", "Rear stabilizer links only");
+
+            // ===== STEERING =====
+            await EnsureAsync("Steering - Tie Rod End", "Tie rod ends only");
+            await EnsureAsync("Steering - Rack", "Steering rack only");
+            await EnsureAsync("Steering - Pump", "Power steering pump only");
+
+            // ===== ENGINE (common replacement) =====
+            await EnsureAsync("Engine - Oil", "Engine oil only");
+            await EnsureAsync("Engine - Oil Filter", "Oil filter only");
+            await EnsureAsync("Engine - Air Filter", "Engine air filter only");
+            await EnsureAsync("Engine - Spark Plugs", "Spark plugs only");
+            await EnsureAsync("Engine - Ignition Coils", "Ignition coils only");
+            await EnsureAsync("Engine - Drive Belt", "Serpentine/drive belt only");
+            await EnsureAsync("Engine - Mounts", "Engine mounts only");
+            await EnsureAsync("Engine - Gaskets & Seals", "Common engine gaskets/seals (valve cover, etc.)");
+
+            // ===== INTAKE / FUEL =====
+            await EnsureAsync("Intake - Throttle Body", "Throttle body / gasket only");
+            await EnsureAsync("Fuel - Fuel Pump", "Fuel pump only");
+            await EnsureAsync("Fuel - Fuel Filter", "Fuel filter only");
+            await EnsureAsync("Fuel - Injectors", "Fuel injectors only");
+
+            // ===== COOLING =====
+            await EnsureAsync("Cooling - Radiator", "Radiator only");
+            await EnsureAsync("Cooling - Water Pump", "Water pump only");
+            await EnsureAsync("Cooling - Thermostat", "Thermostat only");
+            await EnsureAsync("Cooling - Hoses", "Cooling hoses only");
+            await EnsureAsync("Cooling - Coolant", "Coolant only");
+
+            // ===== ELECTRICAL (charge/start) =====
+            await EnsureAsync("Electrical - Battery", "Battery only");
+            await EnsureAsync("Electrical - Alternator", "Alternator only");
+            await EnsureAsync("Electrical - Starter Motor", "Starter motor only");
+            await EnsureAsync("Electrical - Fuses/Relays", "Fuses and relays only");
+
+            // ===== SENSORS (hay lỗi) =====
+            await EnsureAsync("Sensors - O2", "Oxygen sensors only");
+            await EnsureAsync("Sensors - MAF/MAP", "MAF/MAP sensors only");
+            await EnsureAsync("Sensors - ABS Front", "Front ABS wheel speed sensors only");
+            await EnsureAsync("Sensors - ABS Rear", "Rear ABS wheel speed sensors only");
+
+            // ===== TRANSMISSION =====
+            await EnsureAsync("Transmission - ATF", "Automatic transmission fluid only");
+            await EnsureAsync("Transmission - Clutch Kit", "Clutch kit only (manual)");
+            await EnsureAsync("Transmission - Mount", "Transmission mount only");
+
+            // ===== HVAC =====
+            await EnsureAsync("HVAC - Cabin Filter", "Cabin air filter only");
+            await EnsureAsync("HVAC - Refrigerant", "Refrigerant gas only");
+            await EnsureAsync("HVAC - AC Compressor", "AC compressor only");
+            await EnsureAsync("HVAC - Blower Motor", "Blower motor only");
+
+            // ===== EXHAUST =====
+            await EnsureAsync("Exhaust - Muffler", "Muffler only");
+            await EnsureAsync("Exhaust - Catalytic Converter", "Catalytic converter only");
+            await EnsureAsync("Exhaust - Gaskets/Hangers", "Exhaust gaskets/hangers only");
+
+            await _context.SaveChangesAsync();
+        }
+
+
 
 
 
         private async Task SeedPartsAsync()
         {
-            if (!_context.Parts.Any())
+            if (_context.Parts.Any()) return;
+
+            // helper: lấy PartCategoryId (bạn đang dùng LaborCategoryId)
+            async Task<Guid> PC(string categoryName)
             {
-                var categories = await _context.PartCategories.ToListAsync();
-
-                var parts = new List<Part>();
-
-                PartCategory? FindCategory(string name) =>
-                    categories.FirstOrDefault(c => c.CategoryName == name);
-
-                // 🔧 Engine
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Air Filter (Budget)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 5000, Stock = 60, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Oil Filter (Standard)", PartCategoryId = FindCategory("Rear - Engine").LaborCategoryId, Price = 8000, Stock = 40, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Spark Plug (Premium)", PartCategoryId = FindCategory("Front - Engine").LaborCategoryId, Price = 15000, Stock = 20, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🛑 Brakes
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Brake Pad (Budget)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 7000, Stock = 50, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Brake Disc (Standard)", PartCategoryId = FindCategory("Rear - Brakes").LaborCategoryId, Price = 12000, Stock = 25, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Brake Caliper (Premium)", PartCategoryId = FindCategory("Front - Brakes").LaborCategoryId, Price = 19000, Stock = 15, CreatedAt = DateTime.UtcNow },
-        });
-
-                // ⚡ Electrical System
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Battery (Budget)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 10000, Stock = 30, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Alternator (Standard)", PartCategoryId = FindCategory("Rear - Electrical System").LaborCategoryId, Price = 15000, Stock = 20, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Starter Motor (Premium)", PartCategoryId = FindCategory("Front - Electrical System").LaborCategoryId, Price = 20000, Stock = 10, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🦾 Suspension
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Shock Absorber (Budget)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 9000, Stock = 35, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Control Arm (Standard)", PartCategoryId = FindCategory("Rear - Suspension").LaborCategoryId, Price = 13000, Stock = 25, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Suspension Strut (Premium)", PartCategoryId = FindCategory("Front - Suspension").LaborCategoryId, Price = 19000, Stock = 12, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🌡️ Cooling System
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Coolant Hose (Budget)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 4000, Stock = 45, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Radiator (Standard)", PartCategoryId = FindCategory("Rear - Cooling System").LaborCategoryId, Price = 16000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Water Pump (Premium)", PartCategoryId = FindCategory("Front - Cooling System").LaborCategoryId, Price = 20000, Stock = 8, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🚗 Steering System (Front)
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Steering Rack (Standard)", PartCategoryId = FindCategory("Front - Steering System").LaborCategoryId, Price = 14000, Stock = 15, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Tie Rod End (Budget)", PartCategoryId = FindCategory("Front - Steering System").LaborCategoryId, Price = 6000, Stock = 30, CreatedAt = DateTime.UtcNow },
-        });
-
-                // ⚙️ Transmission System
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Clutch Disc (Standard)", PartCategoryId = FindCategory("Front - Transmission System").LaborCategoryId, Price = 15000, Stock = 18, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Gearbox Mount (Budget)", PartCategoryId = FindCategory("Front - Transmission System").LaborCategoryId, Price = 7000, Stock = 25, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Driveshaft (Standard)", PartCategoryId = FindCategory("Rear - Transmission System").LaborCategoryId, Price = 16000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Differential Bearing (Budget)", PartCategoryId = FindCategory("Rear - Transmission System").LaborCategoryId, Price = 8000, Stock = 20, CreatedAt = DateTime.UtcNow },
-        });
-
-                // ⛽ Fuel System
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Fuel Injector (Standard)", PartCategoryId = FindCategory("Front - Fuel System").LaborCategoryId, Price = 15000, Stock = 24, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Fuel Rail (Premium)", PartCategoryId = FindCategory("Front - Fuel System").LaborCategoryId, Price = 19000, Stock = 10, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Fuel Pump (Standard)", PartCategoryId = FindCategory("Rear - Fuel System").LaborCategoryId, Price = 17000, Stock = 14, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Fuel Filter (Budget)", PartCategoryId = FindCategory("Rear - Fuel System").LaborCategoryId, Price = 5000, Stock = 35, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🌬️ Air Intake & Exhaust
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Air Intake Duct (Budget)", PartCategoryId = FindCategory("Front - Air Intake System").LaborCategoryId, Price = 6000, Stock = 30, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Air Filter Box (Standard)", PartCategoryId = FindCategory("Front - Air Intake System").LaborCategoryId, Price = 11000, Stock = 18, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Muffler Assembly (Standard)", PartCategoryId = FindCategory("Rear - Exhaust System").LaborCategoryId, Price = 18000, Stock = 12, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Tailpipe Tip (Budget)", PartCategoryId = FindCategory("Rear - Exhaust System").LaborCategoryId, Price = 4000, Stock = 40, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🛡️ Body Parts
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Bumper Cover (Standard)", PartCategoryId = FindCategory("Front - Body Parts").LaborCategoryId, Price = 17000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Headlight Assembly (Premium)", PartCategoryId = FindCategory("Front - Body Parts").LaborCategoryId, Price = 20000, Stock = 8, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Bumper Cover (Standard)", PartCategoryId = FindCategory("Rear - Body Parts").LaborCategoryId, Price = 17000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Taillight Assembly (Premium)", PartCategoryId = FindCategory("Rear - Body Parts").LaborCategoryId, Price = 20000, Stock = 8, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🪑 Interior Components
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Seat Cushion (Standard)", PartCategoryId = FindCategory("Front - Interior Components").LaborCategoryId, Price = 12000, Stock = 16, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Dashboard Trim Panel (Budget)", PartCategoryId = FindCategory("Front - Interior Components").LaborCategoryId, Price = 7000, Stock = 20, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Seat Backrest (Standard)", PartCategoryId = FindCategory("Rear - Interior Components").LaborCategoryId, Price = 13000, Stock = 14, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Door Panel (Budget)", PartCategoryId = FindCategory("Rear - Interior Components").LaborCategoryId, Price = 8000, Stock = 18, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🌀 HVAC System
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Blower Motor (Standard)", PartCategoryId = FindCategory("Front - HVAC System").LaborCategoryId, Price = 15000, Stock = 12, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Cabin Air Filter (Budget)", PartCategoryId = FindCategory("Front - HVAC System").LaborCategoryId, Price = 5000, Stock = 30, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear AC Vent Assembly (Budget)", PartCategoryId = FindCategory("Rear - HVAC System").LaborCategoryId, Price = 6000, Stock = 20, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Rear Evaporator Core (Standard)", PartCategoryId = FindCategory("Rear - HVAC System").LaborCategoryId, Price = 16000, Stock = 10, CreatedAt = DateTime.UtcNow },
-        });
-
-                // 🛡️ Safety Components
-                parts.AddRange(new[]
-                {
-            new Part { Name = "Front Airbag Module (Standard)", PartCategoryId = FindCategory("Front - Safety Components").LaborCategoryId, Price = 18000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Front Crash Sensor (Budget)", PartCategoryId = FindCategory("Front - Safety Components").LaborCategoryId, Price = 9000, Stock = 20, CreatedAt = DateTime.UtcNow },
-
-            new Part { Name = "Rear Airbag Module (Standard)", PartCategoryId = FindCategory("Rear - Safety Components").LaborCategoryId, Price = 18000, Stock = 10, CreatedAt = DateTime.UtcNow },
-            new Part { Name = "Child Seat Anchor Kit (Budget)", PartCategoryId = FindCategory("Rear - Safety Components").LaborCategoryId, Price = 4000, Stock = 25, CreatedAt = DateTime.UtcNow },
-        });
-
-                _context.Parts.AddRange(parts);
-                await _context.SaveChangesAsync();
+                var pc = await _context.PartCategories.FirstAsync(x => x.CategoryName == categoryName);
+                return pc.LaborCategoryId; // đổi nếu PK của bạn là PartCategoryId
             }
+
+            void Add(List<Part> parts, Guid pcId, string name, int price, int stock)
+            {
+                parts.Add(new Part
+                {
+                    Name = name,
+                    PartCategoryId = pcId,
+                    Price = price,
+                    Stock = stock,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            var parts = new List<Part>();
+
+            // ===== BRAKE PADS FRONT =====
+            {
+                var id = await PC("Front - Brake Pads");
+                Add(parts, id, "Front Brake Pads - Budget (Generic)", 700, 60);
+                Add(parts, id, "Front Brake Pads - Standard (Semi-metallic)", 1100, 50);
+                Add(parts, id, "Front Brake Pads - Premium (Ceramic)", 1600, 40);
+
+                Add(parts, id, "Front Brake Pads - Toyota Vios 2014-2018 (Standard)", 1250, 25);
+                Add(parts, id, "Front Brake Pads - Toyota Altis 2015-2019 (Premium)", 1750, 20);
+                Add(parts, id, "Front Brake Pads - Honda City 2014-2019 (Standard)", 1350, 25);
+                Add(parts, id, "Front Brake Pads - Honda Civic 2016-2020 (Premium)", 2200, 15);
+            }
+
+            // ===== BRAKE PADS REAR =====
+            {
+                var id = await PC("Rear - Brake Pads");
+                Add(parts, id, "Rear Brake Pads - Budget (Generic)", 700, 60);
+                Add(parts, id, "Rear Brake Pads - Standard (Semi-metallic)", 1100, 50);
+                Add(parts, id, "Rear Brake Pads - Premium (Ceramic)", 1600, 40);
+
+                Add(parts, id, "Rear Brake Pads - Toyota Vios 2014-2018 (Standard)", 1200, 25);
+                Add(parts, id, "Rear Brake Pads - Honda Civic 2016-2020 (Premium)", 2100, 15);
+            }
+
+            // ===== BRAKE DISCS FRONT/REAR =====
+            {
+                var id = await PC("Front - Brake Discs");
+                Add(parts, id, "Front Brake Disc Pair - Budget (Generic)", 1200, 30);
+                Add(parts, id, "Front Brake Disc Pair - Standard (Vented)", 1800, 25);
+                Add(parts, id, "Front Brake Disc Pair - Premium (High Carbon)", 2600, 15);
+                Add(parts, id, "Front Brake Disc Pair - Honda Civic 2016-2020", 2900, 10);
+            }
+            {
+                var id = await PC("Rear - Brake Discs");
+                Add(parts, id, "Rear Brake Disc Pair - Budget (Generic)", 1200, 30);
+                Add(parts, id, "Rear Brake Disc Pair - Standard", 1800, 25);
+                Add(parts, id, "Rear Brake Disc Pair - Premium", 2600, 15);
+                Add(parts, id, "Rear Brake Disc Pair - Toyota Altis 2015-2019", 2400, 12);
+            }
+
+            // ===== BRAKE CALIPERS FRONT/REAR =====
+            {
+                var id = await PC("Front - Brake Calipers");
+                Add(parts, id, "Front Brake Caliper - Reman (Budget)", 1400, 15);
+                Add(parts, id, "Front Brake Caliper - Standard", 2200, 12);
+                Add(parts, id, "Front Brake Caliper - OEM Grade (Premium)", 3200, 8);
+            }
+            {
+                var id = await PC("Rear - Brake Calipers");
+                Add(parts, id, "Rear Brake Caliper - Reman (Budget)", 1400, 15);
+                Add(parts, id, "Rear Brake Caliper - Standard", 2200, 12);
+                Add(parts, id, "Rear Brake Caliper - OEM Grade (Premium)", 3200, 8);
+            }
+
+            // ===== BRAKE FLUID / LINES / MASTER =====
+            {
+                var id = await PC("Brake - Fluid");
+                Add(parts, id, "Brake Fluid DOT4 1L - Budget", 200, 80);
+                Add(parts, id, "Brake Fluid DOT4 1L - Standard", 320, 80);
+                Add(parts, id, "Brake Fluid DOT4 LV 1L - Premium", 450, 60);
+            }
+            {
+                var id = await PC("Brake - Hoses & Lines");
+                Add(parts, id, "Brake Hose Set - Budget", 350, 30);
+                Add(parts, id, "Brake Hose Set - Standard", 550, 25);
+                Add(parts, id, "Brake Hose Set - Premium (Braided)", 900, 15);
+            }
+            {
+                var id = await PC("Brake - Master Cylinder");
+                Add(parts, id, "Master Cylinder - Budget", 1200, 10);
+                Add(parts, id, "Master Cylinder - Standard", 1800, 8);
+                Add(parts, id, "Master Cylinder - Premium", 2600, 6);
+            }
+
+            // ===== TIRES FRONT/REAR =====
+            {
+                var id = await PC("Front - Tires");
+                Add(parts, id, "Front Tire Pair 195/65R15 - Budget", 2200, 25);
+                Add(parts, id, "Front Tire Pair 195/65R15 - Standard Touring", 3200, 20);
+                Add(parts, id, "Front Tire Pair 195/65R15 - Premium Performance", 4500, 12);
+
+                Add(parts, id, "Front Tire Pair 185/60R15 - Budget", 2100, 20);
+                Add(parts, id, "Front Tire Pair 205/55R16 - Standard", 3600, 15);
+            }
+            {
+                var id = await PC("Rear - Tires");
+                Add(parts, id, "Rear Tire Pair 195/65R15 - Budget", 2200, 25);
+                Add(parts, id, "Rear Tire Pair 195/65R15 - Standard Touring", 3200, 20);
+                Add(parts, id, "Rear Tire Pair 195/65R15 - Premium Performance", 4500, 12);
+
+                Add(parts, id, "Rear Tire Pair 205/55R16 - Standard", 3600, 15);
+            }
+
+            // ===== WHEEL BEARING FRONT/REAR =====
+            {
+                var id = await PC("Front - Wheel Bearings");
+                Add(parts, id, "Front Wheel Bearing - Budget", 600, 25);
+                Add(parts, id, "Front Wheel Bearing - Standard", 900, 20);
+                Add(parts, id, "Front Wheel Bearing - Premium", 1300, 15);
+            }
+            {
+                var id = await PC("Rear - Wheel Bearings");
+                Add(parts, id, "Rear Wheel Bearing - Budget", 600, 25);
+                Add(parts, id, "Rear Wheel Bearing - Standard", 900, 20);
+                Add(parts, id, "Rear Wheel Bearing - Premium", 1300, 15);
+            }
+
+            // ===== TPMS / VALVE =====
+            {
+                var id = await PC("Wheel - Valve & TPMS");
+                Add(parts, id, "Valve Stem Set - Budget", 80, 100);
+                Add(parts, id, "Valve Stem Set - Standard", 120, 100);
+                Add(parts, id, "TPMS Sensor - Standard", 650, 25);
+                Add(parts, id, "TPMS Sensor - Premium (OE)", 950, 15);
+            }
+
+            // ===== BALANCING WEIGHTS =====
+            {
+                var id = await PC("Wheel - Balancing Weights");
+                Add(parts, id, "Balancing Weights Set - Budget", 100, 200);
+                Add(parts, id, "Balancing Weights Set - Standard", 160, 200);
+                Add(parts, id, "Balancing Weights Set - Premium", 250, 150);
+            }
+
+            // ===== SUSPENSION: shocks/control arms/links =====
+            {
+                var id = await PC("Front - Shock/Strut");
+                Add(parts, id, "Front Shock/Strut Pair - Budget", 1800, 18);
+                Add(parts, id, "Front Shock/Strut Pair - Standard", 2600, 14);
+                Add(parts, id, "Front Shock/Strut Pair - Premium", 3600, 10);
+            }
+            {
+                var id = await PC("Rear - Shock");
+                Add(parts, id, "Rear Shock Pair - Budget", 1700, 18);
+                Add(parts, id, "Rear Shock Pair - Standard", 2500, 14);
+                Add(parts, id, "Rear Shock Pair - Premium", 3500, 10);
+            }
+            {
+                var id = await PC("Front - Control Arm");
+                Add(parts, id, "Front Control Arm - Budget", 900, 20);
+                Add(parts, id, "Front Control Arm - Standard", 1400, 16);
+                Add(parts, id, "Front Control Arm - Premium", 2000, 12);
+            }
+            {
+                var id = await PC("Bushings - Suspension");
+                Add(parts, id, "Suspension Bushing Set - Budget", 300, 30);
+                Add(parts, id, "Suspension Bushing Set - Standard", 500, 25);
+                Add(parts, id, "Suspension Bushing Set - Premium (PU)", 900, 15);
+            }
+            {
+                var id = await PC("Stabilizer Link - Front");
+                Add(parts, id, "Front Stabilizer Link Pair - Budget", 250, 30);
+                Add(parts, id, "Front Stabilizer Link Pair - Standard", 400, 25);
+                Add(parts, id, "Front Stabilizer Link Pair - Premium", 650, 15);
+            }
+
+            // ===== STEERING: tie rod/rack =====
+            {
+                var id = await PC("Steering - Tie Rod End");
+                Add(parts, id, "Tie Rod End Pair - Budget", 500, 25);
+                Add(parts, id, "Tie Rod End Pair - Standard", 800, 20);
+                Add(parts, id, "Tie Rod End Pair - Premium", 1200, 12);
+            }
+            {
+                var id = await PC("Steering - Rack");
+                Add(parts, id, "Steering Rack - Reman (Budget)", 2500, 6);
+                Add(parts, id, "Steering Rack - Standard", 3500, 5);
+                Add(parts, id, "Steering Rack - Premium (OE Grade)", 5200, 3);
+            }
+
+            // ===== ENGINE basics =====
+            {
+                var id = await PC("Engine - Oil");
+                Add(parts, id, "Engine Oil 4L - Mineral (Budget)", 900, 80);
+                Add(parts, id, "Engine Oil 4L - Semi Synthetic (Standard)", 1300, 60);
+                Add(parts, id, "Engine Oil 4L - Full Synthetic (Premium)", 1800, 40);
+            }
+            {
+                var id = await PC("Engine - Oil Filter");
+                Add(parts, id, "Oil Filter - Budget", 120, 80);
+                Add(parts, id, "Oil Filter - Standard", 200, 80);
+                Add(parts, id, "Oil Filter - Premium", 350, 60);
+            }
+            {
+                var id = await PC("Engine - Air Filter");
+                Add(parts, id, "Air Filter - Budget", 250, 60);
+                Add(parts, id, "Air Filter - Standard", 400, 50);
+                Add(parts, id, "Air Filter - Premium", 650, 40);
+                Add(parts, id, "Air Filter - Toyota Vios 2014-2018", 420, 30);
+                Add(parts, id, "Air Filter - Honda City 2014-2019", 450, 30);
+            }
+            {
+                var id = await PC("Engine - Spark Plugs");
+                Add(parts, id, "Spark Plug Set - Nickel (Budget)", 600, 50);
+                Add(parts, id, "Spark Plug Set - Platinum (Standard)", 900, 40);
+                Add(parts, id, "Spark Plug Set - Iridium (Premium)", 1400, 30);
+            }
+            {
+                var id = await PC("Engine - Ignition Coils");
+                Add(parts, id, "Ignition Coil - Budget", 700, 25);
+                Add(parts, id, "Ignition Coil - Standard", 1100, 20);
+                Add(parts, id, "Ignition Coil - Premium", 1700, 12);
+            }
+
+            // ===== COOLING =====
+            {
+                var id = await PC("Cooling - Radiator");
+                Add(parts, id, "Radiator - Budget", 1500, 10);
+                Add(parts, id, "Radiator - Standard", 2300, 8);
+                Add(parts, id, "Radiator - Premium", 3400, 6);
+            }
+            {
+                var id = await PC("Cooling - Water Pump");
+                Add(parts, id, "Water Pump - Budget", 900, 12);
+                Add(parts, id, "Water Pump - Standard", 1400, 10);
+                Add(parts, id, "Water Pump - Premium", 2100, 8);
+            }
+            {
+                var id = await PC("Cooling - Thermostat");
+                Add(parts, id, "Thermostat - Budget", 250, 20);
+                Add(parts, id, "Thermostat - Standard", 400, 18);
+                Add(parts, id, "Thermostat - Premium", 650, 12);
+            }
+            {
+                var id = await PC("Cooling - Coolant");
+                Add(parts, id, "Coolant 4L - Budget", 300, 50);
+                Add(parts, id, "Coolant 4L - Standard", 450, 40);
+                Add(parts, id, "Coolant 4L - Premium (Long Life)", 650, 30);
+            }
+
+            // ===== ELECTRICAL =====
+            {
+                var id = await PC("Electrical - Battery");
+                Add(parts, id, "Battery 12V 45Ah - Budget", 1800, 20);
+                Add(parts, id, "Battery 12V 55Ah - Standard", 2600, 15);
+                Add(parts, id, "Battery 12V 60Ah AGM - Premium", 3800, 8);
+            }
+            {
+                var id = await PC("Electrical - Alternator");
+                Add(parts, id, "Alternator - Budget", 2500, 8);
+                Add(parts, id, "Alternator - Standard", 3500, 6);
+                Add(parts, id, "Alternator - Premium", 5200, 4);
+            }
+            {
+                var id = await PC("Electrical - Starter Motor");
+                Add(parts, id, "Starter Motor - Budget", 2300, 8);
+                Add(parts, id, "Starter Motor - Standard", 3300, 6);
+                Add(parts, id, "Starter Motor - Premium", 4800, 4);
+            }
+
+            // ===== SENSORS =====
+            {
+                var id = await PC("Sensors - O2");
+                Add(parts, id, "O2 Sensor - Budget", 700, 20);
+                Add(parts, id, "O2 Sensor - Standard", 1100, 16);
+                Add(parts, id, "O2 Sensor - Premium", 1700, 10);
+            }
+            {
+                var id = await PC("Sensors - ABS Front");
+                Add(parts, id, "ABS Sensor Front - Budget", 650, 20);
+                Add(parts, id, "ABS Sensor Front - Standard", 1000, 15);
+                Add(parts, id, "ABS Sensor Front - Premium", 1500, 10);
+            }
+            {
+                var id = await PC("Sensors - ABS Rear");
+                Add(parts, id, "ABS Sensor Rear - Budget", 650, 20);
+                Add(parts, id, "ABS Sensor Rear - Standard", 1000, 15);
+                Add(parts, id, "ABS Sensor Rear - Premium", 1500, 10);
+            }
+
+            // ===== HVAC =====
+            {
+                var id = await PC("HVAC - Cabin Filter");
+                Add(parts, id, "Cabin Filter - Budget", 200, 40);
+                Add(parts, id, "Cabin Filter - Standard", 320, 30);
+                Add(parts, id, "Cabin Filter - Premium (Carbon)", 500, 20);
+            }
+            {
+                var id = await PC("HVAC - Refrigerant");
+                Add(parts, id, "Refrigerant R134a - Budget", 250, 80);
+                Add(parts, id, "Refrigerant R134a - Standard", 400, 60);
+                Add(parts, id, "Refrigerant R134a - Premium", 650, 40);
+            }
+            {
+                var id = await PC("HVAC - AC Compressor");
+                Add(parts, id, "AC Compressor - Budget", 3500, 6);
+                Add(parts, id, "AC Compressor - Standard", 5200, 4);
+                Add(parts, id, "AC Compressor - Premium", 7600, 3);
+            }
+
+            // ===== EXHAUST =====
+            {
+                var id = await PC("Exhaust - Muffler");
+                Add(parts, id, "Muffler - Budget", 1800, 10);
+                Add(parts, id, "Muffler - Standard", 2600, 8);
+                Add(parts, id, "Muffler - Premium", 3800, 6);
+            }
+            {
+                var id = await PC("Exhaust - Catalytic Converter");
+                Add(parts, id, "Catalytic Converter - Budget", 4500, 3);
+                Add(parts, id, "Catalytic Converter - Standard", 6500, 2);
+                Add(parts, id, "Catalytic Converter - Premium (OE Grade)", 9500, 1);
+            }
+
+            _context.Parts.AddRange(parts);
+            await _context.SaveChangesAsync();
         }
+
+
 
 
 
         private async Task SeedServiceCategoriesAsync()
         {
-            if (!_context.ServiceCategories.Any())
+            var existing = await _context.ServiceCategories
+                .Select(c => c.CategoryName)
+                .ToListAsync();
+
+            void AddIfMissing(ServiceCategory cat)
             {
-                // --- STEP 1: Create parent categories ---
-                var parentCategories = new List<ServiceCategory>
-                    {
-                        new ServiceCategory { CategoryName = "Maintenance", Description = "General maintenance services for vehicles" },
-                        new ServiceCategory { CategoryName = "Repair", Description = "Repair services for damaged parts" },
-                        new ServiceCategory { CategoryName = "Inspection", Description = "Vehicle inspection and diagnostics" },
-                        new ServiceCategory { CategoryName = "Upgrade", Description = "Performance and aesthetic upgrades" }
-                    };
-
-                _context.ServiceCategories.AddRange(parentCategories);
-                await _context.SaveChangesAsync();
-
-                // --- STEP 2: Create child categories ---
-                var maintenance = parentCategories.First(c => c.CategoryName == "Maintenance");
-                var repair = parentCategories.First(c => c.CategoryName == "Repair");
-                var inspection = parentCategories.First(c => c.CategoryName == "Inspection");
-                var upgrade = parentCategories.First(c => c.CategoryName == "Upgrade");
-
-                var childCategories = new List<ServiceCategory>
-                    {
-                        // 🔧 Maintenance
-                        new ServiceCategory { CategoryName = "Oil Change", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Engine oil and filter replacement" },
-                        new ServiceCategory { CategoryName = "Tire Rotation", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Rotating tires for even wear" },
-                        new ServiceCategory { CategoryName = "Battery Check", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Battery testing and replacement" },
-                        new ServiceCategory { CategoryName = "Fluid Refill", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Coolant, brake fluid, and transmission fluid refill" },
-
-                        // ⚙️ Repair
-                        new ServiceCategory { CategoryName = "Engine Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Engine part replacement and tuning" },
-                        new ServiceCategory { CategoryName = "Brake Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Brake pad, caliper, and disc replacement" },
-                        new ServiceCategory { CategoryName = "Electrical Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Fixing alternator, starter motor, and wiring issues" },
-                        new ServiceCategory { CategoryName = "Suspension Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Shock absorber and suspension arm repair" },
-
-                        // 🔍 Inspection
-                        new ServiceCategory { CategoryName = "Safety Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check safety systems like brakes, lights, and tires" },
-                        new ServiceCategory { CategoryName = "Emissions Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Check exhaust and emissions compliance" },
-                        new ServiceCategory { CategoryName = "Pre-Purchase Inspection", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Comprehensive vehicle check before buying" },
-                        new ServiceCategory { CategoryName = "Engine Diagnostic", ParentServiceCategoryId = inspection.ServiceCategoryId, Description = "Computer-based engine and sensor diagnostics" },
-
-                        // 🏎️ Upgrade
-                        new ServiceCategory { CategoryName = "Performance Tuning", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Boost vehicle performance and horsepower" },
-                        new ServiceCategory { CategoryName = "Lighting Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Install LED or HID lighting systems" },
-                        new ServiceCategory { CategoryName = "Interior Upgrade", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Improve interior design and comfort" },
-                        new ServiceCategory { CategoryName = "Exterior Styling", ParentServiceCategoryId = upgrade.ServiceCategoryId, Description = "Add body kits, spoilers, and paint customization" },
-
-                        // ❄️ Cooling System
-                        new ServiceCategory { CategoryName = "Cooling System Service", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Radiator, coolant and cooling system maintenance" },
-                        new ServiceCategory { CategoryName = "Cooling System Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Radiator, water pump and cooling system repair" },
-
-                        // 🛞 Steering
-                        new ServiceCategory { CategoryName = "Steering Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Steering rack, tie rod and alignment repair" },
-
-                        // ⚙️ Transmission / Drivetrain
-                        new ServiceCategory { CategoryName = "Transmission Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Gearbox, clutch and drivetrain repair" },
-
-                        // ⛽ Fuel System
-                        new ServiceCategory { CategoryName = "Fuel System Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Fuel pump, injector and fuel line repair" },
-
-                        // 🌬️ Intake & Exhaust
-                        new ServiceCategory { CategoryName = "Exhaust Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Muffler, catalytic converter and exhaust pipe repair" },
-
-                        // 🚗 Body & Interior
-                        new ServiceCategory { CategoryName = "Body Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Repair and alignment of exterior body panels" },
-                        new ServiceCategory { CategoryName = "Interior Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Repair of seats, trims and interior panels" },
-
-                        // 🌀 HVAC
-                        new ServiceCategory { CategoryName = "HVAC Service", ParentServiceCategoryId = maintenance.ServiceCategoryId, Description = "Air conditioning and heating system maintenance" },
-
-                        // 🛡️ Safety
-                        new ServiceCategory { CategoryName = "Safety System Repair", ParentServiceCategoryId = repair.ServiceCategoryId, Description = "Airbags, sensors and seat belt system repair" }
-                    };
-
-
-                _context.ServiceCategories.AddRange(childCategories);
-                await _context.SaveChangesAsync();
+                if (!existing.Contains(cat.CategoryName))
+                    _context.ServiceCategories.Add(cat);
             }
+
+            // ===== PARENT =====
+            AddIfMissing(new ServiceCategory { CategoryName = "Maintenance", Description = "General maintenance services" });
+            AddIfMissing(new ServiceCategory { CategoryName = "Repair", Description = "Repair services" });
+            AddIfMissing(new ServiceCategory { CategoryName = "Inspection", Description = "Inspection & diagnostics" });
+            AddIfMissing(new ServiceCategory { CategoryName = "Upgrade", Description = "Upgrade & enhancement services" });
+
+            await _context.SaveChangesAsync();
+
+            var parents = await _context.ServiceCategories.ToListAsync();
+            Guid P(string name) => parents.First(c => c.CategoryName == name).ServiceCategoryId;
+
+            // ===== CHILD =====
+            // ===== MAINTENANCE =====
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Oil Change",
+                ParentServiceCategoryId = P("Maintenance"),
+                Description = "Engine oil and oil filter replacement to maintain engine lubrication and performance."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Tire Rotation",
+                ParentServiceCategoryId = P("Maintenance"),
+                Description = "Tire rotation, balancing, alignment and basic tire-related services to ensure even wear."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Battery Check",
+                ParentServiceCategoryId = P("Maintenance"),
+                Description = "Battery testing, charging system inspection, and battery replacement services."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Fluid Refill",
+                ParentServiceCategoryId = P("Maintenance"),
+                Description = "Refill and replacement of essential vehicle fluids such as brake fluid, coolant, and transmission fluid."
+            });
+
+
+            // ===== REPAIR =====
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Brake Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Repair and replacement of brake components including pads, discs, calipers, and brake hydraulics."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Suspension Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Repair of suspension components such as shock absorbers, struts, control arms, and stabilizer links."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Steering Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Steering system repair including tie rods, steering rack, power steering components and alignment."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Electrical Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Electrical system repair including alternator, starter motor, sensors, wiring, and control modules."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Engine Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Engine repair and tuning services such as spark plugs, ignition coils, air intake, and fuel system components."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Cooling System Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Cooling system repair including radiator, water pump, thermostat, hoses, and coolant leaks."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "HVAC Service",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Heating, ventilation and air conditioning services including AC recharge, compressor repair, and cabin air quality."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Safety System Repair",
+                ParentServiceCategoryId = P("Repair"),
+                Description = "Repair of vehicle safety systems such as airbags, ABS, traction control, and safety sensors."
+            });
+
+
+            // ===== INSPECTION =====
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Safety Inspection",
+                ParentServiceCategoryId = P("Inspection"),
+                Description = "Basic vehicle safety inspection covering brakes, tires, lights, suspension and essential safety items."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Engine Diagnostic",
+                ParentServiceCategoryId = P("Inspection"),
+                Description = "Computer-based diagnostics using OBD tools to detect engine, sensor, and performance-related faults."
+            });
+
+            AddIfMissing(new ServiceCategory
+            {
+                CategoryName = "Pre-Purchase Inspection",
+                ParentServiceCategoryId = P("Inspection"),
+                Description = "Comprehensive vehicle inspection before purchase including engine, transmission, brakes, suspension, body and interior."
+            });
+
+
+            await _context.SaveChangesAsync();
         }
+
+
 
         private async Task SeedServicesAsync()
         {
-            if (!_context.Services.Any())
+            
+
+            var categories = await _context.ServiceCategories.ToListAsync();
+            Guid Cat(string name)
             {
-                var categories = await _context.ServiceCategories.ToListAsync();
-                Guid GetCategoryId(string name) => categories.First(c => c.CategoryName == name).ServiceCategoryId;
+                var cat = categories.FirstOrDefault(c => c.CategoryName.Equals(name));
+                if (cat == null)
+                    throw new Exception($" ServiceCategory '{name}' NOT FOUND. Check SeedServiceCategoriesAsync.");
 
-                var services = new List<Service>
-        {
-            // 🔧 Maintenance
-            new Service { ServiceName = "Basic Oil Change", Description = "Drain old oil and refill with standard engine oil.", ServiceCategoryId = GetCategoryId("Oil Change"), Price = 1000, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Premium Oil Change", Description = "Use synthetic oil for better performance and protection.", ServiceCategoryId = GetCategoryId("Oil Change"), Price = 1500, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Tire Rotation Service", Description = "Rotate tires to ensure even wear and longer life.", ServiceCategoryId = GetCategoryId("Tire Rotation"), Price = 1200, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Battery Health Check", Description = "Inspect and test vehicle battery condition.", ServiceCategoryId = GetCategoryId("Battery Check"), Price = 1100, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // ⚙️ Repair
-            new Service { ServiceName = "Engine Tune-Up", Description = "Adjust and replace necessary engine components for smoother performance.", ServiceCategoryId = GetCategoryId("Engine Repair"), Price = 2000, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Brake Pad Replacement", Description = "Replace worn brake pads and check calipers and rotors.", ServiceCategoryId = GetCategoryId("Brake Repair"), Price = 1800, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Electrical Wiring Repair", Description = "Diagnose and repair wiring or connection issues.", ServiceCategoryId = GetCategoryId("Electrical Repair"), Price = 1900, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Shock Absorber Replacement", Description = "Replace front or rear shock absorbers for better ride quality.", ServiceCategoryId = GetCategoryId("Suspension Repair"), Price = 2000, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🔍 Inspection
-            new Service { ServiceName = "Basic Safety Inspection", Description = "Inspect brakes, tires, and lights for safety compliance.", ServiceCategoryId = GetCategoryId("Safety Inspection"), Price = 1000, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Emissions Test", Description = "Check emission levels to meet environmental regulations.", ServiceCategoryId = GetCategoryId("Emissions Inspection"), Price = 1200, EstimatedDuration = 1, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Pre-Purchase Inspection", Description = "Full vehicle inspection before purchase.", ServiceCategoryId = GetCategoryId("Pre-Purchase Inspection"), Price = 1500, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Full Engine Diagnostic", Description = "Use OBD tools to detect engine faults.", ServiceCategoryId = GetCategoryId("Engine Diagnostic"), Price = 1600, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🏎️ Upgrade
-            new Service { ServiceName = "ECU Performance Tuning", Description = "Remap ECU for optimized performance.", ServiceCategoryId = GetCategoryId("Performance Tuning"), Price = 2000, EstimatedDuration = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "LED Lighting Installation", Description = "Upgrade headlights and taillights to LED.", ServiceCategoryId = GetCategoryId("Lighting Upgrade"), Price = 1700, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Interior Detailing", Description = "Deep clean and restore car interior.", ServiceCategoryId = GetCategoryId("Interior Upgrade"), Price = 1800, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Exterior Body Kit Installation", Description = "Install custom bumpers and spoilers.", ServiceCategoryId = GetCategoryId("Exterior Styling"), Price = 2000, EstimatedDuration = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // ❄️ Cooling System
-            new Service { ServiceName = "Radiator Flush & Coolant Change", Description = "Flush and refill coolant.", ServiceCategoryId = GetCategoryId("Cooling System Service"), Price = 1300, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-            new Service { ServiceName = "Radiator & Water Pump Repair", Description = "Repair/replace radiator and pump.", ServiceCategoryId = GetCategoryId("Cooling System Repair"), Price = 2000, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🛞 Steering
-            new Service { ServiceName = "Steering Rack Repair", Description = "Repair steering rack and tie rod ends.", ServiceCategoryId = GetCategoryId("Steering Repair"), Price = 1800, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // ⚙️ Transmission
-            new Service { ServiceName = "Transmission Overhaul", Description = "Repair gearbox and clutch.", ServiceCategoryId = GetCategoryId("Transmission Repair"), Price = 2000, EstimatedDuration = 5, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // ⛽ Fuel
-            new Service { ServiceName = "Fuel Pump & Injector Service", Description = "Clean/replace injectors and pump.", ServiceCategoryId = GetCategoryId("Fuel System Repair"), Price = 1700, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🌬️ Exhaust
-            new Service { ServiceName = "Exhaust System Repair", Description = "Repair muffler and exhaust pipes.", ServiceCategoryId = GetCategoryId("Exhaust Repair"), Price = 1800, EstimatedDuration = 3, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🚗 Body
-            new Service { ServiceName = "Body Panel Repair", Description = "Repair damaged exterior panels.", ServiceCategoryId = GetCategoryId("Body Repair"), Price = 2000, EstimatedDuration = 4, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🪑 Interior
-            new Service { ServiceName = "Interior Trim Repair", Description = "Fix trims and interior panels.", ServiceCategoryId = GetCategoryId("Interior Repair"), Price = 1500, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🌀 HVAC
-            new Service { ServiceName = "AC System Service", Description = "Refill gas & clean evaporator.", ServiceCategoryId = GetCategoryId("HVAC Service"), Price = 1700, EstimatedDuration = 2, IsActive = true, CreatedAt = DateTime.UtcNow },
-
-            // 🛡️ Safety
-            new Service { ServiceName = "Airbag & Sensor Repair", Description = "Repair airbag modules & sensors.", ServiceCategoryId = GetCategoryId("Safety System Repair"), Price = 2000, EstimatedDuration = 4, IsActive = true, CreatedAt = DateTime.UtcNow }
-        };
-
-                _context.Services.AddRange(services);
-                await _context.SaveChangesAsync();
+                return cat.ServiceCategoryId;
             }
+
+            var now = DateTime.UtcNow;
+
+            var services = new List<Service>
+    {
+        // ================= OIL CHANGE =================
+        new Service
+        {
+            ServiceName = "Basic Oil Change",
+            Description = "Drain old oil, replace oil filter, refill with standard engine oil.",
+            ServiceCategoryId = Cat("Oil Change"),
+            Price = 1000, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Premium Oil Change",
+            Description = "Drain old oil, replace oil filter, refill with synthetic engine oil.",
+            ServiceCategoryId = Cat("Oil Change"),
+            Price = 1500, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+
+        // ================= TIRES / WHEELS =================
+        new Service
+        {
+            ServiceName = "Replace Front Tires (Pair)",
+            Description = "Replace 2 front tires; check tread/wear pattern; inflate to spec.",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 2500, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Replace Rear Tires (Pair)",
+            Description = "Replace 2 rear tires; check tread/wear pattern; inflate to spec.",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 2500, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Tire Rotation Service",
+            Description = "Rotate tires to ensure even wear and longer tire life.",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 1200, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Wheel Balancing (4 wheels)",
+            Description = "Balance 4 wheels to reduce vibration at speed.",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 1200, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Wheel Alignment (4 wheels)",
+            Description = "Adjust camber/caster/toe to correct steering pull and uneven wear.",
+            ServiceCategoryId = Cat("Steering Repair"),
+            Price = 1800, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Tire Puncture Repair (Front)",
+            Description = "Repair puncture on front tire (patch/plug depending on condition).",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 600, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Tire Puncture Repair (Rear)",
+            Description = "Repair puncture on rear tire (patch/plug depending on condition).",
+            ServiceCategoryId = Cat("Tire Rotation"),
+            Price = 600, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+
+        // ================= BATTERY / ELECTRICAL =================
+        new Service
+        {
+            ServiceName = "Battery Health Check",
+            Description = "Test battery capacity/CCA and inspect terminals & charging condition.",
+            ServiceCategoryId = Cat("Battery Check"),
+            Price = 1100, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Battery Replacement",
+            Description = "Replace battery, clean terminals, and test charging system.",
+            ServiceCategoryId = Cat("Battery Check"),
+            Price = 2600, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Alternator Replacement",
+            Description = "Replace alternator and verify charging voltage and belt condition.",
+            ServiceCategoryId = Cat("Electrical Repair"),
+            Price = 3800, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Starter Motor Replacement",
+            Description = "Replace starter motor and check wiring/ground connections.",
+            ServiceCategoryId = Cat("Electrical Repair"),
+            Price = 3600, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+
+        // ================= BRAKES (tách trước/sau) =================
+        new Service
+        {
+            ServiceName = "Replace Front Brake Pads",
+            Description = "Replace front brake pads; inspect discs and calipers.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 1800, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Replace Rear Brake Pads",
+            Description = "Replace rear brake pads; inspect discs and calipers.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 1800, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Replace Front Brake Discs (Pair)",
+            Description = "Replace front brake discs/rotors (pair) and check pad contact surface.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 2400, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Replace Rear Brake Discs (Pair)",
+            Description = "Replace rear brake discs/rotors (pair) and check pad contact surface.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 2400, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Brake Fluid Flush & Bleed",
+            Description = "Flush brake fluid and bleed to remove air; improve pedal feel.",
+            ServiceCategoryId = Cat("Fluid Refill"),
+            Price = 1400, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+
+        // Nâng cao (multi-partcategory)
+        new Service
+        {
+            ServiceName = "Front Brake Overhaul",
+            Description = "Front brake overhaul: pads + discs + caliper service + fluid bleed.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 5200, EstimatedDuration = 5, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Rear Brake Overhaul",
+            Description = "Rear brake overhaul: pads + discs + caliper service + fluid bleed.",
+            ServiceCategoryId = Cat("Brake Repair"),
+            Price = 5000, EstimatedDuration = 5, IsActive = true, CreatedAt = now
+        },
+
+        // ================= SUSPENSION / STEERING =================
+        new Service
+        {
+            ServiceName = "Replace Front Shock Absorbers (Pair)",
+            Description = "Replace front shocks/struts (pair); inspect mounts/bushings.",
+            ServiceCategoryId = Cat("Suspension Repair"),
+            Price = 3200, EstimatedDuration = 4, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Replace Rear Shock Absorbers (Pair)",
+            Description = "Replace rear shocks (pair); inspect bushings and links.",
+            ServiceCategoryId = Cat("Suspension Repair"),
+            Price = 3000, EstimatedDuration = 4, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Tie Rod End Replacement",
+            Description = "Replace tie rod end(s); recommended alignment afterward.",
+            ServiceCategoryId = Cat("Steering Repair"),
+            Price = 2200, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Steering Rack Repair",
+            Description = "Repair/replace steering rack and inspect tie rods; road test after.",
+            ServiceCategoryId = Cat("Steering Repair"),
+            Price = 3800, EstimatedDuration = 5, IsActive = true, CreatedAt = now
+        },
+
+        // ================= ENGINE / INTAKE / SENSORS =================
+        new Service
+        {
+            ServiceName = "Engine Tune-Up",
+            Description = "Tune-up: replace plugs/filters as needed and check ignition/fuel trims.",
+            ServiceCategoryId = Cat("Engine Repair"),
+            Price = 2500, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Spark Plug Replacement",
+            Description = "Replace spark plugs; check gaps/condition and misfire history.",
+            ServiceCategoryId = Cat("Engine Repair"),
+            Price = 1600, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Ignition Coil Replacement",
+            Description = "Replace faulty ignition coil(s) causing misfire; clear codes and test drive.",
+            ServiceCategoryId = Cat("Electrical Repair"),
+            Price = 2000, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Throttle Body Cleaning",
+            Description = "Clean throttle body and inspect/clean related air intake sensors if needed.",
+            ServiceCategoryId = Cat("Engine Repair"),
+            Price = 1700, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Oxygen Sensor Replacement",
+            Description = "Replace oxygen (O2) sensor and verify fuel trim / emission readings.",
+            ServiceCategoryId = Cat("Electrical Repair"),
+            Price = 2200, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+
+        // ================= COOLING =================
+        new Service
+        {
+            ServiceName = "Radiator Replacement",
+            Description = "Replace radiator and pressure test system; refill coolant.",
+            ServiceCategoryId = Cat("Cooling System Repair"),
+            Price = 4000, EstimatedDuration = 4, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Water Pump Replacement",
+            Description = "Replace water pump; refill coolant and check for leaks/overheating.",
+            ServiceCategoryId = Cat("Cooling System Repair"),
+            Price = 3500, EstimatedDuration = 4, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Thermostat Replacement",
+            Description = "Replace thermostat to fix overheating or slow warm-up issues.",
+            ServiceCategoryId = Cat("Cooling System Repair"),
+            Price = 2400, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+
+        // ================= HVAC =================
+        new Service
+        {
+            ServiceName = "AC Gas Recharge & Leak Check",
+            Description = "Recharge AC refrigerant and check for leaks; verify vent temperature.",
+            ServiceCategoryId = Cat("HVAC Service"),
+            Price = 1700, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "AC Compressor Replacement",
+            Description = "Replace AC compressor and recharge system; verify pressures and cooling.",
+            ServiceCategoryId = Cat("HVAC Service"),
+            Price = 6500, EstimatedDuration = 6, IsActive = true, CreatedAt = now
+        },
+
+        // ================= SAFETY =================
+        new Service
+        {
+            ServiceName = "ABS Sensor Replacement (Front)",
+            Description = "Replace front ABS wheel speed sensor; clear codes and verify live data.",
+            ServiceCategoryId = Cat("Safety System Repair"),
+            Price = 2200, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "ABS Sensor Replacement (Rear)",
+            Description = "Replace rear ABS wheel speed sensor; clear codes and verify live data.",
+            ServiceCategoryId = Cat("Safety System Repair"),
+            Price = 2200, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+
+        // ================= INSPECTION / DIAGNOSTIC (optional but useful demo) =================
+        new Service
+        {
+            ServiceName = "Basic Safety Inspection",
+            Description = "Quick safety check: brakes/tires/lights/basic undercar check.",
+            ServiceCategoryId = Cat("Safety Inspection"),
+            Price = 1000, EstimatedDuration = 1, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Full Engine Diagnostic",
+            Description = "OBD scan + live data review to identify engine/sensor faults.",
+            ServiceCategoryId = Cat("Engine Diagnostic"),
+            Price = 1600, EstimatedDuration = 2, IsActive = true, CreatedAt = now
+        },
+        new Service
+        {
+            ServiceName = "Pre-Purchase Inspection",
+            Description = "Comprehensive inspection before purchase: engine, brakes, suspension, body, interior.",
+            ServiceCategoryId = Cat("Pre-Purchase Inspection"),
+            Price = 2500, EstimatedDuration = 3, IsActive = true, CreatedAt = now
+        },
+
+
+        // ================= ADVANCED SERVICES =================
+
+                        // 🔧 Advanced Brake + Suspension (rất hay gặp)
+                        new Service
+                        {
+                            ServiceName = "Front Suspension & Brake Refresh",
+                            Description = "Refresh front suspension and brakes: shocks, brake pads, discs, and alignment check.",
+                            ServiceCategoryId = Cat("Suspension Repair"),
+                            Price = 7800,
+                            EstimatedDuration = 7,
+                            IsActive = true,
+                            IsAdvanced= true,
+                            CreatedAt = now
+                        },
+
+                        // ⚙️ Engine + Cooling combo (xe nóng máy, rất thực tế)
+                        new Service
+                        {
+                            ServiceName = "Engine Cooling System Overhaul",
+                            Description = "Overhaul cooling system: radiator, water pump, thermostat, hoses, and coolant.",
+                            ServiceCategoryId = Cat("Cooling System Repair"),
+                            Price = 8200,
+                            EstimatedDuration = 7,
+                            IsActive = true,
+                            IsAdvanced= true,
+                            CreatedAt = now
+                        },
+
+                        // 🌀 HVAC + Electrical (xe mất lạnh, hay chết lốc)
+                        new Service
+                        {
+                            ServiceName = "Complete AC System Repair",
+                            Description = "Complete AC repair: compressor replacement, refrigerant recharge, and cabin filter.",
+                            ServiceCategoryId = Cat("HVAC Service"),
+                            Price = 9500,
+                            EstimatedDuration = 8,
+                            IsActive = true,
+                            IsAdvanced= true,
+                            CreatedAt = now
+                        }
+
+
+                    };
+
+            var existingNames = await _context.Services
+            .Select(s => s.ServiceName)
+            .ToListAsync();
+
+            var toAdd = services
+                .Where(s => !existingNames.Contains(s.ServiceName))
+                .ToList();
+
+            if (toAdd.Count == 0) return;
+
+            _context.Services.AddRange(services);
+            await _context.SaveChangesAsync();
         }
+
 
 
         private async Task SeedServicePartCategoriesAsync()
         {
-            if (!_context.ServicePartCategories.Any())
+            if (_context.ServicePartCategories.Any()) return;
+
+            // Cache
+            var services = await _context.Services.ToListAsync();
+            var pcs = await _context.PartCategories.ToListAsync();
+
+            Guid GetServiceId(string name) => services.First(s => s.ServiceName == name).ServiceId;
+            Guid GetPcId(string name) => pcs.First(p => p.CategoryName == name).LaborCategoryId; // đổi nếu PK khác
+
+            var now = DateTime.UtcNow;
+            var mappings = new List<ServicePartCategory>();
+
+            void Map(string serviceName, params string[] partCategoryNames)
             {
-                // Lấy Service (tên phải trùng với SeedServicesAsync)
-                var basicOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Oil Change");
-                var premiumOilChange = await _context.Services.FirstAsync(s => s.ServiceName == "Premium Oil Change");
-                var tireRotationService = await _context.Services.FirstAsync(s => s.ServiceName == "Tire Rotation Service");
-                var batteryHealthCheck = await _context.Services.FirstAsync(s => s.ServiceName == "Battery Health Check");
-
-                var engineTuneUp = await _context.Services.FirstAsync(s => s.ServiceName == "Engine Tune-Up");
-                var brakePadReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Brake Pad Replacement");
-                var electricalWiringRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Electrical Wiring Repair");
-                var shockAbsorberReplacement = await _context.Services.FirstAsync(s => s.ServiceName == "Shock Absorber Replacement");
-
-                var basicSafetyInspection = await _context.Services.FirstAsync(s => s.ServiceName == "Basic Safety Inspection");
-                var emissionsTest = await _context.Services.FirstAsync(s => s.ServiceName == "Emissions Test");
-                var prePurchaseInspection = await _context.Services.FirstAsync(s => s.ServiceName == "Pre-Purchase Inspection");
-                var fullEngineDiagnostic = await _context.Services.FirstAsync(s => s.ServiceName == "Full Engine Diagnostic");
-
-                var ecuPerformanceTuning = await _context.Services.FirstAsync(s => s.ServiceName == "ECU Performance Tuning");
-                var ledLightingInstallation = await _context.Services.FirstAsync(s => s.ServiceName == "LED Lighting Installation");
-                var interiorDetailing = await _context.Services.FirstAsync(s => s.ServiceName == "Interior Detailing");
-                var exteriorBodyKitInstallation = await _context.Services.FirstAsync(s => s.ServiceName == "Exterior Body Kit Installation");
-
-                var radiatorFlushCoolantChange = await _context.Services.FirstAsync(s => s.ServiceName == "Radiator Flush & Coolant Change");
-                var radiatorWaterPumpRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Radiator & Water Pump Repair");
-
-                var steeringRackRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Steering Rack Repair");
-                var transmissionOverhaul = await _context.Services.FirstAsync(s => s.ServiceName == "Transmission Overhaul");
-                var fuelPumpInjectorService = await _context.Services.FirstAsync(s => s.ServiceName == "Fuel Pump & Injector Service");
-                var exhaustSystemRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Exhaust System Repair");
-
-                var bodyPanelRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Body Panel Repair");
-                var interiorTrimRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Interior Trim Repair");
-                var acSystemService = await _context.Services.FirstAsync(s => s.ServiceName == "AC System Service");
-                var airbagSensorRepair = await _context.Services.FirstAsync(s => s.ServiceName == "Airbag & Sensor Repair");
-
-                // Lấy PartCategory (đã seed trước đó)
-                var frontEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Engine");
-                var rearEngine = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Engine");
-
-                var frontBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Brakes");
-                var rearBrakes = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Brakes");
-
-                var frontElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Electrical System");
-                var rearElectrical = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Electrical System");
-
-                var frontSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Suspension");
-                var rearSuspension = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Suspension");
-
-                var frontCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Cooling System");
-                var rearCooling = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Cooling System");
-
-                var frontSteering = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Steering System");
-
-                var frontTrans = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Transmission System");
-                var rearTrans = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Transmission System");
-
-                var frontFuel = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Fuel System");
-                var rearFuel = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Fuel System");
-
-                var rearExhaust = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Exhaust System");
-
-                var frontBody = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Body Parts");
-                var rearBody = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Body Parts");
-
-                var frontInterior = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Interior Components");
-                var rearInterior = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Interior Components");
-
-                var frontHVAC = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - HVAC System");
-                var rearHVAC = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - HVAC System");
-
-                var frontSafety = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Front - Safety Components");
-                var rearSafety = await _context.PartCategories.FirstAsync(p => p.CategoryName == "Rear - Safety Components");
-
-                var now = DateTime.UtcNow;
-
-                var mappings = new List<ServicePartCategory>
-        {
-            // 🔧 BASIC / PREMIUM OIL CHANGE ↔ Engine (Front & Rear)
-            new ServicePartCategory { ServiceId = basicOilChange.ServiceId,   PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = basicOilChange.ServiceId,   PartCategoryId = rearEngine.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = frontEngine.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = premiumOilChange.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,  CreatedAt = now },
-
-            // Tire Rotation ↔ Suspension (Front & Rear)
-            new ServicePartCategory { ServiceId = tireRotationService.ServiceId, PartCategoryId = frontSuspension.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = tireRotationService.ServiceId, PartCategoryId = rearSuspension.LaborCategoryId,  CreatedAt = now },
-
-            // Battery Health Check ↔ Electrical (Front & Rear)
-            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = batteryHealthCheck.ServiceId, PartCategoryId = rearElectrical.LaborCategoryId,  CreatedAt = now },
-
-            // ⚙️ Engine Tune-Up ↔ Engine + Electrical
-            new ServicePartCategory { ServiceId = engineTuneUp.ServiceId, PartCategoryId = frontEngine.LaborCategoryId,     CreatedAt = now },
-            new ServicePartCategory { ServiceId = engineTuneUp.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,      CreatedAt = now },
-            new ServicePartCategory { ServiceId = engineTuneUp.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-
-            // Brake Pad Replacement ↔ Brakes (Front & Rear)
-            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = frontBrakes.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = brakePadReplacement.ServiceId, PartCategoryId = rearBrakes.LaborCategoryId,  CreatedAt = now },
-
-            // Electrical Wiring Repair ↔ Electrical (Front & Rear)
-            new ServicePartCategory { ServiceId = electricalWiringRepair.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = electricalWiringRepair.ServiceId, PartCategoryId = rearElectrical.LaborCategoryId,  CreatedAt = now },
-
-            // Shock Absorber Replacement ↔ Suspension (Front & Rear)
-            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = frontSuspension.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = shockAbsorberReplacement.ServiceId, PartCategoryId = rearSuspension.LaborCategoryId,  CreatedAt = now },
-
-            // 🔍 Basic Safety Inspection ↔ Brakes + Safety (Front & Rear)
-            new ServicePartCategory { ServiceId = basicSafetyInspection.ServiceId, PartCategoryId = frontBrakes.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = basicSafetyInspection.ServiceId, PartCategoryId = rearBrakes.LaborCategoryId,   CreatedAt = now },
-            new ServicePartCategory { ServiceId = basicSafetyInspection.ServiceId, PartCategoryId = frontSafety.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = basicSafetyInspection.ServiceId, PartCategoryId = rearSafety.LaborCategoryId,   CreatedAt = now },
-
-            // Emissions Test ↔ Engine Rear + Exhaust
-            new ServicePartCategory { ServiceId = emissionsTest.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = emissionsTest.ServiceId, PartCategoryId = rearExhaust.LaborCategoryId, CreatedAt = now },
-
-            // Pre-Purchase Inspection ↔ Engine, Brakes, Body, Interior (Front & Rear)
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = frontEngine.LaborCategoryId,   CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,    CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = frontBrakes.LaborCategoryId,   CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = rearBrakes.LaborCategoryId,    CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = frontBody.LaborCategoryId,     CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = rearBody.LaborCategoryId,      CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = frontInterior.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = prePurchaseInspection.ServiceId, PartCategoryId = rearInterior.LaborCategoryId,  CreatedAt = now },
-
-            // Full Engine Diagnostic ↔ Engine + Electrical + Cooling
-            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontEngine.LaborCategoryId,     CreatedAt = now },
-            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,      CreatedAt = now },
-            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = frontCooling.LaborCategoryId,    CreatedAt = now },
-            new ServicePartCategory { ServiceId = fullEngineDiagnostic.ServiceId, PartCategoryId = rearCooling.LaborCategoryId,     CreatedAt = now },
-
-            // 🏎️ ECU Performance Tuning ↔ Engine + Electrical
-            new ServicePartCategory { ServiceId = ecuPerformanceTuning.ServiceId, PartCategoryId = frontEngine.LaborCategoryId,     CreatedAt = now },
-            new ServicePartCategory { ServiceId = ecuPerformanceTuning.ServiceId, PartCategoryId = rearEngine.LaborCategoryId,      CreatedAt = now },
-            new ServicePartCategory { ServiceId = ecuPerformanceTuning.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-
-            // LED Lighting Installation ↔ Electrical + Body (Front & Rear)
-            new ServicePartCategory { ServiceId = ledLightingInstallation.ServiceId, PartCategoryId = frontElectrical.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = ledLightingInstallation.ServiceId, PartCategoryId = rearElectrical.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = ledLightingInstallation.ServiceId, PartCategoryId = frontBody.LaborCategoryId,       CreatedAt = now },
-            new ServicePartCategory { ServiceId = ledLightingInstallation.ServiceId, PartCategoryId = rearBody.LaborCategoryId,        CreatedAt = now },
-
-            // Interior Detailing ↔ Interior (Front & Rear)
-            new ServicePartCategory { ServiceId = interiorDetailing.ServiceId, PartCategoryId = frontInterior.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = interiorDetailing.ServiceId, PartCategoryId = rearInterior.LaborCategoryId,  CreatedAt = now },
-
-            // Exterior Body Kit Installation ↔ Body (Front & Rear)
-            new ServicePartCategory { ServiceId = exteriorBodyKitInstallation.ServiceId, PartCategoryId = frontBody.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = exteriorBodyKitInstallation.ServiceId, PartCategoryId = rearBody.LaborCategoryId,  CreatedAt = now },
-
-            // ❄️ Cooling System Service ↔ Cooling (Front & Rear)
-            new ServicePartCategory { ServiceId = radiatorFlushCoolantChange.ServiceId, PartCategoryId = frontCooling.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = radiatorFlushCoolantChange.ServiceId, PartCategoryId = rearCooling.LaborCategoryId,  CreatedAt = now },
-
-            // Cooling System Repair ↔ Cooling + Engine
-            new ServicePartCategory { ServiceId = radiatorWaterPumpRepair.ServiceId, PartCategoryId = frontCooling.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = radiatorWaterPumpRepair.ServiceId, PartCategoryId = rearCooling.LaborCategoryId,  CreatedAt = now },
-            new ServicePartCategory { ServiceId = radiatorWaterPumpRepair.ServiceId, PartCategoryId = frontEngine.LaborCategoryId,  CreatedAt = now },
-
-            // 🛞 Steering Rack Repair ↔ Steering + Suspension Front
-            new ServicePartCategory { ServiceId = steeringRackRepair.ServiceId, PartCategoryId = frontSteering.LaborCategoryId,   CreatedAt = now },
-            new ServicePartCategory { ServiceId = steeringRackRepair.ServiceId, PartCategoryId = frontSuspension.LaborCategoryId, CreatedAt = now },
-
-            // ⚙️ Transmission Overhaul ↔ Transmission (Front & Rear)
-            new ServicePartCategory { ServiceId = transmissionOverhaul.ServiceId, PartCategoryId = frontTrans.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = transmissionOverhaul.ServiceId, PartCategoryId = rearTrans.LaborCategoryId,  CreatedAt = now },
-
-            // ⛽ Fuel Pump & Injector Service ↔ Fuel System (Front & Rear)
-            new ServicePartCategory { ServiceId = fuelPumpInjectorService.ServiceId, PartCategoryId = frontFuel.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = fuelPumpInjectorService.ServiceId, PartCategoryId = rearFuel.LaborCategoryId,  CreatedAt = now },
-
-            // 🌬️ Exhaust System Repair ↔ Exhaust Rear
-            new ServicePartCategory { ServiceId = exhaustSystemRepair.ServiceId, PartCategoryId = rearExhaust.LaborCategoryId, CreatedAt = now },
-
-            // 🚗 Body Panel Repair ↔ Body (Front & Rear)
-            new ServicePartCategory { ServiceId = bodyPanelRepair.ServiceId, PartCategoryId = frontBody.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = bodyPanelRepair.ServiceId, PartCategoryId = rearBody.LaborCategoryId,  CreatedAt = now },
-
-            // 🪑 Interior Trim Repair ↔ Interior (Front & Rear)
-            new ServicePartCategory { ServiceId = interiorTrimRepair.ServiceId, PartCategoryId = frontInterior.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = interiorTrimRepair.ServiceId, PartCategoryId = rearInterior.LaborCategoryId,  CreatedAt = now },
-
-            // 🌀 AC System Service ↔ HVAC (Front & Rear)
-            new ServicePartCategory { ServiceId = acSystemService.ServiceId, PartCategoryId = frontHVAC.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = acSystemService.ServiceId, PartCategoryId = rearHVAC.LaborCategoryId,  CreatedAt = now },
-
-            // 🛡️ Airbag & Sensor Repair ↔ Safety (Front & Rear)
-            new ServicePartCategory { ServiceId = airbagSensorRepair.ServiceId, PartCategoryId = frontSafety.LaborCategoryId, CreatedAt = now },
-            new ServicePartCategory { ServiceId = airbagSensorRepair.ServiceId, PartCategoryId = rearSafety.LaborCategoryId,  CreatedAt = now }
-        };
-
-                _context.ServicePartCategories.AddRange(mappings);
-                await _context.SaveChangesAsync();
+                var sid = GetServiceId(serviceName);
+                foreach (var pcName in partCategoryNames.Distinct())
+                {
+                    mappings.Add(new ServicePartCategory
+                    {
+                        ServiceId = sid,
+                        PartCategoryId = GetPcId(pcName),
+                        CreatedAt = now
+                    });
+                }
             }
+
+            // ================= OIL CHANGE =================
+            Map("Basic Oil Change", "Engine - Oil", "Engine - Oil Filter");
+            Map("Premium Oil Change", "Engine - Oil", "Engine - Oil Filter");
+
+            // ================= TIRES / WHEELS =================
+            // sửa lỗi logic cũ: tire rotation không map suspension
+            Map("Tire Rotation Service", "Front - Tires", "Rear - Tires");
+            Map("Wheel Balancing (4 wheels)", "Wheel - Balancing Weights", "Front - Tires", "Rear - Tires");
+            Map("Wheel Alignment (4 wheels)", "Steering - Tie Rod End", "Front - Control Arm", "Front - Shock/Strut"); // alignment thường dính lái + treo
+
+            Map("Replace Front Tires (Pair)", "Front - Tires");
+            Map("Replace Rear Tires (Pair)", "Rear - Tires");
+            Map("Tire Puncture Repair (Front)", "Front - Tires");
+            Map("Tire Puncture Repair (Rear)", "Rear - Tires");
+
+            // ================= BATTERY / ELECTRICAL =================
+            Map("Battery Health Check", "Electrical - Battery");         // nếu service này chỉ check battery
+            Map("Battery Replacement", "Electrical - Battery");
+            Map("Alternator Replacement", "Electrical - Alternator");
+            Map("Starter Motor Replacement", "Electrical - Starter Motor");
+
+            // ================= BRAKES (tách trước/sau đúng garage) =================
+            Map("Replace Front Brake Pads", "Front - Brake Pads");
+            Map("Replace Rear Brake Pads", "Rear - Brake Pads");
+            Map("Replace Front Brake Discs (Pair)", "Front - Brake Discs");
+            Map("Replace Rear Brake Discs (Pair)", "Rear - Brake Discs");
+            Map("Brake Fluid Flush & Bleed", "Brake - Fluid");
+
+            // Service nâng cao: nhiều PartCategory
+            Map("Front Brake Overhaul",
+                "Front - Brake Pads",
+                "Front - Brake Discs",
+                "Front - Brake Calipers",
+                "Brake - Fluid");
+
+            Map("Rear Brake Overhaul",
+                "Rear - Brake Pads",
+                "Rear - Brake Discs",
+                "Rear - Brake Calipers",
+                "Brake - Fluid");
+
+            // ================= SUSPENSION / STEERING =================
+            Map("Replace Front Shock Absorbers (Pair)", "Front - Shock/Strut");
+            Map("Replace Rear Shock Absorbers (Pair)", "Rear - Shock");
+            Map("Tie Rod End Replacement", "Steering - Tie Rod End");
+            Map("Steering Rack Repair", "Steering - Rack", "Steering - Tie Rod End");
+
+            // ================= ENGINE / INTAKE / SENSORS =================
+            Map("Engine Tune-Up", "Engine - Spark Plugs", "Engine - Air Filter", "Engine - Oil Filter"); // tune-up thực tế hay gồm lọc gió/bugi/lọc dầu
+            Map("Spark Plug Replacement", "Engine - Spark Plugs");
+            Map("Ignition Coil Replacement", "Engine - Ignition Coils");
+            Map("Throttle Body Cleaning", "Intake - Throttle Body", "Sensors - MAF/MAP");
+            Map("Oxygen Sensor Replacement", "Sensors - O2");
+
+            // ================= COOLING =================
+            Map("Radiator Replacement", "Cooling - Radiator", "Cooling - Coolant");
+            Map("Water Pump Replacement", "Cooling - Water Pump", "Cooling - Coolant");
+            Map("Thermostat Replacement", "Cooling - Thermostat", "Cooling - Coolant");
+
+            // ================= HVAC =================
+            Map("AC Gas Recharge & Leak Check", "HVAC - Refrigerant");
+            Map("AC Compressor Replacement", "HVAC - AC Compressor", "HVAC - Refrigerant");
+            // (nếu có service cabin filter)
+            // Map("Cabin Filter Replacement", "HVAC - Cabin Filter");
+
+            // ================= SAFETY =================
+            Map("ABS Sensor Replacement (Front)", "Sensors - ABS Front");
+            Map("ABS Sensor Replacement (Rear)", "Sensors - ABS Rear");
+
+
+
+            // ================= ADVANCED SERVICE MAPPINGS =================
+
+            // 🔧 Front Suspension & Brake Refresh
+            Map(
+                "Front Suspension & Brake Refresh",
+                "Front - Shock/Strut",
+                "Front - Brake Pads",
+                "Front - Brake Discs",
+                "Front - Brake Calipers",
+                "Brake - Fluid",
+                "Front - Control Arm",
+                "Stabilizer Link - Front"
+            );
+
+            // ⚙️ Engine Cooling System Overhaul
+            Map(
+                "Engine Cooling System Overhaul",
+                "Cooling - Radiator",
+                "Cooling - Water Pump",
+                "Cooling - Thermostat",
+                "Cooling - Hoses",
+                "Cooling - Coolant"
+            );
+
+            // 🌀 Complete AC System Repair
+            Map(
+                "Complete AC System Repair",
+                "HVAC - AC Compressor",
+                "HVAC - Refrigerant",
+                "HVAC - Cabin Filter",
+                "Electrical - Fuses/Relays"
+            );
+
+
+
+            // ================= INSPECTION / DIAGNOSTIC =================
+            // Nếu bạn còn giữ các service này trong SeedServicesAsync cũ:
+            // Map("Basic Safety Inspection", "Front - Brake Pads", "Rear - Brake Pads", "Front - Tires", "Rear - Tires");
+            // Map("Full Engine Diagnostic", "Sensors - MAF/MAP", "Sensors - O2");
+
+            _context.ServicePartCategories.AddRange(mappings);
+            await _context.SaveChangesAsync();
         }
+
 
 
 
