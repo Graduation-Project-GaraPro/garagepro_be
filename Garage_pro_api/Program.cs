@@ -382,7 +382,14 @@ builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();
 builder.Services.AddScoped<IRepairRepository, RepairRepository>();
-builder.Services.AddScoped<IRepairService, RepairService>();
+builder.Services.AddScoped<IRepairService>(provider =>
+{
+    var repairRepository = provider.GetRequiredService<IRepairRepository>();
+    var mapper = provider.GetRequiredService<IMapper>();
+    var hubContext = provider.GetRequiredService<IHubContext<RepairHub>>();
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new RepairService(repairRepository, mapper, hubContext, repairOrderService);
+});
 builder.Services.AddScoped<IStatisticalRepository, StatisticalRepository>();
 builder.Services.AddScoped<IStatisticalService, StatisticalService>();
 builder.Services.AddScoped<IRepairHistoryRepository, RepairHistoryRepository>();
@@ -566,7 +573,8 @@ builder.Services.AddScoped<IJobService>(provider =>
     var technicianAssignmentHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.TechnicianAssignmentHub>>();
     var jobHubContext = provider.GetRequiredService<IHubContext<Services.Hubs.JobHub>>();
     var notificationService = provider.GetRequiredService<INotificationService>();
-    return new Services.JobService(jobRepository, technicianAssignmentHubContext, jobHubContext, notificationService);
+    var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
+    return new Services.JobService(jobRepository, technicianAssignmentHubContext, jobHubContext, notificationService, repairOrderService);
 });
 
 // Inspection services
