@@ -201,6 +201,20 @@ namespace Repositories.EmergencyRequestRepositories
         }
 
 
+        public async Task<RequestEmergency?> GetEmergencyDetailAsync(Guid emergencyRequestId)
+        {
+            return await _context.Set<RequestEmergency>()
+                                 .Include(x => x.Customer)
+                                 .Include(x => x.Technician)
+                                 .Include(x => x.Branch)
+                                 .Include(x => x.Vehicle)
+                                     .ThenInclude(v => v.Brand)
+                                 .Include(x => x.Vehicle)
+                                     .ThenInclude(v => v.Model)
+                                 
+                                 .FirstOrDefaultAsync(x => x.EmergencyRequestId == emergencyRequestId);
+        }
+
         public async Task<List<BranchNearbyResponseDto>> GetNearestBranchesAsync(double userLat, double userLon, int count = 5)
         {
             var branches = await _context.Branches

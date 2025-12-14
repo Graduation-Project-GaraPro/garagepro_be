@@ -44,6 +44,32 @@ namespace Garage_pro_api.Controllers
 
             return Ok(result);
         }
+        [Authorize]
+        [HttpGet("{emergencyRequestId:guid}")]
+        public async Task<ActionResult<EmergencyDetailDto>> GetDetail([FromRoute] Guid emergencyRequestId)
+        {
+            // Lấy technicianId từ JWT/Claims
+            var technicianId =
+                User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
+
+            if (string.IsNullOrWhiteSpace(technicianId))
+                return Unauthorized();
+
+            try
+            {
+                var result = await _technicianEmergencyService.GetDetailAsync(technicianId, emergencyRequestId);
+                return Ok(result);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return Forbid(ex.Message); // hoặc return StatusCode(403, ex.Message);
+            }
+        }
 
         [Authorize]
         [HttpPost("location/update")]
