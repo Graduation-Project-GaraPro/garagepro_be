@@ -236,6 +236,7 @@ namespace Garage_pro_api.Controllers
             {
                 var techUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(techUserId)) return Unauthorized();
+                dto.RecomputeRoute = true;
                 var ok = await _emergencyService.UpdateTechnicianLocationAsync(techUserId, dto);
                 return Ok(new { Success = ok });
             }
