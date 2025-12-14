@@ -22,6 +22,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Security.Authentication;
 using System.Globalization;
+using Microsoft.Extensions.Configuration;
 
 namespace Services.EmergencyRequestService
 {
@@ -36,6 +37,8 @@ namespace Services.EmergencyRequestService
         private readonly IVehicleRepository _vehicleRepository;
         private readonly IMemoryCache _cache;
         private readonly IUserRepository _userRepository;
+        private readonly IConfiguration _config;
+
 
 
         public EmergencyRequestService(
@@ -47,7 +50,8 @@ namespace Services.EmergencyRequestService
             Services.GeocodingServices.IGeocodingService geocodingService,
             IVehicleRepository vehicleRepository,
             IMemoryCache cache,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IConfiguration configuration)
         {
             _repository = repository;
             _mapper = mapper;
@@ -58,6 +62,7 @@ namespace Services.EmergencyRequestService
             _vehicleRepository = vehicleRepository;
             _cache = cache;
             _userRepository = userRepository;
+            _config = configuration;
         }
 
         public async Task<EmergencyResponeDto> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto, string? idempotencyKey = null)
@@ -574,11 +579,13 @@ namespace Services.EmergencyRequestService
         public async Task<RouteDto> GetRouteAsync(double fromLat, double fromLon, double toLat, double toLon)
         {
             // --- Read environment variables ---
-            var token = Environment.GetEnvironmentVariable("MAPBOX_TOKEN");
+            var token = _config["Mapbox:Token"];
+            
             if (string.IsNullOrWhiteSpace(token))
                 throw new InvalidOperationException("Missing MAPBOX_TOKEN environment variable.");
 
-            var profile = Environment.GetEnvironmentVariable("MAPBOX_PROFILE");
+            //var profile = Environment.GetEnvironmentVariable("MAPBOX_PROFILE");
+            var profile = _config["Mapbox:Profile"] ?? "driving-traffic";
             if (string.IsNullOrWhiteSpace(profile))
                 profile = "driving-traffic";
 
