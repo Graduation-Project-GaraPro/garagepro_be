@@ -143,8 +143,8 @@ namespace Services
 
             try
             {
-                // First, get the current repair order to get its current status
-                var currentRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(updateDto.RepairOrderId);
+                // Get the current repair order for update (with tracking)
+                var currentRepairOrder = await _repairOrderRepository.GetRepairOrderForUpdateAsync(updateDto.RepairOrderId);
                 if (currentRepairOrder == null)
                 {
                     result.Success = false;
@@ -167,54 +167,36 @@ namespace Services
                 result.OldStatusId = currentRepairOrder.StatusId;
                 result.NewStatusId = updateDto.NewStatusId;
 
-                // Update the status
-                var updateSuccess = await _repairOrderRepository.UpdateRepairOrderStatusAsync(
-                    updateDto.RepairOrderId, updateDto.NewStatusId, null);
+                // Update the status on the loaded entity
+                currentRepairOrder.StatusId = updateDto.NewStatusId;
+                currentRepairOrder.UpdatedAt = DateTime.UtcNow;
 
-                if (updateSuccess)
+                // Auto-assign default label for the new status
+                var defaultLabel = await _labelRepository.GetDefaultLabelByStatusIdAsync(updateDto.NewStatusId);
+                if (defaultLabel != null)
                 {
-                    // Auto-assign default label for the new status
-                    var defaultLabel = await _labelRepository.GetDefaultLabelByStatusIdAsync(updateDto.NewStatusId);
-                    if (defaultLabel != null)
-                    {
-                        await _repairOrderRepository.UpdateRepairOrderLabelsAsync(
-                            updateDto.RepairOrderId, 
-                            new List<Guid> { defaultLabel.LabelId });
-                    }
-                    else
-                    {
-                        // No default label, clear all labels
-                        await _repairOrderRepository.UpdateRepairOrderLabelsAsync(updateDto.RepairOrderId, new List<Guid>());
-                    }
-
-                    // Get updated repair order for response
-                    var updatedRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(updateDto.RepairOrderId);
-                    result.UpdatedCard = MapToRoBoardCardDto(updatedRepairOrder);
-                    result.Success = true;
-                    result.Message = "Status updated successfully";
-
-                    // Send real-time update via SignalR
-                    if (_hubContext != null)
-                    {
-                        await _hubContext.Clients.All.SendAsync("RepairOrderMoved", updateDto.RepairOrderId, updateDto.NewStatusId, result.UpdatedCard);
-
-                        //await _JobhubContext
-                        //             .Clients
-                        //             .Group($"RepairOrder_{updateDto.RepairOrderId}")
-                        //             .SendAsync(
-                        //                 "RepairOrderMoved",
-                        //                 updateDto.RepairOrderId
-
-                        //);
-
-
-                    }
+                    // Clear existing labels and add default
+                    currentRepairOrder.Labels.Clear();
+                    currentRepairOrder.Labels.Add(defaultLabel);
                 }
                 else
                 {
-                    result.Success = false;
-                    result.Message = "Failed to update status";
-                    result.Errors.Add("Database update failed");
+                    // No default label, clear all labels
+                    currentRepairOrder.Labels.Clear();
+                }
+
+                // Save all changes at once
+                await _repairOrderRepository.Context.SaveChangesAsync();
+
+                // Create response using the updated entity
+                result.UpdatedCard = MapToRoBoardCardDto(currentRepairOrder);
+                result.Success = true;
+                result.Message = "Status updated successfully";
+
+                // Send real-time update via SignalR
+                if (_hubContext != null)
+                {
+                    await _hubContext.Clients.All.SendAsync("RepairOrderMoved", updateDto.RepairOrderId, updateDto.NewStatusId, result.UpdatedCard);
                 }
             }
             catch (Exception ex)
@@ -484,14 +466,20 @@ namespace Services
 
         #region Business Rules and Validation
 
-        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId) // Changed from Guid to int
+        public async Task<bool> CanMoveToStatusAsync(Guid repairOrderId, int newStatusId) 
         {
             return await _repairOrderRepository.CanMoveToStatusAsync(repairOrderId, newStatusId);
         }
 
-        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
+        public async Task<IEnumerable<RoBoardLabelDto>> GetAvailableLabelsForStatusAsync(int statusId) 
         {
             var labels = await _repairOrderRepository.GetAvailableLabelsForStatusAsync(statusId);
+            return labels.Select(MapToRoBoardLabelDto);
+        }
+
+        public async Task<IEnumerable<RoBoardLabelDto>> GetDefaultLabelsForStatusAsync(int statusId)
+        {
+            var labels = await _repairOrderRepository.GetDefaultLabelsForStatusAsync(statusId);
             return labels.Select(MapToRoBoardLabelDto);
         }
 
@@ -503,7 +491,7 @@ namespace Services
         {
             return new RoBoardConfigurationDto
             {
-                AllowDragAndDrop = true,
+                AllowDragAndDrop = false, // Disabled - status updates are now automatic
                 ShowCardDetails = true,
                 ShowLabels = true,
                 ShowCustomer = true,
@@ -536,8 +524,8 @@ namespace Services
 
         public async Task<RepairOrder> UpdateRepairOrderStatusNoteServicesAsync(Guid repairOrderId, UpdateRepairOrderDto updateDto)
         {
-            // First, get the existing repair order with its services
-            var existingRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            // First, get the existing repair order with its services for update
+            var existingRepairOrder = await _repairOrderRepository.GetRepairOrderForUpdateAsync(repairOrderId);
             if (existingRepairOrder == null)
             {
                 throw new ArgumentException($"Repair order with ID {repairOrderId} not found.");
@@ -592,8 +580,8 @@ namespace Services
             // Save changes
             await _repairOrderRepository.Context.SaveChangesAsync();
 
-            // Return updated repair order
-            return await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            // Return the updated repair order instance
+            return existingRepairOrder;
         }
 
         #endregion
@@ -608,8 +596,8 @@ namespace Services
         /// <returns>The updated repair order</returns>
         public async Task<RepairOrder> UpdateCostFromInspectionAsync(Guid repairOrderId)
         {
-            // Get the repair order with inspections and service inspections
-            var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+            // Get the repair order with inspections and service inspections for update
+            var repairOrder = await _repairOrderRepository.GetRepairOrderForUpdateAsync(repairOrderId);
             if (repairOrder == null)
                 throw new ArgumentException("Repair order not found");
 
@@ -656,9 +644,8 @@ namespace Services
                 repairOrder.Cost = totalCost;
                 repairOrder.UpdatedAt = DateTime.UtcNow;
 
-                // Save changes
-                var updatedRepairOrder = await _repairOrderRepository.UpdateAsync(repairOrder);
-                return updatedRepairOrder;
+                // Save changes directly using the context
+                await _repairOrderRepository.Context.SaveChangesAsync();
             }
 
             return repairOrder;
@@ -1582,8 +1569,8 @@ namespace Services
 
             try
             {
-                // Get the repair order
-                var repairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
+                // Get the repair order for update (with tracking)
+                var repairOrder = await _repairOrderRepository.GetRepairOrderForUpdateAsync(repairOrderId);
                 if (repairOrder == null)
                 {
                     result.Success = false;
@@ -1606,18 +1593,26 @@ namespace Services
                         return result;
                     }
 
-                    // Update labels
-                    await _repairOrderRepository.UpdateRepairOrderLabelsAsync(repairOrderId, labelIds);
+                    // Update labels on the loaded entity
+                    repairOrder.Labels.Clear();
+                    foreach (var label in labels)
+                    {
+                        repairOrder.Labels.Add(label);
+                    }
                 }
                 else
                 {
                     // Clear all labels
-                    await _repairOrderRepository.UpdateRepairOrderLabelsAsync(repairOrderId, new List<Guid>());
+                    repairOrder.Labels.Clear();
                 }
 
-                // Get updated repair order
-                var updatedRepairOrder = await _repairOrderRepository.GetRepairOrderWithFullDetailsAsync(repairOrderId);
-                result.UpdatedCard = MapToRoBoardCardDto(updatedRepairOrder);
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+                
+                // Save changes
+                await _repairOrderRepository.Context.SaveChangesAsync();
+
+                // Create response using the updated entity
+                result.UpdatedCard = MapToRoBoardCardDto(repairOrder);
                 result.Success = true;
                 result.Message = "Labels updated successfully";
 

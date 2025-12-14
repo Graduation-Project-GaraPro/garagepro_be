@@ -116,7 +116,28 @@ namespace Repositories
 
         public async Task<RepairOrder> UpdateAsync(RepairOrder repairOrder)
         {
-            _context.RepairOrders.Update(repairOrder);
+            // Check if entity is already being tracked
+            var existingEntry = _context.Entry(repairOrder);
+            if (existingEntry.State == EntityState.Detached)
+            {
+                // If not tracked, check if another instance is being tracked
+                var trackedEntity = _context.ChangeTracker.Entries<RepairOrder>()
+                    .FirstOrDefault(e => e.Entity.RepairOrderId == repairOrder.RepairOrderId);
+                
+                if (trackedEntity != null)
+                {
+                    // Update the tracked entity with new values
+                    _context.Entry(trackedEntity.Entity).CurrentValues.SetValues(repairOrder);
+                    repairOrder = trackedEntity.Entity;
+                }
+                else
+                {
+                    // No tracked entity, safe to update
+                    _context.RepairOrders.Update(repairOrder);
+                }
+            }
+            
+            repairOrder.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return repairOrder;
         }
@@ -219,6 +240,7 @@ namespace Repositories
         public async Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId)
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
                 .Include(ro => ro.Labels) // Include assigned labels for this repair order
@@ -251,6 +273,7 @@ namespace Repositories
         public async Task<RepairOrder?> GetRepairOrderWithFullDetailsIncludingArchivedAsync(Guid repairOrderId)
         {
             return await _context.RepairOrders
+                .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
                 .Include(ro => ro.Labels) // Include assigned labels for this repair order
@@ -278,6 +301,26 @@ namespace Repositories
                     .ThenInclude(q => q.QuotationServices)
                 .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+        }
+
+        // Add a method specifically for getting RepairOrder for updates (with tracking)
+        public async Task<RepairOrder?> GetRepairOrderForUpdateAsync(Guid repairOrderId)
+        {
+            // Clear any existing tracked entities to avoid conflicts
+            _context.ChangeTracker.Clear();
+            
+            return await _context.RepairOrders
+                .Include(ro => ro.OrderStatus)
+                .Include(ro => ro.Labels)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.Service)
+                .Include(ro => ro.RepairOrderServices)
+                    .ThenInclude(ros => ros.RepairOrderServiceParts)
+                .Include(ro => ro.Inspections)
+                .Include(ro => ro.Jobs)
+                .Include(ro => ro.Quotations)
+                .Include(ro => ro.Payments)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
         public async Task<IEnumerable<RepairOrder>> GetAllRepairOrdersWithFullDetailsAsync()
@@ -315,20 +358,108 @@ namespace Repositories
 
         public async Task<bool> UpdateRepairOrderStatusAsync(Guid repairOrderId, int newStatusId, string? changeNote = null) // Changed from Guid to int
         {
-            var repairOrder = await _context.RepairOrders.FindAsync(repairOrderId);
+            // Clear any existing tracked entities to avoid conflicts
+            _context.ChangeTracker.Clear();
+            
+            var repairOrder = await _context.RepairOrders
+                .Include(ro => ro.Labels)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                
             if (repairOrder == null || repairOrder.IsArchived) return false;
 
             var oldStatusId = repairOrder.StatusId;
-            repairOrder.StatusId = newStatusId;
-
-            // Add change note to the repair order notes if provided
-            if (!string.IsNullOrEmpty(changeNote))
+            
+            // Only update if status actually changed
+            if (oldStatusId != newStatusId)
             {
-                var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
-                var statusChangeNote = $"[{timestamp}] Status changed: {changeNote}";
-                repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note)
-                    ? statusChangeNote
-                    : $"{repairOrder.Note}\n{statusChangeNote}";
+                repairOrder.StatusId = newStatusId;
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+
+                // Auto-assign default labels for the new status
+                var defaultLabels = await GetDefaultLabelsForStatusAsync(newStatusId);
+                if (defaultLabels.Any())
+                {
+                    // Clear existing labels
+                    repairOrder.Labels.Clear();
+                    
+                    // Add default labels for the new status
+                    foreach (var defaultLabel in defaultLabels)
+                    {
+                        repairOrder.Labels.Add(defaultLabel);
+                    }
+                }
+
+                // Add change note to the repair order notes if provided
+                if (!string.IsNullOrEmpty(changeNote))
+                {
+                    var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                    var statusChangeNote = $"[{timestamp}] Status changed: {changeNote}";
+                    repairOrder.Note = string.IsNullOrEmpty(repairOrder.Note)
+                        ? statusChangeNote
+                        : $"{repairOrder.Note}\n{statusChangeNote}";
+                }
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        // Automatic status update without adding notes (for system-triggered updates)
+        public async Task<bool> UpdateRepairOrderStatusAutomaticAsync(Guid repairOrderId, int newStatusId)
+        {
+            var repairOrder = await _context.RepairOrders
+                .Include(ro => ro.Labels)
+                .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
+                
+            if (repairOrder == null || repairOrder.IsArchived) return false;
+
+            return await UpdateRepairOrderStatusAutomaticAsync(repairOrder, newStatusId);
+        }
+
+        // Overload that accepts RepairOrder instance to avoid tracking conflicts
+        public async Task<bool> UpdateRepairOrderStatusAutomaticAsync(RepairOrder repairOrder, int newStatusId)
+        {
+            if (repairOrder == null || repairOrder.IsArchived) return false;
+
+            var oldStatusId = repairOrder.StatusId;
+            
+            // Only update if status actually changed
+            if (oldStatusId != newStatusId)
+            {
+                // Ensure the entity is being tracked
+                var trackedEntity = _context.Entry(repairOrder);
+                if (trackedEntity.State == EntityState.Detached)
+                {
+                    // If not tracked, attach and include labels
+                    _context.RepairOrders.Attach(repairOrder);
+                    await _context.Entry(repairOrder)
+                        .Collection(ro => ro.Labels)
+                        .LoadAsync();
+                }
+
+                repairOrder.StatusId = newStatusId;
+
+                // Auto-assign default labels for the new status
+                var defaultLabels = await GetDefaultLabelsForStatusAsync(newStatusId);
+                if (defaultLabels.Any())
+                {
+                    // Clear existing labels
+                    repairOrder.Labels.Clear();
+                    
+                    // Add default labels for the new status
+                    foreach (var defaultLabel in defaultLabels)
+                    {
+                        repairOrder.Labels.Add(defaultLabel);
+                    }
+                }
+                // No notes added for automatic updates
             }
 
             try
@@ -373,6 +504,9 @@ namespace Repositories
 
         public async Task<bool> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds)
         {
+            // Clear any existing tracked entities to avoid conflicts
+            _context.ChangeTracker.Clear();
+            
             var repairOrder = await _context.RepairOrders
                 .Include(ro => ro.Labels)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
@@ -398,6 +532,7 @@ namespace Repositories
                     }
                 }
 
+                repairOrder.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
                 return true;
             }
@@ -518,7 +653,6 @@ namespace Repositories
             var newStatus = await _context.OrderStatuses.FindAsync(newStatusId);
             if (newStatus == null) return false;
 
-            // If it's the same status, allow the move
             if (repairOrder.StatusId == newStatusId) return true;
 
             // Business rules validation
@@ -534,10 +668,17 @@ namespace Repositories
             return true;
         }
 
-        public async Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId) // Changed from Guid to int
+        public async Task<IEnumerable<Label>> GetAvailableLabelsForStatusAsync(int statusId) 
         {
             return await _context.Labels
                 .Where(l => l.OrderStatusId == statusId)
+                .ToListAsync();
+        }
+
+        public async Task<IEnumerable<Label>> GetDefaultLabelsForStatusAsync(int statusId)
+        {
+            return await _context.Labels
+                .Where(l => l.OrderStatusId == statusId && l.IsDefault)
                 .ToListAsync();
         }
 

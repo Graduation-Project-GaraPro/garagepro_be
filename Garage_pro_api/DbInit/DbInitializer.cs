@@ -1838,25 +1838,28 @@ namespace Garage_pro_api.DbInit
                             {
                                 LabelName = "Pending",
                                 Description = "Order is waiting to be processed",
-                                OrderStatusId = pendingStatus.OrderStatusId, // Now using int ID
+                                OrderStatusId = pendingStatus.OrderStatusId, 
                                 ColorName = "Red",
-                                HexCode = "#FF0000"
+                                HexCode = "#FF0000",
+                                IsDefault = true 
                             },
                             new Label
                             {
                                 LabelName = "In Progress",
                                 Description = "Order is being worked on",
-                                OrderStatusId = inProgressStatus.OrderStatusId, // Now using int ID
+                                OrderStatusId = inProgressStatus.OrderStatusId, 
                                 ColorName = "Yellow",
-                                HexCode = "#FFFF00"
+                                HexCode = "#FFFF00",
+                                IsDefault = true 
                             },
                             new Label
                             {
                                 LabelName = "Done",
                                 Description = "Order completed",
-                                OrderStatusId = completedStatus.OrderStatusId, // Now using int ID
+                                OrderStatusId = completedStatus.OrderStatusId, 
                                 ColorName = "Green",
-                                HexCode = "#00FF00"
+                                HexCode = "#00FF00",
+                                IsDefault = true
                             }
                         };
 

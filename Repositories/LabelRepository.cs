@@ -53,6 +53,14 @@ namespace Repositories
                 .FirstOrDefaultAsync(l => l.OrderStatusId == orderStatusId && l.IsDefault);
         }
 
+        public async Task<IEnumerable<Label>> GetDefaultByOrderStatusIdAsync(int orderStatusId)
+        {
+            return await _context.Labels
+                .Include(l => l.OrderStatus)
+                .Where(l => l.OrderStatusId == orderStatusId && l.IsDefault)
+                .ToListAsync();
+        }
+
         public async Task<Label> CreateAsync(Label label)
         {
             _context.Labels.Add(label);
