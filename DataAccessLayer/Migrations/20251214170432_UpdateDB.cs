@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdateDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1118,7 +1118,8 @@ namespace DataAccessLayer.Migrations
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     RepairRequestId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
                     FeedBackId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    CarPickupStatus = table.Column<int>(type: "int", nullable: false)
+                    CarPickupStatus = table.Column<int>(type: "int", nullable: false),
+                    LabelId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -1135,6 +1136,12 @@ namespace DataAccessLayer.Migrations
                         principalTable: "Branches",
                         principalColumn: "BranchId",
                         onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepairOrders_Labels_LabelId",
+                        column: x => x.LabelId,
+                        principalTable: "Labels",
+                        principalColumn: "LabelId",
+                        onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
                         name: "FK_RepairOrders_OrderStatuses_StatusId",
                         column: x => x.StatusId,
@@ -1374,31 +1381,6 @@ namespace DataAccessLayer.Migrations
                         principalTable: "RepairOrders",
                         principalColumn: "RepairOrderId",
                         onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "RepairOrderLabels",
-                columns: table => new
-                {
-                    RepairOrderId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    LabelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AssignedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_RepairOrderLabels", x => new { x.RepairOrderId, x.LabelId });
-                    table.ForeignKey(
-                        name: "FK_RepairOrderLabels_Labels_LabelId",
-                        column: x => x.LabelId,
-                        principalTable: "Labels",
-                        principalColumn: "LabelId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_RepairOrderLabels_RepairOrders_RepairOrderId",
-                        column: x => x.RepairOrderId,
-                        principalTable: "RepairOrders",
-                        principalColumn: "RepairOrderId",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -2081,19 +2063,14 @@ namespace DataAccessLayer.Migrations
                 column: "RepairRequestId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RepairOrderLabels_LabelId",
-                table: "RepairOrderLabels",
-                column: "LabelId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RepairOrderLabels_RepairOrderId",
-                table: "RepairOrderLabels",
-                column: "RepairOrderId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_RepairOrders_BranchId",
                 table: "RepairOrders",
                 column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RepairOrders_LabelId",
+                table: "RepairOrders",
+                column: "LabelId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepairOrders_RepairRequestId",
@@ -2449,9 +2426,6 @@ namespace DataAccessLayer.Migrations
                 name: "RepairImages");
 
             migrationBuilder.DropTable(
-                name: "RepairOrderLabels");
-
-            migrationBuilder.DropTable(
                 name: "RepairOrderServiceParts");
 
             migrationBuilder.DropTable(
@@ -2495,9 +2469,6 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "QuotationServices");
-
-            migrationBuilder.DropTable(
-                name: "Labels");
 
             migrationBuilder.DropTable(
                 name: "RepairOrderServices");
@@ -2563,10 +2534,13 @@ namespace DataAccessLayer.Migrations
                 name: "Technicians");
 
             migrationBuilder.DropTable(
-                name: "OrderStatuses");
+                name: "Labels");
 
             migrationBuilder.DropTable(
                 name: "RepairRequests");
+
+            migrationBuilder.DropTable(
+                name: "OrderStatuses");
 
             migrationBuilder.DropTable(
                 name: "Vehicles");

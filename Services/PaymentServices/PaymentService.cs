@@ -363,17 +363,12 @@ namespace Services.PaymentServices
                 // 7. Update repair order paid status
                 if (method == PaymentMethod.Cash)
                 {
-                    // Clear any tracked entities to avoid conflicts
-                    _db.ChangeTracker.Clear();
-                    
-                    // Get fresh instance from database
-                    var freshRepairOrder = await _repoRepairOrder.GetRepairOrderByIdAsync(repairOrderId);
-                    if (freshRepairOrder != null)
-                    {
-                        freshRepairOrder.PaidStatus = PaidStatus.Paid;
-                        freshRepairOrder.PaidAmount = freshRepairOrder.Cost;
-                        await _repoRepairOrder.UpdateAsync(freshRepairOrder);
-                    }
+                    // Update repair order paid status using direct update to avoid tracking conflicts
+                    await _db.RepairOrders
+                        .Where(ro => ro.RepairOrderId == repairOrderId)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(ro => ro.PaidStatus, PaidStatus.Paid)
+                            .SetProperty(ro => ro.PaidAmount, repairOrder.Cost), ct);
                 }
 
                 // Commit transaction before sending notifications
