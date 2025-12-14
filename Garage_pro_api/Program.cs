@@ -456,6 +456,7 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
                                                                           // var jobService = provider.GetRequiredService<Services.IJobService>();
     var fcmService = provider.GetRequiredService<IFcmService>(); // Add this
     var userService = provider.GetRequiredService<IUserService>(); // Add this
+    var notificationService = provider.GetRequiredService<Services.Notifications.INotificationService>();
 
     var mapper = provider.GetRequiredService<IMapper>();
     var hubContext = provider.GetRequiredService<IHubContext<QuotationHub>>();
@@ -471,6 +472,7 @@ builder.Services.AddScoped<Services.QuotationServices.IQuotationService>(provide
         jobService,
         fcmService,
         userService,
+        notificationService,
         mapper);
 });
 builder.Services.AddScoped<IRepairOrderRepository, RepairOrderRepository>(); // Add this line

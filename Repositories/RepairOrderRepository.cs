@@ -116,30 +116,42 @@ namespace Repositories
 
         public async Task<RepairOrder> UpdateAsync(RepairOrder repairOrder)
         {
-            // Check if entity is already being tracked
-            var existingEntry = _context.Entry(repairOrder);
-            if (existingEntry.State == EntityState.Detached)
+            try
             {
-                // If not tracked, check if another instance is being tracked
-                var trackedEntity = _context.ChangeTracker.Entries<RepairOrder>()
-                    .FirstOrDefault(e => e.Entity.RepairOrderId == repairOrder.RepairOrderId);
+                // Check if entity is already being tracked
+                var existingEntry = _context.Entry(repairOrder);
+                if (existingEntry.State == EntityState.Detached)
+                {
+                    // If not tracked, check if another instance is being tracked
+                    var trackedEntity = _context.ChangeTracker.Entries<RepairOrder>()
+                        .FirstOrDefault(e => e.Entity.RepairOrderId == repairOrder.RepairOrderId);
+                    
+                    if (trackedEntity != null)
+                    {
+                        // Update the tracked entity with new values
+                        _context.Entry(trackedEntity.Entity).CurrentValues.SetValues(repairOrder);
+                        repairOrder = trackedEntity.Entity;
+                    }
+                    else
+                    {
+                        // No tracked entity, safe to update
+                        _context.RepairOrders.Update(repairOrder);
+                    }
+                }
                 
-                if (trackedEntity != null)
-                {
-                    // Update the tracked entity with new values
-                    _context.Entry(trackedEntity.Entity).CurrentValues.SetValues(repairOrder);
-                    repairOrder = trackedEntity.Entity;
-                }
-                else
-                {
-                    // No tracked entity, safe to update
-                    _context.RepairOrders.Update(repairOrder);
-                }
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return repairOrder;
             }
-            
-            repairOrder.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return repairOrder;
+            catch (InvalidOperationException ex) when (ex.Message.Contains("tracked"))
+            {
+                // If we still get tracking conflicts, clear tracker and retry once
+                _context.ChangeTracker.Clear();
+                _context.RepairOrders.Update(repairOrder);
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return repairOrder;
+            }
         }
         public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
         {
@@ -433,15 +445,31 @@ namespace Repositories
             // Only update if status actually changed
             if (oldStatusId != newStatusId)
             {
-                // Ensure the entity is being tracked
-                var trackedEntity = _context.Entry(repairOrder);
-                if (trackedEntity.State == EntityState.Detached)
+                try
                 {
-                    // If not tracked, attach and include labels
-                    _context.RepairOrders.Attach(repairOrder);
-                    await _context.Entry(repairOrder)
-                        .Collection(ro => ro.Labels)
-                        .LoadAsync();
+                    // Ensure the entity is being tracked
+                    var trackedEntity = _context.Entry(repairOrder);
+                    if (trackedEntity.State == EntityState.Detached)
+                    {
+                        // If not tracked, attach and include labels
+                        _context.RepairOrders.Attach(repairOrder);
+                        await _context.Entry(repairOrder)
+                            .Collection(ro => ro.Labels)
+                            .LoadAsync();
+                    }
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("tracked"))
+                {
+                    // Handle entity tracking conflicts by clearing and reloading
+                    _context.ChangeTracker.Clear();
+                    
+                    // Reload the repair order with labels
+                    repairOrder = await _context.RepairOrders
+                        .Include(ro => ro.Labels)
+                        .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrder.RepairOrderId);
+                    
+                    if (repairOrder == null)
+                        throw new InvalidOperationException($"RepairOrder {repairOrder.RepairOrderId} not found after reload");
                 }
 
                 repairOrder.StatusId = newStatusId;

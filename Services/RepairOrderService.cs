@@ -1671,6 +1671,39 @@ namespace Services
             return dto;
         }
 
+        public async Task<Dtos.RepairOrder.RepairOrderNotificationInfoDto> GetNotificationInfoAsync(Guid repairOrderId)
+        {
+            // Use a lightweight query to get only the data needed for notifications
+            var repairOrder = await _repairOrderRepository.Context.RepairOrders
+                .Where(ro => ro.RepairOrderId == repairOrderId)
+                .Select(ro => new Dtos.RepairOrder.RepairOrderNotificationInfoDto
+                {
+                    RepairOrderId = ro.RepairOrderId,
+                    BranchId = ro.BranchId,
+                    CustomerFirstName = ro.User.FirstName ?? "",
+                    CustomerLastName = ro.User.LastName ?? "",
+                    VehicleBrand = ro.Vehicle.Brand.BrandName ?? "",
+                    VehicleModel = ro.Vehicle.Model.ModelName ?? "",
+                    LicensePlate = ro.Vehicle.LicensePlate ?? ""
+                })
+                .FirstOrDefaultAsync();
+
+            if (repairOrder != null)
+            {
+                // Format the display strings
+                repairOrder.CustomerName = $"{repairOrder.CustomerFirstName} {repairOrder.CustomerLastName}".Trim();
+                repairOrder.VehicleInfo = $"{repairOrder.VehicleBrand} {repairOrder.VehicleModel} ({repairOrder.LicensePlate})";
+                
+                // Handle empty cases
+                if (string.IsNullOrEmpty(repairOrder.CustomerName))
+                    repairOrder.CustomerName = "Unknown Customer";
+                if (string.IsNullOrEmpty(repairOrder.VehicleInfo) || repairOrder.VehicleInfo == " ()")
+                    repairOrder.VehicleInfo = "Unknown Vehicle";
+            }
+
+            return repairOrder;
+        }
+
         #endregion
     }
 }

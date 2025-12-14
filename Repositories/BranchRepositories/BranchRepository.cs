@@ -120,6 +120,23 @@ namespace Repositories.BranchRepositories
         {
             await _context.SaveChangesAsync();
         }
+
+        public async Task<List<BusinessObject.Authentication.ApplicationUser>> GetManagersByBranchAsync(Guid branchId)
+        {
+            var managerRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Manager");
+
+            if (managerRole == null) return new List<BusinessObject.Authentication.ApplicationUser>();
+
+            var userIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == managerRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
+
+            return await _context.Users
+                .Where(u => userIds.Contains(u.Id) && u.BranchId == branchId)
+                .ToListAsync();
+        }
     }
 
 
