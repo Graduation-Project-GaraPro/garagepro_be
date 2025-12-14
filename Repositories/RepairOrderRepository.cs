@@ -34,7 +34,7 @@ namespace Repositories
             return await _context.RepairOrders
                 .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro=>ro.Inspections).ThenInclude(r=>r.ServiceInspections)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
@@ -52,7 +52,7 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -116,30 +116,42 @@ namespace Repositories
 
         public async Task<RepairOrder> UpdateAsync(RepairOrder repairOrder)
         {
-            // Check if entity is already being tracked
-            var existingEntry = _context.Entry(repairOrder);
-            if (existingEntry.State == EntityState.Detached)
+            try
             {
-                // If not tracked, check if another instance is being tracked
-                var trackedEntity = _context.ChangeTracker.Entries<RepairOrder>()
-                    .FirstOrDefault(e => e.Entity.RepairOrderId == repairOrder.RepairOrderId);
+                // Check if entity is already being tracked
+                var existingEntry = _context.Entry(repairOrder);
+                if (existingEntry.State == EntityState.Detached)
+                {
+                    // If not tracked, check if another instance is being tracked
+                    var trackedEntity = _context.ChangeTracker.Entries<RepairOrder>()
+                        .FirstOrDefault(e => e.Entity.RepairOrderId == repairOrder.RepairOrderId);
+                    
+                    if (trackedEntity != null)
+                    {
+                        // Update the tracked entity with new values
+                        _context.Entry(trackedEntity.Entity).CurrentValues.SetValues(repairOrder);
+                        repairOrder = trackedEntity.Entity;
+                    }
+                    else
+                    {
+                        // No tracked entity, safe to update
+                        _context.RepairOrders.Update(repairOrder);
+                    }
+                }
                 
-                if (trackedEntity != null)
-                {
-                    // Update the tracked entity with new values
-                    _context.Entry(trackedEntity.Entity).CurrentValues.SetValues(repairOrder);
-                    repairOrder = trackedEntity.Entity;
-                }
-                else
-                {
-                    // No tracked entity, safe to update
-                    _context.RepairOrders.Update(repairOrder);
-                }
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return repairOrder;
             }
-            
-            repairOrder.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-            return repairOrder;
+            catch (InvalidOperationException ex) when (ex.Message.Contains("tracked"))
+            {
+                // If we still get tracking conflicts, clear tracker and retry once
+                _context.ChangeTracker.Clear();
+                _context.RepairOrders.Update(repairOrder);
+                repairOrder.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+                return repairOrder;
+            }
         }
         public async Task UpdateCarPickupStatusAsync(Guid repairOrderId, string userId, CarPickupStatus status)
         {
@@ -195,7 +207,7 @@ namespace Repositories
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels) // Assigned labels
+                .Include(ro => ro.Label) // Assigned label
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -214,7 +226,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels) // Assigned labels
+                .Include(ro => ro.Label) // Assigned labels
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -239,34 +251,15 @@ namespace Repositories
 
         public async Task<RepairOrder?> GetRepairOrderWithFullDetailsAsync(Guid repairOrderId)
         {
+            // Temporary simplified version to avoid RepairOrderLabels table issue
+            // TODO: Remove this after application restart
             return await _context.RepairOrders
                 .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
-                    .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels) // Include assigned labels for this repair order
+                .Include(ro => ro.Label) // Include assigned label for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Brand)
-                .Include(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Model)
-                .Include(ro => ro.Vehicle)
-                    .ThenInclude(v => v.Color)
                 .Include(ro => ro.User)
-                .Include(ro => ro.RepairOrderServices)
-                    .ThenInclude(ros => ros.Service)
-                .Include(ro => ro.RepairOrderServices)
-                    .ThenInclude(ros => ros.RepairOrderServiceParts)
-                        .ThenInclude(rosp => rosp.Part)
-                .Include(ro => ro.Inspections)
-                    .ThenInclude(i => i.Technician)
-                        .ThenInclude(t => t.User)
-                .Include(ro => ro.Jobs)
-                    .ThenInclude(j => j.JobTechnicians)
-                        .ThenInclude(jt => jt.Technician)
-                            .ThenInclude(t => t.User)
-                .Include(ro => ro.Quotations)
-                    .ThenInclude(q => q.QuotationServices)
-                .Include(ro => ro.Payments)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId && !ro.IsArchived);
         }
 
@@ -276,7 +269,7 @@ namespace Repositories
                 .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels) // Include assigned labels for this repair order
+                .Include(ro => ro.Label) // Include assigned label for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -311,7 +304,7 @@ namespace Repositories
             
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.RepairOrderServices)
                     .ThenInclude(ros => ros.Service)
                 .Include(ro => ro.RepairOrderServices)
@@ -329,7 +322,7 @@ namespace Repositories
                 .AsNoTracking()
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels) // Include assigned labels for this repair order
+                .Include(ro => ro.Label) // Include assigned labels for this repair order
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -362,7 +355,7 @@ namespace Repositories
             _context.ChangeTracker.Clear();
             
             var repairOrder = await _context.RepairOrders
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
                 
             if (repairOrder == null || repairOrder.IsArchived) return false;
@@ -375,18 +368,17 @@ namespace Repositories
                 repairOrder.StatusId = newStatusId;
                 repairOrder.UpdatedAt = DateTime.UtcNow;
 
-                // Auto-assign default labels for the new status
+                // Auto-assign default label for the new status
                 var defaultLabels = await GetDefaultLabelsForStatusAsync(newStatusId);
                 if (defaultLabels.Any())
                 {
-                    // Clear existing labels
-                    repairOrder.Labels.Clear();
-                    
-                    // Add default labels for the new status
-                    foreach (var defaultLabel in defaultLabels)
-                    {
-                        repairOrder.Labels.Add(defaultLabel);
-                    }
+                    // Assign the first default label (since each RO can only have one label)
+                    repairOrder.LabelId = defaultLabels.First().LabelId;
+                }
+                else
+                {
+                    // Clear the label if no default exists
+                    repairOrder.LabelId = null;
                 }
 
                 // Add change note to the repair order notes if provided
@@ -415,7 +407,7 @@ namespace Repositories
         public async Task<bool> UpdateRepairOrderStatusAutomaticAsync(Guid repairOrderId, int newStatusId)
         {
             var repairOrder = await _context.RepairOrders
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
                 
             if (repairOrder == null || repairOrder.IsArchived) return false;
@@ -433,31 +425,46 @@ namespace Repositories
             // Only update if status actually changed
             if (oldStatusId != newStatusId)
             {
-                // Ensure the entity is being tracked
-                var trackedEntity = _context.Entry(repairOrder);
-                if (trackedEntity.State == EntityState.Detached)
+                try
                 {
-                    // If not tracked, attach and include labels
-                    _context.RepairOrders.Attach(repairOrder);
-                    await _context.Entry(repairOrder)
-                        .Collection(ro => ro.Labels)
-                        .LoadAsync();
+                    // Ensure the entity is being tracked
+                    var trackedEntity = _context.Entry(repairOrder);
+                    if (trackedEntity.State == EntityState.Detached)
+                    {
+                        // If not tracked, attach and include label
+                        _context.RepairOrders.Attach(repairOrder);
+                        await _context.Entry(repairOrder)
+                            .Reference(ro => ro.Label)
+                            .LoadAsync();
+                    }
+                }
+                catch (InvalidOperationException ex) when (ex.Message.Contains("tracked"))
+                {
+                    // Handle entity tracking conflicts by clearing and reloading
+                    _context.ChangeTracker.Clear();
+                    
+                    // Reload the repair order with labels
+                    repairOrder = await _context.RepairOrders
+                        .Include(ro => ro.Label)
+                        .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrder.RepairOrderId);
+                    
+                    if (repairOrder == null)
+                        throw new InvalidOperationException($"RepairOrder {repairOrder.RepairOrderId} not found after reload");
                 }
 
                 repairOrder.StatusId = newStatusId;
 
-                // Auto-assign default labels for the new status
+                // Auto-assign default label for the new status
                 var defaultLabels = await GetDefaultLabelsForStatusAsync(newStatusId);
                 if (defaultLabels.Any())
                 {
-                    // Clear existing labels
-                    repairOrder.Labels.Clear();
-                    
-                    // Add default labels for the new status
-                    foreach (var defaultLabel in defaultLabels)
-                    {
-                        repairOrder.Labels.Add(defaultLabel);
-                    }
+                    // Assign the first default label (since each RO can only have one label)
+                    repairOrder.LabelId = defaultLabels.First().LabelId;
+                }
+                else
+                {
+                    // Clear the label if no default exists
+                    repairOrder.LabelId = null;
                 }
                 // No notes added for automatic updates
             }
@@ -504,11 +511,7 @@ namespace Repositories
 
         public async Task<bool> UpdateRepairOrderLabelsAsync(Guid repairOrderId, List<Guid> labelIds)
         {
-            // Clear any existing tracked entities to avoid conflicts
-            _context.ChangeTracker.Clear();
-            
             var repairOrder = await _context.RepairOrders
-                .Include(ro => ro.Labels)
                 .FirstOrDefaultAsync(ro => ro.RepairOrderId == repairOrderId);
 
             if (repairOrder == null || repairOrder.IsArchived)
@@ -516,20 +519,14 @@ namespace Repositories
 
             try
             {
-                // Clear existing labels
-                repairOrder.Labels.Clear();
-
-                // Add new labels if any
+                // Since each RO can only have one label, take the first labelId
                 if (labelIds != null && labelIds.Any())
                 {
-                    var labels = await _context.Labels
-                        .Where(l => labelIds.Contains(l.LabelId))
-                        .ToListAsync();
-
-                    foreach (var label in labels)
-                    {
-                        repairOrder.Labels.Add(label);
-                    }
+                    repairOrder.LabelId = labelIds.First();
+                }
+                else
+                {
+                    repairOrder.LabelId = null;
                 }
 
                 repairOrder.UpdatedAt = DateTime.UtcNow;
@@ -556,7 +553,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -690,7 +687,7 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -708,7 +705,7 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -744,7 +741,7 @@ namespace Repositories
         {
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -822,7 +819,7 @@ namespace Repositories
 
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -904,7 +901,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -931,7 +928,7 @@ namespace Repositories
             var query = _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
                     .ThenInclude(os => os.Labels)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Branch)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
@@ -1104,7 +1101,7 @@ namespace Repositories
         {
             return await _context.RepairOrders
                 .Include(ro => ro.OrderStatus)
-                .Include(ro => ro.Labels)
+                .Include(ro => ro.Label)
                 .Include(ro => ro.Vehicle)
                     .ThenInclude(v => v.Brand)
                 .Include(ro => ro.Vehicle)

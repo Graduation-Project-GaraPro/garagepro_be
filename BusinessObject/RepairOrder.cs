@@ -99,7 +99,8 @@ namespace BusinessObject
         public virtual ICollection<VoucherUsage>? VoucherUsages { get; set; }
             = new List<VoucherUsage>();
         
-        // Many-to-many relationship with Labels
-        public virtual ICollection<Label> Labels { get; set; } = new List<Label>();
+        // One-to-many relationship with Label (each RO has one label)
+        public Guid? LabelId { get; set; }
+        public virtual Label? Label { get; set; }
     }
 }

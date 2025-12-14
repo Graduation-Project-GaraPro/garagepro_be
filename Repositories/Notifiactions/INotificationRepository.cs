@@ -18,6 +18,6 @@ namespace Repositories.Notifiactions
         Task<bool> MarkAllAsReadAsync(string userId);
         Task<int> GetUnreadCountAsync(string userId);
         Task<bool> DeleteNotificationAsync(Guid notificationId);
-        Task<string> GetNotificationOwnerIdAsync(Guid notificationId); 
+        Task<string> GetNotificationOwnerIdAsync(Guid notificationId);
     }
 }
