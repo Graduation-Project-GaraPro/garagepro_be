@@ -140,19 +140,6 @@ namespace Garage_pro_api.Controllers
                 if (repairOrder == null)
                     return NotFound($"Repair order with ID {repairOrderId} not found");
 
-                // Check if repair order status is Completed (StatusId = 3)
-                if (repairOrder.StatusId != 3)
-                {
-                    return BadRequest($"Repair order must be in Completed status to process payment. Current status: {repairOrder.OrderStatus?.StatusName ?? "Unknown"}");
-                }
-
-                // Check if all jobs are completed
-                var allJobsCompleted = repairOrder.Jobs?.All(j => j.Status == BusinessObject.Enums.JobStatus.Completed) ?? false;
-                if (!allJobsCompleted)
-                {
-                    return BadRequest($"All jobs in repair order must be completed before payment can be created");
-                }
-
                 // Check if there's already a paid payment
                 var existingPayments = await _service.GetByRepairOrderIdAsync(repairOrderId);
                 var paidPayment = existingPayments?.FirstOrDefault(p => p.Status == PaymentStatus.Paid);
