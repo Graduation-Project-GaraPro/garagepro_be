@@ -95,6 +95,13 @@ namespace Services
         /// <param name="repairOrderId">The ID of the repair order</param>
         /// <returns>Customer and vehicle information DTO</returns>
         Task<Dtos.RepairOrder.RoCustomerVehicleInfoDto> GetCustomerVehicleInfoAsync(Guid repairOrderId);
+        
+        /// <summary>
+        /// Gets minimal repair order information needed for notifications
+        /// </summary>
+        /// <param name="repairOrderId">The ID of the repair order</param>
+        /// <returns>Notification information DTO</returns>
+        Task<Dtos.RepairOrder.RepairOrderNotificationInfoDto> GetNotificationInfoAsync(Guid repairOrderId);
         #endregion
     }
 }

@@ -16,13 +16,16 @@ namespace Services.Notifications
     {
         private readonly INotificationRepository _notificationRepository;
         private readonly IHubContext<NotificationHub> _notificationHubContext;
+        private readonly Repositories.BranchRepositories.IBranchRepository _branchRepository;
 
         public NotificationService(
             INotificationRepository notificationRepository,
-            IHubContext<NotificationHub> notificationHubContext)
+            IHubContext<NotificationHub> notificationHubContext,
+            Repositories.BranchRepositories.IBranchRepository branchRepository)
         {
             _notificationRepository = notificationRepository;
             _notificationHubContext = notificationHubContext;
+            _branchRepository = branchRepository;
         }
         private async Task SendUnreadCountUpdateAsync(string userId)
         {
@@ -294,6 +297,109 @@ namespace Services.Notifications
             await SendUnreadCountUpdateAsync(userId);
 
             Console.WriteLine($"[NotificationService] General notification sent to User_{userId}");
+        }
+
+        public async Task SendRepairOrderPaidNotificationToManagersAsync(Guid repairOrderId, Guid branchId, string customerName, string vehicleInfo, decimal amount, string paymentMethod)
+        {
+            // Get managers from the specific branch
+            var managers = await GetManagersByBranchAsync(branchId);
+
+            foreach (var manager in managers)
+            {
+                var notification = new Notification
+                {
+                    NotificationID = Guid.NewGuid(),
+                    UserID = manager.Id,
+                    Content = $"Mobile payment received: {customerName} paid ${amount:F2} for {vehicleInfo} via {paymentMethod}",
+                    Type = NotificationType.Message,
+                    Status = NotificationStatus.Unread,
+                    Target = $"/manager/repair-orders/{repairOrderId}",
+                    TimeSent = DateTime.UtcNow
+                };
+
+                await _notificationRepository.CreateNotificationAsync(notification);
+
+                // Send real-time notification via SignalR
+                await _notificationHubContext.Clients
+                    .Group($"User_{manager.Id}")
+                    .SendAsync("ReceiveNotification", new
+                    {
+                        NotificationId = notification.NotificationID,
+                        Type = "MOBILE_PAYMENT_RECEIVED",
+                        Title = "Mobile Payment Received",
+                        Content = notification.Content,
+                        RepairOrderId = repairOrderId,
+                        CustomerName = customerName,
+                        VehicleInfo = vehicleInfo,
+                        Amount = amount,
+                        PaymentMethod = paymentMethod,
+                        Target = notification.Target,
+                        TimeSent = notification.TimeSent,
+                        Status = notification.Status.ToString()
+                    });
+
+                await SendUnreadCountUpdateAsync(manager.Id);
+
+                Console.WriteLine($"[NotificationService] payment notification sent to Manager_{manager.Id} in Branch_{branchId}");
+            }
+
+            Console.WriteLine($"[NotificationService] Mobile payment notifications sent to {managers.Count} managers in Branch_{branchId}");
+        }
+
+        public async Task SendRepairOrderCompletedNotificationToManagersAsync(Guid repairOrderId, Guid branchId, string customerName, string vehicleInfo, bool isAutoCompleted)
+        {
+            // Get managers from the specific branch
+            var managers = await GetManagersByBranchAsync(branchId);
+
+            var completionType = isAutoCompleted ? "automatically completed" : "marked as completed";
+            var notificationContent = $"Repair order {completionType}: {customerName}'s {vehicleInfo} is ready for payment";
+
+            foreach (var manager in managers)
+            {
+                var notification = new Notification
+                {
+                    NotificationID = Guid.NewGuid(),
+                    UserID = manager.Id,
+                    Content = notificationContent,
+                    Type = NotificationType.Message,
+                    Status = NotificationStatus.Unread,
+                    Target = $"/manager/repair-orders/{repairOrderId}",
+                    TimeSent = DateTime.UtcNow
+                };
+
+                await _notificationRepository.CreateNotificationAsync(notification);
+
+                // Send real-time notification via SignalR
+                await _notificationHubContext.Clients
+                    .Group($"User_{manager.Id}")
+                    .SendAsync("ReceiveNotification", new
+                    {
+                        NotificationId = notification.NotificationID,
+                        Type = "REPAIR_ORDER_COMPLETED",
+                        Title = "Repair Order Completed",
+                        Content = notification.Content,
+                        RepairOrderId = repairOrderId,
+                        CustomerName = customerName,
+                        VehicleInfo = vehicleInfo,
+                        IsAutoCompleted = isAutoCompleted,
+                        CompletionType = completionType,
+                        Target = notification.Target,
+                        TimeSent = notification.TimeSent,
+                        Status = notification.Status.ToString()
+                    });
+
+                await SendUnreadCountUpdateAsync(manager.Id);
+
+                Console.WriteLine($"[NotificationService] RO completed notification sent to Manager_{manager.Id} in Branch_{branchId}");
+            }
+
+            Console.WriteLine($"[NotificationService] RO completed notifications sent to {managers.Count} managers in Branch_{branchId}");
+        }
+
+        private async Task<List<BusinessObject.Authentication.ApplicationUser>> GetManagersByBranchAsync(Guid branchId)
+        {
+            // Get managers from the specific branch using branch repository
+            return await _branchRepository.GetManagersByBranchAsync(branchId);
         }
     }
 }

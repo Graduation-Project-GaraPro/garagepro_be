@@ -1650,6 +1650,9 @@ namespace DataAccessLayer.Migrations
                     b.Property<bool>("IsCancelled")
                         .HasColumnType("bit");
 
+                    b.Property<Guid?>("LabelId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Note")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -1688,6 +1691,8 @@ namespace DataAccessLayer.Migrations
                     b.HasKey("RepairOrderId");
 
                     b.HasIndex("BranchId");
+
+                    b.HasIndex("LabelId");
 
                     b.HasIndex("RepairRequestId")
                         .IsUnique()
@@ -2512,28 +2517,6 @@ namespace DataAccessLayer.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("RepairOrderLabels", b =>
-                {
-                    b.Property<Guid>("RepairOrderId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("LabelId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("AssignedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime2")
-                        .HasDefaultValueSql("GETUTCDATE()");
-
-                    b.HasKey("RepairOrderId", "LabelId");
-
-                    b.HasIndex("LabelId");
-
-                    b.HasIndex("RepairOrderId");
-
-                    b.ToTable("RepairOrderLabels", (string)null);
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.HasOne("BusinessObject.AiChat.AIChatSession", "Session")
@@ -3105,6 +3088,11 @@ namespace DataAccessLayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BusinessObject.Label", "Label")
+                        .WithMany("RepairOrders")
+                        .HasForeignKey("LabelId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("BusinessObject.Customers.RepairRequest", "RepairRequest")
                         .WithOne()
                         .HasForeignKey("BusinessObject.RepairOrder", "RepairRequestId")
@@ -3129,6 +3117,8 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Branch");
+
+                    b.Navigation("Label");
 
                     b.Navigation("OrderStatus");
 
@@ -3454,21 +3444,6 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("RepairOrderLabels", b =>
-                {
-                    b.HasOne("BusinessObject.Label", null)
-                        .WithMany()
-                        .HasForeignKey("LabelId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("BusinessObject.RepairOrder", null)
-                        .WithMany()
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("BusinessObject.AiChat.AIChatMessage", b =>
                 {
                     b.Navigation("Keywords");
@@ -3584,6 +3559,11 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("Repair")
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("BusinessObject.Label", b =>
+                {
+                    b.Navigation("RepairOrders");
                 });
 
             modelBuilder.Entity("BusinessObject.OrderStatus", b =>

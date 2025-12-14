@@ -70,20 +70,21 @@ namespace Repositories
 
         public async Task<Label> UpdateAsync(Label label)
         {
-            // Detach any tracked entity with the same key
-            var trackedEntity = _context.ChangeTracker.Entries<Label>()
-                .FirstOrDefault(e => e.Entity.LabelId == label.LabelId);
-            
-            if (trackedEntity != null)
-            {
-                _context.Entry(trackedEntity.Entity).State = EntityState.Detached;
-            }
+            // Find and update the existing entity to avoid tracking conflicts
+            var existingLabel = await _context.Labels.FindAsync(label.LabelId);
+            if (existingLabel == null)
+                throw new KeyNotFoundException($"Label with ID {label.LabelId} not found");
 
-            // Update the entity
-            _context.Labels.Update(label);
+            // Update properties
+            existingLabel.LabelName = label.LabelName;
+            existingLabel.Description = label.Description;
+            existingLabel.ColorName = label.ColorName;
+            existingLabel.HexCode = label.HexCode;
+            existingLabel.OrderStatusId = label.OrderStatusId;
+            existingLabel.IsDefault = label.IsDefault;
+
             await _context.SaveChangesAsync();
-            
-            return label;
+            return existingLabel;
         }
 
         public async Task<bool> DeleteAsync(Guid id)

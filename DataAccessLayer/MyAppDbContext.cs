@@ -862,31 +862,13 @@ namespace DataAccessLayer
                 .HasForeignKey(l => l.OrderStatusId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Many-to-many RepairOrder <-> Label relationship
+            // One-to-many RepairOrder -> Label relationship (each RO has one label)
             modelBuilder.Entity<RepairOrder>()
-                .HasMany(ro => ro.Labels)
+                .HasOne(ro => ro.Label)
                 .WithMany(l => l.RepairOrders)
-                .UsingEntity<Dictionary<string, object>>(
-                    "RepairOrderLabels",
-                    j => j
-                        .HasOne<Label>()
-                        .WithMany()
-                        .HasForeignKey("LabelId")
-                        .OnDelete(DeleteBehavior.Cascade),
-                    j => j
-                        .HasOne<RepairOrder>()
-                        .WithMany()
-                        .HasForeignKey("RepairOrderId")
-                        .OnDelete(DeleteBehavior.Cascade),
-                    j =>
-                    {
-                        j.HasKey("RepairOrderId", "LabelId");
-                        j.ToTable("RepairOrderLabels");
-                        j.Property<DateTime>("AssignedAt")
-                            .HasDefaultValueSql("GETUTCDATE()");
-                        j.HasIndex("RepairOrderId");
-                        j.HasIndex("LabelId");
-                    });
+                .HasForeignKey(ro => ro.LabelId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
 
             // Configure OrderStatus to use identity
             modelBuilder.Entity<OrderStatus>(entity =>

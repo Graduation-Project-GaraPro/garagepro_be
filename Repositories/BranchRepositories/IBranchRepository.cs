@@ -24,6 +24,7 @@ namespace Repositories.BranchRepositories
         Task RemoveBranchServicesAsync(Branch branch);
         Task RemoveOperatingHoursAsync(Branch branch);
         Task SaveChangesAsync();
+        Task<List<BusinessObject.Authentication.ApplicationUser>> GetManagersByBranchAsync(Guid branchId);
     }
 
 }

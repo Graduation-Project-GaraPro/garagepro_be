@@ -66,9 +66,8 @@ namespace Services
 
         public async Task<Label> UpdateLabelAsync(Label label)
         {
-            // Check if label exists
-            var existingLabel = await _labelRepository.GetByIdAsync(label.LabelId);
-            if (existingLabel == null)
+            // Check if label exists without tracking
+            if (!await _labelRepository.ExistsAsync(label.LabelId))
                 throw new KeyNotFoundException($"Label with ID {label.LabelId} not found");
 
             // Business logic validation
