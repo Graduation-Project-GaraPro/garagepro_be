@@ -1,3 +1,4 @@
+using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -14,6 +15,10 @@ namespace BusinessObject
         public Guid LaborCategoryId { get; set; } = Guid.NewGuid();
 
         [Required]
+        [ForeignKey(nameof(VehicleModel))]
+        public Guid ModelId { get; set; }
+
+        [Required]
         [MaxLength(100)]
         public string CategoryName { get; set; }
 
@@ -25,6 +30,7 @@ namespace BusinessObject
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
+        public virtual VehicleModel VehicleModel { get; set; }
         public virtual ICollection<Part> Parts { get; set; }
         public virtual ICollection<ServicePartCategory> ServicePartCategories { get; set; } = new List<ServicePartCategory>();
     }

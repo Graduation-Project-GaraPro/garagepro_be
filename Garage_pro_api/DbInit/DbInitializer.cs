@@ -45,16 +45,17 @@ namespace Garage_pro_api.DbInit
             await SeedPermissionsAsync();
             await AssignPermissionsToRolesAsync();
             await SeedInspectionTypesAsync();
-            await SeedPartCategoriesAsync();
-            await SeedPartsAsync();
+            //await SeedPartCategoriesAsync();
+            //await SeedPartsAsync();
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
-            await SeedServicePartCategoriesAsync();
+            //await SeedServicePartCategoriesAsync();
             await UpdateAdvancedFlagFromPartCategoriesAsync();
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
             await SeedVehicleRelatedEntitiesAsync();
+            await SeedPartCategoriesAsync1();
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
             await SeedPriceEmergenciesAsync();
@@ -647,6 +648,73 @@ namespace Garage_pro_api.DbInit
             await EnsureAsync("Exhaust - Muffler", "Muffler only");
             await EnsureAsync("Exhaust - Catalytic Converter", "Catalytic converter only");
             await EnsureAsync("Exhaust - Gaskets/Hangers", "Exhaust gaskets/hangers only");
+
+            await _context.SaveChangesAsync();
+        }
+
+        // NEW part ctg
+        private async Task SeedPartCategoriesAsync1()
+        {
+            // Get all vehicle models first
+            var vehicleModels = await _context.VehicleModels.ToListAsync();
+            if (!vehicleModels.Any()) return; 
+
+            // Helper method to ensure part category exists for a specific model
+            async Task EnsureAsync(Guid modelId, string name, string desc)
+            {
+                var exists = await _context.PartCategories.AnyAsync(x => x.ModelId == modelId && x.CategoryName == name);
+                if (exists) return;
+
+                _context.PartCategories.Add(new PartCategory
+                {
+                    ModelId = modelId,
+                    CategoryName = name,
+                    Description = desc
+                });
+            }
+
+            // Create part categories for each vehicle model
+            foreach (var model in vehicleModels)
+            {
+                // ===== BRAKES =====
+                await EnsureAsync(model.ModelID, "Front Brake Pads", $"Front brake pads for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Rear Brake Pads", $"Rear brake pads for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Front Brake Discs", $"Front brake discs/rotors for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Rear Brake Discs", $"Rear brake discs/rotors for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Brake Calipers", $"Brake calipers for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Brake Fluid", $"Brake fluid for {model.ModelName}");
+
+                // ===== ENGINE =====
+                await EnsureAsync(model.ModelID, "Engine Oil", $"Engine oil for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Oil Filter", $"Oil filter for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Air Filter", $"Engine air filter for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Spark Plugs", $"Spark plugs for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Ignition Coils", $"Ignition coils for {model.ModelName}");
+
+                // ===== SUSPENSION =====
+                await EnsureAsync(model.ModelID, "Front Shocks", $"Front shocks/struts for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Rear Shocks", $"Rear shocks for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Control Arms", $"Control arms for {model.ModelName}");
+
+                // ===== ELECTRICAL =====
+                await EnsureAsync(model.ModelID, "Battery", $"Battery for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Alternator", $"Alternator for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Starter Motor", $"Starter motor for {model.ModelName}");
+
+                // ===== COOLING =====
+                await EnsureAsync(model.ModelID, "Radiator", $"Radiator for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Water Pump", $"Water pump for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Thermostat", $"Thermostat for {model.ModelName}");
+
+                // ===== TIRES & WHEELS =====
+                await EnsureAsync(model.ModelID, "Front Tires", $"Front tires for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Rear Tires", $"Rear tires for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "Wheel Bearings", $"Wheel bearings for {model.ModelName}");
+
+                // ===== HVAC =====
+                await EnsureAsync(model.ModelID, "Cabin Filter", $"Cabin air filter for {model.ModelName}");
+                await EnsureAsync(model.ModelID, "AC Compressor", $"AC compressor for {model.ModelName}");
+            }
 
             await _context.SaveChangesAsync();
         }

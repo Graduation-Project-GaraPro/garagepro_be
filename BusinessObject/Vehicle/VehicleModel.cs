@@ -30,5 +30,6 @@ namespace BusinessObject.Vehicles
 
         public virtual ICollection<Vehicle> Vehicles { get; set; }
         public virtual ICollection<VehicleModelColor> VehicleModelColors { get; set; }
+        public virtual ICollection<PartCategory> PartCategories { get; set; } = new List<PartCategory>();
     }
 }

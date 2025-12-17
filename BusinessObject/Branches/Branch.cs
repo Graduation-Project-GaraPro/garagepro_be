@@ -44,7 +44,7 @@ namespace BusinessObject.Branches
         public DateTime? UpdatedAt { get; set; }
 
        
-        public int ArrivalWindowMinutes { get; set; } = 30; // ?? dài c?a s? ??n
+        public int ArrivalWindowMinutes { get; set; } = 30; // ?? dï¿½i c?a s? ??n
         public int MaxBookingsPerWindow { get; set; } = 6;  // quota duy?t/1 c?a s?
        
 
@@ -63,6 +63,9 @@ namespace BusinessObject.Branches
 
         // Quotation relationship
         public virtual ICollection<Quotation> Quotations { get; set; } = new List<Quotation>();
+
+        // PartInventory relationship
+        public virtual ICollection<PartInventory> PartInventories { get; set; } = new List<PartInventory>();
 
     }
 
