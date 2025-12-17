@@ -1,10 +1,11 @@
-﻿using System;
+﻿using BusinessObject;
+using BusinessObject.Branches;
+using Microsoft.EntityFrameworkCore.Storage;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Repositories.ServiceRepositories
 {
@@ -18,6 +19,8 @@ namespace Repositories.ServiceRepositories
         Task AddAsync(Service service);
         void Update(Service service);
         void Delete(Service service);
+        void DeleteServiceCategoryRange(List<ServicePartCategory> servicePartCategory);
+        void DeleteBranchServicesRange(List<BranchService> BranchServices);
         Task SaveChangesAsync();
     }
 }
