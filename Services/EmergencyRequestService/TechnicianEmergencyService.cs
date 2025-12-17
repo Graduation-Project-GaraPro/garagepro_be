@@ -94,7 +94,26 @@ namespace Services.EmergencyRequestService
                 await _hubContext.Clients.All.SendAsync("EmergencyRequestInProgress", payload);
                 await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestInProgress", payload);
                 await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestInProgress", payload);
-            }         
+            }
+            if (newStatus == EmergencyStatus.Towing)
+            {
+                var emergency = await _repo.GetByIdAsync(emergencyRequestId);
+                if (emergency == null) return false;
+
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Towing",
+                    CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
+                    BranchId = emergency.BranchId,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestTowning", payload);
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestTowning", payload);
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestTowning", payload);
+            }
             return result;
         }
         public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
