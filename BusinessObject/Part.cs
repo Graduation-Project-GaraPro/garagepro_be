@@ -1,6 +1,6 @@
 using BusinessObject.Branches;
 using BusinessObject.Customers;
-
+using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -19,7 +19,7 @@ namespace BusinessObject
         [Required]
         [ForeignKey(nameof(PartCategory))]
         public Guid PartCategoryId { get; set; }
-        public Guid? BranchId { get; set; }  
+        public Guid? BranchId { get; set; }
 
         [Required, MaxLength(100)]
         public string Name { get; set; }
@@ -29,17 +29,21 @@ namespace BusinessObject
 
         public int Stock { get; set; }
 
+        // NEW
+        public int? WarrantyMonths { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }
 
-        // Navigation properties
         public virtual PartCategory PartCategory { get; set; }
         public virtual Branch? Branch { get; set; } // 1-n     
         public virtual ICollection<JobPart> JobParts { get; set; } = new List<JobPart>();
         public virtual ICollection<RepairOrderServicePart> RepairOrderServiceParts { get; set; } = new List<RepairOrderServicePart>();
         public virtual ICollection<PartInspection> PartInspections { get; set; } = new List<PartInspection>();
+        
+        public virtual ICollection<PartInventory> PartInventories { get; set; } = new List<PartInventory>();
         
         public virtual ICollection<RequestPart> RequestParts { get; set; } = new List<RequestPart>();
 

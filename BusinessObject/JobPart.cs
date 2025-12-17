@@ -24,6 +24,12 @@ namespace BusinessObject
         [Column(TypeName = "decimal(18,2)")]
         public decimal UnitPrice { get; set; }
 
+        public int? WarrantyMonths { get; set; }
+
+        public DateTime? WarrantyStartAt { get; set; }
+
+        public DateTime? WarrantyEndAt { get; set; }
+
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

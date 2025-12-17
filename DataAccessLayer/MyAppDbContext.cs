@@ -46,6 +46,7 @@ namespace DataAccessLayer
         public DbSet<Payment> Payments { get; set; }
         public DbSet<Part> Parts { get; set; }
         public DbSet<PartCategory> PartCategories { get; set; }
+        public DbSet<PartInventory> PartInventories { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<FeedBack> FeedBacks { get; set; }
         public DbSet<Quotation> Quotations { get; set; }
@@ -847,6 +848,44 @@ namespace DataAccessLayer
                 .WithMany(pc => pc.Parts)
                 .HasForeignKey(p => p.PartCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // VehicleModel-PartCategory relationship
+            modelBuilder.Entity<PartCategory>()
+                .HasOne(pc => pc.VehicleModel)
+                .WithMany(vm => vm.PartCategories)
+                .HasForeignKey(pc => pc.ModelId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // PartCategory unique constraint on (ModelId, CategoryName)
+            modelBuilder.Entity<PartCategory>()
+                .HasIndex(pc => new { pc.ModelId, pc.CategoryName })
+                .IsUnique()
+                .HasDatabaseName("UX_PartCategory_ModelId_CategoryName");
+
+            // PartInventory configuration
+            modelBuilder.Entity<PartInventory>(entity =>
+            {
+                entity.HasKey(e => e.PartInventoryId);
+                entity.Property(e => e.Stock).IsRequired();
+                entity.Property(e => e.CreatedAt).IsRequired();
+
+                // Part-PartInventory relationship
+                entity.HasOne(pi => pi.Part)
+                      .WithMany(p => p.PartInventories)
+                      .HasForeignKey(pi => pi.PartId)
+                      .OnDelete(DeleteBehavior.Cascade);
+
+                // Branch-PartInventory relationship
+                entity.HasOne(pi => pi.Branch)
+                      .WithMany(b => b.PartInventories)
+                      .HasForeignKey(pi => pi.BranchId)
+                      .OnDelete(DeleteBehavior.Restrict);
+
+                // Unique constraint on (PartId, BranchId)
+                entity.HasIndex(pi => new { pi.PartId, pi.BranchId })
+                      .IsUnique()
+                      .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+            });
 
             // Inspection-RepairOrder relationship
             modelBuilder.Entity<Inspection>()
