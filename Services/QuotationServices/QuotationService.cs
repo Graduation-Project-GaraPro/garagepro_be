@@ -325,6 +325,7 @@ namespace Services.QuotationServices
                                                     PartName = p.Part?.Name ?? "Unknown Part",
                                                     Price = p.Price,
                                                     Quantity = p.Quantity,
+                                                    WarrantyMonths = p?.Part?.WarrantyMonths,
                                                     IsSelected = p.IsSelected
                                                 }).ToList()
                                             }).ToList();

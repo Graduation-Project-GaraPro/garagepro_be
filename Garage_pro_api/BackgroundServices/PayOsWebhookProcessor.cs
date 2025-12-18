@@ -59,7 +59,7 @@ namespace Garage_pro_api.BackgroundServices
                         continue;
                     }
 
-                    // 2) Xử lý song song có kiểm soát
+                    
                     var tasks = new List<Task>(items.Count);
                     foreach (var item in items)
                     {

@@ -225,17 +225,17 @@ namespace Services.InspectionAndRepair
             Console.WriteLine($"[JobTechnicianService] Job {dto.JobId} status updated by technician: {oldStatus} → {dto.JobStatus}");
 
             // auto completed RO if all jobs are completed
-            if (dto.JobStatus == JobStatus.Completed)
-            {
-                try
-                {
-                    await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
-                }
-            }
+            //if (dto.JobStatus == JobStatus.Completed)
+            //{
+            //    try
+            //    {
+            //        await CheckAndCompleteRepairOrderAsync(job.RepairOrderId);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine($"[JobTechnicianService] Auto-complete RO failed: {ex.Message}");
+            //    }
+            //}
 
             return true;
         }
