@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BusinessObject;
+using BusinessObject.Branches;
 using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -41,7 +42,7 @@ namespace Repositories.ServiceRepositories
                  .Include(s => s.ServiceCategory)
                 .Include(s => s.BranchServices).ThenInclude(bs => bs.Branch)
                 
-                .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory).ThenInclude(p => p.Parts)
+                .Include(s => s.ServicePartCategories).ThenInclude(sp => sp.PartCategory)
                 .AsSplitQuery()
 
 
@@ -82,6 +83,16 @@ namespace Repositories.ServiceRepositories
         public void Delete(Service service)
         {
             _context.Services.Remove(service);
+        }
+
+        public void DeleteServiceCategoryRange(List<ServicePartCategory> servicePartCategory)
+        {
+            _context.ServicePartCategories.RemoveRange(servicePartCategory);
+        }
+
+        public void DeleteBranchServicesRange(List<BranchService> BranchServices)
+        {
+            _context.BranchServices.RemoveRange(BranchServices);
         }
 
         public async Task SaveChangesAsync()

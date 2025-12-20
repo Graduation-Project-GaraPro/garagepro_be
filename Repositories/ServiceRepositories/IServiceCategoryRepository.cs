@@ -18,6 +18,7 @@ namespace Repositories.ServiceRepositories
             Guid parentServiceCategoryId,
             int pageNumber,
             int pageSize,
+            Guid? vehicleId = null,
             Guid? childServiceCategoryId = null,
             string? searchTerm = null,
             Guid? branchId = null

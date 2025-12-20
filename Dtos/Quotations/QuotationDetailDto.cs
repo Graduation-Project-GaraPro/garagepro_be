@@ -84,6 +84,7 @@ namespace Dtos.Quotations
         public string PartName { get; set; }
         public decimal Price { get; set; }
         public decimal Quantity { get; set; }
+        public int? WarrantyMonths { get; set; }
         public bool IsSelected { get; set; }
     }
 }

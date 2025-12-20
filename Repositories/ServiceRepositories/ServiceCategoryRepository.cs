@@ -29,39 +29,41 @@ namespace Repositories.ServiceRepositories
                     .ThenInclude(c => c.ChildServiceCategories) // nếu muốn nhiều cấp
                 .ToListAsync();
         }
-        public async Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesByParentAsync(
-                 Guid parentServiceCategoryId,
-                 int pageNumber,
-                 int pageSize,
-                 Guid? childServiceCategoryId = null,
-                 string? searchTerm = null,
-                 Guid? branchId = null
-             )
-        {
-            var query = _context.ServiceCategories
-                // Include services đã filter theo Active + Branch
-                .Include(c => c.Services
-                    .Where(s =>
-                        s.IsActive == true &&
-                        (!branchId.HasValue ||
-                         s.BranchServices.Any(bs => bs.BranchId == branchId.Value))  
-                    )
-                )
-                    .ThenInclude(s => s.ServicePartCategories)
-                        .ThenInclude(spc => spc.PartCategory)
-                            .ThenInclude(p => p.Parts)
-                .Include(c => c.ChildServiceCategories)
-                .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId)
-                .AsSplitQuery()
-                .AsQueryable();
 
-            // 🔹 Lọc theo childServiceCategoryId
+
+        public async Task<(IEnumerable<ServiceCategory> Categories, int TotalCount)> GetCategoriesByParentAsync(
+                Guid parentServiceCategoryId,
+                int pageNumber,
+                int pageSize,
+                Guid? vehicleId = null,
+                Guid? childServiceCategoryId = null,
+                string? searchTerm = null,
+                Guid? branchId = null
+                )
+        {
+            Guid? modelId = null;
+
+            // 🔹 Lấy ModelId từ Vehicle (nếu có)
+            if (vehicleId.HasValue)
+            {
+                modelId = await _context.Vehicles
+                    .Where(v => v.VehicleId == vehicleId.Value)
+                    .Select(v => v.ModelId)
+                    .FirstOrDefaultAsync();
+            }
+
+            var query = _context.ServiceCategories
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Where(c => c.ParentServiceCategoryId == parentServiceCategoryId);
+
+            // 🔹 Filter theo child category
             if (childServiceCategoryId.HasValue)
             {
                 query = query.Where(c => c.ServiceCategoryId == childServiceCategoryId.Value);
             }
 
-            // 🔹 Tìm kiếm theo tên category / child / service
+            // 🔹 Search
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(c =>
@@ -69,19 +71,22 @@ namespace Repositories.ServiceRepositories
                     c.ChildServiceCategories.Any(cc => cc.CategoryName.Contains(searchTerm)) ||
                     c.Services.Any(s =>
                         s.ServiceName.Contains(searchTerm) &&
-                        s.IsActive == true &&
+                        s.IsActive &&
                         (!branchId.HasValue ||
-                         s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) // ✅ search theo branch
+                         s.BranchServices.Any(bs => bs.BranchId == branchId.Value))
                     )
                 );
             }
 
-            // 🔹 Chỉ giữ category có ÍT NHẤT 1 service thoả IsActive + Branch
+            // 🔹 Core filter: Category phải có ít nhất 1 Service hợp lệ
             query = query.Where(c =>
                 c.Services.Any(s =>
-                    s.IsActive == true &&
+                    s.IsActive &&
                     (!branchId.HasValue ||
-                     s.BranchServices.Any(bs => bs.BranchId == branchId.Value))
+                     s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) &&
+                    (!modelId.HasValue ||
+                     s.ServicePartCategories.Any(spc =>
+                         spc.PartCategory.ModelId == modelId.Value))
                 )
             );
 
@@ -91,10 +96,22 @@ namespace Repositories.ServiceRepositories
                 .OrderBy(c => c.CategoryName)
                 .Skip((pageNumber - 1) * pageSize)
                 .Take(pageSize)
+                .Include(c => c.Services.Where(s =>
+                    s.IsActive &&
+                    (!branchId.HasValue ||
+                     s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) &&
+                    (!modelId.HasValue ||
+                     s.ServicePartCategories.Any(spc =>
+                         spc.PartCategory.ModelId == modelId.Value))
+                ))
+                    .ThenInclude(s => s.ServicePartCategories)
+                        .ThenInclude(spc => spc.PartCategory)
+                .Include(c => c.ChildServiceCategories)
                 .ToListAsync();
 
             return (categories, totalCount);
         }
+
 
 
         public async Task<IEnumerable<ServiceCategory>> GetAllCategoriesWithFilterAsync(

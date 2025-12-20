@@ -16,7 +16,7 @@ namespace Dtos.Services
         [MaxLength(100, ErrorMessage = "Service name cannot exceed 100 characters"), MinLength(3)]
         public string ServiceName { get; set; } = string.Empty;
 
-        [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters"),MinLength(10)]
+        [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters"), MinLength(10)]
         public string Description { get; set; }
 
         [Range(1000, double.MaxValue, ErrorMessage = "Price must be greater than or equal to 1000")]
@@ -25,17 +25,16 @@ namespace Dtos.Services
         [Range(1, double.MaxValue, ErrorMessage = "Estimated duration must be greater than or equal to 1")]
         public decimal EstimatedDuration { get; set; }
 
-
         public bool IsActive { get; set; } = true;
         public bool IsAdvanced { get; set; } = false;
 
-        // ít nhất phải có 1 branch
         [MinLength(1, ErrorMessage = "At least one branch must be assigned")]
         public List<Guid> BranchIds { get; set; } = new();
 
-        // parts có thể để trống, nhưng nếu có thì validate số lượng
-        [MaxLength(50, ErrorMessage = "A service cannot have more than 50 parts")]
-        public List<Guid> PartCategoryIds { get; set; } = new();
-
+        // Nhận theo TÊN PartCategory (có thể để trống)
+        // Nếu bạn muốn chỉ cho tối đa 50 vẫn giữ được:
+        [MaxLength(50, ErrorMessage = "A service cannot have more than 50 part categories")]
+        public List<string> PartCategoryNames { get; set; } = new();
     }
+
 }

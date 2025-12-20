@@ -16,7 +16,7 @@ namespace Dtos.Services
         public Guid ServiceCategoryId { get; set; }
 
         [Required(ErrorMessage = "Service name is required")]
-        [MaxLength(100, ErrorMessage = "Service name cannot exceed 100 characters"),MinLength(3)]
+        [MaxLength(100, ErrorMessage = "Service name cannot exceed 100 characters"), MinLength(3)]
         public string ServiceName { get; set; } = string.Empty;
 
         [MaxLength(500, ErrorMessage = "Description cannot exceed 500 characters"), MinLength(10)]
@@ -34,7 +34,9 @@ namespace Dtos.Services
         [MinLength(1, ErrorMessage = "At least one branch must be assigned")]
         public List<Guid> BranchIds { get; set; } = new();
 
+        // ✅ đổi từ Ids sang Names
         [MaxLength(50, ErrorMessage = "A service cannot have more than 50 parts")]
-        public List<Guid> PartCategoryIds { get; set; } = new();
+        public List<string> PartCategoryNames { get; set; } = new();
     }
+
 }
