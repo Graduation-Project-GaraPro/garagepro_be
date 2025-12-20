@@ -330,6 +330,7 @@ namespace Garage_pro_api.DbInit
 
                     // ✅ Part Management
                     new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId,IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW_ADMIN", Name = "View Parts In Admin", Description = "Can view parts in admin page", CategoryId = partCatId,IsDefault=true },
 
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
@@ -447,7 +448,8 @@ namespace Garage_pro_api.DbInit
                                     // LOG MONITORING
                                     "LOG_VIEW" ,                                    
                                     // Security Policy
-                                    "POLICY_MANAGEMENT"
+                                    "POLICY_MANAGEMENT",
+                                    "PART_VIEW_ADMIN"
                                 }
                             },
                             {
@@ -2080,7 +2082,7 @@ namespace Garage_pro_api.DbInit
                             OpenTime = new TimeSpan(8, 0, 0),   // 08:00
                             CloseTime = new TimeSpan(17, 30, 0) // 17:30
                         });
-                    }
+                   }
 
                     // Gán staff
                     var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");

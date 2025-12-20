@@ -12,13 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251218014722_UpdateDB.Designer.cs
-    [Migration("20251218014722_UpdateDB")]
-    partial class UpdateDB
-========
-    [Migration("20251217124747_addnewLogicPartCategory")]
-    partial class addnewLogicPartCategory
->>>>>>>> ad5ddf63dfc79ad5163f6e72a4f2235df565cd5c:DataAccessLayer/Migrations/20251217124747_addnewLogicPartCategory.Designer.cs
+    [Migration("20251220144800_addnewLogicCategory")]
+    partial class addnewLogicCategory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1216,9 +1211,20 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("PartId");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("IX_Part_BranchId");
 
-                    b.HasIndex("PartCategoryId");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Part_Name");
+
+                    b.HasIndex("PartCategoryId")
+                        .HasDatabaseName("IX_Part_PartCategoryId");
+
+                    b.HasIndex("PartCategoryId", "BranchId")
+                        .HasDatabaseName("IX_Part_CategoryId_BranchId");
+
+                    b.HasIndex("PartCategoryId", "Name")
+                        .HasDatabaseName("IX_Part_CategoryId_Name");
 
                     b.ToTable("Parts");
                 });
@@ -2205,9 +2211,15 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("ServicePartCategoryId");
 
-                    b.HasIndex("PartCategoryId");
+                    b.HasIndex("PartCategoryId")
+                        .HasDatabaseName("IX_ServicePartCategory_PartCategoryId");
 
-                    b.HasIndex("ServiceId");
+                    b.HasIndex("ServiceId")
+                        .HasDatabaseName("IX_ServicePartCategory_ServiceId");
+
+                    b.HasIndex("ServiceId", "PartCategoryId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ServicePartCategory_ServiceId_PartCategoryId");
 
                     b.ToTable("ServicePartCategories");
                 });
