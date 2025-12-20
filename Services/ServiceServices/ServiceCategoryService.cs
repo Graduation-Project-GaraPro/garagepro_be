@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AutoMapper;
 using BusinessObject;
 using BusinessObject.Campaigns;
+using DataAccessLayer;
 using Dtos.Branches;
 using Dtos.Parts;
 using Dtos.Services;
@@ -17,11 +18,13 @@ namespace Services.ServiceServices
     public class ServiceCategoryService : IServiceCategoryService
     {
         private readonly IServiceCategoryRepository _repository;
+        private readonly MyAppDbContext _context;
         private readonly IMapper _mapper;
 
-        public ServiceCategoryService(IServiceCategoryRepository repository, IMapper mapper)
+        public ServiceCategoryService(IServiceCategoryRepository repository, IMapper mapper, MyAppDbContext context)
         {
             _repository = repository;
+            _context = context;
             _mapper = mapper;
         }
 
@@ -94,31 +97,33 @@ namespace Services.ServiceServices
              Guid parentServiceCategoryId,
              int pageNumber = 1,
              int pageSize = 10,
+             Guid? vehicleId = null,
              Guid? childServiceCategoryId = null,
              string? searchTerm = null,
-             Guid? branchId = null  
+             Guid? branchId = null
          )
         {
-            var (categories, totalCount) = await _repository.GetCategoriesByParentAsync(
-                parentServiceCategoryId,
-                pageNumber,
-                pageSize,
-                childServiceCategoryId,
-                searchTerm,
-                branchId 
-            );
+            var (categories, totalCount) =
+                await _repository.GetCategoriesByParentAsync(
+                    parentServiceCategoryId,
+                    pageNumber,
+                    pageSize,
+                    vehicleId,                 
+                    childServiceCategoryId,
+                    searchTerm,
+                    branchId
+                );
 
             var result = categories.Select(cat => new ServiceCategoryForBooking
             {
                 ServiceCategoryId = cat.ServiceCategoryId,
                 ParentServiceCategoryId = cat.ParentServiceCategoryId,
                 CategoryName = cat.CategoryName,
-                
+
                 Services = cat.Services.Select(service => new ServiceDtoForBooking
                 {
                     ServiceId = service.ServiceId,
                     ServiceCategoryId = service.ServiceCategoryId,
-
                     ServiceName = service.ServiceName,
                     Description = service.Description,
                     Price = service.Price,
@@ -128,22 +133,24 @@ namespace Services.ServiceServices
                     IsAdvanced = service.IsAdvanced,
                     CreatedAt = service.CreatedAt,
                     UpdatedAt = service.UpdatedAt,
+
                     ServiceCategory = new GetCategoryForServiceDto
                     {
                         ServiceCategoryId = service.ServiceCategory.ServiceCategoryId,
                         CategoryName = service.ServiceCategory.CategoryName
                     }
                 }).ToList()
-            }).ToList(); 
+            }).ToList();
 
             return new
             {
-                TotalCount = totalCount, // đã là số category còn service
+                TotalCount = totalCount,
                 PageNumber = pageNumber,
                 PageSize = pageSize,
                 Data = result
             };
         }
+
 
         public async Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesAsync()
         {
@@ -179,6 +186,99 @@ namespace Services.ServiceServices
                 }).ToList() ?? new List<ServiceCategoryDto>()
             }).ToList();
         }
+
+
+
+        public async Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesOptimizedAsync(
+         Guid? vehicleId = null,
+         Guid? branchId = null)
+        {
+            Guid? vehicleModelId = null;
+
+            if (vehicleId.HasValue)
+            {
+                vehicleModelId = await _context.Vehicles
+                    .Where(v => v.VehicleId == vehicleId.Value)
+                    .Select(v => v.ModelId)
+                    .FirstOrDefaultAsync();
+            }
+
+            var query = _context.ServiceCategories
+                .Where(c => c.ParentServiceCategoryId == null) // Chỉ lấy parent
+                .Select(cat => new ServiceCategoryDto
+                {
+                    ServiceCategoryId = cat.ServiceCategoryId,
+                    CategoryName = cat.CategoryName,
+                    ParentServiceCategoryId = cat.ParentServiceCategoryId,
+                    Description = cat.Description,
+                    IsActive = cat.IsActive,
+                    CreatedAt = cat.CreatedAt,
+                    UpdatedAt = cat.UpdatedAt,
+
+                    // Services hợp lệ
+                    Services = cat.Services
+                        .Where(s =>
+                            s.IsActive &&
+                            (!branchId.HasValue || s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) &&
+                            (!vehicleModelId.HasValue || s.ServicePartCategories.Any(spc => spc.PartCategory.ModelId == vehicleModelId))
+                        )
+                        .Select(s => new Dtos.Services.ServiceDto
+                        {
+                            ServiceId = s.ServiceId,
+                            ServiceCategoryId = s.ServiceCategoryId,
+                            ServiceName = s.ServiceName,
+                            Description = s.Description,
+                            Price = s.Price,
+                            IsActive = s.IsActive
+                        })
+                        .ToList(),
+
+                    // Child categories hợp lệ
+                    ChildCategories = cat.ChildServiceCategories
+                        .Select(child => new
+                        {
+                            Child = child,
+                            Services = child.Services
+                                .Where(s =>
+                                    s.IsActive &&
+                                    (!branchId.HasValue || s.BranchServices.Any(bs => bs.BranchId == branchId.Value)) &&
+                                    (!vehicleModelId.HasValue || s.ServicePartCategories.Any(spc => spc.PartCategory.ModelId == vehicleModelId))
+                                )
+                                .Select(s => new Dtos.Services.ServiceDto
+                                {
+                                    ServiceId = s.ServiceId,
+                                    ServiceCategoryId = s.ServiceCategoryId,
+                                    ServiceName = s.ServiceName,
+                                    Description = s.Description,
+                                    Price = s.Price,
+                                    IsActive = s.IsActive
+                                })
+                                .ToList()
+                        })
+                        .Where(x => x.Services.Any()) // Chỉ giữ child có ít nhất 1 service
+                        .Select(x => new ServiceCategoryDto
+                        {
+                            ServiceCategoryId = x.Child.ServiceCategoryId,
+                            CategoryName = x.Child.CategoryName,
+                            ParentServiceCategoryId = x.Child.ParentServiceCategoryId,
+                            Description = x.Child.Description,
+                            IsActive = x.Child.IsActive,
+                            CreatedAt = x.Child.CreatedAt,
+                            UpdatedAt = x.Child.UpdatedAt,
+                            Services = x.Services
+                        })
+                        .ToList()
+                })
+                // Chỉ giữ parent có ít nhất 1 service hoặc child category hợp lệ
+                .Where(cat => cat.Services.Any() || cat.ChildCategories.Any());
+
+            return await query.ToListAsync();
+        }
+
+
+
+
+
 
 
         // Hàm helper tính giá sau ưu đãi

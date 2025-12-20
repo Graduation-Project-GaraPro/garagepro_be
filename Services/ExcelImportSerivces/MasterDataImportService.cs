@@ -1,29 +1,29 @@
-﻿using System;
+﻿using BusinessObject;
+using BusinessObject.Authentication;
+using BusinessObject.Branches;
+using BusinessObject.Enums;
+using BusinessObject.InspectionAndRepair;
+using BusinessObject.ResultExcelReads;
+using BusinessObject.Roles;
+using BusinessObject.Vehicles;
+using DataAccessLayer;
+using Google;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using OfficeOpenXml;
+using Services.EmailSenders;
+using Services.GeocodingServices;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Globalization;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using BusinessObject.ResultExcelReads;
-using BusinessObject;
-using Google;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
-using DataAccessLayer;
-
-using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
-using System.Globalization;
-using BusinessObject.Branches;
-using BusinessObject.Enums;
-using BusinessObject.Authentication;
-using Microsoft.AspNetCore.Identity;
-using BusinessObject.Roles;
-using BusinessObject.InspectionAndRepair;
-using Services.GeocodingServices;
 using System.Text.RegularExpressions;
-using Services.EmailSenders;
+using System.Threading.Tasks;
 
 
 namespace Services.ExcelImportSerivces
@@ -48,6 +48,12 @@ namespace Services.ExcelImportSerivces
         private Dictionary<string, OperatingHour> _operatingHourCache = null!;
         private Dictionary<string, ApplicationUser> _staffCache = null!;
 
+        private Dictionary<string, VehicleBrand> _brandCache = null!;
+        private Dictionary<string, VehicleModel> _modelCache = null!;
+        private Dictionary<string, List<PartCategory>> _partCategoriesByNameCache = null!;
+        private Dictionary<string, PartInventory> _partInventoryCache = null!;
+
+        private Dictionary<string, PartInventory> _inventoryCache;
 
         private static readonly Regex EmailRegex = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.Compiled);
 
@@ -95,15 +101,15 @@ namespace Services.ExcelImportSerivces
                 }
                 var staffWelcomeEmails = new List<StaffWelcomeEmailInfo>();
 
-                await ImportBranchesAsync(package);
-                await ImportOperatingHoursAsync(package);
-                await ImportStaffAsync(package, staffWelcomeEmails);
+                //await ImportBranchesAsync(package);
+                //await ImportOperatingHoursAsync(package);
+                //await ImportStaffAsync(package, staffWelcomeEmails);
                 await ImportParentCategoriesAsync(package);
                 await ImportServiceCategoriesAsync(package);
                 await ImportServicesAsync(package);
                 await ImportPartCategoriesAsync(package);
                 await ImportPartsAsync(package);
-
+                //await ImportPartInventoryAsync(package);
 
                 if (_errors.Any())
                 {
@@ -119,7 +125,7 @@ namespace Services.ExcelImportSerivces
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Lỗi khi import Excel master data");
+                _logger.LogError(ex, "Error When import Excel master data");
                 return ImportResult.Fail($"Import Excel Fail: {ex.Message}");
             }
         }
@@ -138,6 +144,14 @@ namespace Services.ExcelImportSerivces
             var branches = await _context.Branches.ToListAsync();
             var operatingHours = await _context.OperatingHours.ToListAsync();
             var users = await _userManager.Users.ToListAsync();
+
+            var brands = await _context.VehicleBrands.ToListAsync();
+            var models = await _context.VehicleModels.ToListAsync();
+
+            
+            var partInventories = await _context.PartInventories.ToListAsync();
+
+
             _branchCache = branches
             .GroupBy(b => Normalize(b.BranchName))
             .ToDictionary(g => g.Key, g => g.First());
@@ -159,13 +173,39 @@ namespace Services.ExcelImportSerivces
             _branchServiceCache = branchServices
                 .GroupBy(bs => GetBranchServiceKey(bs.BranchId, bs.ServiceId))
                 .ToDictionary(g => g.Key, g => g.First());
-            _partCategoryCache = partCategories
-                .GroupBy(pc => Normalize(pc.CategoryName))
+
+
+            _brandCache = brands
+                .GroupBy(b => GetBrandKey(b.BrandName))
                 .ToDictionary(g => g.Key, g => g.First());
 
-            _partCache = parts
-                .GroupBy(p => Normalize(p.Name))
+            _modelCache = models
+                .GroupBy(m => GetModelKey(m.BrandID, m.ModelName))
                 .ToDictionary(g => g.Key, g => g.First());
+
+
+            _partCategoryCache = partCategories
+                .GroupBy(pc => GetPartCategoryKey(pc.ModelId, pc.CategoryName))
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // lookup theo CategoryName để map vào Service theo tên
+            _partCategoriesByNameCache = partCategories
+                .GroupBy(pc => Normalize(pc.CategoryName))
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Part cache theo (PartCategoryId + PartCode/PartName)
+            _partCache = parts
+                .GroupBy(p => GetPartKey(p.PartCategoryId,  p.Name))
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // PartInventory cache theo (PartId + BranchId)
+            _inventoryCache = await _context.PartInventories
+                .AsNoTracking()
+                .Include(pi=>pi.Part)
+                .ToDictionaryAsync(
+                    i => $"{Normalize(i.Part.Name)}|{i.BranchId:N}",
+                    i => i
+                );
 
             _spcCache = servicePartCats
                 .GroupBy(x => GetSpcKey(x.ServiceId, x.PartCategoryId))
@@ -1583,211 +1623,102 @@ namespace Services.ExcelImportSerivces
 
             int rowCount = ws.Dimension.Rows;
 
-            // === Pre-scan duplicate PartCategoryName ===
-            var partCategoryNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var allModels = _modelCache.Values.ToList();
 
             for (int row = 2; row <= rowCount; row++)
             {
-                if (IsRowEmpty(ws, row, 3))
-                    continue;
+                if (IsRowEmpty(ws, row, 3)) continue;
 
-                var nameScan = ws.Cells[row, 1].Text?.Trim();
-                if (string.IsNullOrWhiteSpace(nameScan))
-                    continue;
+                var categoryName = ws.Cells[row, 1].Text?.Trim();
+                var description = ws.Cells[row, 2].Text?.Trim();
+                var serviceName = ws.Cells[row, 3].Text?.Trim();
 
-                var keyScan = Normalize(nameScan);
-                if (partCategoryNameCounts.ContainsKey(keyScan))
-                    partCategoryNameCounts[keyScan]++;
-                else
-                    partCategoryNameCounts[keyScan] = 1;
-            }
-
-            var duplicatePartCategoryNames = new HashSet<string>(
-                partCategoryNameCounts.Where(x => x.Value > 1).Select(x => x.Key),
-                StringComparer.OrdinalIgnoreCase
-            );
-
-            // === Main import ===
-            for (int row = 2; row <= rowCount; row++)
-            {
-                if (IsRowEmpty(ws, row, 3))
-                    continue;
-
-                bool hasError = false;
-
-                var partCategoryName = ws.Cells[row, 1].Text?.Trim(); // A
-                var description = ws.Cells[row, 2].Text?.Trim(); // B
-                var serviceName = ws.Cells[row, 3].Text?.Trim(); // C
-
-                // ===== Required fields =====
-                if (string.IsNullOrWhiteSpace(partCategoryName))
+                if (string.IsNullOrWhiteSpace(categoryName))
                 {
-                    AddError(
-                        sheetName,
-                        "Part Category Name is required.",
-                        row,
-                        "A",
-                        "PART_CATEGORY_NAME_REQUIRED"
-                    );
-                    hasError = true;
-                }
-
-                if (string.IsNullOrWhiteSpace(description))
-                {
-                    AddError(
-                        sheetName,
-                        "Description is required.",
-                        row,
-                        "B",
-                        "PART_CATEGORY_DESCRIPTION_REQUIRED"
-                    );
-                    hasError = true;
+                    AddError(sheetName, "PartCategoryName is required.", row, "A", "PC_NAME_REQUIRED");
+                    continue;
                 }
 
                 if (string.IsNullOrWhiteSpace(serviceName))
                 {
-                    AddError(
-                        sheetName,
-                        "Service Name is required.",
-                        row,
-                        "C",
-                        "PART_CATEGORY_SERVICE_NAME_REQUIRED"
-                    );
-                    hasError = true;
-                }
-
-                if (hasError)
+                    AddError(sheetName, "ServiceName is required.", row, "C", "PC_SERVICE_REQUIRED");
                     continue;
-
-                var pcKey = Normalize(partCategoryName!);
-
-                // Duplicate PartCategoryName in sheet
-                if (duplicatePartCategoryNames.Contains(pcKey))
-                {
-                    AddError(
-                        sheetName,
-                        $"Duplicate part category name '{partCategoryName}' found in the sheet.",
-                        row,
-                        "A",
-                        "PART_CATEGORY_DUPLICATE_NAME"
-                    );
-                    hasError = true;
                 }
 
-                // Check ServiceName exists in system
-                Service? svc = null;
-                Guid? serviceId = null;
-
-                if (!string.IsNullOrWhiteSpace(serviceName))
+                
+                var sKey = Normalize(serviceName);
+                if (!_serviceCache.TryGetValue(sKey, out var service))
                 {
-                    var sKey = Normalize(serviceName);
-                    if (_serviceCache.TryGetValue(sKey, out svc))
-                    {
-                        serviceId = svc.ServiceId;
-                    }
-                    else
-                    {
-                        AddError(
-                            sheetName,
-                            $"Service '{serviceName}' does not exist in the system but is referenced by Part Category '{partCategoryName}'.",
-                            row,
-                            "C",
-                            "PART_CATEGORY_SERVICE_NOT_FOUND"
-                        );
-                        hasError = true;
-                    }
-                }
-
-                if (hasError)
+                    AddError(sheetName,
+                        $"Service '{serviceName}' not found.",
+                        row, "C", "PC_SERVICE_NOT_FOUND");
                     continue;
-
-                // Create / update PartCategory
-                if (!_partCategoryCache.TryGetValue(pcKey, out var partCategory))
-                {
-                    partCategory = new PartCategory
-                    {
-                        LaborCategoryId = Guid.NewGuid(),
-                        CategoryName = partCategoryName!,
-                        Description = description,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    _context.PartCategories.Add(partCategory);
-                    _partCategoryCache[pcKey] = partCategory;
-                }
-                else
-                {
-                    partCategory.Description = description ?? partCategory.Description;
-                    partCategory.UpdatedAt = DateTime.UtcNow;
-                    _context.PartCategories.Update(partCategory);
                 }
 
-                // Link with Service (ServicePartCategory) – only if service exists
-                if (svc != null && serviceId.HasValue)
+                
+                if (!service.IsAdvanced)
                 {
-                    // Current PartCategories of this Service
-                    var existingPartCategoryIds = _spcCache.Values
-                        .Where(x => x.ServiceId == serviceId.Value)
-                        .Select(x => x.PartCategoryId)
-                        .Distinct()
+                    var oldSpcs = _spcCache.Values
+                        .Where(x => x.ServiceId == service.ServiceId)
                         .ToList();
 
-                    var currentCount = existingPartCategoryIds.Count;
-
-                    // Rule: if IsAdvanced = false => only one PartCategory is allowed
-                    if (!svc.IsAdvanced && currentCount >= 1)
+                    foreach (var old in oldSpcs)
                     {
-                        // If current PartCategory already linked -> ensure link exists in cache/db, but do not create duplicate
-                        if (existingPartCategoryIds.Contains(partCategory.LaborCategoryId))
-                        {
-                            var spcKeyExisting = GetSpcKey(serviceId.Value, partCategory.LaborCategoryId);
-                            if (!_spcCache.ContainsKey(spcKeyExisting))
-                            {
-                                var spcExisting = new ServicePartCategory
-                                {
-                                    ServicePartCategoryId = Guid.NewGuid(),
-                                    ServiceId = serviceId.Value,
-                                    PartCategoryId = partCategory.LaborCategoryId,
-                                    CreatedAt = DateTime.UtcNow
-                                };
-                                _context.ServicePartCategories.Add(spcExisting);
-                                _spcCache[spcKeyExisting] = spcExisting;
-                            }
-
-                            // Do not report error, do not create new record
-                            continue;
-                        }
-
-                        // Non-advanced service already has another PartCategory linked
-                        AddError(
-                            sheetName,
-                            $"Service '{serviceName}' has IsAdvanced = false and can only be linked to one Part Category. Existing Part Category cannot be replaced by '{partCategoryName}'.",
-                            row,
-                            "C",
-                            "PART_CATEGORY_TOO_MANY_FOR_NON_ADVANCED_SERVICE"
-                        );
-
-                        continue;
+                        _context.ServicePartCategories.Remove(old);
+                        _spcCache.Remove(GetSpcKey(old.ServiceId, old.PartCategoryId));
                     }
+                }
 
-                    var spcKey = GetSpcKey(serviceId.Value, partCategory.LaborCategoryId);
+                
+                foreach (var model in allModels)
+                {
+                    var pcKey = GetPartCategoryKey(model.ModelID, categoryName);
 
-                    if (!_spcCache.ContainsKey(spcKey))
+                    if (!_partCategoryCache.TryGetValue(pcKey, out var partCategory))
                     {
-                        var spc = new ServicePartCategory
+                        partCategory = new PartCategory
                         {
-                            ServicePartCategoryId = Guid.NewGuid(),
-                            ServiceId = serviceId.Value,
-                            PartCategoryId = partCategory.LaborCategoryId,
+                            LaborCategoryId = Guid.NewGuid(),
+                            ModelId = model.ModelID,
+                            CategoryName = categoryName,
+                            Description = description,
                             CreatedAt = DateTime.UtcNow
                         };
 
-                        _context.ServicePartCategories.Add(spc);
-                        _spcCache[spcKey] = spc;
+                        _context.PartCategories.Add(partCategory);
+                        _partCategoryCache[pcKey] = partCategory;
                     }
+                    else
+                    {
+                        // Update description nếu có
+                        if (!string.IsNullOrWhiteSpace(description))
+                        {
+                            partCategory.Description = description;
+                            partCategory.UpdatedAt = DateTime.UtcNow;
+                        }
+                    }
+
+                    // ===== MAP Service ↔ PartCategory =====
+                    var spcKey = GetSpcKey(service.ServiceId, partCategory.LaborCategoryId);
+                    if (_spcCache.ContainsKey(spcKey)) continue;
+
+                    var spc = new ServicePartCategory
+                    {
+                        ServicePartCategoryId = Guid.NewGuid(),
+                        ServiceId = service.ServiceId,
+                        PartCategoryId = partCategory.LaborCategoryId,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    _context.ServicePartCategories.Add(spc);
+                    _spcCache[spcKey] = spc;
                 }
             }
         }
+
+
+
+
 
 
         private async Task ImportPartsAsync(ExcelPackage package)
@@ -1797,116 +1728,167 @@ namespace Services.ExcelImportSerivces
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
+            int colCount = ws.Dimension.Columns;
+
+            var excelPartDuplicateCheck = new HashSet<string>();
 
             for (int row = 2; row <= rowCount; row++)
             {
-                // Bỏ qua dòng trống hoàn toàn
-                if (IsRowEmpty(ws, row, 3))
-                    continue;
+                if (IsRowEmpty(ws, row, 6)) continue;
 
                 bool hasError = false;
 
-                var partCategoryName = ws.Cells[row, 1].Text?.Trim(); // A
-                var partName = ws.Cells[row, 2].Text?.Trim(); // B
-                var priceText = ws.Cells[row, 3].Text?.Trim(); // C
+                var brandName = ws.Cells[row, 1].Text?.Trim();
+                var modelName = ws.Cells[row, 2].Text?.Trim();
+                var categoryName = ws.Cells[row, 3].Text?.Trim();
+                var partName = ws.Cells[row, 4].Text?.Trim();
+                var priceText = ws.Cells[row, 5].Text?.Trim();
+                var warrantyText = ws.Cells[row, 6].Text?.Trim();
 
-                // ===== Required fields =====
-                if (string.IsNullOrWhiteSpace(partCategoryName))
+                // ===== Required validation =====
+                if (string.IsNullOrWhiteSpace(brandName)) { AddError(sheetName, "BrandName is required", row, "A", "REQ_BRAND"); hasError = true; }
+                if (string.IsNullOrWhiteSpace(modelName)) { AddError(sheetName, "ModelName is required", row, "B", "REQ_MODEL"); hasError = true; }
+                if (string.IsNullOrWhiteSpace(categoryName)) { AddError(sheetName, "PartCategoryName is required", row, "C", "REQ_CATEGORY"); hasError = true; }
+                if (string.IsNullOrWhiteSpace(partName)) { AddError(sheetName, "PartName is required", row, "D", "REQ_PART"); hasError = true; }
+                if (string.IsNullOrWhiteSpace(priceText)) { AddError(sheetName, "Price is required", row, "E", "REQ_PRICE"); hasError = true; }
+
+                if (hasError) continue;
+
+                // ===== Duplicate in Excel =====
+                var excelDupKey = $"{Normalize(brandName)}|{Normalize(modelName)}|{Normalize(categoryName)}|{Normalize(partName)}";
+                if (!excelPartDuplicateCheck.Add(excelDupKey))
                 {
-                    AddError(
-                        sheetName,
-                        "Part Category Name is required.",
-                        row,
-                        "A",
-                        "PART_CATEGORY_NAME_REQUIRED"
-                    );
-                    hasError = true;
-                }
-
-                if (string.IsNullOrWhiteSpace(partName))
-                {
-                    AddError(
-                        sheetName,
-                        "Part Name is required.",
-                        row,
-                        "B",
-                        "PART_NAME_REQUIRED"
-                    );
-                    hasError = true;
-                }
-
-                if (string.IsNullOrWhiteSpace(priceText))
-                {
-                    AddError(
-                        sheetName,
-                        "Price is required.",
-                        row,
-                        "C",
-                        "PART_PRICE_REQUIRED"
-                    );
-                    hasError = true;
-                }
-
-                if (hasError)
+                    AddError(sheetName,
+                        $"Duplicate PartName '{partName}' in same Category within Excel.",
+                        row, "D", "DUP_PART_EXCEL");
                     continue;
+                }
 
                 // ===== Parse price =====
                 if (!decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
                 {
-                    AddError(
-                        sheetName,
-                        $"Invalid number format for 'Price': '{priceText}'.",
-                        row,
-                        "C",
-                        "PART_INVALID_PRICE"
-                    );
+                    AddError(sheetName, $"Invalid price '{priceText}'", row, "E", "INVALID_PRICE");
                     continue;
                 }
 
-                // ===== Check PartCategory exists in system =====
-                PartCategory? partCategory = null;
-                var pcKey = Normalize(partCategoryName!);
-
-                if (!_partCategoryCache.TryGetValue(pcKey, out partCategory))
+                int? warrantyMonths = null;
+                if (!string.IsNullOrWhiteSpace(warrantyText))
                 {
-                    AddError(
-                        sheetName,
-                        $"Part Category '{partCategoryName}' does not exist in the system.",
-                        row,
-                        "A",
-                        "PART_CATEGORY_NOT_FOUND"
-                    );
+                    if (!int.TryParse(warrantyText, out var wm))
+                    {
+                        AddError(sheetName, $"Invalid WarrantyMonths '{warrantyText}'", row, "F", "INVALID_WARRANTY");
+                        continue;
+                    }
+                    warrantyMonths = wm;
+                }
+
+                // ===== Brand =====
+                var bKey = Normalize(brandName);
+                if (!_brandCache.TryGetValue(bKey, out var brand))
+                {
+                    AddError(sheetName, $"Brand '{brandName}' not found", row, "A", "BRAND_NOT_FOUND");
                     continue;
                 }
 
-                // ===== Create / Update Part =====
-                var pKey = Normalize(partName!);
+                // ===== Model =====
+                var mKey = GetModelKey(brand.BrandID, Normalize(modelName));
+                if (!_modelCache.TryGetValue(mKey, out var model))
+                {
+                    AddError(sheetName, $"Model '{modelName}' not found", row, "B", "MODEL_NOT_FOUND");
+                    continue;
+                }
 
+                // ===== Category =====
+                var pcKey = $"{model.ModelID:N}|{Normalize(categoryName)}";
+                if (!_partCategoryCache.TryGetValue(pcKey, out var category))
+                {
+                    AddError(sheetName, $"PartCategory '{categoryName}' not found", row, "C", "CATEGORY_NOT_FOUND");
+                    continue;
+                }
+                
+                // ===== Part =====
+                var pKey = $"{category.LaborCategoryId:N}|{Normalize(partName)}";
                 if (!_partCache.TryGetValue(pKey, out var part))
                 {
                     part = new Part
                     {
                         PartId = Guid.NewGuid(),
-                        PartCategoryId = partCategory.LaborCategoryId,
-                        Name = partName!,
+                        PartCategoryId = category.LaborCategoryId,
+                        Name = partName,
                         Price = price,
+                        WarrantyMonths = warrantyMonths,
                         CreatedAt = DateTime.UtcNow
                     };
-
                     _context.Parts.Add(part);
                     _partCache[pKey] = part;
                 }
                 else
                 {
-                    part.PartCategoryId = partCategory.LaborCategoryId;
                     part.Price = price;
+                    part.WarrantyMonths = warrantyMonths;
                     part.UpdatedAt = DateTime.UtcNow;
-
                     _context.Parts.Update(part);
+
+                }
+
+                // ===== Inventory (dynamic BranchName_X + Stock_X) =====
+                for (int col = 7; col <= colCount; col += 2)
+                {
+                    var branchName = ws.Cells[row, col].Text?.Trim();
+                    if (string.IsNullOrWhiteSpace(branchName)) continue;
+
+                    var stockText = ws.Cells[row, col + 1].Text?.Trim();
+                    if (!int.TryParse(stockText, out var stock))
+                    {
+                        AddError(sheetName, $"Invalid stock '{stockText}'", row, ws.Cells[1, col + 1].Address, "INVALID_STOCK");
+                        continue;
+                    }
+
+                    var brKey = Normalize(branchName);
+                    if (!_branchCache.TryGetValue(brKey, out var branch))
+                    {
+                        AddError(sheetName, $"Branch '{branchName}' not found", row, ws.Cells[1, col].Address, "BRANCH_NOT_FOUND");
+                        continue;
+                    }
+
+                    var invKey = $"{Normalize(partName)}|{branch.BranchId:N}";
+
+                    if (!_inventoryCache.TryGetValue(invKey, out var inventory))
+                    {
+                        
+                        inventory = new PartInventory
+                        {
+                            PartInventoryId = Guid.NewGuid(),
+                            PartId = part.PartId,
+                            BranchId = branch.BranchId,
+                            Stock = stock,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.PartInventories.Add(inventory);
+                        _inventoryCache[invKey] = inventory;
+                    }
+                    else
+                    {
+                        
+                        inventory.Stock = stock;
+                        inventory.UpdatedAt = DateTime.UtcNow;
+
+                        _context.PartInventories.Update(inventory);
+                    }
+
+
+
+                   
                 }
             }
         }
 
+
+
+
+
+        
 
 
         private List<ImportErrorDetail> ValidateTemplate(ExcelPackage package)
@@ -1943,13 +1925,14 @@ namespace Services.ExcelImportSerivces
                         "EstimatedDuration","IsAdvanced","BranchName"
                     },
                 ["PartCategory"] = new[]
-                            {
-                        "PartCategoryName","Description","ServiceName"
-                    },
+                {
+                    "PartCategoryName","Description","ServiceName"
+                },
+
                 ["Part"] = new[]
-                            {
-                        "PartCategoryName","PartName","Price"
-                    }
+                {
+                    "BrandName","ModelName","PartCategoryName","PartName","Price","WarrantyMonths"
+                }
             };
 
             foreach (var kv in requiredSheets)
@@ -2048,6 +2031,23 @@ namespace Services.ExcelImportSerivces
         private static string GetOperatingHourKey(Guid branchId, DayOfWeekEnum day)
          => $"{branchId:N}|{(int)day}";
 
+        private static string GetBranchKey(string branchName)
+            => Normalize(branchName);
+        private static string GetBrandKey(string brandName)
+        => Normalize(brandName);
+
+        private static string GetModelKey(Guid brandId, string modelName)
+            => $"{brandId:N}|{Normalize(modelName)}";
+
+        private static string GetPartCategoryKey(Guid modelId, string categoryName)
+            => $"{modelId:N}|{Normalize(categoryName)}";
+
+        // part key ưu tiên PartCode, fallback PartName
+        private static string GetPartKey(Guid partCategoryId,  string partName)
+            => $"{partCategoryId:N}|{Normalize(partName)}";
+
+        private static string GetPartInventoryKey(Guid partId, Guid branchId)
+            => $"{partId:N}|{branchId:N}";
 
         private async Task SendStaffWelcomeEmailsAsync(IEnumerable<StaffWelcomeEmailInfo> staffEmails)
         {

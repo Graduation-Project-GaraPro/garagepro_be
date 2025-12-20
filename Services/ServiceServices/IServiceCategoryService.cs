@@ -21,6 +21,8 @@ namespace Services.ServiceServices
             
             );
 
+        Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesOptimizedAsync(Guid? vehicleId = null, Guid? branchId = null);
+
         Task<IEnumerable<ServiceCategoryDto>> GetParentCategoriesForFilterAsync();
 
         Task<IEnumerable<ServiceCategoryDto>> GetAllCategoriesWithFilterAsync(
@@ -33,6 +35,7 @@ namespace Services.ServiceServices
             Guid parentServiceCategoryId,
             int pageNumber = 1,
             int pageSize = 10,
+            Guid? vehicleId = null,
             Guid? childServiceCategoryId = null,
             string? searchTerm = null
             , Guid? branchId = null

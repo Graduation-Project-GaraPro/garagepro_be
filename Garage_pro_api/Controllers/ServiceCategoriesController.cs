@@ -62,25 +62,52 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+
+        [HttpGet("parentsByVehicleId")]
+        public async Task<ActionResult<IEnumerable<ServiceCategoryDto>>> GetParentCategories([FromQuery] Guid vehicleId, Guid? branchId = null)
+        {
+            try
+            {
+                var categories = await _service.GetParentCategoriesOptimizedAsync(vehicleId, branchId);
+
+                if (categories == null || !categories.Any())
+                    return NotFound(new { Message = "No parent service categories found." });
+
+                return Ok(categories);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An unexpected error occurred while retrieving parent categories.",
+                    Details = ex.Message
+                });
+            }
+        }
+
         [HttpGet("fromParent/{parentId}")]
         public async Task<ActionResult<object>> GetAllFromParentCategory(
             Guid parentId,
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
+            [FromQuery] Guid? vehicleId = null,              
             [FromQuery] Guid? childServiceCategoryId = null,
             [FromQuery] string? searchTerm = null,
-            [FromQuery] Guid? branchId = null)
+            [FromQuery] Guid? branchId = null
+        )
         {
             try
             {
-                var result = await _service.GetAllServiceCategoryFromParentCategoryAsync(
-                    parentId,
-                    pageNumber,
-                    pageSize,
-                    childServiceCategoryId,
-                    searchTerm,
-                    branchId
-                );
+                var result =
+                    await _service.GetAllServiceCategoryFromParentCategoryAsync(
+                        parentId,
+                        pageNumber,
+                        pageSize,
+                        vehicleId,              
+                        childServiceCategoryId,
+                        searchTerm,
+                        branchId
+                    );
 
                 return Ok(result);
             }
@@ -97,6 +124,7 @@ namespace Garage_pro_api.Controllers
                 });
             }
         }
+
         [HttpGet("filter")]
         public async Task<IActionResult> GetFilteredCategories(
            [FromQuery] Guid? parentServiceCategoryId,

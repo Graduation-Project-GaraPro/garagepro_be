@@ -12,8 +12,13 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251218014722_UpdateDB.Designer.cs
     [Migration("20251218014722_UpdateDB")]
     partial class UpdateDB
+========
+    [Migration("20251217124747_addnewLogicPartCategory")]
+    partial class addnewLogicPartCategory
+>>>>>>>> ad5ddf63dfc79ad5163f6e72a4f2235df565cd5c:DataAccessLayer/Migrations/20251217124747_addnewLogicPartCategory.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

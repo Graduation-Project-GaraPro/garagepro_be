@@ -6,7 +6,11 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251218014722_UpdateDB.cs
     public partial class UpdateDB : Migration
+========
+    public partial class addnewLogicPartCategory : Migration
+>>>>>>>> ad5ddf63dfc79ad5163f6e72a4f2235df565cd5c:DataAccessLayer/Migrations/20251217124747_addnewLogicPartCategory.cs
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

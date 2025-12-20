@@ -31,10 +31,18 @@ namespace Repositories.PartRepositories
                 .ToListAsync();
         }
 
+        public IQueryable<PartCategory> Query()
+        {
+            return _context.PartCategories;
+        }
+
         public async Task<IEnumerable<PartCategory>> GetAllWithPartsAsync()
         {
             return await _context.PartCategories
-                .Include(pc => pc.Parts)
+                .GroupBy(pc => pc.CategoryName)
+                .Select(g => g.OrderBy(pc => pc.LaborCategoryId).First())   
+                //.Include(pc => pc.Parts)
+                .AsSplitQuery()
                 .ToListAsync();
         }
 
