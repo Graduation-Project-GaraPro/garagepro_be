@@ -22,7 +22,8 @@ namespace Repositories
 
         Task<List<ApplicationUser>> GetManagersWithoutBranchAsync();
         Task<List<ApplicationUser>> GetTechniciansWithoutBranchAsync();
-        
+        Task<ApplicationUser?> GetByTechnicianId(string technicianId);
+
         // New method to get technicians by branch
         Task<List<ApplicationUser>> GetTechniciansByBranchAsync(Guid branchId);
         

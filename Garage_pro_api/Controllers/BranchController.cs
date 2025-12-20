@@ -122,7 +122,7 @@ namespace Garage_pro_api.Controllers
             }
         }
         
-        [Authorize(Policy = "BRANCH_VIEW")]
+       // [Authorize(Policy = "BRANCH_VIEW")]
 
         // GET: api/branch/{id}
         [HttpGet("{id}")]
