@@ -91,21 +91,31 @@ namespace Services.RepairHistory
                         TotalAmount = job.TotalAmount,
                         Deadline = job.Deadline,
                         Note = job.Note,
+                        StartTime = job.Repair?.StartTime,
+                        EndTime = job.Repair?.EndTime,
                         JobParts = job.JobParts.Select(p => new Dtos.RepairHistory.JobPartDto
                         {
                             PartName = p.Part.Name,
                             Quantity = p.Quantity,
-                            UnitPrice = p.UnitPrice
+                            UnitPrice = p.UnitPrice,
+                            WarrantyMonths = p.WarrantyMonths,
+                            WarrantyStartAt = p.WarrantyStartAt,
+                            WarrantyEndAt = p.WarrantyEndAt
                         }).ToList(),
-                        // Lọc services theo ServiceId của Job này
-                        Services = job.RepairOrder.RepairOrderServices?
-                            .Where(s => s.ServiceId == job.ServiceId)
-                            .Select(s => new ServiceDto
+
+                        Services = job.Service != null
+                        ? new List<ServiceDto>
+                        {
+                            new ServiceDto
                             {
-                                ServiceName = s.Service.ServiceName,
-                                ActualDuration = s.ActualDuration,
-                                Notes = s.Notes
-                            }).ToList() ?? new List<ServiceDto>()
+                                ServiceName = job.Service.ServiceName,
+                                ActualDuration = job.RepairOrder.RepairOrderServices?
+                                    .FirstOrDefault(s => s.ServiceId == job.ServiceId)?.ActualDuration ?? 0,
+                                Notes = job.RepairOrder.RepairOrderServices?
+                                    .FirstOrDefault(s => s.ServiceId == job.ServiceId)?.Notes
+                            }
+                        }
+                        : new List<ServiceDto>()
                     }).ToList()
                 };
             }).ToList();

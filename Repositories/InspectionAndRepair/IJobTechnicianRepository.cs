@@ -17,6 +17,7 @@ namespace Repositories.InspectionAndRepair
         //Task UpdateJobAsync(Job job);
         Task UpdateJobStatusAsync(Guid jobId, JobStatus newStatus, DateTime? endTime = null, TimeSpan? actualTime = null);
         Task<Technician?> GetTechnicianByUserIdAsync(string userId);
-
+        Task<List<JobPart>> GetJobPartsByJobIdAsync(Guid jobId);
+        Task SaveChangesAsync();
     }
 }

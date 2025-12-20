@@ -54,7 +54,7 @@ namespace Services.InspectionAndRepair
 
             var repair = _mapper.Map<Repair>(dto);
             repair.EstimatedTime = estimatedTime;
-            repair.StartTime = DateTime.UtcNow;
+            repair.StartTime = DateTime.Now;
 
             var oldStatus = job.Status;
             await _repairRepository.AddRepairAsync(repair);

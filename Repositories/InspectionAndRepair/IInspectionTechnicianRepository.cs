@@ -24,5 +24,8 @@ namespace Repositories.InspectionAndRepair
         Task<Service?> GetServiceByIdAsync(Guid serviceId);
         void RemoveServiceInspection(ServiceInspection serviceInspection);
         Task SaveChangesAsync();
+        Task<PartInventory?> GetPartInventoryAsync(Guid partId, Guid branchId);
+        void UpdatePartInventory(PartInventory partInventory);
+        Task<Inspection?> GetInspectionWithRepairOrderAsync(Guid inspectionId);
     }
 }

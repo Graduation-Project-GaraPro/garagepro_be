@@ -20,17 +20,20 @@ public class InspectionTechnicianService : IInspectionTechnicianService
     private readonly IMapper _mapper;
     private readonly IRepairOrderService _repairOrderService;
     private readonly IHubContext<InspectionHub> _inspectionHubContext;
+    private readonly MyAppDbContext _context;
 
     public InspectionTechnicianService(
-        IInspectionTechnicianRepository repo, 
-        IMapper mapper, 
+        IInspectionTechnicianRepository repo,
+        IMapper mapper,
         IRepairOrderService repairOrderService,
-        IHubContext<InspectionHub> inspectionHubContext)
+        IHubContext<InspectionHub> inspectionHubContext,
+        MyAppDbContext context)
     {
         _repo = repo;
         _mapper = mapper;
         _repairOrderService = repairOrderService;
         _inspectionHubContext = inspectionHubContext;
+        _context = context;
     }
     public async Task<List<InspectionTechnicianDto>> GetInspectionsByTechnicianAsync(string userId)
     {
@@ -42,13 +45,18 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         var dtos = _mapper.Map<List<InspectionTechnicianDto>>(inspections);
 
         foreach (var dto in dtos)
-            AttachSuggestedParts(dto, inspections.FirstOrDefault(i => i.InspectionId == dto.InspectionId));
+        {
+            var inspection = inspections.FirstOrDefault(i => i.InspectionId == dto.InspectionId);
+
+            FilterPartCategoriesByModel(dto, inspection);
+            AttachSuggestedParts(dto, inspection);
+        }
 
         dtos = dtos
             .OrderBy(i => i.Status == InspectionStatus.New ? 0 :
                           i.Status == InspectionStatus.InProgress ? 1 :
                           i.Status == InspectionStatus.Completed ? 2 : 3)
-          .ThenBy(i => i.RepairOrder?.Vehicle?.Brand.BrandName)
+            .ThenBy(i => i.RepairOrder?.Vehicle?.Brand.BrandName)
             .ToList();
 
         return dtos;
@@ -63,6 +71,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         if (inspection == null) return null;
 
         var dto = _mapper.Map<InspectionTechnicianDto>(inspection);
+
+        FilterPartCategoriesByModel(dto, inspection);
         AttachSuggestedParts(dto, inspection);
         return dto;
     }
@@ -85,8 +95,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         await _repo.SaveChangesAsync();
 
         // Send SignalR notification to managers
-        var technicianName = technician.User != null 
-            ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() 
+        var technicianName = technician.User != null
+            ? $"{technician.User.FirstName} {technician.User.LastName}".Trim()
             : "Unknown Technician";
 
         await _inspectionHubContext.Clients
@@ -172,6 +182,34 @@ public class InspectionTechnicianService : IInspectionTechnicianService
 
         var existingServiceInspections = inspection.ServiceInspections.ToDictionary(si => si.ServiceId, si => si);
 
+        var allPartsToValidate = new Dictionary<Guid, List<PartWithQuantityDto>>();
+        foreach (var serviceUpdate in request.ServiceUpdates)
+        {
+            if (serviceUpdate.ConditionStatus == ConditionStatus.Replace ||
+                serviceUpdate.ConditionStatus == ConditionStatus.Needs_Attention)
+            {
+                if (serviceUpdate.SuggestedPartsByCategory != null && serviceUpdate.SuggestedPartsByCategory.Any())
+                {
+                    foreach (var kvp in serviceUpdate.SuggestedPartsByCategory)
+                    {
+                        allPartsToValidate[kvp.Key] = kvp.Value;
+                    }
+                }
+            }
+        }
+
+        if (allPartsToValidate.Any())
+        {
+            try
+            {
+                await ValidateAndReservePartStockAsync(id, allPartsToValidate);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException($"Stock validation failed: {ex.Message}");
+            }
+        }
+
         foreach (var serviceUpdate in request.ServiceUpdates)
         {
             Service service;
@@ -211,7 +249,13 @@ public class InspectionTechnicianService : IInspectionTechnicianService
                 _repo.AddServiceInspection(serviceInspection);
             }
 
+            var vehicleModelId = inspection.RepairOrder?.Vehicle?.ModelId;
+            if (!vehicleModelId.HasValue)
+                throw new InvalidOperationException("Vehicle model information is missing.");
+
+
             var allowedPartCategoryIds = service.ServicePartCategories
+                .Where(spc => spc.PartCategory.ModelId == vehicleModelId.Value)
                 .Select(spc => spc.PartCategoryId)
                 .ToHashSet();
 
@@ -328,8 +372,8 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         // Send SignalR notification only when inspection completes
         if (previousStatus != InspectionStatus.Completed && inspection.Status == InspectionStatus.Completed)
         {
-            var technicianName = technician.User != null 
-                ? $"{technician.User.FirstName} {technician.User.LastName}".Trim() 
+            var technicianName = technician.User != null
+                ? $"{technician.User.FirstName} {technician.User.LastName}".Trim()
                 : "Unknown Technician";
 
             await _inspectionHubContext.Clients
@@ -469,6 +513,9 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         if (dto == null || entity == null) return;
         if (dto.ServiceInspections == null || dto.ServiceInspections.Count == 0) return;
 
+        var vehicleModelId = entity.RepairOrder?.Vehicle?.ModelId;
+        if (vehicleModelId == null) return;
+
         var partInsByPartId = (entity.PartInspections ?? Enumerable.Empty<PartInspection>())
             .GroupBy(pi => pi.PartId)
             .ToDictionary(g => g.Key, g => g.ToList());
@@ -481,6 +528,7 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             if (sEntity?.Service == null) continue;
 
             var allowedPartIds = sEntity.Service.ServicePartCategories?
+                .Where(spc => spc.PartCategory.ModelId == vehicleModelId.Value)
                 .SelectMany(spc => spc.PartCategory.Parts.Select(p => p.PartId))
                 .ToHashSet() ?? new HashSet<Guid>();
 
@@ -603,5 +651,61 @@ public class InspectionTechnicianService : IInspectionTechnicianService
         {
             TechnicianId = technician.TechnicianId
         };
+    }
+    private void FilterPartCategoriesByModel(InspectionTechnicianDto dto, Inspection? entity)
+    {
+        if (dto == null || entity == null) return;
+
+        var vehicleModelId = entity.RepairOrder?.Vehicle?.ModelId;
+        if (!vehicleModelId.HasValue) return;
+
+        foreach (var serviceDto in dto.ServiceInspections)
+        {
+            if (serviceDto.AllPartCategories != null && serviceDto.AllPartCategories.Any())
+            {
+                serviceDto.AllPartCategories = serviceDto.AllPartCategories
+                    .Where(pc => pc.ModelId == vehicleModelId.Value) 
+                    .ToList();
+            }
+        }
+    }
+    private async Task ValidateAndReservePartStockAsync(
+        Guid inspectionId,
+        Dictionary<Guid, List<PartWithQuantityDto>> partsByCategory)
+    {
+        var inspection = await _repo.GetInspectionWithRepairOrderAsync(inspectionId);
+        if (inspection?.RepairOrder?.BranchId == null)
+            throw new InvalidOperationException("Cannot find BranchId from RepairOrder.");
+
+        var branchId = inspection.RepairOrder.BranchId;
+
+        foreach (var kvp in partsByCategory)
+        {
+            var partRequests = kvp.Value;
+
+            foreach (var partRequest in partRequests)
+            {
+                var partInventory = await _repo.GetPartInventoryAsync(partRequest.PartId, branchId);
+
+                if (partInventory == null)
+                {
+                    var part = await _context.Parts.FindAsync(partRequest.PartId);
+                    var partName = part?.Name ?? "Unknown Part";
+                    throw new InvalidOperationException(
+                        $"Currently '{partName}' is not available in stock");
+                }
+
+                if (partInventory.Stock < partRequest.Quantity)
+                {
+                    throw new InvalidOperationException(
+                        $"Currently '{partInventory.Part.Name}' only has {partInventory.Stock} available");
+                }
+
+                // Trừ stock
+                partInventory.Stock -= partRequest.Quantity;
+                partInventory.UpdatedAt = DateTime.UtcNow;
+                _repo.UpdatePartInventory(partInventory);
+            }
+        }
     }
 }
