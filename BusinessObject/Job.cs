@@ -54,6 +54,6 @@ namespace BusinessObject
         public virtual ICollection<JobPart> JobParts { get; set; }
         public virtual ICollection<JobTechnician> JobTechnicians { get; set; } = new List<JobTechnician>(); 
         public virtual Repair Repair { get; set; }
-        public virtual Job OriginalJob { get; set; } // Navigation property for the original job
+        public virtual Job OriginalJob { get; set; } 
     }
 }
