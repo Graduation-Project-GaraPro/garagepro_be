@@ -4,6 +4,7 @@ using DataAccessLayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    partial class MyAppDbContextModelSnapshot : ModelSnapshot
+<<<<<<<< HEAD:DataAccessLayer/Migrations/20251218014722_UpdateDB.Designer.cs
+    [Migration("20251218014722_UpdateDB")]
+    partial class UpdateDB
+========
+    [Migration("20251217124747_addnewLogicPartCategory")]
+    partial class addnewLogicPartCategory
+>>>>>>>> ad5ddf63dfc79ad5163f6e72a4f2235df565cd5c:DataAccessLayer/Migrations/20251217124747_addnewLogicPartCategory.Designer.cs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

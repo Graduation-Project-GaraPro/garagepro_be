@@ -144,6 +144,7 @@ namespace Dtos.InspectionAndRepair
     {
         public Guid PartCategoryId { get; set; }
         public string CategoryName { get; set; } = string.Empty;
+        public Guid ModelId { get; set; }
         public List<ServicePartDto> Parts { get; set; } = new();
     }
 

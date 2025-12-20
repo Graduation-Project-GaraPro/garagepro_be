@@ -220,5 +220,17 @@ namespace Repositories.InspectionAndRepair
             return await _context.Technicians
                 .FirstOrDefaultAsync(t => t.UserId == userId);
         }
+        public async Task<List<JobPart>> GetJobPartsByJobIdAsync(Guid jobId)
+        {
+            return await _context.JobParts
+                .Include(jp => jp.Part) 
+                .Where(jp => jp.JobId == jobId)
+                .ToListAsync();
+        }
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 }

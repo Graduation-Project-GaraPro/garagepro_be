@@ -29,11 +29,11 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetMyInspections()
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized(new { Message = "Bạn cần đăng nhập để xem danh sách kiểm tra xe." });
+            if (user == null) return Unauthorized(new { Message = "You need to log in to view the vehicle inspection list." });
 
             var inspections = await _inspectionService.GetInspectionsByTechnicianAsync(user.Id);
             if (inspections == null || !inspections.Any())
-                return Ok(new { Message = "Hiện tại bạn chưa được phân công kiểm tra xe nào." });
+                return Ok(new { Message = "You have not been assigned to inspect any vehicles yet." });
 
             return Ok(inspections); 
         }
@@ -43,10 +43,10 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> GetInspectionById(Guid id)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+            if (user == null) return Unauthorized(new { Message = "You need to log in." });
 
             var dto = await _inspectionService.GetInspectionByIdAsync(id, user.Id);
-            if (dto == null) return NotFound(new { Message = "Không tìm thấy kiểm tra xe hoặc bạn không có quyền truy cập." });
+            if (dto == null) return NotFound(new { Message = "Vehicle inspection not found or you do not have permission to access it." });
 
             return Ok(dto);
         }
@@ -57,14 +57,14 @@ namespace Garage_pro_api.Controllers
         {
             if (!ModelState.IsValid) return BadRequest(ModelState);
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+            if (user == null) return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
                 var updatedDto = await _inspectionService.UpdateInspectionAsync(id, request, user.Id);
                 return Ok(new
                 {
-                    Message = request.IsCompleted ? "Kiểm tra xe đã hoàn thành và gửi cho Manager xem xét." : "Cập nhật kiểm tra xe thành công.",
+                    Message = request.IsCompleted ? "Inspection completed and sent for review." : "Vehicle inspection updated successfully.",
                     Inspection = updatedDto
                 });
             }
@@ -74,7 +74,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi cập nhật kiểm tra xe.", Error = ex.Message });
+                return StatusCode(500, new { Message = "An error occurred while updating the vehicle inspection.", Error = ex.Message });
             }
         }
         [HttpDelete("{inspectionId}/services/{serviceId}/part-inspections/{partInspectionId}")]
@@ -83,12 +83,12 @@ namespace Garage_pro_api.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+                return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
                 await _inspectionService.RemovePartFromInspectionAsync(inspectionId, serviceId, partInspectionId, user.Id);
-                return Ok(new { Message = "Đã xóa phụ tùng khỏi Inspection thành công." });
+                return Ok(new { Message = "The part was successfully removed from the inspection." });
             }
             catch (InvalidOperationException ex)
             {
@@ -96,7 +96,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi xóa phụ tùng khỏi Inspection.", Error = ex.Message });
+                return StatusCode(500, new { Message = "An error occurred while removing the part from the inspection.", Error = ex.Message });
             }
         }
 
@@ -109,7 +109,7 @@ namespace Garage_pro_api.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+                return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
@@ -122,7 +122,7 @@ namespace Garage_pro_api.Controllers
 
                 return Ok(new
                 {
-                    Message = "Đã xóa PartCategory và các parts liên quan thành công.",
+                    Message = "The part category and its related parts were successfully deleted.",
                     Inspection = dto
                 });
             }
@@ -134,7 +134,7 @@ namespace Garage_pro_api.Controllers
             {
                 return StatusCode(500, new
                 {
-                    Message = "Đã xảy ra lỗi khi xóa PartCategory.",
+                    Message = "An error occurred while deleting the PartCategory.",
                     Error = ex.Message
                 });
             }
@@ -145,12 +145,12 @@ namespace Garage_pro_api.Controllers
         public async Task<IActionResult> StartInspection(Guid id)
         {
             var user = await _userManager.GetUserAsync(User);
-            if (user == null) return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+            if (user == null) return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
                 var dto = await _inspectionService.StartInspectionAsync(id, user.Id);
-                return Ok(new { Message = "Đã bắt đầu kiểm tra xe.", Inspection = dto });
+                return Ok(new { Message = "The vehicle inspection has started.", Inspection = dto });
             }
             catch (InvalidOperationException ex)
             {
@@ -158,7 +158,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Lỗi.", Error = ex.Message });
+                return StatusCode(500, new { Message = "Error !", Error = ex.Message });
             }
         }
 
@@ -173,7 +173,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi lấy danh sách service.", Error = ex.Message });
+                return StatusCode(500, new { Message = "An error occurred while retrieving the service list.", Error = ex.Message });
             }
         }
 
@@ -186,14 +186,14 @@ namespace Garage_pro_api.Controllers
 
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+                return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
                 var dto = await _inspectionService.AddServiceToInspectionAsync(inspectionId, request, user.Id);
                 return Ok(new
                 {
-                    Message = "Thêm service vào Inspection thành công.",
+                    Message = "Service was successfully added to the inspection.",
                     Inspection = dto
                 });
             }
@@ -203,7 +203,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi thêm service vào Inspection.", Error = ex.Message });
+                return StatusCode(500, new { Message = "An error occurred while adding the service to the inspection.", Error = ex.Message });
             }
         }
 
@@ -213,14 +213,14 @@ namespace Garage_pro_api.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+                return Unauthorized(new { Message = "You need to log in." });
 
             try
             {
                 var dto = await _inspectionService.RemoveServiceFromInspectionAsync(inspectionId, serviceInspectionId, user.Id);
                 return Ok(new
                 {
-                    Message = "Xóa service khỏi Inspection thành công.",
+                    Message = "Service removed from the inspection successfully.",
                     Inspection = dto
                 });
             }
@@ -230,7 +230,7 @@ namespace Garage_pro_api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { Message = "Đã xảy ra lỗi khi xóa service khỏi Inspection.", Error = ex.Message });
+                return StatusCode(500, new { Message = "An error occurred while removing the service from the inspection.", Error = ex.Message });
             }
         }
         [HttpGet("my-technician-id")]
@@ -239,11 +239,11 @@ namespace Garage_pro_api.Controllers
         {
             var user = await _userManager.GetUserAsync(User);
             if (user == null)
-                return Unauthorized(new { Message = "Bạn cần đăng nhập." });
+                return Unauthorized(new { Message = "You need to log in." });
 
             var technician = await _inspectionService.GetTechnicianByUserIdAsync(user.Id);
             if (technician == null)
-                return NotFound(new { Message = "Không tìm thấy thông tin technician." });
+                return NotFound(new { Message = "Technician information not found." });
 
             return Ok(new { TechnicianId = technician.TechnicianId });
         }

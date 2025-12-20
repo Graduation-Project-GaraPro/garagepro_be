@@ -18,7 +18,24 @@ namespace Repositories.InspectionAndRepair
             return await _context.Technicians
                 .FirstOrDefaultAsync(t => t.UserId == userId);
         }
+        public async Task<PartInventory?> GetPartInventoryAsync(Guid partId, Guid branchId)
+        {
+            return await _context.PartInventories
+                .Include(pi => pi.Part)
+                .FirstOrDefaultAsync(pi => pi.PartId == partId && pi.BranchId == branchId);
+        }
 
+        public void UpdatePartInventory(PartInventory partInventory)
+        {
+            _context.PartInventories.Update(partInventory);
+        }
+
+        public async Task<Inspection?> GetInspectionWithRepairOrderAsync(Guid inspectionId)
+        {
+            return await _context.Inspections
+                .Include(i => i.RepairOrder)
+                .FirstOrDefaultAsync(i => i.InspectionId == inspectionId);
+        }
         public async Task<List<Inspection>> GetInspectionsByTechnicianIdAsync(Guid technicianId)
         {
             return await _context.Inspections
@@ -162,5 +179,6 @@ namespace Repositories.InspectionAndRepair
         }
         public void RemoveServiceInspection(ServiceInspection serviceInspection)
             => _context.ServiceInspections.Remove(serviceInspection);
+
     }
 }
