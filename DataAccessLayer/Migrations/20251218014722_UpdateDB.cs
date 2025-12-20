@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class @new : Migration
+    public partial class UpdateDB : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -105,21 +105,6 @@ namespace DataAccessLayer.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_OrderStatuses", x => x.OrderStatusId);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "PartCategories",
-                columns: table => new
-                {
-                    LaborCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CategoryName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PartCategories", x => x.LaborCategoryId);
                 });
 
             migrationBuilder.CreateTable(
@@ -404,35 +389,6 @@ namespace DataAccessLayer.Migrations
                         column: x => x.OrderStatusId,
                         principalTable: "OrderStatuses",
                         principalColumn: "OrderStatusId",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Parts",
-                columns: table => new
-                {
-                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
-                    Stock = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Parts", x => x.PartId);
-                    table.ForeignKey(
-                        name: "FK_Parts_Branches_BranchId",
-                        column: x => x.BranchId,
-                        principalTable: "Branches",
-                        principalColumn: "BranchId");
-                    table.ForeignKey(
-                        name: "FK_Parts_PartCategories_PartCategoryId",
-                        column: x => x.PartCategoryId,
-                        principalTable: "PartCategories",
-                        principalColumn: "LaborCategoryId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -844,32 +800,6 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ServicePartCategories",
-                columns: table => new
-                {
-                    ServicePartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ServicePartCategories", x => x.ServicePartCategoryId);
-                    table.ForeignKey(
-                        name: "FK_ServicePartCategories_PartCategories_PartCategoryId",
-                        column: x => x.PartCategoryId,
-                        principalTable: "PartCategories",
-                        principalColumn: "LaborCategoryId",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_ServicePartCategories_Services_ServiceId",
-                        column: x => x.ServiceId,
-                        principalTable: "Services",
-                        principalColumn: "ServiceId",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "SpecificationsData",
                 columns: table => new
                 {
@@ -893,6 +823,28 @@ namespace DataAccessLayer.Migrations
                         principalTable: "VehicleLookups",
                         principalColumn: "LookupID",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PartCategories",
+                columns: table => new
+                {
+                    LaborCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ModelId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CategoryName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PartCategories", x => x.LaborCategoryId);
+                    table.ForeignKey(
+                        name: "FK_PartCategories_VehicleModels_ModelId",
+                        column: x => x.ModelId,
+                        principalTable: "VehicleModels",
+                        principalColumn: "ModelID",
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -1029,6 +981,62 @@ namespace DataAccessLayer.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Parts",
+                columns: table => new
+                {
+                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Price = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    Stock = table.Column<int>(type: "int", nullable: false),
+                    WarrantyMonths = table.Column<int>(type: "int", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Parts", x => x.PartId);
+                    table.ForeignKey(
+                        name: "FK_Parts_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "BranchId");
+                    table.ForeignKey(
+                        name: "FK_Parts_PartCategories_PartCategoryId",
+                        column: x => x.PartCategoryId,
+                        principalTable: "PartCategories",
+                        principalColumn: "LaborCategoryId",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ServicePartCategories",
+                columns: table => new
+                {
+                    ServicePartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ServiceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartCategoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ServicePartCategories", x => x.ServicePartCategoryId);
+                    table.ForeignKey(
+                        name: "FK_ServicePartCategories_PartCategories_PartCategoryId",
+                        column: x => x.PartCategoryId,
+                        principalTable: "PartCategories",
+                        principalColumn: "LaborCategoryId",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ServicePartCategories_Services_ServiceId",
+                        column: x => x.ServiceId,
+                        principalTable: "Services",
+                        principalColumn: "ServiceId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "RepairRequests",
                 columns: table => new
                 {
@@ -1067,6 +1075,34 @@ namespace DataAccessLayer.Migrations
                         column: x => x.VehicleID,
                         principalTable: "Vehicles",
                         principalColumn: "VehicleId",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "PartInventories",
+                columns: table => new
+                {
+                    PartInventoryId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BranchId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Stock = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_PartInventories", x => x.PartInventoryId);
+                    table.ForeignKey(
+                        name: "FK_PartInventories_Branches_BranchId",
+                        column: x => x.BranchId,
+                        principalTable: "Branches",
+                        principalColumn: "BranchId",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_PartInventories_Parts_PartId",
+                        column: x => x.PartId,
+                        principalTable: "Parts",
+                        principalColumn: "PartId",
                         onDelete: ReferentialAction.Cascade);
                 });
 
@@ -1624,6 +1660,9 @@ namespace DataAccessLayer.Migrations
                     PartId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
                     UnitPrice = table.Column<decimal>(type: "decimal(18,2)", nullable: false),
+                    WarrantyMonths = table.Column<int>(type: "int", nullable: true),
+                    WarrantyStartAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    WarrantyEndAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -1953,6 +1992,12 @@ namespace DataAccessLayer.Migrations
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
+                name: "UX_PartCategory_ModelId_CategoryName",
+                table: "PartCategories",
+                columns: new[] { "ModelId", "CategoryName" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PartInspections_InspectionId",
                 table: "PartInspections",
                 column: "InspectionId");
@@ -1966,6 +2011,17 @@ namespace DataAccessLayer.Migrations
                 name: "IX_PartInspections_PartId",
                 table: "PartInspections",
                 column: "PartId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PartInventories_BranchId",
+                table: "PartInventories",
+                column: "BranchId");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_PartInventory_PartId_BranchId",
+                table: "PartInventories",
+                columns: new[] { "PartId", "BranchId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Parts_BranchId",
@@ -2409,6 +2465,9 @@ namespace DataAccessLayer.Migrations
 
             migrationBuilder.DropTable(
                 name: "PartInspections");
+
+            migrationBuilder.DropTable(
+                name: "PartInventories");
 
             migrationBuilder.DropTable(
                 name: "Payments");

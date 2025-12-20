@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251216074131_AddVehicleModelPartRelation")]
-    partial class AddVehicleModelPartRelation
+    [Migration("20251218014722_UpdateDB")]
+    partial class UpdateDB
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1027,6 +1027,15 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("WarrantyEndAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("WarrantyStartAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("JobPartId");
 
                     b.HasIndex("JobId");
@@ -1180,9 +1189,6 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<Guid>("ModelID")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1200,11 +1206,12 @@ namespace DataAccessLayer.Migrations
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("WarrantyMonths")
+                        .HasColumnType("int");
+
                     b.HasKey("PartId");
 
                     b.HasIndex("BranchId");
-
-                    b.HasIndex("ModelID");
 
                     b.HasIndex("PartCategoryId");
 
@@ -1229,10 +1236,17 @@ namespace DataAccessLayer.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid>("ModelId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
 
                     b.HasKey("LaborCategoryId");
+
+                    b.HasIndex("ModelId", "CategoryName")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PartCategory_ModelId_CategoryName");
 
                     b.ToTable("PartCategories");
                 });
@@ -1267,6 +1281,38 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("PartId");
 
                     b.ToTable("PartInspections");
+                });
+
+            modelBuilder.Entity("BusinessObject.PartInventory", b =>
+                {
+                    b.Property<Guid>("PartInventoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Stock")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("PartInventoryId");
+
+                    b.HasIndex("BranchId");
+
+                    b.HasIndex("PartId", "BranchId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+
+                    b.ToTable("PartInventories");
                 });
 
             modelBuilder.Entity("BusinessObject.PayOsModels.WebhookInbox", b =>
@@ -2913,12 +2959,6 @@ namespace DataAccessLayer.Migrations
                         .WithMany()
                         .HasForeignKey("BranchId");
 
-                    b.HasOne("BusinessObject.Vehicles.VehicleModel", "VehicleModel")
-                        .WithMany("Parts")
-                        .HasForeignKey("ModelID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("BusinessObject.PartCategory", "PartCategory")
                         .WithMany("Parts")
                         .HasForeignKey("PartCategoryId")
@@ -2928,6 +2968,15 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Branch");
 
                     b.Navigation("PartCategory");
+                });
+
+            modelBuilder.Entity("BusinessObject.PartCategory", b =>
+                {
+                    b.HasOne("BusinessObject.Vehicles.VehicleModel", "VehicleModel")
+                        .WithMany("PartCategories")
+                        .HasForeignKey("ModelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("VehicleModel");
                 });
@@ -2957,6 +3006,25 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("Part");
 
                     b.Navigation("PartCategory");
+                });
+
+            modelBuilder.Entity("BusinessObject.PartInventory", b =>
+                {
+                    b.HasOne("BusinessObject.Branches.Branch", "Branch")
+                        .WithMany("PartInventories")
+                        .HasForeignKey("BranchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("BusinessObject.Part", "Part")
+                        .WithMany("PartInventories")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Branch");
+
+                    b.Navigation("Part");
                 });
 
             modelBuilder.Entity("BusinessObject.Payment", b =>
@@ -3501,6 +3569,8 @@ namespace DataAccessLayer.Migrations
 
                     b.Navigation("OperatingHours");
 
+                    b.Navigation("PartInventories");
+
                     b.Navigation("Quotations");
 
                     b.Navigation("RepairOrders");
@@ -3594,6 +3664,8 @@ namespace DataAccessLayer.Migrations
                     b.Navigation("JobParts");
 
                     b.Navigation("PartInspections");
+
+                    b.Navigation("PartInventories");
 
                     b.Navigation("RepairOrderServiceParts");
 
@@ -3711,7 +3783,7 @@ namespace DataAccessLayer.Migrations
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleModel", b =>
                 {
-                    b.Navigation("Parts");
+                    b.Navigation("PartCategories");
 
                     b.Navigation("VehicleModelColors");
 
