@@ -849,6 +849,41 @@ namespace DataAccessLayer
                 .HasForeignKey(p => p.PartCategoryId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // Part indexes for better query performance
+            modelBuilder.Entity<Part>()
+                .HasIndex(p => p.PartCategoryId)
+                .HasDatabaseName("IX_Part_PartCategoryId");
+
+            modelBuilder.Entity<Part>()
+                .HasIndex(p => p.BranchId)
+                .HasDatabaseName("IX_Part_BranchId");
+
+            modelBuilder.Entity<Part>()
+                .HasIndex(p => p.Name)
+                .HasDatabaseName("IX_Part_Name");
+
+            modelBuilder.Entity<Part>()
+                .HasIndex(p => new { p.PartCategoryId, p.BranchId })
+                .HasDatabaseName("IX_Part_CategoryId_BranchId");
+
+            modelBuilder.Entity<Part>()
+                .HasIndex(p => new { p.PartCategoryId, p.Name })
+                .HasDatabaseName("IX_Part_CategoryId_Name");
+
+            // ServicePartCategory indexes for better query performance
+            modelBuilder.Entity<ServicePartCategory>()
+                .HasIndex(spc => spc.ServiceId)
+                .HasDatabaseName("IX_ServicePartCategory_ServiceId");
+
+            modelBuilder.Entity<ServicePartCategory>()
+                .HasIndex(spc => spc.PartCategoryId)
+                .HasDatabaseName("IX_ServicePartCategory_PartCategoryId");
+
+            modelBuilder.Entity<ServicePartCategory>()
+                .HasIndex(spc => new { spc.ServiceId, spc.PartCategoryId })
+                .IsUnique()
+                .HasDatabaseName("UX_ServicePartCategory_ServiceId_PartCategoryId");
+
             // VehicleModel-PartCategory relationship
             modelBuilder.Entity<PartCategory>()
                 .HasOne(pc => pc.VehicleModel)
