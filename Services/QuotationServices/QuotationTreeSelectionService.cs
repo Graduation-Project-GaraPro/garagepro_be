@@ -139,21 +139,34 @@ namespace Services.QuotationServices
             };
         }
 
-        public async Task<ServiceDetailsDto> GetServiceDetailsAsync(Guid serviceId)
+        public async Task<ServiceDetailsDto> GetServiceDetailsAsync(Guid serviceId, Guid? modelId = null)
         {
             var service = await _serviceRepository.Query()
                 .Include(s => s.ServicePartCategories)
                     .ThenInclude(spc => spc.PartCategory)
+                        .ThenInclude(pc => pc.VehicleModel)
+                            .ThenInclude(vm => vm.Brand)
                 .FirstOrDefaultAsync(s => s.ServiceId == serviceId);
 
             if (service == null)
                 throw new ArgumentException($"Service with ID {serviceId} not found.");
 
-            var partCategories = service.ServicePartCategories?
+            var partCategoriesQuery = service.ServicePartCategories?.AsQueryable();
+
+            // Filter by model if specified
+            if (modelId.HasValue)
+            {
+                partCategoriesQuery = partCategoriesQuery?.Where(spc => spc.PartCategory.ModelId == modelId.Value);
+            }
+
+            var partCategories = partCategoriesQuery?
                 .Select(spc => new PartCategoryForSelectionDto
                 {
                     PartCategoryId = spc.PartCategoryId,
-                    CategoryName = spc.PartCategory?.CategoryName ?? ""
+                    CategoryName = spc.PartCategory.CategoryName,
+                    ModelId = spc.PartCategory.ModelId,
+                    ModelName = spc.PartCategory.VehicleModel.ModelName,
+                    BrandName = spc.PartCategory.VehicleModel.Brand.BrandName
                 })
                 .ToList() ?? new List<PartCategoryForSelectionDto>();
 
@@ -166,21 +179,63 @@ namespace Services.QuotationServices
             };
         }
 
-        public async Task<List<PartForSelectionDto>> GetPartsByCategoryAsync(Guid partCategoryId)
+        public async Task<List<PartForSelectionDto>> GetPartsByCategoryAsync(Guid partCategoryId, Guid? modelId = null)
         {
-            var parts = await _serviceRepository.Query()
+            var query = _serviceRepository.Query()
                 .SelectMany(s => s.ServicePartCategories)
-                .Where(spc => spc.PartCategoryId == partCategoryId)
+                .Where(spc => spc.PartCategoryId == partCategoryId);
+
+            // If modelId is provided, filter by vehicle model
+            if (modelId.HasValue)
+            {
+                query = query.Where(spc => spc.PartCategory.ModelId == modelId.Value);
+            }
+
+            var parts = await query
                 .SelectMany(spc => spc.PartCategory.Parts)
+                .Include(p => p.PartCategory)
+                    .ThenInclude(pc => pc.VehicleModel)
+                        .ThenInclude(vm => vm.Brand)
                 .Distinct()
                 .Select(p => new PartForSelectionDto
                 {
                     PartId = p.PartId,
                     Name = p.Name,
-                    Description = "",
+                    Description = p.PartCategory.Description,
                     Price = p.Price,
                     StockQuantity = p.Stock,
-                    PartCategoryId = p.PartCategoryId
+                    WarrantyMonths = p.WarrantyMonths,
+                    PartCategoryId = p.PartCategoryId,
+                    ModelId = p.PartCategory.ModelId,
+                    ModelName = p.PartCategory.VehicleModel.ModelName,
+                    BrandName = p.PartCategory.VehicleModel.Brand.BrandName
+                })
+                .ToListAsync();
+
+            return parts;
+        }
+
+        public async Task<List<PartForSelectionDto>> GetPartsByModelAndCategoryAsync(Guid modelId, string categoryName)
+        {
+            var parts = await _serviceRepository.Query()
+                .SelectMany(s => s.ServicePartCategories)
+                .Where(spc => spc.PartCategory.ModelId == modelId && spc.PartCategory.CategoryName == categoryName)
+                .SelectMany(spc => spc.PartCategory.Parts)
+                .Include(p => p.PartCategory)
+                    .ThenInclude(pc => pc.VehicleModel)
+                        .ThenInclude(vm => vm.Brand)
+                .Select(p => new PartForSelectionDto
+                {
+                    PartId = p.PartId,
+                    Name = p.Name,
+                    Description = p.PartCategory.Description,
+                    Price = p.Price,
+                    StockQuantity = p.Stock,
+                    WarrantyMonths = p.WarrantyMonths,
+                    PartCategoryId = p.PartCategoryId,
+                    ModelId = p.PartCategory.ModelId,
+                    ModelName = p.PartCategory.VehicleModel.ModelName,
+                    BrandName = p.PartCategory.VehicleModel.Brand.BrandName
                 })
                 .ToListAsync();
 

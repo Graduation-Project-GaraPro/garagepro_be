@@ -55,12 +55,14 @@ namespace Garage_pro_api.Controllers
             }
         }
 
+        /// GET: api/QuotationTreeSelection/service/{serviceId}?modelId={modelId}
+        /// Updated to include vehicle model for model-specific part categories
         [HttpGet("service/{serviceId}")]
-        public async Task<ActionResult<ServiceDetailsDto>> GetServiceDetails(Guid serviceId)
+        public async Task<ActionResult<ServiceDetailsDto>> GetServiceDetails(Guid serviceId, [FromQuery] Guid? modelId = null)
         {
             try
             {
-                var result = await _treeSelectionService.GetServiceDetailsAsync(serviceId);
+                var result = await _treeSelectionService.GetServiceDetailsAsync(serviceId, modelId);
                 return Ok(result);
             }
             catch (ArgumentException ex)
@@ -74,13 +76,39 @@ namespace Garage_pro_api.Controllers
         }
 
         /// GET: api/QuotationTreeSelection/parts/category/{partCategoryId}
+        /// Updated to work with model-specific part categories
+        /// Optional modelId parameter to filter parts by vehicle model
         [HttpGet("parts/category/{partCategoryId}")]
-        public async Task<ActionResult<List<PartForSelectionDto>>> GetPartsByCategory(Guid partCategoryId)
+        public async Task<ActionResult<List<PartForSelectionDto>>> GetPartsByCategory(Guid partCategoryId, [FromQuery] Guid? modelId = null)
         {
             try
             {
-                var result = await _treeSelectionService.GetPartsByCategoryAsync(partCategoryId);
+                var result = await _treeSelectionService.GetPartsByCategoryAsync(partCategoryId, modelId);
                 return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Message = "Error retrieving parts", Detail = ex.Message });
+            }
+        }
+
+        /// GET: api/QuotationTreeSelection/parts/model/{modelId}/category/{categoryName}
+        /// NEW: Get parts by model and category name (for model-specific categories)
+        [HttpGet("parts/model/{modelId}/category/{categoryName}")]
+        public async Task<ActionResult<List<PartForSelectionDto>>> GetPartsByModelAndCategory(Guid modelId, string categoryName)
+        {
+            try
+            {
+                var result = await _treeSelectionService.GetPartsByModelAndCategoryAsync(modelId, categoryName);
+                return Ok(result);
+            }
+            catch (ArgumentException ex)
+            {
+                return NotFound(new { Message = ex.Message });
             }
             catch (Exception ex)
             {

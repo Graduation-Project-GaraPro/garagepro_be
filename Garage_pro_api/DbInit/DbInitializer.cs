@@ -59,6 +59,8 @@ namespace Garage_pro_api.DbInit
             //await SeedPartCategoriesAsync1();
             await SeedPartCategoriesEnumBasedAsync(); // New enum
             await SeedPartsAsyncNew(); // NEW Parts seeding 
+            await SeedServicePartCategoriesAsyncNew(); // ✅ NEW Service-PartCategory linking
+            await SeedPartInventoryAsync(); // ✅ NEW PartInventory for branches
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
             await SeedPriceEmergenciesAsync();
@@ -3933,6 +3935,191 @@ namespace Garage_pro_api.DbInit
             }
 
             Console.WriteLine($"Bulk seeding finished - total repair orders created: {createdOrders}");
+        }
+
+        // NEW: Link Services with PartCategories
+        private async Task SeedServicePartCategoriesAsyncNew()
+        {
+            if (_context.ServicePartCategories.Any()) return;
+
+            var services = await _context.Services.ToListAsync();
+            var partCategories = await _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
+                .ToListAsync();
+
+            if (!services.Any() || !partCategories.Any()) return;
+
+            var servicePartCategories = new List<ServicePartCategory>();
+
+            // Define service to part category mappings
+            var serviceMappings = new Dictionary<string, string[]>
+            {
+                // Oil Change Services
+                ["Basic Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
+                ["Premium Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
+
+                // Tire Services
+                ["Replace Front Tires (Pair)"] = new[] { "Lốp trước" },
+                ["Replace Rear Tires (Pair)"] = new[] { "Lốp sau" },
+                ["Tire Rotation Service"] = new[] { "Lốp trước", "Lốp sau" },
+                ["Wheel Balancing (4 wheels)"] = new[] { "Lốp trước", "Lốp sau", "Bi bánh xe" },
+                ["Wheel Alignment (4 wheels)"] = new[] { "Lốp trước", "Lốp sau" },
+                ["Tire Puncture Repair (Front)"] = new[] { "Lốp trước" },
+                ["Tire Puncture Repair (Rear)"] = new[] { "Lốp sau" },
+
+                // Battery Services
+                ["Battery Health Check"] = new[] { "Ắc quy" },
+                ["Battery Replacement"] = new[] { "Ắc quy" },
+                ["Alternator Replacement"] = new[] { "Máy phát điện" },
+                ["Starter Motor Replacement"] = new[] { "Máy khởi động" },
+
+                // Brake Services
+                ["Replace Front Brake Pads"] = new[] { "Má phanh trước" },
+                ["Replace Rear Brake Pads"] = new[] { "Má phanh sau" },
+                ["Replace Front Brake Discs (Pair)"] = new[] { "Đĩa phanh trước" },
+                ["Replace Rear Brake Discs (Pair)"] = new[] { "Đĩa phanh sau" },
+                ["Brake Fluid Flush & Bleed"] = new[] { "Dầu phanh" },
+                ["Front Brake Overhaul"] = new[] { "Má phanh trước", "Đĩa phanh trước", "Kẹp phanh", "Dầu phanh" },
+                ["Rear Brake Overhaul"] = new[] { "Má phanh sau", "Đĩa phanh sau", "Kẹp phanh", "Dầu phanh" },
+
+                // Suspension Services
+                ["Replace Front Shock Absorbers (Pair)"] = new[] { "Giảm xóc trước" },
+                ["Replace Rear Shock Absorbers (Pair)"] = new[] { "Giảm xóc sau" },
+                ["Tie Rod End Replacement"] = new[] { "Cần A" },
+                ["Steering Rack Repair"] = new[] { "Cần A" },
+
+                // Engine Services
+                ["Engine Tune-Up"] = new[] { "Bugi", "Lọc gió", "Lọc dầu" },
+                ["Spark Plug Replacement"] = new[] { "Bugi" },
+                ["Ignition Coil Replacement"] = new[] { "Cuộn dây đánh lửa" },
+                ["Throttle Body Cleaning"] = new[] { "Lọc gió" },
+                ["Oxygen Sensor Replacement"] = new[] { "Cuộn dây đánh lửa" },
+
+                // Cooling Services
+                ["Radiator Replacement"] = new[] { "Két nước" },
+                ["Water Pump Replacement"] = new[] { "Bơm nước" },
+                ["Thermostat Replacement"] = new[] { "Van nhiệt" },
+
+                // HVAC Services
+                ["AC Gas Recharge & Leak Check"] = new[] { "Lọc gió điều hòa" },
+                ["AC Compressor Replacement"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" },
+
+                // Safety Services
+                ["ABS Sensor Replacement (Front)"] = new[] { "Bi bánh xe" },
+                ["ABS Sensor Replacement (Rear)"] = new[] { "Bi bánh xe" },
+
+                // Advanced Services
+                ["Front Suspension & Brake Refresh"] = new[] { "Giảm xóc trước", "Má phanh trước", "Đĩa phanh trước" },
+                ["Engine Cooling System Overhaul"] = new[] { "Két nước", "Bơm nước", "Van nhiệt", "Ống nước làm mát" },
+                ["Complete AC System Repair"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" }
+            };
+
+            foreach (var service in services)
+            {
+                if (serviceMappings.ContainsKey(service.ServiceName))
+                {
+                    var requiredPartCategories = serviceMappings[service.ServiceName];
+                    
+                    foreach (var categoryName in requiredPartCategories)
+                    {
+                        // Find all part categories with this name (across different vehicle models)
+                        var matchingCategories = partCategories
+                            .Where(pc => pc.CategoryName == categoryName)
+                            .ToList();
+
+                        foreach (var partCategory in matchingCategories)
+                        {
+                            // Check if this service-partcategory link already exists
+                            var exists = servicePartCategories.Any(spc => 
+                                spc.ServiceId == service.ServiceId && 
+                                spc.PartCategoryId == partCategory.LaborCategoryId);
+
+                            if (!exists)
+                            {
+                                servicePartCategories.Add(new ServicePartCategory
+                                {
+                                    ServiceId = service.ServiceId,
+                                    PartCategoryId = partCategory.LaborCategoryId,
+                                    CreatedAt = DateTime.UtcNow
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (servicePartCategories.Any())
+            {
+                _context.ServicePartCategories.AddRange(servicePartCategories);
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Seeded {servicePartCategories.Count} service-part category links");
+            }
+        }
+
+        // NEW
+        private async Task SeedPartInventoryAsync()
+        {
+            if (_context.PartInventories.Any()) return;
+
+            var parts = await _context.Parts.ToListAsync();
+            var branches = await _context.Branches.ToListAsync();
+
+            if (!parts.Any() || !branches.Any()) return;
+
+            // Find Nha Trang Garage branch
+            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Nha Trang Garage");
+            if (nhaTrangBranch == null)
+            {
+                Console.WriteLine("Nha Trang Garage branch not found!");
+                return;
+            }
+
+            var partInventories = new List<PartInventory>();
+            var random = new Random();
+
+            // Add inventory for all parts to Nha Trang Garage
+            foreach (var part in parts)
+            {
+                var stock = random.Next(5, 50); // Random stock between 5-50 units
+                
+                partInventories.Add(new PartInventory
+                {
+                    PartId = part.PartId,
+                    BranchId = nhaTrangBranch.BranchId,
+                    Stock = stock,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            // Also add some inventory to other branches (but less stock)
+            var otherBranches = branches.Where(b => b.BranchName != "Nha Trang Garage").ToList();
+            foreach (var branch in otherBranches)
+            {
+                // Add inventory for about 60% of parts to other branches
+                var selectedParts = parts.OrderBy(p => random.Next()).Take((int)(parts.Count * 0.6)).ToList();
+                
+                foreach (var part in selectedParts)
+                {
+                    var stock = random.Next(1, 20); // Lower stock for other branches
+                    
+                    partInventories.Add(new PartInventory
+                    {
+                        PartId = part.PartId,
+                        BranchId = branch.BranchId,
+                        Stock = stock,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            if (partInventories.Any())
+            {
+                _context.PartInventories.AddRange(partInventories);
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Seeded {partInventories.Count} part inventory records");
+                Console.WriteLine($"Nha Trang Garage has inventory for {parts.Count} parts");
+            }
         }
 
     }
