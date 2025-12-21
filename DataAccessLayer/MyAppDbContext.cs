@@ -881,7 +881,6 @@ namespace DataAccessLayer
 
             modelBuilder.Entity<ServicePartCategory>()
                 .HasIndex(spc => new { spc.ServiceId, spc.PartCategoryId })
-                .IsUnique()
                 .HasDatabaseName("UX_ServicePartCategory_ServiceId_PartCategoryId");
 
             // VehicleModel-PartCategory relationship

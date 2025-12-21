@@ -55,12 +55,12 @@ namespace Garage_pro_api.DbInit
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
             //await SeedVehicleRelatedEntitiesAsync();
-            await SeedVehicleRelatedEntitiesAsyncNew(); //NEW
+            await SeedVehicleRelatedEntitiesAsyncNew(); //new
             //await SeedPartCategoriesAsync1();
-            await SeedPartCategoriesEnumBasedAsync(); // New enum
-            await SeedPartsAsyncNew(); // NEW Parts seeding 
-            await SeedServicePartCategoriesAsyncNew(); // ✅ NEW Service-PartCategory linking
-            await SeedPartInventoryAsync(); // ✅ NEW PartInventory for branches
+            await SeedPartCategoriesEnumBasedAsync(); // new enum
+            await SeedPartsAsyncNew(); // new Parts seeding 
+            await SeedServicePartCategoriesAsyncNew(); // new
+            await SeedPartInventoryAsync(); // new
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
             await SeedPriceEmergenciesAsync();
@@ -729,56 +729,56 @@ namespace Garage_pro_api.DbInit
         // ENUM-BASED SEEDING - Simplified approach using CategoryName directly
         private async Task SeedPartCategoriesEnumBasedAsync()
         {
-            // Category display names mapping (Vietnamese) - enum values as keys
+            // Category display names mapping (English) - enum values as keys
             var categoryDisplayNames = new Dictionary<string, string>
             {
                 // BRAKE SYSTEM
-                { "FrontBrakePad", "Má phanh trước" },
-                { "RearBrakePad", "Má phanh sau" },
-                { "FrontBrakeDisc", "Đĩa phanh trước" },
-                { "RearBrakeDisc", "Đĩa phanh sau" },
-                { "BrakeCalipers", "Kẹp phanh" },
-                { "BrakeFluid", "Dầu phanh" },
+                { "FrontBrakePad", "Front Brake Pads" },
+                { "RearBrakePad", "Rear Brake Pads" },
+                { "FrontBrakeDisc", "Front Brake Discs" },
+                { "RearBrakeDisc", "Rear Brake Discs" },
+                { "BrakeCalipers", "Brake Calipers" },
+                { "BrakeFluid", "Brake Fluid" },
                 
                 // ENGINE SYSTEM
-                { "EngineOil", "Dầu động cơ" },
-                { "OilFilter", "Lọc dầu" },
-                { "AirFilter", "Lọc gió" },
-                { "FuelFilter", "Lọc xăng" },
-                { "SparkPlugs", "Bugi" },
-                { "IgnitionCoils", "Cuộn dây đánh lửa" },
-                { "TimingBelt", "Dây curoa cam" },
-                { "DriveBelt", "Dây curoa phụ" },
+                { "EngineOil", "Engine Oil" },
+                { "OilFilter", "Oil Filter" },
+                { "AirFilter", "Air Filter" },
+                { "FuelFilter", "Fuel Filter" },
+                { "SparkPlugs", "Spark Plugs" },
+                { "IgnitionCoils", "Ignition Coils" },
+                { "TimingBelt", "Timing Belt" },
+                { "DriveBelt", "Drive Belt" },
                 
                 // SUSPENSION SYSTEM
-                { "FrontShocks", "Giảm xóc trước" },
-                { "RearShocks", "Giảm xóc sau" },
-                { "ControlArms", "Cần A" },
-                { "StabilizerLinks", "Thanh cân bằng" },
+                { "FrontShocks", "Front Shock Absorbers" },
+                { "RearShocks", "Rear Shock Absorbers" },
+                { "ControlArms", "Control Arms" },
+                { "StabilizerLinks", "Stabilizer Links" },
                 
                 // ELECTRICAL SYSTEM
-                { "Battery", "Ắc quy" },
-                { "Alternator", "Máy phát điện" },
-                { "StarterMotor", "Máy khởi động" },
+                { "Battery", "Battery" },
+                { "Alternator", "Alternator" },
+                { "StarterMotor", "Starter Motor" },
                 
                 // COOLING SYSTEM
-                { "Radiator", "Két nước" },
-                { "WaterPump", "Bơm nước" },
-                { "Thermostat", "Van nhiệt" },
-                { "CoolantHoses", "Ống nước làm mát" },
+                { "Radiator", "Radiator" },
+                { "WaterPump", "Water Pump" },
+                { "Thermostat", "Thermostat" },
+                { "CoolantHoses", "Coolant Hoses" },
                 
                 // TRANSMISSION SYSTEM
-                { "ClutchKit", "Bộ ly hợp" },
-                { "TransmissionFluid", "Dầu hộp số" },
+                { "ClutchKit", "Clutch Kit" },
+                { "TransmissionFluid", "Transmission Fluid" },
                 
                 // HVAC SYSTEM
-                { "CabinFilter", "Lọc gió điều hòa" },
-                { "ACCompressor", "Lốc điều hòa" },
+                { "CabinFilter", "Cabin Air Filter" },
+                { "ACCompressor", "AC Compressor" },
                 
                 // TIRES & WHEELS
-                { "FrontTires", "Lốp trước" },
-                { "RearTires", "Lốp sau" },
-                { "WheelBearings", "Bi bánh xe" }
+                { "FrontTires", "Front Tires" },
+                { "RearTires", "Rear Tires" },
+                { "WheelBearings", "Wheel Bearings" }
             };
 
             // Define categories for each brand (3 brands focus)
@@ -849,6 +849,10 @@ namespace Garage_pro_api.DbInit
         // NEW PARTS SEEDING - Related to PartCategories and Models following document requirements
         private async Task SeedPartsAsyncNew()
         {
+            var dtBranch = await _context.Branches
+            .FirstOrDefaultAsync(b => b.BranchName == "Nha Trang Garage");
+            var dataBranchId = dtBranch.BranchId;
+
             if (_context.Parts.Any()) return;
 
             // Get all part categories that were seeded
@@ -864,104 +868,104 @@ namespace Garage_pro_api.DbInit
             // Define part data with warranty information (following document requirement)
             var partDefinitions = new Dictionary<string, (string[] partNames, decimal[] prices, int[] warrantyMonths)>
             {
-                ["Dầu động cơ"] = (
+                ["Engine Oil"] = (
                     new[] { "Castrol GTX 5W-30", "Mobil 1 0W-20", "Shell Helix Ultra 5W-40", "Valvoline MaxLife 10W-40" },
-                    new[] { 450000m, 650000m, 580000m, 520000m },
+                    new[] { 1200m, 1800m, 1500m, 1300m },
                     new[] { 6, 6, 6, 6 }
                 ),
-                ["Lọc dầu"] = (
+                ["Oil Filter"] = (
                     new[] { "Mann Filter W 712/75", "Bosch 0 451 103 336", "Fram PH3593A", "K&N HP-1017" },
-                    new[] { 180000m, 220000m, 160000m, 280000m },
+                    new[] { 1000m, 1100m, 1050m, 1400m },
                     new[] { 12, 12, 12, 12 }
                 ),
-                ["Lọc gió"] = (
+                ["Air Filter"] = (
                     new[] { "Mann Filter C 2774", "Bosch 1 987 429 404", "Fram CA10467", "K&N 33-2364" },
-                    new[] { 320000m, 380000m, 290000m, 450000m },
+                    new[] { 1600m, 1900m, 1450m, 2250m },
                     new[] { 12, 12, 12, 12 }
                 ),
-                ["Má phanh trước"] = (
+                ["Front Brake Pads"] = (
                     new[] { "Brembo P 83 076", "Akebono ACT1089", "Wagner ThermoQuiet QC1089", "Bendix D1089" },
-                    new[] { 850000m, 920000m, 780000m, 680000m },
+                    new[] { 4250m, 4600m, 3900m, 3400m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Má phanh sau"] = (
+                ["Rear Brake Pads"] = (
                     new[] { "Brembo P 83 077", "Akebono ACT1090", "Wagner ThermoQuiet QC1090", "Bendix D1090" },
-                    new[] { 650000m, 720000m, 580000m, 520000m },
+                    new[] { 3250m, 3600m, 2900m, 2600m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Đĩa phanh trước"] = (
+                ["Front Brake Discs"] = (
                     new[] { "Brembo 09.A419.11", "ATE 24.0125-0173.1", "Zimmermann 150.3414.20", "Febi 24025" },
-                    new[] { 1200000m, 1350000m, 1100000m, 980000m },
+                    new[] { 4800m, 5000m, 4400m, 3900m },
                     new[] { 36, 36, 24, 24 }
                 ),
-                ["Đĩa phanh sau"] = (
+                ["Rear Brake Discs"] = (
                     new[] { "Brembo 08.A419.11", "ATE 24.0125-0174.1", "Zimmermann 150.3415.20", "Febi 24026" },
-                    new[] { 950000m, 1080000m, 850000m, 780000m },
+                    new[] { 3800m, 4300m, 3400m, 3100m },
                     new[] { 36, 36, 24, 24 }
                 ),
-                ["Kẹp phanh"] = (
+                ["Brake Calipers"] = (
                     new[] { "Brembo F 83 000", "ATE 13.2109-0173.2", "TRW BHN230E", "Cardone 18-4735" },
-                    new[] { 2200000m, 2450000m, 1980000m, 1750000m },
+                    new[] { 5000m, 4900m, 4500m, 4200m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Dầu phanh"] = (
+                ["Brake Fluid"] = (
                     new[] { "Castrol React SRF", "Motul RBF 600", "ATE TYP 200", "Bosch DOT 4" },
-                    new[] { 280000m, 320000m, 180000m, 150000m },
+                    new[] { 1400m, 1600m, 1200m, 1000m },
                     new[] { 24, 24, 24, 24 }
                 ),
-                ["Bugi"] = (
+                ["Spark Plugs"] = (
                     new[] { "NGK LZKAR6AP-11", "Denso IK20TT", "Bosch FR7KPP332S", "Champion RE14MCC4" },
-                    new[] { 180000m, 220000m, 160000m, 140000m },
+                    new[] { 1200m, 1400m, 1100m, 1000m },
                     new[] { 12, 12, 12, 12 }
                 ),
-                ["Cuộn dây đánh lửa"] = (
+                ["Ignition Coils"] = (
                     new[] { "Bosch 0 221 504 470", "Denso 673-1301", "NGK U5040", "Delphi GN10328" },
-                    new[] { 850000m, 920000m, 780000m, 680000m },
+                    new[] { 3400m, 3700m, 3100m, 2700m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Ắc quy"] = (
+                ["Battery"] = (
                     new[] { "Varta Blue Dynamic E11", "Bosch S4 005", "Exide Premium EA640", "GS Astra NS60L" },
-                    new[] { 1800000m, 2200000m, 1650000m, 1450000m },
+                    new[] { 4500m, 5000m, 4100m, 3600m },
                     new[] { 24, 36, 18, 18 }
                 ),
-                ["Máy phát điện"] = (
+                ["Alternator"] = (
                     new[] { "Bosch 0 986 082 230", "Denso 104210-4240", "Valeo 437558", "Lucas LRA02830" },
-                    new[] { 4500000m, 5200000m, 4200000m, 3800000m },
+                    new[] { 5000m, 4900m, 4700m, 4300m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Máy khởi động"] = (
+                ["Starter Motor"] = (
                     new[] { "Bosch 0 986 023 240", "Denso 428000-5550", "Valeo 458178", "Lucas LRS02230" },
-                    new[] { 3200000m, 3800000m, 2950000m, 2650000m },
+                    new[] { 4800m, 5000m, 4400m, 4000m },
                     new[] { 24, 24, 18, 18 }
                 ),
-                ["Giảm xóc trước"] = (
+                ["Front Shock Absorbers"] = (
                     new[] { "Monroe G8069", "KYB 334380", "Bilstein B4 22-112629", "Gabriel G63544" },
-                    new[] { 1200000m, 1450000m, 1800000m, 980000m },
+                    new[] { 3600m, 4300m, 5000m, 2900m },
                     new[] { 24, 24, 36, 18 }
                 ),
-                ["Giảm xóc sau"] = (
+                ["Rear Shock Absorbers"] = (
                     new[] { "Monroe G8070", "KYB 344380", "Bilstein B4 19-112630", "Gabriel G63545" },
-                    new[] { 1100000m, 1350000m, 1650000m, 880000m },
+                    new[] { 3300m, 4000m, 4800m, 2600m },
                     new[] { 24, 24, 36, 18 }
                 ),
-                ["Cần A"] = (
+                ["Control Arms"] = (
                     new[] { "Lemförder 31126", "Febi 40440", "TRW JTC1028", "Moog TO-WP-4367" },
-                    new[] { 850000m, 720000m, 920000m, 1050000m },
+                    new[] { 3400m, 2900m, 3700m, 4200m },
                     new[] { 24, 18, 24, 24 }
                 ),
-                ["Lốp trước"] = (
+                ["Front Tires"] = (
                     new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
-                    new[] { 2200000m, 2450000m, 2350000m, 1980000m },
+                    new[] { 4400m, 4900m, 4700m, 3900m },
                     new[] { 60, 60, 60, 48 }
                 ),
-                ["Lốp sau"] = (
+                ["Rear Tires"] = (
                     new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
-                    new[] { 2200000m, 2450000m, 2350000m, 1980000m },
+                    new[] { 4400m, 4900m, 4700m, 3900m },
                     new[] { 60, 60, 60, 48 }
                 ),
-                ["Lọc gió điều hòa"] = (
+                ["Cabin Air Filter"] = (
                     new[] { "Mann Filter CU 2442", "Bosch 1 987 432 120", "Fram CF10285", "K&N VF2042" },
-                    new[] { 280000m, 320000m, 250000m, 380000m },
+                    new[] { 1400m, 1600m, 1250m, 1900m },
                     new[] { 12, 12, 12, 12 }
                 )
             };
@@ -987,8 +991,9 @@ namespace Garage_pro_api.DbInit
                             PartCategoryId = category.LaborCategoryId,
                             Name = $"{partNames[i]} - {brandName} {modelName}",
                             Price = prices[i],
-                            Stock = new Random().Next(5, 25), // Random stock between 5-25
+                            Stock = new Random().Next(5, 25), // Random stock
                             WarrantyMonths = warrantyMonths[i], // NEW: Warranty as per document
+                            BranchId = dataBranchId, 
                             CreatedAt = DateTime.UtcNow
                         });
                     }
@@ -1001,7 +1006,7 @@ namespace Garage_pro_api.DbInit
                 _context.Parts.AddRange(parts);
                 await _context.SaveChangesAsync();
                 
-                Console.WriteLine($"✅ Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
+                Console.WriteLine($"Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
             }
         }
 
@@ -3926,63 +3931,63 @@ namespace Garage_pro_api.DbInit
             var serviceMappings = new Dictionary<string, string[]>
             {
                 // Oil Change Services
-                ["Basic Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
-                ["Premium Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
+                ["Basic Oil Change"] = new[] { "Engine Oil", "Oil Filter" },
+                ["Premium Oil Change"] = new[] { "Engine Oil", "Oil Filter" },
 
                 // Tire Services
-                ["Replace Front Tires (Pair)"] = new[] { "Lốp trước" },
-                ["Replace Rear Tires (Pair)"] = new[] { "Lốp sau" },
-                ["Tire Rotation Service"] = new[] { "Lốp trước", "Lốp sau" },
-                ["Wheel Balancing (4 wheels)"] = new[] { "Lốp trước", "Lốp sau", "Bi bánh xe" },
-                ["Wheel Alignment (4 wheels)"] = new[] { "Lốp trước", "Lốp sau" },
-                ["Tire Puncture Repair (Front)"] = new[] { "Lốp trước" },
-                ["Tire Puncture Repair (Rear)"] = new[] { "Lốp sau" },
+                ["Replace Front Tires (Pair)"] = new[] { "Front Tires" },
+                ["Replace Rear Tires (Pair)"] = new[] { "Rear Tires" },
+                ["Tire Rotation Service"] = new[] { "Front Tires", "Rear Tires" },
+                ["Wheel Balancing (4 wheels)"] = new[] { "Front Tires", "Rear Tires", "Wheel Bearings" },
+                ["Wheel Alignment (4 wheels)"] = new[] { "Front Tires", "Rear Tires" },
+                ["Tire Puncture Repair (Front)"] = new[] { "Front Tires" },
+                ["Tire Puncture Repair (Rear)"] = new[] { "Rear Tires" },
 
                 // Battery Services
-                ["Battery Health Check"] = new[] { "Ắc quy" },
-                ["Battery Replacement"] = new[] { "Ắc quy" },
-                ["Alternator Replacement"] = new[] { "Máy phát điện" },
-                ["Starter Motor Replacement"] = new[] { "Máy khởi động" },
+                ["Battery Health Check"] = new[] { "Battery" },
+                ["Battery Replacement"] = new[] { "Battery" },
+                ["Alternator Replacement"] = new[] { "Alternator" },
+                ["Starter Motor Replacement"] = new[] { "Starter Motor" },
 
                 // Brake Services
-                ["Replace Front Brake Pads"] = new[] { "Má phanh trước" },
-                ["Replace Rear Brake Pads"] = new[] { "Má phanh sau" },
-                ["Replace Front Brake Discs (Pair)"] = new[] { "Đĩa phanh trước" },
-                ["Replace Rear Brake Discs (Pair)"] = new[] { "Đĩa phanh sau" },
-                ["Brake Fluid Flush & Bleed"] = new[] { "Dầu phanh" },
-                ["Front Brake Overhaul"] = new[] { "Má phanh trước", "Đĩa phanh trước", "Kẹp phanh", "Dầu phanh" },
-                ["Rear Brake Overhaul"] = new[] { "Má phanh sau", "Đĩa phanh sau", "Kẹp phanh", "Dầu phanh" },
+                ["Replace Front Brake Pads"] = new[] { "Front Brake Pads" },
+                ["Replace Rear Brake Pads"] = new[] { "Rear Brake Pads" },
+                ["Replace Front Brake Discs (Pair)"] = new[] { "Front Brake Discs" },
+                ["Replace Rear Brake Discs (Pair)"] = new[] { "Rear Brake Discs" },
+                ["Brake Fluid Flush & Bleed"] = new[] { "Brake Fluid" },
+                ["Front Brake Overhaul"] = new[] { "Front Brake Pads", "Front Brake Discs", "Brake Calipers", "Brake Fluid" },
+                ["Rear Brake Overhaul"] = new[] { "Rear Brake Pads", "Rear Brake Discs", "Brake Calipers", "Brake Fluid" },
 
                 // Suspension Services
-                ["Replace Front Shock Absorbers (Pair)"] = new[] { "Giảm xóc trước" },
-                ["Replace Rear Shock Absorbers (Pair)"] = new[] { "Giảm xóc sau" },
-                ["Tie Rod End Replacement"] = new[] { "Cần A" },
-                ["Steering Rack Repair"] = new[] { "Cần A" },
+                ["Replace Front Shock Absorbers (Pair)"] = new[] { "Front Shock Absorbers" },
+                ["Replace Rear Shock Absorbers (Pair)"] = new[] { "Rear Shock Absorbers" },
+                ["Tie Rod End Replacement"] = new[] { "Control Arms" },
+                ["Steering Rack Repair"] = new[] { "Control Arms" },
 
                 // Engine Services
-                ["Engine Tune-Up"] = new[] { "Bugi", "Lọc gió", "Lọc dầu" },
-                ["Spark Plug Replacement"] = new[] { "Bugi" },
-                ["Ignition Coil Replacement"] = new[] { "Cuộn dây đánh lửa" },
-                ["Throttle Body Cleaning"] = new[] { "Lọc gió" },
-                ["Oxygen Sensor Replacement"] = new[] { "Cuộn dây đánh lửa" },
+                ["Engine Tune-Up"] = new[] { "Spark Plugs", "Air Filter", "Oil Filter" },
+                ["Spark Plug Replacement"] = new[] { "Spark Plugs" },
+                ["Ignition Coil Replacement"] = new[] { "Ignition Coils" },
+                ["Throttle Body Cleaning"] = new[] { "Air Filter" },
+                ["Oxygen Sensor Replacement"] = new[] { "Ignition Coils" },
 
                 // Cooling Services
-                ["Radiator Replacement"] = new[] { "Két nước" },
-                ["Water Pump Replacement"] = new[] { "Bơm nước" },
-                ["Thermostat Replacement"] = new[] { "Van nhiệt" },
+                ["Radiator Replacement"] = new[] { "Radiator" },
+                ["Water Pump Replacement"] = new[] { "Water Pump" },
+                ["Thermostat Replacement"] = new[] { "Thermostat" },
 
                 // HVAC Services
-                ["AC Gas Recharge & Leak Check"] = new[] { "Lọc gió điều hòa" },
-                ["AC Compressor Replacement"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" },
+                ["AC Gas Recharge & Leak Check"] = new[] { "Cabin Air Filter" },
+                ["AC Compressor Replacement"] = new[] { "AC Compressor", "Cabin Air Filter" },
 
                 // Safety Services
-                ["ABS Sensor Replacement (Front)"] = new[] { "Bi bánh xe" },
-                ["ABS Sensor Replacement (Rear)"] = new[] { "Bi bánh xe" },
+                ["ABS Sensor Replacement (Front)"] = new[] { "Wheel Bearings" },
+                ["ABS Sensor Replacement (Rear)"] = new[] { "Wheel Bearings" },
 
                 // Advanced Services
-                ["Front Suspension & Brake Refresh"] = new[] { "Giảm xóc trước", "Má phanh trước", "Đĩa phanh trước" },
-                ["Engine Cooling System Overhaul"] = new[] { "Két nước", "Bơm nước", "Van nhiệt", "Ống nước làm mát" },
-                ["Complete AC System Repair"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" }
+                ["Front Suspension & Brake Refresh"] = new[] { "Front Shock Absorbers", "Front Brake Pads", "Front Brake Discs" },
+                ["Engine Cooling System Overhaul"] = new[] { "Radiator", "Water Pump", "Thermostat", "Coolant Hoses" },
+                ["Complete AC System Repair"] = new[] { "AC Compressor", "Cabin Air Filter" }
             };
 
             foreach (var service in services)

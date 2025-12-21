@@ -116,6 +116,11 @@ namespace Services.PartCategoryServices
                 searchDto.SearchTerm,
                 searchDto.PartCategoryId,
                 searchDto.BranchId,
+                searchDto.ModelId,
+                searchDto.ModelName,
+                searchDto.BrandId,
+                searchDto.BrandName,
+                searchDto.CategoryName,
                 searchDto.MinPrice,
                 searchDto.MaxPrice,
                 searchDto.SortBy,
@@ -157,6 +162,14 @@ namespace Services.PartCategoryServices
 
         private PartDto MapToDto(Part part)
         {
+            // Calculate stock from PartInventory instead of Part.Stock
+            var totalStock = part.PartInventories?.Sum(pi => pi.Stock) ?? 0;
+            
+            // If filtering by branch, show only that branch's stock
+            var branchStock = part.BranchId.HasValue 
+                ? part.PartInventories?.FirstOrDefault(pi => pi.BranchId == part.BranchId.Value)?.Stock ?? 0
+                : totalStock;
+
             return new PartDto
             {
                 PartId = part.PartId,
@@ -166,7 +179,11 @@ namespace Services.PartCategoryServices
                 BranchName = part.Branch?.BranchName ?? "",
                 Name = part.Name,
                 Price = part.Price,
-                Stock = part.Stock,
+                Stock = branchStock, // ✅ Now using PartInventory data
+                ModelId = part.PartCategory?.ModelId ?? Guid.Empty,
+                ModelName = part.PartCategory?.VehicleModel?.ModelName ?? "",
+                BrandName = part.PartCategory?.VehicleModel?.Brand?.BrandName ?? "",
+                BrandId = part.PartCategory?.VehicleModel?.BrandID ?? Guid.Empty,
                 CreatedAt = part.CreatedAt,
                 UpdatedAt = part.UpdatedAt
             };

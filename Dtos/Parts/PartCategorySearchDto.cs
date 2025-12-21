@@ -12,6 +12,26 @@ namespace Dtos.Parts
 
         public string? SearchTerm { get; set; }
 
+        /// <summary>
+        /// Filter part categories by vehicle model ID (exact match)
+        /// </summary>
+        public Guid? ModelId { get; set; }
+
+        /// <summary>
+        /// Filter part categories by vehicle model name (partial match)
+        /// </summary>
+        public string? ModelName { get; set; }
+
+        /// <summary>
+        /// Filter part categories by vehicle brand ID (exact match)
+        /// </summary>
+        public Guid? BrandId { get; set; }
+
+        /// <summary>
+        /// Filter part categories by vehicle brand name (partial match)
+        /// </summary>
+        public string? BrandName { get; set; }
+
         public string SortBy { get; set; } = "CategoryName";
 
         public string SortOrder { get; set; } = "asc"; // "asc" or "desc"

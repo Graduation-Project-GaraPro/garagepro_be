@@ -9,6 +9,12 @@ namespace Dtos.Parts
         public string Description { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
+        
+        // Vehicle Model Information
+        public Guid ModelId { get; set; }
+        public string ModelName { get; set; }
+        public string BrandName { get; set; }
+        public Guid BrandId { get; set; }
     }
 
     public class CreatePartCategoryDto
