@@ -116,6 +116,11 @@ namespace Repositories.PartRepositories
             string searchTerm,
             Guid? partCategoryId,
             Guid? branchId,
+            Guid? modelId,
+            string modelName,
+            Guid? brandId,
+            string brandName,
+            string categoryName,
             decimal? minPrice,
             decimal? maxPrice,
             string sortBy,
@@ -125,6 +130,8 @@ namespace Repositories.PartRepositories
         {
             var query = _context.Parts
                 .Include(p => p.PartCategory)
+                .ThenInclude(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
                 .Include(p => p.Branch)
                 .AsQueryable();
 
@@ -134,10 +141,40 @@ namespace Repositories.PartRepositories
                 query = query.Where(p => p.Name.Contains(searchTerm));
             }
 
-            // Filter by category
+            // Filter by category ID
             if (partCategoryId.HasValue)
             {
                 query = query.Where(p => p.PartCategoryId == partCategoryId.Value);
+            }
+
+            // Filter by category name (partial match)
+            if (!string.IsNullOrWhiteSpace(categoryName))
+            {
+                query = query.Where(p => p.PartCategory.CategoryName.Contains(categoryName));
+            }
+
+            // Filter by vehicle model ID
+            if (modelId.HasValue)
+            {
+                query = query.Where(p => p.PartCategory.ModelId == modelId.Value);
+            }
+
+            // Filter by vehicle model name (partial match)
+            if (!string.IsNullOrWhiteSpace(modelName))
+            {
+                query = query.Where(p => p.PartCategory.VehicleModel.ModelName.Contains(modelName));
+            }
+
+            // Filter by vehicle brand ID
+            if (brandId.HasValue)
+            {
+                query = query.Where(p => p.PartCategory.VehicleModel.BrandID == brandId.Value);
+            }
+
+            // Filter by vehicle brand name (partial match)
+            if (!string.IsNullOrWhiteSpace(brandName))
+            {
+                query = query.Where(p => p.PartCategory.VehicleModel.Brand.BrandName.Contains(brandName));
             }
 
             // Filter by branch
@@ -172,6 +209,15 @@ namespace Repositories.PartRepositories
                 "createdat" => sortOrder?.ToLower() == "desc" 
                     ? query.OrderByDescending(p => p.CreatedAt) 
                     : query.OrderBy(p => p.CreatedAt),
+                "modelname" => sortOrder?.ToLower() == "desc" 
+                    ? query.OrderByDescending(p => p.PartCategory.VehicleModel.ModelName) 
+                    : query.OrderBy(p => p.PartCategory.VehicleModel.ModelName),
+                "brandname" => sortOrder?.ToLower() == "desc" 
+                    ? query.OrderByDescending(p => p.PartCategory.VehicleModel.Brand.BrandName) 
+                    : query.OrderBy(p => p.PartCategory.VehicleModel.Brand.BrandName),
+                "categoryname" => sortOrder?.ToLower() == "desc" 
+                    ? query.OrderByDescending(p => p.PartCategory.CategoryName) 
+                    : query.OrderBy(p => p.PartCategory.CategoryName),
                 _ => sortOrder?.ToLower() == "desc" 
                     ? query.OrderByDescending(p => p.Name) 
                     : query.OrderBy(p => p.Name)

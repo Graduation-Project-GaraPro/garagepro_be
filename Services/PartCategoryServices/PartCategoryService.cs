@@ -53,6 +53,10 @@ namespace Services.PartCategoryServices
         {
             var (items, totalCount) = await _partCategoryRepository.SearchPartCategoriesAsync(
                 searchDto.SearchTerm,
+                searchDto.ModelId,
+                searchDto.ModelName,
+                searchDto.BrandId,
+                searchDto.BrandName,
                 searchDto.SortBy,
                 searchDto.SortOrder,
                 searchDto.Page,
@@ -128,7 +132,11 @@ namespace Services.PartCategoryServices
                 CategoryName = category.CategoryName,
                 Description = category.Description,
                 CreatedAt = category.CreatedAt,
-                UpdatedAt = category.UpdatedAt
+                UpdatedAt = category.UpdatedAt,
+                ModelId = category.ModelId,
+                ModelName = category.VehicleModel?.ModelName ?? "",
+                BrandName = category.VehicleModel?.Brand?.BrandName ?? "",
+                BrandId = category.VehicleModel?.BrandID ?? Guid.Empty
             };
         }
     }

@@ -116,6 +116,11 @@ namespace Services.PartCategoryServices
                 searchDto.SearchTerm,
                 searchDto.PartCategoryId,
                 searchDto.BranchId,
+                searchDto.ModelId,
+                searchDto.ModelName,
+                searchDto.BrandId,
+                searchDto.BrandName,
+                searchDto.CategoryName,
                 searchDto.MinPrice,
                 searchDto.MaxPrice,
                 searchDto.SortBy,
@@ -167,6 +172,10 @@ namespace Services.PartCategoryServices
                 Name = part.Name,
                 Price = part.Price,
                 Stock = part.Stock,
+                ModelId = part.PartCategory?.ModelId ?? Guid.Empty,
+                ModelName = part.PartCategory?.VehicleModel?.ModelName ?? "",
+                BrandName = part.PartCategory?.VehicleModel?.Brand?.BrandName ?? "",
+                BrandId = part.PartCategory?.VehicleModel?.BrandID ?? Guid.Empty,
                 CreatedAt = part.CreatedAt,
                 UpdatedAt = part.UpdatedAt
             };
