@@ -62,10 +62,18 @@ namespace Repositories.RepairHistory
                     ServiceId = j.ServiceId,
                     RepairOrderId = j.RepairOrderId,
 
+                    Service = new Service
+                    {
+                        ServiceId = j.Service.ServiceId,
+                        ServiceName = j.Service.ServiceName
+                    },
+
                     Repair = j.Repair == null ? null : new Repair
                     {
                         RepairId = j.Repair.RepairId,
-                        Description = j.Repair.Description
+                        Description = j.Repair.Description,
+                        StartTime = j.Repair.StartTime,    
+                        EndTime = j.Repair.EndTime
                     },
 
                     RepairOrder = new RepairOrder
@@ -115,7 +123,10 @@ namespace Repositories.RepairHistory
                     jp.JobId,
                     PartName = jp.Part.Name,
                     jp.Quantity,
-                    jp.UnitPrice
+                    jp.UnitPrice,
+                    jp.WarrantyMonths,
+                    jp.WarrantyStartAt,
+                    jp.WarrantyEndAt
                 })
                 .ToListAsync();
 
@@ -153,7 +164,10 @@ namespace Repositories.RepairHistory
                             Name = jp.PartName
                         },
                         Quantity = jp.Quantity,
-                        UnitPrice = jp.UnitPrice
+                        UnitPrice = jp.UnitPrice,
+                        WarrantyMonths = jp.WarrantyMonths,
+                        WarrantyStartAt = jp.WarrantyStartAt,
+                        WarrantyEndAt = jp.WarrantyEndAt
                     })
                     .ToList();
 

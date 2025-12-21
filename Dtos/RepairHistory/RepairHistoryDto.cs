@@ -13,7 +13,6 @@ namespace Dtos.RepairHistory
         public CustomerDto Owner { get; set; }
         public int RepairCount { get; set; }
         public decimal TotalVehicleAmount { get; set; }
-       
         public string CustomerIssue { get; set; }
         public List<JobHistoryDto> CompletedJobs { get; set; } = new();
     }
@@ -26,6 +25,8 @@ namespace Dtos.RepairHistory
         public decimal TotalAmount { get; set; }
         public DateTime? Deadline { get; set; }
         public string Note { get; set; }
+        public DateTime? StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
         public List<JobPartDto> JobParts { get; set; } = new();
         public List<ServiceDto> Services { get; set; } = new();
     }
@@ -35,6 +36,9 @@ namespace Dtos.RepairHistory
         public string PartName { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public int? WarrantyMonths { get; set; }
+        public DateTime? WarrantyStartAt { get; set; }
+        public DateTime? WarrantyEndAt { get; set; }
     }
 
     public class ServiceDto

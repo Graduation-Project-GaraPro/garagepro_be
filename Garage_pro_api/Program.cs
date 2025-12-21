@@ -377,7 +377,8 @@ builder.Services.AddScoped<IInspectionTechnicianService>(provider =>
     var mapper = provider.GetRequiredService<IMapper>();
     var repairOrderService = provider.GetRequiredService<IRepairOrderService>();
     var inspectionHubContext = provider.GetRequiredService<IHubContext<InspectionHub>>();
-    return new InspectionTechnicianService(repo, mapper, repairOrderService, inspectionHubContext);
+    var myDBContext = provider.GetRequiredService<MyAppDbContext>();
+    return new InspectionTechnicianService(repo, mapper, repairOrderService, inspectionHubContext, myDBContext);
 });
 builder.Services.AddScoped<ISpecificationRepository, SpecificationRepository>();
 builder.Services.AddScoped<ISpecificationService, SpecificationService>();

@@ -121,7 +121,7 @@ namespace Services.InspectionAndRepair
 
             if (dto.JobStatus == JobStatus.Completed && job.Repair.StartTime.HasValue)
             {
-                endTime = DateTime.UtcNow;
+                endTime = DateTime.Now;
                 actualTime = endTime.Value - job.Repair.StartTime.Value;
             }
 
@@ -131,7 +131,10 @@ namespace Services.InspectionAndRepair
                 endTime,
                 actualTime
             );
-
+            if (dto.JobStatus == JobStatus.Completed && endTime.HasValue)
+            {
+                await UpdateJobPartsWarrantyAsync(dto.JobId, endTime.Value);
+            }
             var payload = new
             {
                 JobId = dto.JobId,
@@ -172,7 +175,7 @@ namespace Services.InspectionAndRepair
 
             var user = await _userService.GetUserByIdAsync(job.RepairOrder.Vehicle.User.Id);
 
-           
+
             if (user != null && user.DeviceId != null)
             {
                 var FcmNotification = new FcmDataPayload
@@ -300,6 +303,41 @@ namespace Services.InspectionAndRepair
             {
                 Console.WriteLine($"[JobTechnicianService] Exception while auto-completing RepairOrder {repairOrderId}: {ex.Message}");
                 throw;
+            }
+        }
+        private async Task UpdateJobPartsWarrantyAsync(Guid jobId, DateTime completionTime)
+        {
+            try
+            {
+                var jobParts = await _jobTechnicianRepository.GetJobPartsByJobIdAsync(jobId);
+
+                if (!jobParts.Any())
+                {
+                    Console.WriteLine($"[JobTechnicianService] No parts found for Job {jobId}");
+                    return;
+                }
+
+                foreach (var jobPart in jobParts)
+                {
+                    if (jobPart.Part?.WarrantyMonths > 0 && !jobPart.WarrantyStartAt.HasValue)
+                    {
+                        jobPart.WarrantyMonths = jobPart.Part.WarrantyMonths;
+                        jobPart.WarrantyStartAt = completionTime;
+                        jobPart.WarrantyEndAt = completionTime.AddMonths(jobPart.Part.WarrantyMonths.Value);
+                        jobPart.UpdatedAt = DateTime.UtcNow;
+
+                        Console.WriteLine($"[JobTechnicianService] Updated warranty for JobPart {jobPart.JobPartId}: " +
+                            $"{jobPart.WarrantyMonths} months, Start: {jobPart.WarrantyStartAt:yyyy-MM-dd}, End: {jobPart.WarrantyEndAt:yyyy-MM-dd}");
+                    }
+                }
+
+                await _jobTechnicianRepository.SaveChangesAsync();
+
+                Console.WriteLine($"[JobTechnicianService] Successfully updated warranty for {jobParts.Count} parts in Job {jobId}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[JobTechnicianService] Error updating warranty for Job {jobId}: {ex.Message}");
             }
         }
     }

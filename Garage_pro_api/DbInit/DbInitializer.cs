@@ -330,6 +330,7 @@ namespace Garage_pro_api.DbInit
 
                     // ✅ Part Management
                     new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId,IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW_ADMIN", Name = "View Parts In Admin", Description = "Can view parts in admin page", CategoryId = partCatId,IsDefault=true },
 
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
@@ -447,7 +448,8 @@ namespace Garage_pro_api.DbInit
                                     // LOG MONITORING
                                     "LOG_VIEW" ,                                    
                                     // Security Policy
-                                    "POLICY_MANAGEMENT"
+                                    "POLICY_MANAGEMENT",
+                                    "PART_VIEW_ADMIN"
                                 }
                             },
                             {
@@ -2028,82 +2030,50 @@ namespace Garage_pro_api.DbInit
             if (!_context.Branches.Any())
             {
                 var branches = new List<Branch>
-            {
+        {
             new Branch
             {
-                BranchName = "Central Garage - Hồ Chí Minh",
-                Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
-                Street = "123 Nguyễn Thị Minh Khai",
-                Commune = "Phường Bến Thành",
-                
-                Province = "Hồ Chí Minh",
-                PhoneNumber = "02838220001",
-                Email = "central.hcm@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Hà Nội Garage",
-                Description = "Professional car repair and maintenance services in Hanoi.",
-                Street = "45 Phạm Hùng",
-                Commune = "Phường Mỹ Đình 2",
-                
-                Province = "Hà Nội",
-                PhoneNumber = "02437760002",
-                Email = "hanoi@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Đà Nẵng Garage",
-                Description = "Trusted auto service center for central region customers.",
+                BranchName = "Đà Nẵng Garage - Hải Châu",
+                Description = "Main garage providing full vehicle maintenance services in Da Nang.",
                 Street = "88 Nguyễn Văn Linh",
                 Commune = "Phường Nam Dương",
-                
+                Province = "Đà Nẵng",
+                PhoneNumber = "02363880001",
+                Email = "haichau@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Latitude = 16.0544,
+                Longitude = 108.2022
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage - Thanh Khê",
+                Description = "Professional car repair services for Thanh Khe district.",
+                Street = "120 Điện Biên Phủ",
+                Commune = "Phường Chính Gián",
+                Province = "Đà Nẵng",
+                PhoneNumber = "02363880002",
+                Email = "thanhkhe@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Latitude = 16.0678,
+                Longitude = 108.1890
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage - Sơn Trà",
+                Description = "Trusted auto service center serving Son Tra area.",
+                Street = "25 Ngô Quyền",
+                Commune = "Phường An Hải Bắc",
                 Province = "Đà Nẵng",
                 PhoneNumber = "02363880003",
-                Email = "danang@garage.com",
+                Email = "sontra@garage.com",
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Cần Thơ Garage",
-                Description = "Serving customers in the Mekong Delta with full maintenance packages.",
-                Street = "22 Trần Hưng Đạo",
-                Commune = "Phường An Cư",
-               
-                Province = "Cần Thơ",
-                PhoneNumber = "02923890004",
-                Email = "cantho@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Nha Trang Garage",
-                Description = "High-quality vehicle service center near the coast.",
-                Street = "56 Lê Thánh Tôn",
-                Commune = "Phường Lộc Thọ",             
-                Province= "Khánh Hòa",
-                PhoneNumber = "02583560005",
-                Email = "nhatrang@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            }
-        };
+                Latitude = 16.0788,
+                Longitude = 108.2350
+                }
+            };
 
                 // Seed OperatingHours (7 ngày cho tất cả chi nhánh)
                 foreach (var branch in branches)
@@ -2117,7 +2087,7 @@ namespace Garage_pro_api.DbInit
                             OpenTime = new TimeSpan(8, 0, 0),   // 08:00
                             CloseTime = new TimeSpan(17, 30, 0) // 17:30
                         });
-                    }
+                   }
 
                     // Gán staff
                     var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
