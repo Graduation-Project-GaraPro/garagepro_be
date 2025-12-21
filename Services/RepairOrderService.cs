@@ -1503,7 +1503,18 @@ namespace Services
                     StartTime = null,
                     EndTime = null,
                     Status = j.Status.ToString(),
-                    Notes = j.Note
+                    Notes = j.Note,
+                    JobParts = j.JobParts?.Select(jp => new ArchivedJobPartDto
+                    {
+                        JobPartId = jp.JobPartId,
+                        PartName = jp.Part?.Name ?? "Unknown",
+                        PartCode = jp.Part?.PartId.ToString().Substring(0, 8) ?? "N/A",
+                        UnitPrice = jp.UnitPrice,
+                        Quantity = jp.Quantity,
+                        WarrantyMonths = jp.WarrantyMonths,
+                        WarrantyStartAt = jp.WarrantyStartAt,
+                        WarrantyEndAt = jp.WarrantyEndAt
+                    }).ToList() ?? new List<ArchivedJobPartDto>()
                 }).ToList() ?? new List<ArchivedJobDto>(),
                 Payments = repairOrder.Payments?.Select(p => new ArchivedPaymentDto
                 {

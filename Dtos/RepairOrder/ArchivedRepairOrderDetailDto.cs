@@ -134,6 +134,24 @@ namespace Dtos.RepairOrder
         public DateTime? EndTime { get; set; }
         public string Status { get; set; }
         public string Notes { get; set; }
+        
+        // Job Parts with warranty info
+        public List<ArchivedJobPartDto> JobParts { get; set; } = new List<ArchivedJobPartDto>();
+    }
+
+    public class ArchivedJobPartDto
+    {
+        public Guid JobPartId { get; set; }
+        public string PartName { get; set; }
+        public string PartCode { get; set; }
+        public decimal UnitPrice { get; set; }
+        public int Quantity { get; set; }
+        public decimal TotalPrice => UnitPrice * Quantity;
+        
+        // Warranty Info (directly from JobPart)
+        public int? WarrantyMonths { get; set; }
+        public DateTime? WarrantyStartAt { get; set; }
+        public DateTime? WarrantyEndAt { get; set; }
     }
 
     public class ArchivedPaymentDto
