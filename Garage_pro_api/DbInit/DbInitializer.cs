@@ -4038,7 +4038,7 @@ namespace Garage_pro_api.DbInit
             if (!parts.Any() || !branches.Any()) return;
 
             // Find Nha Trang Garage branch
-            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Nha Trang Garage");
+            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Đà Nẵng Garage - Sơn Trà");
             if (nhaTrangBranch == null)
             {
                 Console.WriteLine("Nha Trang Garage branch not found!");
@@ -4063,7 +4063,7 @@ namespace Garage_pro_api.DbInit
             }
 
             // Also add some inventory to other branches (but less stock)
-            var otherBranches = branches.Where(b => b.BranchName != "Nha Trang Garage").ToList();
+            var otherBranches = branches.Where(b => b.BranchName != "Đà Nẵng Garage - Hải Châu").ToList();
             foreach (var branch in otherBranches)
             {
                 // Add inventory for about 60% of parts to other branches
