@@ -10,6 +10,7 @@ namespace Dtos.Parts
     {
         public Guid PartCategoryId { get; set; }
         public string CategoryName { get; set; }
+        public string Description { get; set; }
         public List<PartDto> Parts { get; set; } = new List<PartDto>();
     }
 }
