@@ -664,8 +664,20 @@ public class InspectionTechnicianService : IInspectionTechnicianService
             if (serviceDto.AllPartCategories != null && serviceDto.AllPartCategories.Any())
             {
                 serviceDto.AllPartCategories = serviceDto.AllPartCategories
-                    .Where(pc => pc.ModelId == vehicleModelId.Value) 
+                    .Where(pc => pc.ModelId == vehicleModelId.Value)
                     .ToList();
+            }
+        }
+        if (dto.RepairOrder?.Services != null)
+        {
+            foreach (var serviceDto in dto.RepairOrder.Services)
+            {
+                if (serviceDto.AllPartCategories != null && serviceDto.AllPartCategories.Any())
+                {
+                    serviceDto.AllPartCategories = serviceDto.AllPartCategories
+                        .Where(pc => pc.ModelId == vehicleModelId.Value)
+                        .ToList();
+                }
             }
         }
     }

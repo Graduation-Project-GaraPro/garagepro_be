@@ -30,5 +30,9 @@ namespace Repositories.QuotationRepositories
         Task<Quotation> UpdateAsync(Quotation quotation);
         Task<bool> DeleteAsync(Guid quotationId);
         Task<bool> ExistsAsync(Guid quotationId);
+
+        Task<List<PartInspection>> GetPartInspectionsByInspectionIdAsync(Guid inspectionId);
+        Task<PartInventory?> GetPartInventoryAsync(Guid partId, Guid branchId);
+        void UpdatePartInventory(PartInventory partInventory);
     }
 }

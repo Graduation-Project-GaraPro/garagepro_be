@@ -215,6 +215,26 @@ namespace Repositories.QuotationRepositories
         {
             return await _context.Quotations.AnyAsync(q => q.QuotationId == quotationId);
         }
+
+        // Implementation
+        public async Task<List<PartInspection>> GetPartInspectionsByInspectionIdAsync(Guid inspectionId)
+        {
+            return await _context.PartInspections
+                .Where(pi => pi.InspectionId == inspectionId)
+                .Include(pi => pi.Part)
+                .ToListAsync();
+        }
+
+        public async Task<PartInventory?> GetPartInventoryAsync(Guid partId, Guid branchId)
+        {
+            return await _context.PartInventories
+                .FirstOrDefaultAsync(pi => pi.PartId == partId && pi.BranchId == branchId);
+        }
+
+        public void UpdatePartInventory(PartInventory partInventory)
+        {
+            _context.PartInventories.Update(partInventory);
+        }
     }
 }
 

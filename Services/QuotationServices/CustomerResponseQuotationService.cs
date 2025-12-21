@@ -84,9 +84,9 @@ namespace Services.QuotationServices
                 }
                 else if (status == QuotationStatus.Rejected)
                 {
-                    
-                    quotation.TotalAmount = quotation.InspectionFee;
-                    
+
+                    await RestorePartInventoryAsync(quotation);
+                    quotation.TotalAmount = quotation.InspectionFee;                   
                     
                     if (quotation.RepairOrder != null)
                     {
@@ -122,7 +122,41 @@ namespace Services.QuotationServices
                 throw;
             }
         }
+        private async Task RestorePartInventoryAsync(Quotation quotation)
+        {
+            if (quotation.InspectionId == null)
+                return;
 
+            var branchId = quotation.RepairOrder?.BranchId;
+            if (branchId == null)
+                throw new InvalidOperationException("Cannot find BranchId from RepairOrder.");
+
+            var partInspections = await _quotationRepository.GetPartInspectionsByInspectionIdAsync(quotation.InspectionId.Value);
+
+            if (!partInspections.Any())
+                return;
+
+            foreach (var partInspection in partInspections)
+            {
+                var partInventory = await _quotationRepository.GetPartInventoryAsync(
+                    partInspection.PartId,
+                    branchId.Value);
+
+                if (partInventory != null)
+                {
+                    partInventory.Stock += partInspection.Quantity;
+                    partInventory.UpdatedAt = DateTime.UtcNow;
+
+                    _quotationRepository.UpdatePartInventory(partInventory);
+
+                    Console.WriteLine($"[RestorePartInventory] Restored {partInspection.Quantity} units of Part {partInspection.Part.Name} to inventory. New stock: {partInventory.Stock}");
+                }
+                else
+                {
+                    Console.WriteLine($"[RestorePartInventory] Warning: PartInventory not found for Part {partInspection.Part.Name} in Branch {branchId}");
+                }
+            }
+        }
         private async Task ValidateCustomerResponseAsync(Quotation quotation, CustomerQuotationResponseDto responseDto)
         {
             
