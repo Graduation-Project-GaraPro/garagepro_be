@@ -2,34 +2,19 @@ namespace Dtos.Parts
 {
     public class PartSearchDto
     {
-        public string SearchTerm { get; set; } // Search by name
+        public string? SearchTerm { get; set; } // Search by name
         public Guid? PartCategoryId { get; set; }
         public Guid? BranchId { get; set; }
         
-        /// <summary>
-        /// Filter parts by vehicle model ID
-        /// </summary>
         public Guid? ModelId { get; set; }
         
-        /// <summary>
-        /// Filter parts by vehicle model name (partial match)
-        /// </summary>
-        public string ModelName { get; set; }
+        public string? ModelName { get; set; }
         
-        /// <summary>
-        /// Filter parts by vehicle brand ID
-        /// </summary>
         public Guid? BrandId { get; set; }
         
-        /// <summary>
-        /// Filter parts by vehicle brand name (partial match)
-        /// </summary>
-        public string BrandName { get; set; }
+        public string? BrandName { get; set; }
         
-        /// <summary>
-        /// Filter parts by category name (partial match)
-        /// </summary>
-        public string CategoryName { get; set; }
+        public string? CategoryName { get; set; }
         
         public decimal? MinPrice { get; set; }
         public decimal? MaxPrice { get; set; }

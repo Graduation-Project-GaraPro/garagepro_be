@@ -23,6 +23,8 @@ namespace Repositories.PartRepositories
             return await _context.Parts
                 .Include(p => p.PartCategory)
                 .Include(p => p.Branch)
+                .Include(p => p.PartInventories)
+                .ThenInclude(pi => pi.Branch)
                 .FirstOrDefaultAsync(p => p.PartId == id);
         }
 
@@ -31,6 +33,8 @@ namespace Repositories.PartRepositories
             return await _context.Parts
                 .Include(p => p.PartCategory)
                 .Include(p => p.Branch)
+                .Include(p => p.PartInventories)
+                .ThenInclude(pi => pi.Branch)
                 .OrderBy(p => p.Name)
                 .ToListAsync();
         }
@@ -133,6 +137,8 @@ namespace Repositories.PartRepositories
                 .ThenInclude(pc => pc.VehicleModel)
                 .ThenInclude(vm => vm.Brand)
                 .Include(p => p.Branch)
+                .Include(p => p.PartInventories)
+                .ThenInclude(pi => pi.Branch)
                 .AsQueryable();
 
             // Filter by search term (name)
