@@ -915,10 +915,9 @@ namespace DataAccessLayer
                       .HasForeignKey(pi => pi.BranchId)
                       .OnDelete(DeleteBehavior.Restrict);
 
-                // Unique constraint on (PartId, BranchId)
+                // Removed unique constraint to allow multiple inventory records per part-branch combination
                 entity.HasIndex(pi => new { pi.PartId, pi.BranchId })
-                      .IsUnique()
-                      .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+                      .HasDatabaseName("IX_PartInventory_PartId_BranchId");
             });
 
             // Inspection-RepairOrder relationship

@@ -850,7 +850,7 @@ namespace Garage_pro_api.DbInit
         private async Task SeedPartsAsyncNew()
         {
             var dtBranch = await _context.Branches
-            .FirstOrDefaultAsync(b => b.BranchName == "Nha Trang Garage");
+            .FirstOrDefaultAsync(b => b.BranchName == "Đà Nẵng Garage - Sơn Trà");
             var dataBranchId = dtBranch.BranchId;
 
             if (_context.Parts.Any()) return;
@@ -4042,47 +4042,37 @@ namespace Garage_pro_api.DbInit
 
             if (!parts.Any() || !branches.Any()) return;
 
-            // Find Nha Trang Garage branch
-            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Nha Trang Garage");
-            if (nhaTrangBranch == null)
-            {
-                Console.WriteLine("Nha Trang Garage branch not found!");
-                return;
-            }
-
             var partInventories = new List<PartInventory>();
             var random = new Random();
 
-            // Add inventory for all parts to Nha Trang Garage
+            var mainBranch = branches.Skip(1).First();
+
+            // Main branch gets full inventory for all parts
             foreach (var part in parts)
             {
-                var stock = random.Next(5, 50); // Random stock between 5-50 units
-                
                 partInventories.Add(new PartInventory
                 {
                     PartId = part.PartId,
-                    BranchId = nhaTrangBranch.BranchId,
-                    Stock = stock,
+                    BranchId = mainBranch.BranchId,
+                    Stock = random.Next(30, 60), // Higher stock for main branch
                     CreatedAt = DateTime.UtcNow
                 });
             }
 
-            // Also add some inventory to other branches (but less stock)
-            var otherBranches = branches.Where(b => b.BranchName != "Nha Trang Garage").ToList();
-            foreach (var branch in otherBranches)
+            // Other branches get inventory for only 60% of parts with lower stock
+            foreach (var branch in branches.Skip(1))
             {
-                // Add inventory for about 60% of parts to other branches
-                var selectedParts = parts.OrderBy(p => random.Next()).Take((int)(parts.Count * 0.6)).ToList();
-                
+                var selectedParts = parts
+                    .OrderBy(_ => random.Next())
+                    .Take((int)(parts.Count * 0.6));
+
                 foreach (var part in selectedParts)
                 {
-                    var stock = random.Next(1, 20); // Lower stock for other branches
-                    
                     partInventories.Add(new PartInventory
                     {
                         PartId = part.PartId,
                         BranchId = branch.BranchId,
-                        Stock = stock,
+                        Stock = random.Next(5, 20), // Lower stock for other branches
                         CreatedAt = DateTime.UtcNow
                     });
                 }
@@ -4093,7 +4083,8 @@ namespace Garage_pro_api.DbInit
                 _context.PartInventories.AddRange(partInventories);
                 await _context.SaveChangesAsync();
                 Console.WriteLine($"Seeded {partInventories.Count} part inventory records");
-                Console.WriteLine($"Nha Trang Garage has inventory for {parts.Count} parts");
+                Console.WriteLine($"Main branch ({mainBranch.BranchName}) has inventory for {parts.Count} parts");
+                Console.WriteLine($"Other branches have inventory for ~60% of parts each");
             }
         }
 
