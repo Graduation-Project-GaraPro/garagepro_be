@@ -69,6 +69,7 @@ namespace Garage_pro_api.Mapper
             CreateMap<PartCategory, PartCategoryDto>()
                 .ForMember(d => d.PartCategoryId, o => o.MapFrom(s => s.LaborCategoryId))
                 .ForMember(d => d.CategoryName, o => o.MapFrom(s => s.CategoryName))
+                .ForMember(d => d.ModelId, o => o.MapFrom(s => s.ModelId))
                 .ForMember(d => d.Parts, o => o.MapFrom(s => s.Parts));
 
             CreateMap<Part, ServicePartDto>()

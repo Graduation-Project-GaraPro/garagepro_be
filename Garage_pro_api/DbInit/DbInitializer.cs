@@ -4042,6 +4042,14 @@ namespace Garage_pro_api.DbInit
 
             if (!parts.Any() || !branches.Any()) return;
 
+            // Find Nha Trang Garage branch
+            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Đà Nẵng Garage - Sơn Trà");
+            if (nhaTrangBranch == null)
+            {
+                Console.WriteLine("Nha Trang Garage branch not found!");
+                return;
+            }
+
             var partInventories = new List<PartInventory>();
             var random = new Random();
 
@@ -4059,8 +4067,9 @@ namespace Garage_pro_api.DbInit
                 });
             }
 
-            // Other branches get inventory for only 60% of parts with lower stock
-            foreach (var branch in branches.Skip(1))
+            // Also add some inventory to other branches (but less stock)
+            var otherBranches = branches.Where(b => b.BranchName != "Đà Nẵng Garage - Hải Châu").ToList();
+            foreach (var branch in otherBranches)
             {
                 var selectedParts = parts
                     .OrderBy(_ => random.Next())
