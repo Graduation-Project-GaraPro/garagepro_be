@@ -15,6 +15,12 @@ namespace Dtos.RepairOrderArchivedDtos
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
 
+        public int? WarrantyMonths { get; set; }
+
+        public DateTime? WarrantyStartAt { get; set; }
+
+        public DateTime? WarrantyEndAt { get; set; }
+
         public decimal LineTotal => UnitPrice * Quantity;
     }
 
