@@ -47,6 +47,10 @@ namespace Garage_pro_api.DbInit
             await SeedInspectionTypesAsync();
             //await SeedPartCategoriesAsync();
             //await SeedPartsAsync();
+
+            await SeedPartCategoriesEnumBasedAsync(); // new enum
+            await SeedPartsAsyncNew(); // new Parts seeding 
+
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
             //await SeedServicePartCategoriesAsync();
@@ -57,8 +61,7 @@ namespace Garage_pro_api.DbInit
             //await SeedVehicleRelatedEntitiesAsync();
             await SeedVehicleRelatedEntitiesAsyncNew(); //new
             //await SeedPartCategoriesAsync1();
-            await SeedPartCategoriesEnumBasedAsync(); // new enum
-            await SeedPartsAsyncNew(); // new Parts seeding 
+           
             await SeedServicePartCategoriesAsyncNew(); // new
             await SeedPartInventoryAsync(); // new
             await SeedVehiclesAsync();
@@ -1012,8 +1015,7 @@ namespace Garage_pro_api.DbInit
 
         private async Task SeedPartsAsyncNew()
         {
-            var branches = await _context.Branches.ToListAsync();
-            if (!branches.Any()) return;
+           
 
             var partCategories = await _context.PartCategories
                 .Include(pc => pc.VehicleModel)
@@ -1133,8 +1135,7 @@ namespace Garage_pro_api.DbInit
                 )
             };
 
-            foreach (var branch in branches)
-            {
+            
                 foreach (var category in partCategories)
                 {
                     if (!partDefinitions.ContainsKey(category.CategoryName))
@@ -1155,7 +1156,7 @@ namespace Garage_pro_api.DbInit
                         {
                             PartId = Guid.NewGuid(),
                             PartCategoryId = category.LaborCategoryId,
-                            BranchId = branch.BranchId,
+                           
                             Name = $"{partNames[i]} - {brandName} {modelName}",
                             Price = prices[i],
                             WarrantyMonths = warrantyMonths[i],
@@ -1164,12 +1165,12 @@ namespace Garage_pro_api.DbInit
                         });
                     }
                 }
-            }
+            
 
             _context.Parts.AddRange(parts);
             await _context.SaveChangesAsync();
 
-            Console.WriteLine($"Seeded {parts.Count} Parts for {branches.Count} branches");
+            Console.WriteLine($"Seeded {parts.Count} Parts ");
         }
         
       
@@ -2228,63 +2229,38 @@ namespace Garage_pro_api.DbInit
         // NEW FOCUSED SEEDING - Toyota, Hyundai, Ford with ~10 models each
         private async Task SeedVehicleRelatedEntitiesAsyncNew()
         {
-            // Seed Vehicle Brands (3 focused brands)
+            // Seed Vehicle Brands
             if (!_context.VehicleBrands.Any())
             {
                 var brands = new List<VehicleBrand>
-                {
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Toyota",
-                        Country = "Japan",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Hyundai",
-                        Country = "South Korea",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Ford",
-                        Country = "USA",
-                        CreatedAt = DateTime.UtcNow
-                    }
-                };
+        {
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Toyota", Country = "Japan", CreatedAt = DateTime.UtcNow },
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Hyundai", Country = "South Korea", CreatedAt = DateTime.UtcNow },
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Ford", Country = "USA", CreatedAt = DateTime.UtcNow }
+        };
 
                 _context.VehicleBrands.AddRange(brands);
                 await _context.SaveChangesAsync();
             }
 
-            // Seed Vehicle Colors (keep same colors)
+            // Seed Vehicle Colors
             if (!_context.VehicleColors.Any())
             {
                 var colors = new List<VehicleColor>
-                {
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White",  HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black",  HexCode = "#000000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray",   HexCode = "#808080", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red",    HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue",   HexCode = "#0000FF", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Green",  HexCode = "#008000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Yellow", HexCode = "#FFFF00", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Orange", HexCode = "#FFA500", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Brown",  HexCode = "#A52A2A", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gold",   HexCode = "#FFD700", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Pink",   HexCode = "#FFC0CB", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Navy",   HexCode = "#000080", CreatedAt = DateTime.UtcNow }
-                };
+        {
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White", HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black", HexCode = "#000000", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray", HexCode = "#808080", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red", HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue", HexCode = "#0000FF", CreatedAt = DateTime.UtcNow }
+        };
 
                 _context.VehicleColors.AddRange(colors);
                 await _context.SaveChangesAsync();
             }
 
-            // Seed Vehicle Models (focused on 3 brands with ~10 models each)
+            // Seed Vehicle Models (5 models per brand)
             if (!_context.VehicleModels.Any())
             {
                 var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
@@ -2294,49 +2270,35 @@ namespace Garage_pro_api.DbInit
                 if (toyotaBrand != null && hyundaiBrand != null && fordBrand != null)
                 {
                     var models = new List<VehicleModel>
-                    {
-                        // Toyota models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Camry", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Corolla", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "RAV4", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Highlander", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Prius", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sienna", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tacoma", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tundra", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "4Runner", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Avalon", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+            {
+                // Toyota models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Camry", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Corolla", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "RAV4", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Highlander", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Prius", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
 
-                        // Hyundai models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Elantra", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sonata", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tucson", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Santa Fe", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Accent", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Kona", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Palisade", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Veloster", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Genesis G90", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ioniq 5", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                // Hyundai models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Elantra", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sonata", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tucson", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Santa Fe", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Accent", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
 
-                        // Ford models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "F-150", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Mustang", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Explorer", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Escape", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Focus", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Edge", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Expedition", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ranger", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Bronco", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Maverick", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow }
-                    };
+                // Ford models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "F-150", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Mustang", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Explorer", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Escape", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Focus", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow }
+            };
 
                     _context.VehicleModels.AddRange(models);
                     await _context.SaveChangesAsync();
                 }
             }
         }
+
 
         private async Task SeedVehiclesAsync()
         {

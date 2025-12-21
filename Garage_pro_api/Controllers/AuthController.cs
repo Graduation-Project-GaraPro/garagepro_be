@@ -56,6 +56,15 @@ namespace Garage_pro_api.Controllers
             _securityPolicyService = iSecurityPolicyService;
         }
 
+
+        [AllowAnonymous]
+      
+        [HttpGet("password-policy")]
+        public async Task<IActionResult> GetPasswordConfig()
+        {
+            var policy = await _securityPolicyService.GetCurrentAsync();
+            return Ok(policy);
+        }
         //  Gửi OTP
         [HttpPost("send-otp")]
         [AllowAnonymous]

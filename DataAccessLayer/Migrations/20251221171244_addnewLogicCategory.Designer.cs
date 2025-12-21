@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251221042309_addnewLogicCategory")]
+    [Migration("20251221171244_addnewLogicCategory")]
     partial class addnewLogicCategory
     {
         /// <inheritdoc />
@@ -1320,8 +1320,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("PartId", "BranchId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+                        .HasDatabaseName("IX_PartInventory_PartId_BranchId");
 
                     b.ToTable("PartInventories");
                 });

@@ -1317,8 +1317,7 @@ namespace DataAccessLayer.Migrations
                     b.HasIndex("BranchId");
 
                     b.HasIndex("PartId", "BranchId")
-                        .IsUnique()
-                        .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+                        .HasDatabaseName("IX_PartInventory_PartId_BranchId");
 
                     b.ToTable("PartInventories");
                 });
