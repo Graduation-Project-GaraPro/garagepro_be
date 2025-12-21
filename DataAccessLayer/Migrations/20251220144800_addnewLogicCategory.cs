@@ -6,11 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-<<<<<<<< HEAD:DataAccessLayer/Migrations/20251218014722_UpdateDB.cs
-    public partial class UpdateDB : Migration
-========
-    public partial class addnewLogicPartCategory : Migration
->>>>>>>> ad5ddf63dfc79ad5163f6e72a4f2235df565cd5c:DataAccessLayer/Migrations/20251217124747_addnewLogicPartCategory.cs
+    public partial class addnewLogicCategory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -2028,12 +2024,27 @@ namespace DataAccessLayer.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_Parts_BranchId",
+                name: "IX_Part_BranchId",
                 table: "Parts",
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Parts_PartCategoryId",
+                name: "IX_Part_CategoryId_BranchId",
+                table: "Parts",
+                columns: new[] { "PartCategoryId", "BranchId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Part_CategoryId_Name",
+                table: "Parts",
+                columns: new[] { "PartCategoryId", "Name" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Part_Name",
+                table: "Parts",
+                column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Part_PartCategoryId",
                 table: "Parts",
                 column: "PartCategoryId");
 
@@ -2290,14 +2301,20 @@ namespace DataAccessLayer.Migrations
                 column: "ServiceId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartCategories_PartCategoryId",
+                name: "IX_ServicePartCategory_PartCategoryId",
                 table: "ServicePartCategories",
                 column: "PartCategoryId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ServicePartCategories_ServiceId",
+                name: "IX_ServicePartCategory_ServiceId",
                 table: "ServicePartCategories",
                 column: "ServiceId");
+
+            migrationBuilder.CreateIndex(
+                name: "UX_ServicePartCategory_ServiceId_PartCategoryId",
+                table: "ServicePartCategories",
+                columns: new[] { "ServiceId", "PartCategoryId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Services_ServiceCategoryId",

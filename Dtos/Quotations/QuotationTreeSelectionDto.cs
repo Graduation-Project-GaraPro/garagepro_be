@@ -59,6 +59,9 @@ namespace Dtos.Quotations
     {
         public Guid PartCategoryId { get; set; }
         public string CategoryName { get; set; }
+        public Guid ModelId { get; set; } // NEW: Vehicle model information
+        public string ModelName { get; set; } // NEW: For display
+        public string BrandName { get; set; } // NEW: For display
     }
 
     public class PartForSelectionDto
@@ -68,6 +71,10 @@ namespace Dtos.Quotations
         public string Description { get; set; }
         public decimal Price { get; set; }
         public int StockQuantity { get; set; }
+        public int? WarrantyMonths { get; set; } // NEW: Warranty information
         public Guid PartCategoryId { get; set; }
+        public Guid ModelId { get; set; } // NEW: Vehicle model information
+        public string ModelName { get; set; } // NEW: For display
+        public string BrandName { get; set; } // NEW: For display
     }
 }

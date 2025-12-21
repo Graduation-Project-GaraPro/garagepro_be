@@ -1208,9 +1208,20 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("PartId");
 
-                    b.HasIndex("BranchId");
+                    b.HasIndex("BranchId")
+                        .HasDatabaseName("IX_Part_BranchId");
 
-                    b.HasIndex("PartCategoryId");
+                    b.HasIndex("Name")
+                        .HasDatabaseName("IX_Part_Name");
+
+                    b.HasIndex("PartCategoryId")
+                        .HasDatabaseName("IX_Part_PartCategoryId");
+
+                    b.HasIndex("PartCategoryId", "BranchId")
+                        .HasDatabaseName("IX_Part_CategoryId_BranchId");
+
+                    b.HasIndex("PartCategoryId", "Name")
+                        .HasDatabaseName("IX_Part_CategoryId_Name");
 
                     b.ToTable("Parts");
                 });
@@ -2197,9 +2208,15 @@ namespace DataAccessLayer.Migrations
 
                     b.HasKey("ServicePartCategoryId");
 
-                    b.HasIndex("PartCategoryId");
+                    b.HasIndex("PartCategoryId")
+                        .HasDatabaseName("IX_ServicePartCategory_PartCategoryId");
 
-                    b.HasIndex("ServiceId");
+                    b.HasIndex("ServiceId")
+                        .HasDatabaseName("IX_ServicePartCategory_ServiceId");
+
+                    b.HasIndex("ServiceId", "PartCategoryId")
+                        .IsUnique()
+                        .HasDatabaseName("UX_ServicePartCategory_ServiceId_PartCategoryId");
 
                     b.ToTable("ServicePartCategories");
                 });

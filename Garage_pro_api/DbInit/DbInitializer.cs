@@ -54,8 +54,13 @@ namespace Garage_pro_api.DbInit
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
-            await SeedVehicleRelatedEntitiesAsync();
-            await SeedPartCategoriesAsync1();
+            //await SeedVehicleRelatedEntitiesAsync();
+            await SeedVehicleRelatedEntitiesAsyncNew(); //NEW
+            //await SeedPartCategoriesAsync1();
+            await SeedPartCategoriesEnumBasedAsync(); // New enum
+            await SeedPartsAsyncNew(); // NEW Parts seeding 
+            await SeedServicePartCategoriesAsyncNew(); // ✅ NEW Service-PartCategory linking
+            await SeedPartInventoryAsync(); // ✅ NEW PartInventory for branches
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
             await SeedPriceEmergenciesAsync();
@@ -325,6 +330,7 @@ namespace Garage_pro_api.DbInit
 
                     // ✅ Part Management
                     new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW", Name = "View Parts", Description = "Can view parts", CategoryId = partCatId,IsDefault=true },
+                    new Permission { Id = Guid.NewGuid(), Code = "PART_VIEW_ADMIN", Name = "View Parts In Admin", Description = "Can view parts in admin page", CategoryId = partCatId,IsDefault=true },
 
                     new Permission { Id = Guid.NewGuid(), Code = "PART_CREATE", Name = "Create Part", Description = "Can create new parts", CategoryId = partCatId },
                     new Permission { Id = Guid.NewGuid(), Code = "PART_UPDATE", Name = "Update Part", Description = "Can update part information", CategoryId = partCatId },
@@ -442,7 +448,8 @@ namespace Garage_pro_api.DbInit
                                     // LOG MONITORING
                                     "LOG_VIEW" ,                                    
                                     // Security Policy
-                                    "POLICY_MANAGEMENT"
+                                    "POLICY_MANAGEMENT",
+                                    "PART_VIEW_ADMIN"
                                 }
                             },
                             {
@@ -719,9 +726,284 @@ namespace Garage_pro_api.DbInit
             await _context.SaveChangesAsync();
         }
 
+        // ENUM-BASED SEEDING - Simplified approach using CategoryName directly
+        private async Task SeedPartCategoriesEnumBasedAsync()
+        {
+            // Category display names mapping (Vietnamese) - enum values as keys
+            var categoryDisplayNames = new Dictionary<string, string>
+            {
+                // BRAKE SYSTEM
+                { "FrontBrakePad", "Má phanh trước" },
+                { "RearBrakePad", "Má phanh sau" },
+                { "FrontBrakeDisc", "Đĩa phanh trước" },
+                { "RearBrakeDisc", "Đĩa phanh sau" },
+                { "BrakeCalipers", "Kẹp phanh" },
+                { "BrakeFluid", "Dầu phanh" },
+                
+                // ENGINE SYSTEM
+                { "EngineOil", "Dầu động cơ" },
+                { "OilFilter", "Lọc dầu" },
+                { "AirFilter", "Lọc gió" },
+                { "FuelFilter", "Lọc xăng" },
+                { "SparkPlugs", "Bugi" },
+                { "IgnitionCoils", "Cuộn dây đánh lửa" },
+                { "TimingBelt", "Dây curoa cam" },
+                { "DriveBelt", "Dây curoa phụ" },
+                
+                // SUSPENSION SYSTEM
+                { "FrontShocks", "Giảm xóc trước" },
+                { "RearShocks", "Giảm xóc sau" },
+                { "ControlArms", "Cần A" },
+                { "StabilizerLinks", "Thanh cân bằng" },
+                
+                // ELECTRICAL SYSTEM
+                { "Battery", "Ắc quy" },
+                { "Alternator", "Máy phát điện" },
+                { "StarterMotor", "Máy khởi động" },
+                
+                // COOLING SYSTEM
+                { "Radiator", "Két nước" },
+                { "WaterPump", "Bơm nước" },
+                { "Thermostat", "Van nhiệt" },
+                { "CoolantHoses", "Ống nước làm mát" },
+                
+                // TRANSMISSION SYSTEM
+                { "ClutchKit", "Bộ ly hợp" },
+                { "TransmissionFluid", "Dầu hộp số" },
+                
+                // HVAC SYSTEM
+                { "CabinFilter", "Lọc gió điều hòa" },
+                { "ACCompressor", "Lốc điều hòa" },
+                
+                // TIRES & WHEELS
+                { "FrontTires", "Lốp trước" },
+                { "RearTires", "Lốp sau" },
+                { "WheelBearings", "Bi bánh xe" }
+            };
 
+            // Define categories for each brand (3 brands focus)
+            var brandCategoryMapping = new Dictionary<string, List<string>>
+            {
+                ["Toyota"] = new List<string>
+                {
+                    // Common maintenance items for Toyota
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
+                    "BrakeFluid", "SparkPlugs", "Battery", "CabinFilter", "FrontShocks", 
+                    "RearShocks", "TimingBelt", "FrontTires", "RearTires", "WheelBearings"
+                },
+                ["Ford"] = new List<string>
+                {
+                    // Common maintenance items for Ford
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
+                    "FrontBrakeDisc", "SparkPlugs", "IgnitionCoils", "Battery", "CabinFilter", 
+                    "FrontShocks", "ControlArms", "FrontTires", "RearTires", "Alternator"
+                },
+                ["Hyundai"] = new List<string>
+                {
+                    // Common maintenance items for Hyundai
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
+                    "BrakeCalipers", "SparkPlugs", "Battery", "StarterMotor", "CabinFilter", 
+                    "ACCompressor", "FrontShocks", "FrontTires", "WaterPump", "Radiator"
+                }
+            };
 
+            // Get vehicle brands and models
+            var vehicleBrands = await _context.VehicleBrands
+                .Include(b => b.VehicleModels)
+                .Where(b => brandCategoryMapping.Keys.Contains(b.BrandName))
+                .ToListAsync();
 
+            foreach (var brand in vehicleBrands)
+            {
+                var categoriesForBrand = brandCategoryMapping[brand.BrandName];
+                
+                // Limit to ~10 models per brand for demo
+                var modelsToSeed = brand.VehicleModels.Take(10).ToList();
+                
+                foreach (var model in modelsToSeed)
+                {
+                    foreach (var categoryKey in categoriesForBrand)
+                    {
+                        var categoryName = categoryDisplayNames[categoryKey];
+                        
+                        // Check if category already exists for this model
+                        var exists = await _context.PartCategories
+                            .AnyAsync(pc => pc.ModelId == model.ModelID && pc.CategoryName == categoryName);
+                        
+                        if (!exists)
+                        {
+                            _context.PartCategories.Add(new PartCategory
+                            {
+                                ModelId = model.ModelID,
+                                CategoryName = categoryName,
+                                Description = $"{categoryName} cho {brand.BrandName} {model.ModelName}"
+                            });
+                        }
+                    }
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        // NEW PARTS SEEDING - Related to PartCategories and Models following document requirements
+        private async Task SeedPartsAsyncNew()
+        {
+            if (_context.Parts.Any()) return;
+
+            // Get all part categories that were seeded
+            var partCategories = await _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
+                .ToListAsync();
+
+            if (!partCategories.Any()) return;
+
+            var parts = new List<Part>();
+
+            // Define part data with warranty information (following document requirement)
+            var partDefinitions = new Dictionary<string, (string[] partNames, decimal[] prices, int[] warrantyMonths)>
+            {
+                ["Dầu động cơ"] = (
+                    new[] { "Castrol GTX 5W-30", "Mobil 1 0W-20", "Shell Helix Ultra 5W-40", "Valvoline MaxLife 10W-40" },
+                    new[] { 450000m, 650000m, 580000m, 520000m },
+                    new[] { 6, 6, 6, 6 }
+                ),
+                ["Lọc dầu"] = (
+                    new[] { "Mann Filter W 712/75", "Bosch 0 451 103 336", "Fram PH3593A", "K&N HP-1017" },
+                    new[] { 180000m, 220000m, 160000m, 280000m },
+                    new[] { 12, 12, 12, 12 }
+                ),
+                ["Lọc gió"] = (
+                    new[] { "Mann Filter C 2774", "Bosch 1 987 429 404", "Fram CA10467", "K&N 33-2364" },
+                    new[] { 320000m, 380000m, 290000m, 450000m },
+                    new[] { 12, 12, 12, 12 }
+                ),
+                ["Má phanh trước"] = (
+                    new[] { "Brembo P 83 076", "Akebono ACT1089", "Wagner ThermoQuiet QC1089", "Bendix D1089" },
+                    new[] { 850000m, 920000m, 780000m, 680000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Má phanh sau"] = (
+                    new[] { "Brembo P 83 077", "Akebono ACT1090", "Wagner ThermoQuiet QC1090", "Bendix D1090" },
+                    new[] { 650000m, 720000m, 580000m, 520000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Đĩa phanh trước"] = (
+                    new[] { "Brembo 09.A419.11", "ATE 24.0125-0173.1", "Zimmermann 150.3414.20", "Febi 24025" },
+                    new[] { 1200000m, 1350000m, 1100000m, 980000m },
+                    new[] { 36, 36, 24, 24 }
+                ),
+                ["Đĩa phanh sau"] = (
+                    new[] { "Brembo 08.A419.11", "ATE 24.0125-0174.1", "Zimmermann 150.3415.20", "Febi 24026" },
+                    new[] { 950000m, 1080000m, 850000m, 780000m },
+                    new[] { 36, 36, 24, 24 }
+                ),
+                ["Kẹp phanh"] = (
+                    new[] { "Brembo F 83 000", "ATE 13.2109-0173.2", "TRW BHN230E", "Cardone 18-4735" },
+                    new[] { 2200000m, 2450000m, 1980000m, 1750000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Dầu phanh"] = (
+                    new[] { "Castrol React SRF", "Motul RBF 600", "ATE TYP 200", "Bosch DOT 4" },
+                    new[] { 280000m, 320000m, 180000m, 150000m },
+                    new[] { 24, 24, 24, 24 }
+                ),
+                ["Bugi"] = (
+                    new[] { "NGK LZKAR6AP-11", "Denso IK20TT", "Bosch FR7KPP332S", "Champion RE14MCC4" },
+                    new[] { 180000m, 220000m, 160000m, 140000m },
+                    new[] { 12, 12, 12, 12 }
+                ),
+                ["Cuộn dây đánh lửa"] = (
+                    new[] { "Bosch 0 221 504 470", "Denso 673-1301", "NGK U5040", "Delphi GN10328" },
+                    new[] { 850000m, 920000m, 780000m, 680000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Ắc quy"] = (
+                    new[] { "Varta Blue Dynamic E11", "Bosch S4 005", "Exide Premium EA640", "GS Astra NS60L" },
+                    new[] { 1800000m, 2200000m, 1650000m, 1450000m },
+                    new[] { 24, 36, 18, 18 }
+                ),
+                ["Máy phát điện"] = (
+                    new[] { "Bosch 0 986 082 230", "Denso 104210-4240", "Valeo 437558", "Lucas LRA02830" },
+                    new[] { 4500000m, 5200000m, 4200000m, 3800000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Máy khởi động"] = (
+                    new[] { "Bosch 0 986 023 240", "Denso 428000-5550", "Valeo 458178", "Lucas LRS02230" },
+                    new[] { 3200000m, 3800000m, 2950000m, 2650000m },
+                    new[] { 24, 24, 18, 18 }
+                ),
+                ["Giảm xóc trước"] = (
+                    new[] { "Monroe G8069", "KYB 334380", "Bilstein B4 22-112629", "Gabriel G63544" },
+                    new[] { 1200000m, 1450000m, 1800000m, 980000m },
+                    new[] { 24, 24, 36, 18 }
+                ),
+                ["Giảm xóc sau"] = (
+                    new[] { "Monroe G8070", "KYB 344380", "Bilstein B4 19-112630", "Gabriel G63545" },
+                    new[] { 1100000m, 1350000m, 1650000m, 880000m },
+                    new[] { 24, 24, 36, 18 }
+                ),
+                ["Cần A"] = (
+                    new[] { "Lemförder 31126", "Febi 40440", "TRW JTC1028", "Moog TO-WP-4367" },
+                    new[] { 850000m, 720000m, 920000m, 1050000m },
+                    new[] { 24, 18, 24, 24 }
+                ),
+                ["Lốp trước"] = (
+                    new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
+                    new[] { 2200000m, 2450000m, 2350000m, 1980000m },
+                    new[] { 60, 60, 60, 48 }
+                ),
+                ["Lốp sau"] = (
+                    new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
+                    new[] { 2200000m, 2450000m, 2350000m, 1980000m },
+                    new[] { 60, 60, 60, 48 }
+                ),
+                ["Lọc gió điều hòa"] = (
+                    new[] { "Mann Filter CU 2442", "Bosch 1 987 432 120", "Fram CF10285", "K&N VF2042" },
+                    new[] { 280000m, 320000m, 250000m, 380000m },
+                    new[] { 12, 12, 12, 12 }
+                )
+            };
+
+            // Create parts for each category
+            foreach (var category in partCategories)
+            {
+                if (partDefinitions.ContainsKey(category.CategoryName))
+                {
+                    var (partNames, prices, warrantyMonths) = partDefinitions[category.CategoryName];
+                    
+                    // Create 2-3 parts per category to keep it manageable
+                    var partsToCreate = Math.Min(3, partNames.Length);
+                    
+                    for (int i = 0; i < partsToCreate; i++)
+                    {
+                        var brandName = category.VehicleModel.Brand.BrandName;
+                        var modelName = category.VehicleModel.ModelName;
+                        
+                        parts.Add(new Part
+                        {
+                            PartId = Guid.NewGuid(),
+                            PartCategoryId = category.LaborCategoryId,
+                            Name = $"{partNames[i]} - {brandName} {modelName}",
+                            Price = prices[i],
+                            Stock = new Random().Next(5, 25), // Random stock between 5-25
+                            WarrantyMonths = warrantyMonths[i], // NEW: Warranty as per document
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+            }
+
+            // Add all parts to context
+            if (parts.Any())
+            {
+                _context.Parts.AddRange(parts);
+                await _context.SaveChangesAsync();
+                
+                Console.WriteLine($"✅ Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
+            }
+        }
 
         private async Task SeedPartsAsync()
         {
@@ -1743,82 +2025,50 @@ namespace Garage_pro_api.DbInit
             if (!_context.Branches.Any())
             {
                 var branches = new List<Branch>
-            {
+        {
             new Branch
             {
-                BranchName = "Central Garage - Hồ Chí Minh",
-                Description = "Main branch providing full vehicle maintenance and repair services in Ho Chi Minh City.",
-                Street = "123 Nguyễn Thị Minh Khai",
-                Commune = "Phường Bến Thành",
-                
-                Province = "Hồ Chí Minh",
-                PhoneNumber = "02838220001",
-                Email = "central.hcm@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Hà Nội Garage",
-                Description = "Professional car repair and maintenance services in Hanoi.",
-                Street = "45 Phạm Hùng",
-                Commune = "Phường Mỹ Đình 2",
-                
-                Province = "Hà Nội",
-                PhoneNumber = "02437760002",
-                Email = "hanoi@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Đà Nẵng Garage",
-                Description = "Trusted auto service center for central region customers.",
+                BranchName = "Đà Nẵng Garage - Hải Châu",
+                Description = "Main garage providing full vehicle maintenance services in Da Nang.",
                 Street = "88 Nguyễn Văn Linh",
                 Commune = "Phường Nam Dương",
-                
+                Province = "Đà Nẵng",
+                PhoneNumber = "02363880001",
+                Email = "haichau@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Latitude = 16.0544,
+                Longitude = 108.2022
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage - Thanh Khê",
+                Description = "Professional car repair services for Thanh Khe district.",
+                Street = "120 Điện Biên Phủ",
+                Commune = "Phường Chính Gián",
+                Province = "Đà Nẵng",
+                PhoneNumber = "02363880002",
+                Email = "thanhkhe@garage.com",
+                CreatedAt = DateTime.UtcNow,
+                IsActive = true,
+                Latitude = 16.0678,
+                Longitude = 108.1890
+            },
+            new Branch
+            {
+                BranchName = "Đà Nẵng Garage - Sơn Trà",
+                Description = "Trusted auto service center serving Son Tra area.",
+                Street = "25 Ngô Quyền",
+                Commune = "Phường An Hải Bắc",
                 Province = "Đà Nẵng",
                 PhoneNumber = "02363880003",
-                Email = "danang@garage.com",
+                Email = "sontra@garage.com",
                 CreatedAt = DateTime.UtcNow,
                 IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Cần Thơ Garage",
-                Description = "Serving customers in the Mekong Delta with full maintenance packages.",
-                Street = "22 Trần Hưng Đạo",
-                Commune = "Phường An Cư",
-               
-                Province = "Cần Thơ",
-                PhoneNumber = "02923890004",
-                Email = "cantho@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            },
-            new Branch
-            {
-                BranchName = "Nha Trang Garage",
-                Description = "High-quality vehicle service center near the coast.",
-                Street = "56 Lê Thánh Tôn",
-                Commune = "Phường Lộc Thọ",             
-                Province= "Khánh Hòa",
-                PhoneNumber = "02583560005",
-                Email = "nhatrang@garage.com",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                 Latitude=1,
-                Longitude=2
-            }
-        };
+                Latitude = 16.0788,
+                Longitude = 108.2350
+                }
+            };
 
                 // Seed OperatingHours (7 ngày cho tất cả chi nhánh)
                 foreach (var branch in branches)
@@ -1832,7 +2082,7 @@ namespace Garage_pro_api.DbInit
                             OpenTime = new TimeSpan(8, 0, 0),   // 08:00
                             CloseTime = new TimeSpan(17, 30, 0) // 17:30
                         });
-                    }
+                   }
 
                     // Gán staff
                     var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
@@ -2131,6 +2381,119 @@ namespace Garage_pro_api.DbInit
                             BrandID = mercedesBrand.BrandID,
                             CreatedAt = DateTime.UtcNow
                         }
+                    };
+
+                    _context.VehicleModels.AddRange(models);
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        // NEW FOCUSED SEEDING - Toyota, Hyundai, Ford with ~10 models each
+        private async Task SeedVehicleRelatedEntitiesAsyncNew()
+        {
+            // Seed Vehicle Brands (3 focused brands)
+            if (!_context.VehicleBrands.Any())
+            {
+                var brands = new List<VehicleBrand>
+                {
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Toyota",
+                        Country = "Japan",
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Hyundai",
+                        Country = "South Korea",
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new VehicleBrand
+                    {
+                        BrandID = Guid.NewGuid(),
+                        BrandName = "Ford",
+                        Country = "USA",
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                _context.VehicleBrands.AddRange(brands);
+                await _context.SaveChangesAsync();
+            }
+
+            // Seed Vehicle Colors (keep same colors)
+            if (!_context.VehicleColors.Any())
+            {
+                var colors = new List<VehicleColor>
+                {
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White",  HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black",  HexCode = "#000000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray",   HexCode = "#808080", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red",    HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue",   HexCode = "#0000FF", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Green",  HexCode = "#008000", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Yellow", HexCode = "#FFFF00", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Orange", HexCode = "#FFA500", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Brown",  HexCode = "#A52A2A", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gold",   HexCode = "#FFD700", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Pink",   HexCode = "#FFC0CB", CreatedAt = DateTime.UtcNow },
+                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Navy",   HexCode = "#000080", CreatedAt = DateTime.UtcNow }
+                };
+
+                _context.VehicleColors.AddRange(colors);
+                await _context.SaveChangesAsync();
+            }
+
+            // Seed Vehicle Models (focused on 3 brands with ~10 models each)
+            if (!_context.VehicleModels.Any())
+            {
+                var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
+                var hyundaiBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Hyundai");
+                var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
+
+                if (toyotaBrand != null && hyundaiBrand != null && fordBrand != null)
+                {
+                    var models = new List<VehicleModel>
+                    {
+                        // Toyota models (10 models)
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Camry", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Corolla", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "RAV4", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Highlander", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Prius", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sienna", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tacoma", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tundra", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "4Runner", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Avalon", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+
+                        // Hyundai models (10 models)
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Elantra", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sonata", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tucson", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Santa Fe", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Accent", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Kona", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Palisade", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Veloster", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Genesis G90", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ioniq 5", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+
+                        // Ford models (10 models)
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "F-150", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Mustang", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Explorer", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Escape", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Focus", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Edge", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Expedition", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ranger", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Bronco", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Maverick", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow }
                     };
 
                     _context.VehicleModels.AddRange(models);
@@ -3542,6 +3905,191 @@ namespace Garage_pro_api.DbInit
             }
 
             Console.WriteLine($"Bulk seeding finished - total repair orders created: {createdOrders}");
+        }
+
+        // NEW: Link Services with PartCategories
+        private async Task SeedServicePartCategoriesAsyncNew()
+        {
+            if (_context.ServicePartCategories.Any()) return;
+
+            var services = await _context.Services.ToListAsync();
+            var partCategories = await _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
+                .ToListAsync();
+
+            if (!services.Any() || !partCategories.Any()) return;
+
+            var servicePartCategories = new List<ServicePartCategory>();
+
+            // Define service to part category mappings
+            var serviceMappings = new Dictionary<string, string[]>
+            {
+                // Oil Change Services
+                ["Basic Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
+                ["Premium Oil Change"] = new[] { "Dầu động cơ", "Lọc dầu" },
+
+                // Tire Services
+                ["Replace Front Tires (Pair)"] = new[] { "Lốp trước" },
+                ["Replace Rear Tires (Pair)"] = new[] { "Lốp sau" },
+                ["Tire Rotation Service"] = new[] { "Lốp trước", "Lốp sau" },
+                ["Wheel Balancing (4 wheels)"] = new[] { "Lốp trước", "Lốp sau", "Bi bánh xe" },
+                ["Wheel Alignment (4 wheels)"] = new[] { "Lốp trước", "Lốp sau" },
+                ["Tire Puncture Repair (Front)"] = new[] { "Lốp trước" },
+                ["Tire Puncture Repair (Rear)"] = new[] { "Lốp sau" },
+
+                // Battery Services
+                ["Battery Health Check"] = new[] { "Ắc quy" },
+                ["Battery Replacement"] = new[] { "Ắc quy" },
+                ["Alternator Replacement"] = new[] { "Máy phát điện" },
+                ["Starter Motor Replacement"] = new[] { "Máy khởi động" },
+
+                // Brake Services
+                ["Replace Front Brake Pads"] = new[] { "Má phanh trước" },
+                ["Replace Rear Brake Pads"] = new[] { "Má phanh sau" },
+                ["Replace Front Brake Discs (Pair)"] = new[] { "Đĩa phanh trước" },
+                ["Replace Rear Brake Discs (Pair)"] = new[] { "Đĩa phanh sau" },
+                ["Brake Fluid Flush & Bleed"] = new[] { "Dầu phanh" },
+                ["Front Brake Overhaul"] = new[] { "Má phanh trước", "Đĩa phanh trước", "Kẹp phanh", "Dầu phanh" },
+                ["Rear Brake Overhaul"] = new[] { "Má phanh sau", "Đĩa phanh sau", "Kẹp phanh", "Dầu phanh" },
+
+                // Suspension Services
+                ["Replace Front Shock Absorbers (Pair)"] = new[] { "Giảm xóc trước" },
+                ["Replace Rear Shock Absorbers (Pair)"] = new[] { "Giảm xóc sau" },
+                ["Tie Rod End Replacement"] = new[] { "Cần A" },
+                ["Steering Rack Repair"] = new[] { "Cần A" },
+
+                // Engine Services
+                ["Engine Tune-Up"] = new[] { "Bugi", "Lọc gió", "Lọc dầu" },
+                ["Spark Plug Replacement"] = new[] { "Bugi" },
+                ["Ignition Coil Replacement"] = new[] { "Cuộn dây đánh lửa" },
+                ["Throttle Body Cleaning"] = new[] { "Lọc gió" },
+                ["Oxygen Sensor Replacement"] = new[] { "Cuộn dây đánh lửa" },
+
+                // Cooling Services
+                ["Radiator Replacement"] = new[] { "Két nước" },
+                ["Water Pump Replacement"] = new[] { "Bơm nước" },
+                ["Thermostat Replacement"] = new[] { "Van nhiệt" },
+
+                // HVAC Services
+                ["AC Gas Recharge & Leak Check"] = new[] { "Lọc gió điều hòa" },
+                ["AC Compressor Replacement"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" },
+
+                // Safety Services
+                ["ABS Sensor Replacement (Front)"] = new[] { "Bi bánh xe" },
+                ["ABS Sensor Replacement (Rear)"] = new[] { "Bi bánh xe" },
+
+                // Advanced Services
+                ["Front Suspension & Brake Refresh"] = new[] { "Giảm xóc trước", "Má phanh trước", "Đĩa phanh trước" },
+                ["Engine Cooling System Overhaul"] = new[] { "Két nước", "Bơm nước", "Van nhiệt", "Ống nước làm mát" },
+                ["Complete AC System Repair"] = new[] { "Lốc điều hòa", "Lọc gió điều hòa" }
+            };
+
+            foreach (var service in services)
+            {
+                if (serviceMappings.ContainsKey(service.ServiceName))
+                {
+                    var requiredPartCategories = serviceMappings[service.ServiceName];
+                    
+                    foreach (var categoryName in requiredPartCategories)
+                    {
+                        // Find all part categories with this name (across different vehicle models)
+                        var matchingCategories = partCategories
+                            .Where(pc => pc.CategoryName == categoryName)
+                            .ToList();
+
+                        foreach (var partCategory in matchingCategories)
+                        {
+                            // Check if this service-partcategory link already exists
+                            var exists = servicePartCategories.Any(spc => 
+                                spc.ServiceId == service.ServiceId && 
+                                spc.PartCategoryId == partCategory.LaborCategoryId);
+
+                            if (!exists)
+                            {
+                                servicePartCategories.Add(new ServicePartCategory
+                                {
+                                    ServiceId = service.ServiceId,
+                                    PartCategoryId = partCategory.LaborCategoryId,
+                                    CreatedAt = DateTime.UtcNow
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (servicePartCategories.Any())
+            {
+                _context.ServicePartCategories.AddRange(servicePartCategories);
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Seeded {servicePartCategories.Count} service-part category links");
+            }
+        }
+
+        // NEW
+        private async Task SeedPartInventoryAsync()
+        {
+            if (_context.PartInventories.Any()) return;
+
+            var parts = await _context.Parts.ToListAsync();
+            var branches = await _context.Branches.ToListAsync();
+
+            if (!parts.Any() || !branches.Any()) return;
+
+            // Find Nha Trang Garage branch
+            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Nha Trang Garage");
+            if (nhaTrangBranch == null)
+            {
+                Console.WriteLine("Nha Trang Garage branch not found!");
+                return;
+            }
+
+            var partInventories = new List<PartInventory>();
+            var random = new Random();
+
+            // Add inventory for all parts to Nha Trang Garage
+            foreach (var part in parts)
+            {
+                var stock = random.Next(5, 50); // Random stock between 5-50 units
+                
+                partInventories.Add(new PartInventory
+                {
+                    PartId = part.PartId,
+                    BranchId = nhaTrangBranch.BranchId,
+                    Stock = stock,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            // Also add some inventory to other branches (but less stock)
+            var otherBranches = branches.Where(b => b.BranchName != "Nha Trang Garage").ToList();
+            foreach (var branch in otherBranches)
+            {
+                // Add inventory for about 60% of parts to other branches
+                var selectedParts = parts.OrderBy(p => random.Next()).Take((int)(parts.Count * 0.6)).ToList();
+                
+                foreach (var part in selectedParts)
+                {
+                    var stock = random.Next(1, 20); // Lower stock for other branches
+                    
+                    partInventories.Add(new PartInventory
+                    {
+                        PartId = part.PartId,
+                        BranchId = branch.BranchId,
+                        Stock = stock,
+                        CreatedAt = DateTime.UtcNow
+                    });
+                }
+            }
+
+            if (partInventories.Any())
+            {
+                _context.PartInventories.AddRange(partInventories);
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Seeded {partInventories.Count} part inventory records");
+                Console.WriteLine($"Nha Trang Garage has inventory for {parts.Count} parts");
+            }
         }
 
     }
