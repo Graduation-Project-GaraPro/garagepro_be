@@ -1395,6 +1395,21 @@ namespace Services
                 ? await _userService.GetUserByIdAsync(repairOrder.ArchivedByUserId) 
                 : null;
 
+            // Calculate warranty information from JobParts
+            var allJobParts = repairOrder.Jobs?.SelectMany(j => j.JobParts ?? new List<JobPart>()).ToList() ?? new List<JobPart>();
+            var partsWithWarranty = allJobParts.Where(jp => jp.WarrantyMonths.HasValue).ToList();
+            
+            int? warrantyMonths = null;
+            DateTime? warrantyStartAt = null;
+            DateTime? warrantyEndAt = null;
+            
+            if (partsWithWarranty.Any())
+            {
+                warrantyMonths = partsWithWarranty.Max(jp => jp.WarrantyMonths);
+                warrantyStartAt = partsWithWarranty.Min(jp => jp.WarrantyStartAt);
+                warrantyEndAt = partsWithWarranty.Max(jp => jp.WarrantyEndAt);
+            }
+
             // Map Vehicle manually
             var vehicleDto = repairOrder.Vehicle != null ? new Dtos.Vehicles.VehicleDto
             {
@@ -1431,6 +1446,12 @@ namespace Services
                 ArchivedAt = repairOrder.ArchivedAt,
                 ArchivedByUserId = repairOrder.ArchivedByUserId,
                 ArchivedByUserName = archivedByUser != null ? $"{archivedByUser.FirstName} {archivedByUser.LastName}".Trim() : "Unknown",
+                
+                // Warranty Info (calculated from JobParts)
+                WarrantyMonths = warrantyMonths,
+                WarrantyStartAt = warrantyStartAt,
+                WarrantyEndAt = warrantyEndAt,
+                
                 IsCancelled = repairOrder.IsCancelled,
                 CancelledAt = repairOrder.CancelledAt,
                 CancelReason = repairOrder.CancelReason,

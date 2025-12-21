@@ -35,6 +35,11 @@ namespace Dtos.RepairOrder
         public string ArchivedByUserName { get; set; }
         public string ArchiveReason { get; set; }
         
+        // Warranty Info
+        public int? WarrantyMonths { get; set; }
+        public DateTime? WarrantyStartAt { get; set; }
+        public DateTime? WarrantyEndAt { get; set; }
+        
         // Cancel Info
         public bool IsCancelled { get; set; }
         public DateTime? CancelledAt { get; set; }
