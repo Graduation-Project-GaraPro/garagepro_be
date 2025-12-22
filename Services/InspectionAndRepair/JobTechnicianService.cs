@@ -50,7 +50,7 @@ namespace Services.InspectionAndRepair
         {
             var jobs = await _jobTechnicianRepository.GetJobsByTechnicianAsync(userId);
 
-            var now = DateTimeOffset.UtcNow;
+            var now = TimeHelper.GetVietnamNow();
             var validStatuses = new[]
             {
         JobStatus.New,
@@ -62,7 +62,7 @@ namespace Services.InspectionAndRepair
             var filteredJobs = jobs
                 .Where(j => validStatuses.Contains(j.Status) &&
                            (
-                               (j.Status == JobStatus.Completed && j.Deadline.HasValue && j.Deadline.Value.Date >= now) ||
+                               (j.Status == JobStatus.Completed && j.Deadline.HasValue && j.Deadline.Value >= now) ||
                                (j.Status == JobStatus.Completed && !j.Deadline.HasValue) ||                                                                          
                                (j.Status != JobStatus.Completed)
                            ))
@@ -120,8 +120,8 @@ namespace Services.InspectionAndRepair
             TimeSpan? actualTime = null;
 
             if (dto.JobStatus == JobStatus.Completed && job.Repair.StartTime.HasValue)
-            {
-                endTime = DateTime.Now;
+            {                
+                endTime = TimeHelper.GetVietnamNow();
                 actualTime = endTime.Value - job.Repair.StartTime.Value;
             }
 
@@ -242,6 +242,19 @@ namespace Services.InspectionAndRepair
 
             return true;
         }
+        public static class TimeHelper
+        {
+            private const int VN_OFFSET_HOURS = 7;
+            public static DateTime GetVietnamNow()
+            {
+                return DateTime.UtcNow.AddHours(VN_OFFSET_HOURS);
+            }
+            public static DateTime ToVietnamTime(DateTime utcTime)
+            {
+                return utcTime.AddHours(VN_OFFSET_HOURS);
+            }
+        }
+
         public async Task<TechnicianDto?> GetTechnicianByUserIdAsync(string userId)
         {
             var technician = await _jobTechnicianRepository.GetTechnicianByUserIdAsync(userId);
