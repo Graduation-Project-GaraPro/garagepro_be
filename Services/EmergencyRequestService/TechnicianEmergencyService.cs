@@ -172,12 +172,14 @@ namespace Services.EmergencyRequestService
                 Status = "Assigned",
                 CustomerId = emergency.CustomerId,
                 TechnicianId = emergency.TechnicianId,
+                TechnicianName = emergency.Technician?.FullName ?? "Unknown Technician",
+                TechnicianPhone = emergency.Technician?.PhoneNumber,
+                TechnicianAvatar = emergency.Technician?.AvatarUrl,
                 BranchId = emergency.BranchId,
                 Timestamp = DateTime.UtcNow,
-                //TechnicianAvatar = emergency.Technician?.AvatarUrl,
                 Message = "A technician has been assigned to your request."
             };
-          //  await _hubContext.Clients.All.SendAsync("TechnicianAssigned", payload); ;
+            //  await _hubContext.Clients.All.SendAsync("TechnicianAssigned", payload); ;
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianAssigned", payload);
            
 

@@ -746,8 +746,9 @@ namespace Services.EmergencyRequestService
                 Status = emergency.Status.ToString(),       
                 DestinationType = destinationType           
             };
+            
 
-           
+
 
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);
             Console.WriteLine($"RT sent: TechnicianLocationUpdated → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
@@ -770,15 +771,17 @@ namespace Services.EmergencyRequestService
                 EmergencyRequestId = emergency.EmergencyRequestId,
                 Status = "Assigned",
                 TechnicianId = techUser.Id,
-                TechnicianName = techUser.FirstName + techUser.FullName, // Hoặc trường tên tương ứng
+                TechnicianName = techUser.FullName, 
                 TechnicianPhone = techUser.PhoneNumber,
-               // TechnicianAvatar = techUser.AvatarUrl,
+                TechnicianAvatar = techUser.AvatarUrl,
                 Message = "A technician has been assigned to your request."
             };
 
             // Gửi cho Khách hàng
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianAssigned", payload);
             Console.WriteLine($"RT backend sent: Asigned → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+            await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("TechnicianAssigned", payload);
+            Console.WriteLine($"RT sent: Updated → branch-{emergency.BranchId}, id={emergency.EmergencyRequestId}");
             return await _repository.AssignTechnicianAsync(emergencyId, technicianUserId);
 
         }

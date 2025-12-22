@@ -3059,6 +3059,7 @@ namespace Garage_pro_api.DbInit
         // Thêm using nếu cần:
         // using System.Globalization;
 
+
         private async Task SeedManyCustomersAndRepairOrdersAsync(int customerCount = 10, int totalOrdersTarget = 500)
         {
             // Nếu đã có nhiều dữ liệu thì không seed nữa (bảo vệ)
