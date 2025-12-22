@@ -141,13 +141,6 @@ namespace Services.QuotationServices
                         allServicesGood = false;
                     }
 
-                    // Only add to total if service is NOT Good
-                    if (!serviceDto.IsGood)
-                    {
-                        decimal serviceTotal = service.Price * 1;
-                        totalAmount += serviceTotal;
-                    }
-
                     var quotationService = new QuotationService // entity
                     {
                         QuotationId = createdQuotation.QuotationId,
@@ -172,9 +165,6 @@ namespace Services.QuotationServices
                                 throw new ArgumentException($"Part with ID {partDto.PartId} not found.");
                             }
 
-                            decimal partTotal = part.Price * 1;
-                            totalAmount += partTotal;
-
                             var quotationServicePart = new QuotationServicePart
                             {
                                 QuotationServiceId = quotationService.QuotationServiceId,
@@ -189,6 +179,13 @@ namespace Services.QuotationServices
                         }
                     }
                 }
+            }
+
+            // For normal quotations (not all services Good), set TotalAmount to 0 before customer response
+            // Total will be calculated only after customer selects services and parts
+            if (!allServicesGood)
+            {
+                totalAmount = 0;
             }
 
             // Update the quotation with the calculated total amount and status
@@ -883,7 +880,7 @@ namespace Services.QuotationServices
         }
 
 
-        // Checks if a repair order can be completed (all quotations are Good and repair order is In Progress)
+        // Checks if a repair order can be completed (all quotations are Good OR all quotations are Rejected, and repair order is In Progress)
         public async Task<bool> CanCompleteRepairOrderAsync(Guid repairOrderId)
         {
             try
@@ -896,10 +893,11 @@ namespace Services.QuotationServices
                     return false;
                 }
 
-                // Check if ALL quotations are Good status
+                // Check if ALL quotations are Good status OR ALL quotations are Rejected status
                 var allQuotationsAreGood = quotations.All(q => q.Status == QuotationStatus.Good);
+                var allQuotationsAreRejected = quotations.All(q => q.Status == QuotationStatus.Rejected);
                 
-                if (!allQuotationsAreGood)
+                if (!allQuotationsAreGood && !allQuotationsAreRejected)
                 {
                     return false;
                 }
@@ -918,14 +916,14 @@ namespace Services.QuotationServices
         }
 
 
-        // Manually completes a repair order when all quotations are Good
+        // Manually completes a repair order when all quotations are Good OR all quotations are Rejected
         public async Task CompleteRepairOrderWithGoodQuotationsAsync(Guid repairOrderId)
         {
             // First check if it can be completed
             var canComplete = await CanCompleteRepairOrderAsync(repairOrderId);
             if (!canComplete)
             {
-                throw new InvalidOperationException("Repair order cannot be completed. Either not all quotations are Good or repair order is not In Progress.");
+                throw new InvalidOperationException("Repair order cannot be completed. Either not all quotations are Good/Rejected or repair order is not In Progress.");
             }
 
             // Get quotations and repair order
@@ -944,10 +942,25 @@ namespace Services.QuotationServices
             repairOrder.CompletionDate = DateTime.UtcNow;
             repairOrder.StatusId = 3;
 
-            // Calculate total cost from Good quotations (inspection fees)
-            var totalInspectionFees = quotations.Sum(q => q.InspectionFee);
-            repairOrder.Cost = totalInspectionFees;
-            repairOrder.PaidAmount = totalInspectionFees;
+            // Calculate total cost based on quotation status
+            var allQuotationsAreGood = quotations.All(q => q.Status == QuotationStatus.Good);
+            var allQuotationsAreRejected = quotations.All(q => q.Status == QuotationStatus.Rejected);
+            
+            decimal totalCost = 0;
+            
+            if (allQuotationsAreGood)
+            {
+                // For Good quotations: use inspection fees from quotations
+                totalCost = quotations.Sum(q => q.InspectionFee);
+            }
+            else if (allQuotationsAreRejected)
+            {
+                // For Rejected quotations: use inspection fees (customer pays for inspection only)
+                totalCost = quotations.Sum(q => q.InspectionFee);
+            }
+            
+            repairOrder.Cost = totalCost;
+            repairOrder.PaidAmount = totalCost;
             
             await _repairOrderRepository.UpdateAsync(repairOrder);
 

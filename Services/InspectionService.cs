@@ -724,18 +724,22 @@ namespace Services
                     // Store total inspection fee 
                     quotationEntity.InspectionFee = totalInspectionFee;
 
-                    // Add Good services inspection fees to quotation total
-                    if (goodServicesInspectionTotal > 0)
+                    // Only add Good services inspection fees to quotation total if ALL services are Good
+                    bool allServicesAreGood = quotationEntity.QuotationServices.All(qs => qs.IsGood);
+                    
+                    if (allServicesAreGood && goodServicesInspectionTotal > 0)
                     {
-                        quotationEntity.TotalAmount += goodServicesInspectionTotal;
+                        quotationEntity.TotalAmount = goodServicesInspectionTotal;
                         
-                        //  update RO cost if all services are Good 
-                        bool allServicesAreGood = quotationEntity.QuotationServices.All(qs => qs.IsGood);
-                        
-                        if (allServicesAreGood && quotationEntity.RepairOrder != null)
+                        // Update RO cost if all services are Good 
+                        if (quotationEntity.RepairOrder != null)
                         {
                             quotationEntity.RepairOrder.Cost += goodServicesInspectionTotal;
                         }
+                    }
+                    else
+                    {
+                        quotationEntity.TotalAmount = 0;
                     }
 
 
