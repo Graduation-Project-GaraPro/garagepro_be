@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Services.Hubs;
+using static Services.InspectionAndRepair.JobTechnicianService;
 
 namespace Services.InspectionAndRepair
 {
@@ -54,7 +55,7 @@ namespace Services.InspectionAndRepair
 
             var repair = _mapper.Map<Repair>(dto);
             repair.EstimatedTime = estimatedTime;
-            repair.StartTime = DateTime.Now;
+            repair.StartTime = TimeHelper.GetVietnamNow();
 
             var oldStatus = job.Status;
             await _repairRepository.AddRepairAsync(repair);
