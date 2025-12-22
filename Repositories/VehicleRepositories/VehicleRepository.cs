@@ -15,6 +15,8 @@ namespace Repositories.VehicleRepositories
             _context = context;
         }
 
+        public IQueryable<Vehicle> Query() => _context.Vehicles.AsNoTracking();
+
         public async Task<Vehicle?> GetByIdAsync(Guid vehicleId)
         {
             return await _context.Vehicles

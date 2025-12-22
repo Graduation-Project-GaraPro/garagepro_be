@@ -1,12 +1,14 @@
+﻿using AutoMapper;
+using BusinessObject;
+using BusinessObject.Customers;
+using Dtos.RoBoard;
+using Dtos.Vehicles;
+using Microsoft.EntityFrameworkCore;
+using Repositories.VehicleRepositories;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AutoMapper;
-using BusinessObject;
-using Dtos.RoBoard;
-using Repositories.VehicleRepositories;
-using Dtos.Vehicles;
 
 namespace Services.VehicleServices
 {
@@ -56,6 +58,68 @@ namespace Services.VehicleServices
             var vehicles = await _vehicleRepository.GetByUserIdAsync(userId);
             return vehicles.Select(v => _mapper.Map<VehicleDto>(v));
         }
+
+        public async Task<List<VehicleSelectableDto>> GetUserVehiclesSelectableAsync(string userId)
+        {
+            var query = _vehicleRepository.Query(); // IQueryable<Vehicle>
+
+            var list = await query
+                .Include(v => v.User)
+                .Include(v => v.Brand)
+                .Include(v => v.Model)
+                .Include(v => v.Color)
+                .Include(v=>v.RepairOrders)
+                .Include(v=>v.RepairRequests)
+                .Where(v => v.UserId == userId)
+                .Select(v => new VehicleSelectableDto
+                {
+                    VehicleId = v.VehicleId,
+                    LicensePlate = v.LicensePlate,
+                    VIN = v.VIN,
+                    Year = v.Year,
+                    Odometer = v.Odometer,
+                    LastServiceDate = v.LastServiceDate,
+                    NextServiceDate = v.NextServiceDate,
+                    WarrantyStatus = v.WarrantyStatus,
+                    CreatedAt = v.CreatedAt,
+                    UpdatedAt = v.UpdatedAt,
+
+                    BrandId = v.BrandId,
+                    ModelId = v.ModelId,
+                    ColorId = v.ColorId,
+
+                    BrandName = v.Brand.BrandName,
+                    ModelName = v.Model.ModelName,
+                    ColorName = v.Color.ColorName,
+
+                    HasActiveRepairRequest =
+                        v.RepairRequests.Any(rr =>
+                            rr.Status != RepairRequestStatus.Completed &&
+                            rr.Status != RepairRequestStatus.Cancelled),
+
+                    HasOpenRepairOrder =
+                        v.RepairOrders.Any(ro => ro.IsArchived == false),
+
+                    HasArchivedRepairOrder =
+                        v.RepairOrders.Any(ro => ro.IsArchived == true),
+                })
+                .ToListAsync();
+
+            foreach (var x in list)
+            {
+                x.IsSelectable = !x.HasActiveRepairRequest && !x.HasOpenRepairOrder;
+
+                if (x.HasOpenRepairOrder)
+                    x.State = VehicleBookingState.InGarage;
+                else if (x.HasArchivedRepairOrder)
+                    x.State = VehicleBookingState.PickedUp; // nếu bạn có trạng thái này
+                else
+                    x.State = VehicleBookingState.Available;
+            }
+
+            return list;
+        }
+
 
         // This method is used when the user ID is provided in the DTO
         public async Task<VehicleDto> CreateVehicleAsync( CreateVehicleDto createVehicleDto)

@@ -913,7 +913,7 @@ namespace DataAccessLayer
                 entity.HasOne(pi => pi.Branch)
                       .WithMany(b => b.PartInventories)
                       .HasForeignKey(pi => pi.BranchId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Cascade);
 
                 // Removed unique constraint to allow multiple inventory records per part-branch combination
                 entity.HasIndex(pi => new { pi.PartId, pi.BranchId })

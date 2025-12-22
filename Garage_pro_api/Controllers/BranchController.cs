@@ -235,15 +235,11 @@ namespace Garage_pro_api.Controllers
                 string statusText = request.IsActive ? "activated" : "deactivated";
                 return Ok(new { message = $"Branch {statusText} successfully." });
             }
-            catch (ApplicationException ex)
-            {
-                //_logger.LogError(ex, "Failed to toggle branch status for ID {BranchId}", id);
-                return StatusCode(500, new { message = ex.Message });
-            }
+            
             catch (Exception ex)
             {
                 //_logger.LogError(ex, "Unexpected error when toggling branch status for ID {BranchId}", id);
-                return StatusCode(500, new { message = "An unexpected error occurred." });
+                return StatusCode(500, new { message = ex.Message });
             }
         }
         [Authorize(Policy = "BRANCH_DELETE")]

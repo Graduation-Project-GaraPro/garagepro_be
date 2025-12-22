@@ -329,16 +329,15 @@ namespace Services.CampaignServices
             if (campaign == null)
                 throw new KeyNotFoundException("Campaign not found.");
 
-            // 🔹 Validate: không được kích hoạt nếu đã hết hạn
-            // SỬA: Đổi điều kiện từ > thành <
+            
             if (campaign.EndDate.Date < DateTime.Today)
                 throw new InvalidOperationException("Cannot activate a campaign that has already expired.");
 
-            // 🔹 Validate: không được kích hoạt nếu đã hết lượt sử dụng
-            if (campaign.UsageLimit.HasValue && campaign.VoucherUsages.Count >= campaign.UsageLimit)
+            
+            if (campaign.UsageLimit.HasValue && campaign.UsedCount >= campaign.UsageLimit)
                 throw new InvalidOperationException("Cannot activate a campaign that has reached its usage limit.");
 
-            // ✅ Hợp lệ → gọi repo để cập nhật
+            
             await _repository.UpdateStatusAsync(id, true);
             await _repository.SaveChangesAsync();
 
@@ -352,7 +351,10 @@ namespace Services.CampaignServices
 
                 if (campaign == null)
                     throw new KeyNotFoundException("Campaign not found.");
-
+                if(campaign.UsedCount > 0)
+                {
+                    throw new Exception("Cannot Deactivate Promotional Campaign Already used");
+                }    
                 campaign.IsActive = false;
                 await _repository.UpdateStatusAsync(id,false);
                 await _repository.SaveChangesAsync();
@@ -494,7 +496,7 @@ namespace Services.CampaignServices
                 throw new InvalidOperationException("Cannot delete an active campaign.");
 
             //  Không cho xoá nếu đã có lượt sử dụng
-            if (campaign.VoucherUsages != null && campaign.VoucherUsages.Any())
+            if (campaign.UsageLimit > 0)
                 throw new InvalidOperationException("Cannot delete a campaign that has been used.");
 
             _repository.Delete(campaign);
@@ -522,7 +524,7 @@ namespace Services.CampaignServices
             }
 
             //  Không cho xoá nếu có lượt sử dụng
-            var usedCampaigns = toDelete.Where(c => c.VoucherUsages != null && c.VoucherUsages.Any()).ToList();
+            var usedCampaigns = toDelete.Where(c => c.UsageLimit > 0).ToList();
             if (usedCampaigns.Any())
             {
                 var names = string.Join(", ", usedCampaigns.Select(c => c.Name));

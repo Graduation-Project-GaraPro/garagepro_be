@@ -40,6 +40,19 @@ namespace Garage_pro_api.Controllers.Vehicle
             return Ok(vehicles);
         }
 
+        [HttpGet("user/selectable")]
+        public async Task<IActionResult> GetUserVehiclesSelectable()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? User.FindFirstValue("sub");
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var vehicles = await _vehicleService.GetUserVehiclesSelectableAsync(userId);
+            return Ok(vehicles);
+        }
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetVehicleById(Guid id)
         {

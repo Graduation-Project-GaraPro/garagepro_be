@@ -449,15 +449,40 @@ namespace Services.BranchServices
 
         public async Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive)
         {
-            try
-            {
-                await _branchRepo.UpdateIsActiveForManyAsync(branchIds, isActive);
-            }
-            catch (Exception ex)
-            {
+            var ids = branchIds.Distinct().ToList();
+            if (!ids.Any()) return;
 
-                throw new ApplicationException("An error occurred while updating branch statuses.", ex);
+            if (!isActive)
+            {
+                var (blocked, allowed) = await _branchRepo.CheckBranchesCanChangeActiveAsync(ids);
+
+                if (blocked.Any())
+                {
+                    // Lấy tên chi nhánh theo các BranchId bị chặn
+                    var blockedIds = blocked.Select(x => x.BranchId).Distinct().ToList();
+
+                    var branchNames = await _context.Branches
+                        .Where(b => blockedIds.Contains(b.BranchId))
+                        .Select(b => new { b.BranchId, b.BranchName })
+                        .ToDictionaryAsync(x => x.BranchId, x => x.BranchName);
+
+                    var msg = string.Join("; ",
+                        blocked.Select(b =>
+                            $"{branchNames.GetValueOrDefault(b.BranchId, b.BranchId.ToString())} " ));
+
+                    throw new InvalidOperationException(
+                        $"Branch cannot be deactivated due to active repair requests/orders: {msg}");
+                }
+
+                ids = allowed?.Distinct().ToList() ?? new List<Guid>();
+                if (!ids.Any()) return;
             }
+
+            await _context.Branches
+                .Where(b => ids.Contains(b.BranchId))
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(b => b.IsActive, isActive)
+                    .SetProperty(b => b.UpdatedAt, DateTime.UtcNow));
         }
 
 

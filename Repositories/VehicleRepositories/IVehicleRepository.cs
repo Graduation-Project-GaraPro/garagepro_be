@@ -16,6 +16,7 @@ namespace Repositories.VehicleRepositories
         Task<IEnumerable<Vehicle>> GetAllAsync();
         Task<Vehicle> CreateAsync(Vehicle vehicle);
         Task<Vehicle> UpdateAsync(Vehicle vehicle);
+        IQueryable<Vehicle> Query();
         Task<bool> DeleteAsync(Guid vehicleId);
         Task<bool> ExistsAsync(Guid vehicleId);
         Task<bool> ExistsByVinAsync(string vin);
