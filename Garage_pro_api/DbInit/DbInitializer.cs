@@ -47,6 +47,10 @@ namespace Garage_pro_api.DbInit
             await SeedInspectionTypesAsync();
             //await SeedPartCategoriesAsync();
             //await SeedPartsAsync();
+
+            await SeedPartCategoriesEnumBasedAsync(); // new enum
+            await SeedPartsAsyncNew(); // new Parts seeding 
+
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
             //await SeedServicePartCategoriesAsync();
@@ -57,8 +61,7 @@ namespace Garage_pro_api.DbInit
             //await SeedVehicleRelatedEntitiesAsync();
             await SeedVehicleRelatedEntitiesAsyncNew(); //new
             //await SeedPartCategoriesAsync1();
-            await SeedPartCategoriesEnumBasedAsync(); // new enum
-            await SeedPartsAsyncNew(); // new Parts seeding 
+           
             await SeedServicePartCategoriesAsyncNew(); // new
             await SeedPartInventoryAsync(); // new
             await SeedVehiclesAsync();
@@ -847,15 +850,173 @@ namespace Garage_pro_api.DbInit
         }
 
         // NEW PARTS SEEDING - Related to PartCategories and Models following document requirements
+        //private async Task SeedPartsAsyncNew()
+        //{
+        //    var dtBranch = await _context.Branches
+        //    .FirstOrDefaultAsync(b => b.BranchName == "Nha Trang Garage");
+        //    var dataBranchId = dtBranch.BranchId;
+
+        //    if (_context.Parts.Any()) return;
+
+        //    // Get all part categories that were seeded
+        //    var partCategories = await _context.PartCategories
+        //        .Include(pc => pc.VehicleModel)
+        //        .ThenInclude(vm => vm.Brand)
+        //        .ToListAsync();
+
+        //    if (!partCategories.Any()) return;
+
+        //    var parts = new List<Part>();
+
+        //    // Define part data with warranty information (following document requirement)
+        //    var partDefinitions = new Dictionary<string, (string[] partNames, decimal[] prices, int[] warrantyMonths)>
+        //    {
+        //        ["Engine Oil"] = (
+        //            new[] { "Castrol GTX 5W-30", "Mobil 1 0W-20", "Shell Helix Ultra 5W-40", "Valvoline MaxLife 10W-40" },
+        //            new[] { 1200m, 1800m, 1500m, 1300m },
+        //            new[] { 6, 6, 6, 6 }
+        //        ),
+        //        ["Oil Filter"] = (
+        //            new[] { "Mann Filter W 712/75", "Bosch 0 451 103 336", "Fram PH3593A", "K&N HP-1017" },
+        //            new[] { 1000m, 1100m, 1050m, 1400m },
+        //            new[] { 12, 12, 12, 12 }
+        //        ),
+        //        ["Air Filter"] = (
+        //            new[] { "Mann Filter C 2774", "Bosch 1 987 429 404", "Fram CA10467", "K&N 33-2364" },
+        //            new[] { 1600m, 1900m, 1450m, 2250m },
+        //            new[] { 12, 12, 12, 12 }
+        //        ),
+        //        ["Front Brake Pads"] = (
+        //            new[] { "Brembo P 83 076", "Akebono ACT1089", "Wagner ThermoQuiet QC1089", "Bendix D1089" },
+        //            new[] { 4250m, 4600m, 3900m, 3400m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Rear Brake Pads"] = (
+        //            new[] { "Brembo P 83 077", "Akebono ACT1090", "Wagner ThermoQuiet QC1090", "Bendix D1090" },
+        //            new[] { 3250m, 3600m, 2900m, 2600m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Front Brake Discs"] = (
+        //            new[] { "Brembo 09.A419.11", "ATE 24.0125-0173.1", "Zimmermann 150.3414.20", "Febi 24025" },
+        //            new[] { 4800m, 5000m, 4400m, 3900m },
+        //            new[] { 36, 36, 24, 24 }
+        //        ),
+        //        ["Rear Brake Discs"] = (
+        //            new[] { "Brembo 08.A419.11", "ATE 24.0125-0174.1", "Zimmermann 150.3415.20", "Febi 24026" },
+        //            new[] { 3800m, 4300m, 3400m, 3100m },
+        //            new[] { 36, 36, 24, 24 }
+        //        ),
+        //        ["Brake Calipers"] = (
+        //            new[] { "Brembo F 83 000", "ATE 13.2109-0173.2", "TRW BHN230E", "Cardone 18-4735" },
+        //            new[] { 5000m, 4900m, 4500m, 4200m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Brake Fluid"] = (
+        //            new[] { "Castrol React SRF", "Motul RBF 600", "ATE TYP 200", "Bosch DOT 4" },
+        //            new[] { 1400m, 1600m, 1200m, 1000m },
+        //            new[] { 24, 24, 24, 24 }
+        //        ),
+        //        ["Spark Plugs"] = (
+        //            new[] { "NGK LZKAR6AP-11", "Denso IK20TT", "Bosch FR7KPP332S", "Champion RE14MCC4" },
+        //            new[] { 1200m, 1400m, 1100m, 1000m },
+        //            new[] { 12, 12, 12, 12 }
+        //        ),
+        //        ["Ignition Coils"] = (
+        //            new[] { "Bosch 0 221 504 470", "Denso 673-1301", "NGK U5040", "Delphi GN10328" },
+        //            new[] { 3400m, 3700m, 3100m, 2700m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Battery"] = (
+        //            new[] { "Varta Blue Dynamic E11", "Bosch S4 005", "Exide Premium EA640", "GS Astra NS60L" },
+        //            new[] { 4500m, 5000m, 4100m, 3600m },
+        //            new[] { 24, 36, 18, 18 }
+        //        ),
+        //        ["Alternator"] = (
+        //            new[] { "Bosch 0 986 082 230", "Denso 104210-4240", "Valeo 437558", "Lucas LRA02830" },
+        //            new[] { 5000m, 4900m, 4700m, 4300m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Starter Motor"] = (
+        //            new[] { "Bosch 0 986 023 240", "Denso 428000-5550", "Valeo 458178", "Lucas LRS02230" },
+        //            new[] { 4800m, 5000m, 4400m, 4000m },
+        //            new[] { 24, 24, 18, 18 }
+        //        ),
+        //        ["Front Shock Absorbers"] = (
+        //            new[] { "Monroe G8069", "KYB 334380", "Bilstein B4 22-112629", "Gabriel G63544" },
+        //            new[] { 3600m, 4300m, 5000m, 2900m },
+        //            new[] { 24, 24, 36, 18 }
+        //        ),
+        //        ["Rear Shock Absorbers"] = (
+        //            new[] { "Monroe G8070", "KYB 344380", "Bilstein B4 19-112630", "Gabriel G63545" },
+        //            new[] { 3300m, 4000m, 4800m, 2600m },
+        //            new[] { 24, 24, 36, 18 }
+        //        ),
+        //        ["Control Arms"] = (
+        //            new[] { "Lemförder 31126", "Febi 40440", "TRW JTC1028", "Moog TO-WP-4367" },
+        //            new[] { 3400m, 2900m, 3700m, 4200m },
+        //            new[] { 24, 18, 24, 24 }
+        //        ),
+        //        ["Front Tires"] = (
+        //            new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
+        //            new[] { 4400m, 4900m, 4700m, 3900m },
+        //            new[] { 60, 60, 60, 48 }
+        //        ),
+        //        ["Rear Tires"] = (
+        //            new[] { "Michelin Primacy 4", "Bridgestone Turanza T005", "Continental PremiumContact 6", "Yokohama BluEarth-A" },
+        //            new[] { 4400m, 4900m, 4700m, 3900m },
+        //            new[] { 60, 60, 60, 48 }
+        //        ),
+        //        ["Cabin Air Filter"] = (
+        //            new[] { "Mann Filter CU 2442", "Bosch 1 987 432 120", "Fram CF10285", "K&N VF2042" },
+        //            new[] { 1400m, 1600m, 1250m, 1900m },
+        //            new[] { 12, 12, 12, 12 }
+        //        )
+        //    };
+
+        //    // Create parts for each category
+        //    foreach (var category in partCategories)
+        //    {
+        //        if (partDefinitions.ContainsKey(category.CategoryName))
+        //        {
+        //            var (partNames, prices, warrantyMonths) = partDefinitions[category.CategoryName];
+                    
+        //            // Create 2-3 parts per category to keep it manageable
+        //            var partsToCreate = Math.Min(3, partNames.Length);
+                    
+        //            for (int i = 0; i < partsToCreate; i++)
+        //            {
+        //                var brandName = category.VehicleModel.Brand.BrandName;
+        //                var modelName = category.VehicleModel.ModelName;
+                        
+        //                parts.Add(new Part
+        //                {
+        //                    PartId = Guid.NewGuid(),
+        //                    PartCategoryId = category.LaborCategoryId,
+        //                    Name = $"{partNames[i]} - {brandName} {modelName}",
+        //                    Price = prices[i],
+        //                    Stock = new Random().Next(5, 25), // Random stock
+        //                    WarrantyMonths = warrantyMonths[i], // NEW: Warranty as per document
+        //                    BranchId = dataBranchId, 
+        //                    CreatedAt = DateTime.UtcNow
+        //                });
+        //            }
+        //        }
+        //    }
+
+        //    // Add all parts to context
+        //    if (parts.Any())
+        //    {
+        //        _context.Parts.AddRange(parts);
+        //        await _context.SaveChangesAsync();
+                
+        //        Console.WriteLine($"Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
+        //    }
+        //}
+
         private async Task SeedPartsAsyncNew()
         {
-            var dtBranch = await _context.Branches
-            .FirstOrDefaultAsync(b => b.BranchName == "Đà Nẵng Garage - Sơn Trà");
-            var dataBranchId = dtBranch.BranchId;
+           
 
-            if (_context.Parts.Any()) return;
-
-            // Get all part categories that were seeded
             var partCategories = await _context.PartCategories
                 .Include(pc => pc.VehicleModel)
                 .ThenInclude(vm => vm.Brand)
@@ -863,9 +1024,13 @@ namespace Garage_pro_api.DbInit
 
             if (!partCategories.Any()) return;
 
+            // ❗ Nếu đã có Part thì không seed lại
+            if (await _context.Parts.AnyAsync()) return;
+
+            var random = new Random();
             var parts = new List<Part>();
 
-            // Define part data with warranty information (following document requirement)
+            
             var partDefinitions = new Dictionary<string, (string[] partNames, decimal[] prices, int[] warrantyMonths)>
             {
                 ["Engine Oil"] = (
@@ -970,378 +1135,45 @@ namespace Garage_pro_api.DbInit
                 )
             };
 
-            // Create parts for each category
-            foreach (var category in partCategories)
-            {
-                if (partDefinitions.ContainsKey(category.CategoryName))
+            
+                foreach (var category in partCategories)
                 {
-                    var (partNames, prices, warrantyMonths) = partDefinitions[category.CategoryName];
-                    
-                    // Create 2-3 parts per category to keep it manageable
+                    if (!partDefinitions.ContainsKey(category.CategoryName))
+                        continue;
+
+                    var (partNames, prices, warrantyMonths) =
+                        partDefinitions[category.CategoryName];
+
+                    var brandName = category.VehicleModel.Brand.BrandName;
+                    var modelName = category.VehicleModel.ModelName;
+
+                    // GIỮ LOGIC 2–3 PART / CATEGORY NHƯ BẠN
                     var partsToCreate = Math.Min(3, partNames.Length);
-                    
+
                     for (int i = 0; i < partsToCreate; i++)
                     {
-                        var brandName = category.VehicleModel.Brand.BrandName;
-                        var modelName = category.VehicleModel.ModelName;
-                        
                         parts.Add(new Part
                         {
                             PartId = Guid.NewGuid(),
                             PartCategoryId = category.LaborCategoryId,
+                           
                             Name = $"{partNames[i]} - {brandName} {modelName}",
                             Price = prices[i],
-                            Stock = new Random().Next(5, 25), // Random stock
-                            WarrantyMonths = warrantyMonths[i], // NEW: Warranty as per document
-                            BranchId = dataBranchId, 
+                            WarrantyMonths = warrantyMonths[i],
+                            Stock = 0,
                             CreatedAt = DateTime.UtcNow
                         });
                     }
                 }
-            }
-
-            // Add all parts to context
-            if (parts.Any())
-            {
-                _context.Parts.AddRange(parts);
-                await _context.SaveChangesAsync();
-                
-                Console.WriteLine($"Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
-            }
-        }
-
-        private async Task SeedPartsAsync()
-        {
-            if (_context.Parts.Any()) return;
-
-            // helper: lấy PartCategoryId (bạn đang dùng LaborCategoryId)
-            async Task<Guid> PC(string categoryName)
-            {
-                var pc = await _context.PartCategories.FirstAsync(x => x.CategoryName == categoryName);
-                return pc.LaborCategoryId; // đổi nếu PK của bạn là PartCategoryId
-            }
-
-            void Add(List<Part> parts, Guid pcId, string name, int price, int stock)
-            {
-                parts.Add(new Part
-                {
-                    Name = name,
-                    PartCategoryId = pcId,
-                    Price = price,
-                    Stock = stock,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-
-            var parts = new List<Part>();
-
-            // ===== BRAKE PADS FRONT =====
-            {
-                var id = await PC("Front - Brake Pads");
-                Add(parts, id, "Front Brake Pads - Budget (Generic)", 700, 60);
-                Add(parts, id, "Front Brake Pads - Standard (Semi-metallic)", 1100, 50);
-                Add(parts, id, "Front Brake Pads - Premium (Ceramic)", 1600, 40);
-
-                Add(parts, id, "Front Brake Pads - Toyota Vios 2014-2018 (Standard)", 1250, 25);
-                Add(parts, id, "Front Brake Pads - Toyota Altis 2015-2019 (Premium)", 1750, 20);
-                Add(parts, id, "Front Brake Pads - Honda City 2014-2019 (Standard)", 1350, 25);
-                Add(parts, id, "Front Brake Pads - Honda Civic 2016-2020 (Premium)", 2200, 15);
-            }
-
-            // ===== BRAKE PADS REAR =====
-            {
-                var id = await PC("Rear - Brake Pads");
-                Add(parts, id, "Rear Brake Pads - Budget (Generic)", 700, 60);
-                Add(parts, id, "Rear Brake Pads - Standard (Semi-metallic)", 1100, 50);
-                Add(parts, id, "Rear Brake Pads - Premium (Ceramic)", 1600, 40);
-
-                Add(parts, id, "Rear Brake Pads - Toyota Vios 2014-2018 (Standard)", 1200, 25);
-                Add(parts, id, "Rear Brake Pads - Honda Civic 2016-2020 (Premium)", 2100, 15);
-            }
-
-            // ===== BRAKE DISCS FRONT/REAR =====
-            {
-                var id = await PC("Front - Brake Discs");
-                Add(parts, id, "Front Brake Disc Pair - Budget (Generic)", 1200, 30);
-                Add(parts, id, "Front Brake Disc Pair - Standard (Vented)", 1800, 25);
-                Add(parts, id, "Front Brake Disc Pair - Premium (High Carbon)", 2600, 15);
-                Add(parts, id, "Front Brake Disc Pair - Honda Civic 2016-2020", 2900, 10);
-            }
-            {
-                var id = await PC("Rear - Brake Discs");
-                Add(parts, id, "Rear Brake Disc Pair - Budget (Generic)", 1200, 30);
-                Add(parts, id, "Rear Brake Disc Pair - Standard", 1800, 25);
-                Add(parts, id, "Rear Brake Disc Pair - Premium", 2600, 15);
-                Add(parts, id, "Rear Brake Disc Pair - Toyota Altis 2015-2019", 2400, 12);
-            }
-
-            // ===== BRAKE CALIPERS FRONT/REAR =====
-            {
-                var id = await PC("Front - Brake Calipers");
-                Add(parts, id, "Front Brake Caliper - Reman (Budget)", 1400, 15);
-                Add(parts, id, "Front Brake Caliper - Standard", 2200, 12);
-                Add(parts, id, "Front Brake Caliper - OEM Grade (Premium)", 3200, 8);
-            }
-            {
-                var id = await PC("Rear - Brake Calipers");
-                Add(parts, id, "Rear Brake Caliper - Reman (Budget)", 1400, 15);
-                Add(parts, id, "Rear Brake Caliper - Standard", 2200, 12);
-                Add(parts, id, "Rear Brake Caliper - OEM Grade (Premium)", 3200, 8);
-            }
-
-            // ===== BRAKE FLUID / LINES / MASTER =====
-            {
-                var id = await PC("Brake - Fluid");
-                Add(parts, id, "Brake Fluid DOT4 1L - Budget", 200, 80);
-                Add(parts, id, "Brake Fluid DOT4 1L - Standard", 320, 80);
-                Add(parts, id, "Brake Fluid DOT4 LV 1L - Premium", 450, 60);
-            }
-            {
-                var id = await PC("Brake - Hoses & Lines");
-                Add(parts, id, "Brake Hose Set - Budget", 350, 30);
-                Add(parts, id, "Brake Hose Set - Standard", 550, 25);
-                Add(parts, id, "Brake Hose Set - Premium (Braided)", 900, 15);
-            }
-            {
-                var id = await PC("Brake - Master Cylinder");
-                Add(parts, id, "Master Cylinder - Budget", 1200, 10);
-                Add(parts, id, "Master Cylinder - Standard", 1800, 8);
-                Add(parts, id, "Master Cylinder - Premium", 2600, 6);
-            }
-
-            // ===== TIRES FRONT/REAR =====
-            {
-                var id = await PC("Front - Tires");
-                Add(parts, id, "Front Tire Pair 195/65R15 - Budget", 2200, 25);
-                Add(parts, id, "Front Tire Pair 195/65R15 - Standard Touring", 3200, 20);
-                Add(parts, id, "Front Tire Pair 195/65R15 - Premium Performance", 4500, 12);
-
-                Add(parts, id, "Front Tire Pair 185/60R15 - Budget", 2100, 20);
-                Add(parts, id, "Front Tire Pair 205/55R16 - Standard", 3600, 15);
-            }
-            {
-                var id = await PC("Rear - Tires");
-                Add(parts, id, "Rear Tire Pair 195/65R15 - Budget", 2200, 25);
-                Add(parts, id, "Rear Tire Pair 195/65R15 - Standard Touring", 3200, 20);
-                Add(parts, id, "Rear Tire Pair 195/65R15 - Premium Performance", 4500, 12);
-
-                Add(parts, id, "Rear Tire Pair 205/55R16 - Standard", 3600, 15);
-            }
-
-            // ===== WHEEL BEARING FRONT/REAR =====
-            {
-                var id = await PC("Front - Wheel Bearings");
-                Add(parts, id, "Front Wheel Bearing - Budget", 600, 25);
-                Add(parts, id, "Front Wheel Bearing - Standard", 900, 20);
-                Add(parts, id, "Front Wheel Bearing - Premium", 1300, 15);
-            }
-            {
-                var id = await PC("Rear - Wheel Bearings");
-                Add(parts, id, "Rear Wheel Bearing - Budget", 600, 25);
-                Add(parts, id, "Rear Wheel Bearing - Standard", 900, 20);
-                Add(parts, id, "Rear Wheel Bearing - Premium", 1300, 15);
-            }
-
-            // ===== TPMS / VALVE =====
-            {
-                var id = await PC("Wheel - Valve & TPMS");
-                Add(parts, id, "Valve Stem Set - Budget", 80, 100);
-                Add(parts, id, "Valve Stem Set - Standard", 120, 100);
-                Add(parts, id, "TPMS Sensor - Standard", 650, 25);
-                Add(parts, id, "TPMS Sensor - Premium (OE)", 950, 15);
-            }
-
-            // ===== BALANCING WEIGHTS =====
-            {
-                var id = await PC("Wheel - Balancing Weights");
-                Add(parts, id, "Balancing Weights Set - Budget", 100, 200);
-                Add(parts, id, "Balancing Weights Set - Standard", 160, 200);
-                Add(parts, id, "Balancing Weights Set - Premium", 250, 150);
-            }
-
-            // ===== SUSPENSION: shocks/control arms/links =====
-            {
-                var id = await PC("Front - Shock/Strut");
-                Add(parts, id, "Front Shock/Strut Pair - Budget", 1800, 18);
-                Add(parts, id, "Front Shock/Strut Pair - Standard", 2600, 14);
-                Add(parts, id, "Front Shock/Strut Pair - Premium", 3600, 10);
-            }
-            {
-                var id = await PC("Rear - Shock");
-                Add(parts, id, "Rear Shock Pair - Budget", 1700, 18);
-                Add(parts, id, "Rear Shock Pair - Standard", 2500, 14);
-                Add(parts, id, "Rear Shock Pair - Premium", 3500, 10);
-            }
-            {
-                var id = await PC("Front - Control Arm");
-                Add(parts, id, "Front Control Arm - Budget", 900, 20);
-                Add(parts, id, "Front Control Arm - Standard", 1400, 16);
-                Add(parts, id, "Front Control Arm - Premium", 2000, 12);
-            }
-            {
-                var id = await PC("Bushings - Suspension");
-                Add(parts, id, "Suspension Bushing Set - Budget", 300, 30);
-                Add(parts, id, "Suspension Bushing Set - Standard", 500, 25);
-                Add(parts, id, "Suspension Bushing Set - Premium (PU)", 900, 15);
-            }
-            {
-                var id = await PC("Stabilizer Link - Front");
-                Add(parts, id, "Front Stabilizer Link Pair - Budget", 250, 30);
-                Add(parts, id, "Front Stabilizer Link Pair - Standard", 400, 25);
-                Add(parts, id, "Front Stabilizer Link Pair - Premium", 650, 15);
-            }
-
-            // ===== STEERING: tie rod/rack =====
-            {
-                var id = await PC("Steering - Tie Rod End");
-                Add(parts, id, "Tie Rod End Pair - Budget", 500, 25);
-                Add(parts, id, "Tie Rod End Pair - Standard", 800, 20);
-                Add(parts, id, "Tie Rod End Pair - Premium", 1200, 12);
-            }
-            {
-                var id = await PC("Steering - Rack");
-                Add(parts, id, "Steering Rack - Reman (Budget)", 2500, 6);
-                Add(parts, id, "Steering Rack - Standard", 3500, 5);
-                Add(parts, id, "Steering Rack - Premium (OE Grade)", 5200, 3);
-            }
-
-            // ===== ENGINE basics =====
-            {
-                var id = await PC("Engine - Oil");
-                Add(parts, id, "Engine Oil 4L - Mineral (Budget)", 900, 80);
-                Add(parts, id, "Engine Oil 4L - Semi Synthetic (Standard)", 1300, 60);
-                Add(parts, id, "Engine Oil 4L - Full Synthetic (Premium)", 1800, 40);
-            }
-            {
-                var id = await PC("Engine - Oil Filter");
-                Add(parts, id, "Oil Filter - Budget", 120, 80);
-                Add(parts, id, "Oil Filter - Standard", 200, 80);
-                Add(parts, id, "Oil Filter - Premium", 350, 60);
-            }
-            {
-                var id = await PC("Engine - Air Filter");
-                Add(parts, id, "Air Filter - Budget", 250, 60);
-                Add(parts, id, "Air Filter - Standard", 400, 50);
-                Add(parts, id, "Air Filter - Premium", 650, 40);
-                Add(parts, id, "Air Filter - Toyota Vios 2014-2018", 420, 30);
-                Add(parts, id, "Air Filter - Honda City 2014-2019", 450, 30);
-            }
-            {
-                var id = await PC("Engine - Spark Plugs");
-                Add(parts, id, "Spark Plug Set - Nickel (Budget)", 600, 50);
-                Add(parts, id, "Spark Plug Set - Platinum (Standard)", 900, 40);
-                Add(parts, id, "Spark Plug Set - Iridium (Premium)", 1400, 30);
-            }
-            {
-                var id = await PC("Engine - Ignition Coils");
-                Add(parts, id, "Ignition Coil - Budget", 700, 25);
-                Add(parts, id, "Ignition Coil - Standard", 1100, 20);
-                Add(parts, id, "Ignition Coil - Premium", 1700, 12);
-            }
-
-            // ===== COOLING =====
-            {
-                var id = await PC("Cooling - Radiator");
-                Add(parts, id, "Radiator - Budget", 1500, 10);
-                Add(parts, id, "Radiator - Standard", 2300, 8);
-                Add(parts, id, "Radiator - Premium", 3400, 6);
-            }
-            {
-                var id = await PC("Cooling - Water Pump");
-                Add(parts, id, "Water Pump - Budget", 900, 12);
-                Add(parts, id, "Water Pump - Standard", 1400, 10);
-                Add(parts, id, "Water Pump - Premium", 2100, 8);
-            }
-            {
-                var id = await PC("Cooling - Thermostat");
-                Add(parts, id, "Thermostat - Budget", 250, 20);
-                Add(parts, id, "Thermostat - Standard", 400, 18);
-                Add(parts, id, "Thermostat - Premium", 650, 12);
-            }
-            {
-                var id = await PC("Cooling - Coolant");
-                Add(parts, id, "Coolant 4L - Budget", 300, 50);
-                Add(parts, id, "Coolant 4L - Standard", 450, 40);
-                Add(parts, id, "Coolant 4L - Premium (Long Life)", 650, 30);
-            }
-
-            // ===== ELECTRICAL =====
-            {
-                var id = await PC("Electrical - Battery");
-                Add(parts, id, "Battery 12V 45Ah - Budget", 1800, 20);
-                Add(parts, id, "Battery 12V 55Ah - Standard", 2600, 15);
-                Add(parts, id, "Battery 12V 60Ah AGM - Premium", 3800, 8);
-            }
-            {
-                var id = await PC("Electrical - Alternator");
-                Add(parts, id, "Alternator - Budget", 2500, 8);
-                Add(parts, id, "Alternator - Standard", 3500, 6);
-                Add(parts, id, "Alternator - Premium", 5200, 4);
-            }
-            {
-                var id = await PC("Electrical - Starter Motor");
-                Add(parts, id, "Starter Motor - Budget", 2300, 8);
-                Add(parts, id, "Starter Motor - Standard", 3300, 6);
-                Add(parts, id, "Starter Motor - Premium", 4800, 4);
-            }
-
-            // ===== SENSORS =====
-            {
-                var id = await PC("Sensors - O2");
-                Add(parts, id, "O2 Sensor - Budget", 700, 20);
-                Add(parts, id, "O2 Sensor - Standard", 1100, 16);
-                Add(parts, id, "O2 Sensor - Premium", 1700, 10);
-            }
-            {
-                var id = await PC("Sensors - ABS Front");
-                Add(parts, id, "ABS Sensor Front - Budget", 650, 20);
-                Add(parts, id, "ABS Sensor Front - Standard", 1000, 15);
-                Add(parts, id, "ABS Sensor Front - Premium", 1500, 10);
-            }
-            {
-                var id = await PC("Sensors - ABS Rear");
-                Add(parts, id, "ABS Sensor Rear - Budget", 650, 20);
-                Add(parts, id, "ABS Sensor Rear - Standard", 1000, 15);
-                Add(parts, id, "ABS Sensor Rear - Premium", 1500, 10);
-            }
-
-            // ===== HVAC =====
-            {
-                var id = await PC("HVAC - Cabin Filter");
-                Add(parts, id, "Cabin Filter - Budget", 200, 40);
-                Add(parts, id, "Cabin Filter - Standard", 320, 30);
-                Add(parts, id, "Cabin Filter - Premium (Carbon)", 500, 20);
-            }
-            {
-                var id = await PC("HVAC - Refrigerant");
-                Add(parts, id, "Refrigerant R134a - Budget", 250, 80);
-                Add(parts, id, "Refrigerant R134a - Standard", 400, 60);
-                Add(parts, id, "Refrigerant R134a - Premium", 650, 40);
-            }
-            {
-                var id = await PC("HVAC - AC Compressor");
-                Add(parts, id, "AC Compressor - Budget", 3500, 6);
-                Add(parts, id, "AC Compressor - Standard", 5200, 4);
-                Add(parts, id, "AC Compressor - Premium", 7600, 3);
-            }
-
-            // ===== EXHAUST =====
-            {
-                var id = await PC("Exhaust - Muffler");
-                Add(parts, id, "Muffler - Budget", 1800, 10);
-                Add(parts, id, "Muffler - Standard", 2600, 8);
-                Add(parts, id, "Muffler - Premium", 3800, 6);
-            }
-            {
-                var id = await PC("Exhaust - Catalytic Converter");
-                Add(parts, id, "Catalytic Converter - Budget", 4500, 3);
-                Add(parts, id, "Catalytic Converter - Standard", 6500, 2);
-                Add(parts, id, "Catalytic Converter - Premium (OE Grade)", 9500, 1);
-            }
+            
 
             _context.Parts.AddRange(parts);
             await _context.SaveChangesAsync();
+
+            Console.WriteLine($"Seeded {parts.Count} Parts ");
         }
+        
+      
 
 
 
@@ -2397,63 +2229,38 @@ namespace Garage_pro_api.DbInit
         // NEW FOCUSED SEEDING - Toyota, Hyundai, Ford with ~10 models each
         private async Task SeedVehicleRelatedEntitiesAsyncNew()
         {
-            // Seed Vehicle Brands (3 focused brands)
+            // Seed Vehicle Brands
             if (!_context.VehicleBrands.Any())
             {
                 var brands = new List<VehicleBrand>
-                {
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Toyota",
-                        Country = "Japan",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Hyundai",
-                        Country = "South Korea",
-                        CreatedAt = DateTime.UtcNow
-                    },
-                    new VehicleBrand
-                    {
-                        BrandID = Guid.NewGuid(),
-                        BrandName = "Ford",
-                        Country = "USA",
-                        CreatedAt = DateTime.UtcNow
-                    }
-                };
+        {
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Toyota", Country = "Japan", CreatedAt = DateTime.UtcNow },
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Hyundai", Country = "South Korea", CreatedAt = DateTime.UtcNow },
+            new VehicleBrand { BrandID = Guid.NewGuid(), BrandName = "Ford", Country = "USA", CreatedAt = DateTime.UtcNow }
+        };
 
                 _context.VehicleBrands.AddRange(brands);
                 await _context.SaveChangesAsync();
             }
 
-            // Seed Vehicle Colors (keep same colors)
+            // Seed Vehicle Colors
             if (!_context.VehicleColors.Any())
             {
                 var colors = new List<VehicleColor>
-                {
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White",  HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black",  HexCode = "#000000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray",   HexCode = "#808080", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red",    HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue",   HexCode = "#0000FF", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Green",  HexCode = "#008000", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Yellow", HexCode = "#FFFF00", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Orange", HexCode = "#FFA500", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Brown",  HexCode = "#A52A2A", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gold",   HexCode = "#FFD700", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Pink",   HexCode = "#FFC0CB", CreatedAt = DateTime.UtcNow },
-                    new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Navy",   HexCode = "#000080", CreatedAt = DateTime.UtcNow }
-                };
+        {
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "White", HexCode = "#FFFFFF", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Black", HexCode = "#000000", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Silver", HexCode = "#C0C0C0", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Gray", HexCode = "#808080", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Red", HexCode = "#FF0000", CreatedAt = DateTime.UtcNow },
+            new VehicleColor { ColorID = Guid.NewGuid(), ColorName = "Blue", HexCode = "#0000FF", CreatedAt = DateTime.UtcNow }
+        };
 
                 _context.VehicleColors.AddRange(colors);
                 await _context.SaveChangesAsync();
             }
 
-            // Seed Vehicle Models (focused on 3 brands with ~10 models each)
+            // Seed Vehicle Models (5 models per brand)
             if (!_context.VehicleModels.Any())
             {
                 var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
@@ -2463,43 +2270,28 @@ namespace Garage_pro_api.DbInit
                 if (toyotaBrand != null && hyundaiBrand != null && fordBrand != null)
                 {
                     var models = new List<VehicleModel>
-                    {
-                        // Toyota models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Camry", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Corolla", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "RAV4", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Highlander", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Prius", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sienna", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tacoma", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tundra", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "4Runner", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Avalon", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+            {
+                // Toyota models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Camry", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Corolla", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "RAV4", ManufacturingYear = 2023, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Highlander", ManufacturingYear = 2022, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Prius", ManufacturingYear = 2021, BrandID = toyotaBrand.BrandID, CreatedAt = DateTime.UtcNow },
 
-                        // Hyundai models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Elantra", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sonata", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tucson", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Santa Fe", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Accent", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Kona", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Palisade", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Veloster", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Genesis G90", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ioniq 5", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                // Hyundai models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Elantra", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Sonata", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Tucson", ManufacturingYear = 2023, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Santa Fe", ManufacturingYear = 2022, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Accent", ManufacturingYear = 2021, BrandID = hyundaiBrand.BrandID, CreatedAt = DateTime.UtcNow },
 
-                        // Ford models (10 models)
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "F-150", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Mustang", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Explorer", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Escape", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Focus", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Edge", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Expedition", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Ranger", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Bronco", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
-                        new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Maverick", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow }
-                    };
+                // Ford models (5 models)
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "F-150", ManufacturingYear = 2023, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Mustang", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Explorer", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Escape", ManufacturingYear = 2022, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow },
+                new VehicleModel { ModelID = Guid.NewGuid(), ModelName = "Focus", ManufacturingYear = 2021, BrandID = fordBrand.BrandID, CreatedAt = DateTime.UtcNow }
+            };
 
                     _context.VehicleModels.AddRange(models);
                     await _context.SaveChangesAsync();
@@ -2507,121 +2299,92 @@ namespace Garage_pro_api.DbInit
             }
         }
 
+
         private async Task SeedVehiclesAsync()
         {
-            if (!_context.Vehicles.Any())
-            {
-                // Get required entities
-                var customerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005"); // Default Customer
+            if (_context.Vehicles.Any())
+                return;
 
-                // Get vehicle related entities
-                var whiteColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "White");
-                var blackColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Black");
-                var silverColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Silver");
-                var redColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Red");
-                var blueColor = await _context.VehicleColors.FirstOrDefaultAsync(c => c.ColorName == "Blue");
+            var customerUser = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.PhoneNumber == "0900000005");
 
-                var toyotaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Toyota");
-                var hondaBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Honda");
-                var fordBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Ford");
-                var bmwBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "BMW");
-                var mercedesBrand = await _context.VehicleBrands.FirstOrDefaultAsync(b => b.BrandName == "Mercedes-Benz");
+            if (customerUser == null)
+                return;
 
-                var camryModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Camry");
-                var civicModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Civic");
-                var focusModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "Focus");
-                var series3Model = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "3 Series");
-                var cClassModel = await _context.VehicleModels.FirstOrDefaultAsync(m => m.ModelName == "C-Class");
+            var white = await _context.VehicleColors.FirstAsync(c => c.ColorName == "White");
+            var black = await _context.VehicleColors.FirstAsync(c => c.ColorName == "Black");
+            var silver = await _context.VehicleColors.FirstAsync(c => c.ColorName == "Silver");
 
-                if (customerUser != null &&
-                    whiteColor != null && blackColor != null && silverColor != null && redColor != null && blueColor != null &&
-                    toyotaBrand != null && hondaBrand != null && fordBrand != null && bmwBrand != null && mercedesBrand != null &&
-                    camryModel != null && civicModel != null && focusModel != null && series3Model != null && cClassModel != null)
-                {
-                    var vehicles = new List<Vehicle>
-                    {
-                        new Vehicle
-                        {
-                            BrandId = toyotaBrand.BrandID,
-                            UserId = customerUser.Id,
-                            ModelId = camryModel.ModelID,
-                            ColorId = whiteColor.ColorID,
-                            LicensePlate = "51F12345",
-                            VIN = "1HGBH41JXMN109186",
-                            Year = 2020,
-                            Odometer = 15000,
-                            LastServiceDate = DateTime.UtcNow.AddDays(-30),
-                            NextServiceDate = DateTime.UtcNow.AddDays(30),
-                            WarrantyStatus = "Active",
-                            CreatedAt = DateTime.UtcNow.AddDays(-30)
-                        },
-                        new Vehicle
-                        {
-                            BrandId = hondaBrand.BrandID,
-                            UserId = customerUser.Id,
-                            ModelId = civicModel.ModelID,
-                            ColorId = blackColor.ColorID,
-                            LicensePlate = "51F67890",
-                            VIN = "2T1BURHE5JC012345",
-                            Year = 2018,
-                            Odometer = 25000,
-                            LastServiceDate = DateTime.UtcNow.AddDays(-60),
-                            NextServiceDate = DateTime.UtcNow.AddDays(15),
-                            WarrantyStatus = "Expired",
-                            CreatedAt = DateTime.UtcNow.AddDays(-60)
-                        },
-                        new Vehicle
-                        {
-                            BrandId = fordBrand.BrandID,
-                            UserId = customerUser.Id,
-                            ModelId = focusModel.ModelID,
-                            ColorId = silverColor.ColorID,
-                            LicensePlate = "51F54321",
-                            VIN = "3VWBP29M85M000001",
-                            Year = 2022,
-                            Odometer = 8000,
-                            LastServiceDate = DateTime.UtcNow.AddDays(-15),
-                            NextServiceDate = DateTime.UtcNow.AddDays(45),
-                            WarrantyStatus = "Active",
-                            CreatedAt = DateTime.UtcNow.AddDays(-15)
-                        },
-                        new Vehicle
-                        {
-                            BrandId = bmwBrand.BrandID,
-                            UserId = customerUser.Id,
-                            ModelId = series3Model.ModelID,
-                            ColorId = redColor.ColorID,
-                            LicensePlate = "51F98765",
-                            VIN = "WBAVA33598NL67342",
-                            Year = 2021,
-                            Odometer = 12000,
-                            LastServiceDate = DateTime.UtcNow.AddDays(-45),
-                            NextServiceDate = DateTime.UtcNow.AddDays(20),
-                            WarrantyStatus = "Active",
-                            CreatedAt = DateTime.UtcNow.AddDays(-45)
-                        },
-                        new Vehicle
-                        {
-                            BrandId = mercedesBrand.BrandID,
-                            UserId = customerUser.Id,
-                            ModelId = cClassModel.ModelID,
-                            ColorId = blueColor.ColorID,
-                            LicensePlate = "51F24680",
-                            VIN = "WDDHF8JB0DA123456",
-                            Year = 2019,
-                            Odometer = 35000,
-                            LastServiceDate = DateTime.UtcNow.AddDays(-90),
-                            NextServiceDate = DateTime.UtcNow.AddDays(10),
-                            WarrantyStatus = "Expiring Soon",
-                            CreatedAt = DateTime.UtcNow.AddDays(-90)
-                        }
-                    };
+            var toyota = await _context.VehicleBrands.FirstAsync(b => b.BrandName == "Toyota");
+            var hyundai = await _context.VehicleBrands.FirstAsync(b => b.BrandName == "Hyundai");
+            var ford = await _context.VehicleBrands.FirstAsync(b => b.BrandName == "Ford");
 
-                    _context.Vehicles.AddRange(vehicles);
-                    await _context.SaveChangesAsync();
-                }
-            }
+            var camry = await _context.VehicleModels.FirstAsync(m => m.ModelName == "Camry");
+            var corolla = await _context.VehicleModels.FirstAsync(m => m.ModelName == "Corolla");
+            var elantra = await _context.VehicleModels.FirstAsync(m => m.ModelName == "Elantra");
+            var tucson = await _context.VehicleModels.FirstAsync(m => m.ModelName == "Tucson");
+            var focus = await _context.VehicleModels.FirstAsync(m => m.ModelName == "Focus");
+
+            var vehicles = new List<Vehicle>
+    {
+        new Vehicle
+        {
+            BrandId = toyota.BrandID,
+            ModelId = camry.ModelID,
+            ColorId = white.ColorID,
+            UserId = customerUser.Id,
+            LicensePlate = "51F12345",
+            VIN = "JTNB11HK0J3000001",
+            Year = 2022,
+            Odometer = 12000,
+            WarrantyStatus = "Active",
+            CreatedAt = DateTime.UtcNow
+        },
+        new Vehicle
+        {
+            BrandId = toyota.BrandID,
+            ModelId = corolla.ModelID,
+            ColorId = black.ColorID,
+            UserId = customerUser.Id,
+            LicensePlate = "51F67890",
+            VIN = "JTDEPRAE0LJ000002",
+            Year = 2021,
+            Odometer = 18000,
+            WarrantyStatus = "Active",
+            CreatedAt = DateTime.UtcNow
+        },
+        new Vehicle
+        {
+            BrandId = hyundai.BrandID,
+            ModelId = elantra.ModelID,
+            ColorId = silver.ColorID,
+            UserId = customerUser.Id,
+            LicensePlate = "51F54321",
+            VIN = "KMHD84LF6LU000003",
+            Year = 2023,
+            Odometer = 5000,
+            WarrantyStatus = "Active",
+            CreatedAt = DateTime.UtcNow
+        },
+        new Vehicle
+        {
+            BrandId = ford.BrandID,
+            ModelId = focus.ModelID,
+            ColorId = white.ColorID,
+            UserId = customerUser.Id,
+            LicensePlate = "51F99999",
+            VIN = "1FADP3F26JL000004",
+            Year = 2022,
+            Odometer = 9000,
+            WarrantyStatus = "Active",
+            CreatedAt = DateTime.UtcNow
         }
+    };
+
+            _context.Vehicles.AddRange(vehicles);
+            await _context.SaveChangesAsync();
+        }
+
         private async Task SeedVehicleModelColorsAsync()
         {
             var models = await _context.VehicleModels.ToListAsync();
@@ -4035,65 +3798,49 @@ namespace Garage_pro_api.DbInit
         // NEW
         private async Task SeedPartInventoryAsync()
         {
-            if (_context.PartInventories.Any()) return;
-
-            var parts = await _context.Parts.ToListAsync();
             var branches = await _context.Branches.ToListAsync();
+            var parts = await _context.Parts.ToListAsync();
 
-            if (!parts.Any() || !branches.Any()) return;
+            if (!branches.Any() || !parts.Any()) return;
 
-            // Find Nha Trang Garage branch
-            var nhaTrangBranch = branches.FirstOrDefault(b => b.BranchName == "Đà Nẵng Garage - Sơn Trà");
-            if (nhaTrangBranch == null)
-            {
-                Console.WriteLine("Nha Trang Garage branch not found!");
-                return;
-            }
-
-            var partInventories = new List<PartInventory>();
             var random = new Random();
+            var inventories = new List<PartInventory>();
 
-            var mainBranch = branches.Skip(1).First();
-
-            // Main branch gets full inventory for all parts
-            foreach (var part in parts)
+            foreach (var branch in branches)
             {
-                partInventories.Add(new PartInventory
-                {
-                    PartId = part.PartId,
-                    BranchId = mainBranch.BranchId,
-                    Stock = random.Next(30, 60), // Higher stock for main branch
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
+                bool isMainBranch = branch.BranchName.Contains("Sơn Trà");
 
-            // Also add some inventory to other branches (but less stock)
-            var otherBranches = branches.Where(b => b.BranchName != "Đà Nẵng Garage - Hải Châu").ToList();
-            foreach (var branch in otherBranches)
-            {
-                var selectedParts = parts
-                    .OrderBy(_ => random.Next())
-                    .Take((int)(parts.Count * 0.6));
+                //var branchParts = parts
+                //    .Where(p => p.BranchId == branch.BranchId)
+                //    .ToList();
 
-                foreach (var part in selectedParts)
+                foreach (var part in parts)
                 {
-                    partInventories.Add(new PartInventory
+                    bool exists = await _context.PartInventories.AnyAsync(pi =>
+                        pi.PartId == part.PartId &&
+                        pi.BranchId == branch.BranchId);
+
+                    if (exists) continue;
+
+                    inventories.Add(new PartInventory
                     {
+                        PartInventoryId = Guid.NewGuid(),
                         PartId = part.PartId,
                         BranchId = branch.BranchId,
-                        Stock = random.Next(5, 20), // Lower stock for other branches
+                        Stock = isMainBranch
+                            ? random.Next(100, 200)
+                            : random.Next(100, 200),
                         CreatedAt = DateTime.UtcNow
                     });
                 }
             }
 
-            if (partInventories.Any())
+            if (inventories.Any())
             {
-                _context.PartInventories.AddRange(partInventories);
+                _context.PartInventories.AddRange(inventories);
                 await _context.SaveChangesAsync();
-                Console.WriteLine($"Seeded {partInventories.Count} part inventory records");
-                Console.WriteLine($"Main branch ({mainBranch.BranchName}) has inventory for {parts.Count} parts");
-                Console.WriteLine($"Other branches have inventory for ~60% of parts each");
+
+                Console.WriteLine($"Seeded {inventories.Count} PartInventory records");
             }
         }
 
