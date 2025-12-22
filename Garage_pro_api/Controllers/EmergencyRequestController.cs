@@ -4,8 +4,10 @@ using BusinessObject.FcmDataModels;
 using Dtos.Emergency;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Services;
+using Services.BranchServices;
 using Services.EmergencyRequestService;
 using Services.FCMServices;
 using System;
@@ -24,12 +26,14 @@ namespace Garage_pro_api.Controllers
         private readonly ITechnicianEmergencyService _technicianEmergencyService;
         private readonly IFcmService _fcmService;
         private readonly IUserService _userService;
-        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService, IFcmService fcmService, IUserService userService)
+        private readonly IBranchService _branchService;
+        public EmergencyRequestController(IEmergencyRequestService service, ITechnicianEmergencyService technicianEmergencyService, IFcmService fcmService, IUserService userService, IBranchService branchService)
         {
             _service = service;
             _technicianEmergencyService = technicianEmergencyService;
             _fcmService = fcmService;
             _userService = userService;
+            _branchService = branchService;
         }
 
        
@@ -153,8 +157,17 @@ namespace Garage_pro_api.Controllers
             var requests = await _service.GetByCustomerAsync(customerId);
             return Ok(requests);
         }
+        [HttpGet("garage/{branchid}")]
+        public async Task<IActionResult> getGarageById(Guid branchid)
+        {
+            var dto = await _branchService.GetBranchByEmergencyAsync(branchid);
+            if (dto == null)
+                return NotFound("Emergency request not found.");
 
-       
+            return Ok(dto);
+        }
+
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
@@ -316,9 +329,10 @@ namespace Garage_pro_api.Controllers
                         };
                         await _fcmService.SendFcmMessageWithDataAsync(user?.DeviceId, FcmNotification);
                     }
-                }    
-
+                }
                 
+
+
                 return Ok(new { Success = result });
             }
             catch (ArgumentException ex)

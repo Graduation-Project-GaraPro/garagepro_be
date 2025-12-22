@@ -15,7 +15,7 @@ namespace Repositories.PartRepositories
         Task<IEnumerable<PartCategory>> GetAllWithPartsAsync();
 
         Task<(IEnumerable<PartCategory> items, int totalCount)> SearchPartCategoriesAsync(
-            string searchTerm, string sortBy, string sortOrder, int page, int pageSize);
+            string searchTerm, Guid? modelId, string modelName, Guid? brandId, string brandName, string sortBy, string sortOrder, int page, int pageSize);
         Task<PartCategory> CreateAsync(PartCategory category);
         Task<PartCategory> UpdateAsync(PartCategory category);
         Task<bool> DeleteAsync(Guid id);

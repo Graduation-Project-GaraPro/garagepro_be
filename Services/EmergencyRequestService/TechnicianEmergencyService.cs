@@ -15,7 +15,7 @@ using static BusinessObject.RequestEmergency.RequestEmergency;
 
 namespace Services.EmergencyRequestService
 {
-    public class TechnicianEmergencyService :  ITechnicianEmergencyService
+    public class TechnicianEmergencyService : ITechnicianEmergencyService
 
     {
         private readonly IEmergencyRequestRepository _repo;
@@ -69,7 +69,7 @@ namespace Services.EmergencyRequestService
             string? rejectReason = null,
             string? technicianId = null)
         {
-            
+
             var result = await _repo.UpdateEmergencyStatusAsync(
                 emergencyRequestId,
                 newStatus,
@@ -110,17 +110,84 @@ namespace Services.EmergencyRequestService
                     Timestamp = DateTime.UtcNow
                 };
 
-                await _hubContext.Clients.All.SendAsync("EmergencyRequestTowning", payload);
-                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestTowning", payload);
-                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestTowning", payload);
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestTowing", payload);
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestTowing", payload);
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestTowing", payload);
             }
+            if (newStatus == EmergencyStatus.Completed)
+            {
+                var emergency = await _repo.GetByIdAsync(emergencyRequestId);
+                if (emergency == null) return false;
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Completed",
+                    CustomerId = emergency.CustomerId,
+                    TechnicianId = emergency.TechnicianId,
+                    BranchId = emergency.BranchId,
+                    Timestamp = DateTime.UtcNow
+                };
+                await _hubContext.Clients.All.SendAsync("EmergencyRequestCompleted", payload);
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("EmergencyRequestCompleted", payload);
+                await _hubContext.Clients.Group($"branch-{emergency.BranchId}").SendAsync("EmergencyRequestCompleted", payload);
+            }
+            if (newStatus == EmergencyStatus.Assigned)
+            {
+                var emergency = await _repo.GetByIdAsync(emergencyRequestId);
+                if (emergency == null) return false;
+
+                var payload = new
+                {
+                    EmergencyRequestId = emergency.EmergencyRequestId,
+                    Status = "Assigned",
+                    TechnicianId = emergency.TechnicianId,
+                    BranchName = emergency.Branch.BranchName,
+                    TechnicianName = emergency.Technician.FirstName + emergency.Technician.LastName, // Hoặc trường tên tương ứng
+                    TechnicianPhone = emergency.Technician.PhoneNumber,
+                    TechnicianAvatar = emergency.Technician.AvatarUrl,
+                    Message = "A technician has been assigned to your request."
+                };
+
+                // Gửi cho Khách hàng
+                await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianAssigned", payload);
+                Console.WriteLine($"RT sent: Asigned → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+
+            }
+
             return result;
         }
         public async Task<bool> AssignTechnicianAsync(Guid emergencyId, string technicianId)
         {
-            return await _repo.AssignTechnicianAsync(emergencyId, technicianId);
+
+
+            var assigned = await _repo.AssignTechnicianAsync(emergencyId, technicianId);
+            if (!assigned) return false;
+
+            var emergency = await _repo.GetEmergencyDetailAsync(emergencyId);
+            if (emergency == null) return false;
+
+            var payload = new
+            {
+                EmergencyRequestId = emergency.EmergencyRequestId,
+                Status = "Assigned",
+                CustomerId = emergency.CustomerId,
+                TechnicianId = emergency.TechnicianId,
+                BranchId = emergency.BranchId,
+                Timestamp = DateTime.UtcNow,
+                //TechnicianAvatar = emergency.Technician?.AvatarUrl,
+                Message = "A technician has been assigned to your request."
+            };
+          //  await _hubContext.Clients.All.SendAsync("TechnicianAssigned", payload); ;
+            await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianAssigned", payload);
+           
+
+            Console.WriteLine($"RT a a sent → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
+
+            return true;
+
         }
     }
+
 
     public class TechnicianEmergencyResultDto
     {

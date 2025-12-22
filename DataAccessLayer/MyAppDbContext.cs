@@ -881,7 +881,6 @@ namespace DataAccessLayer
 
             modelBuilder.Entity<ServicePartCategory>()
                 .HasIndex(spc => new { spc.ServiceId, spc.PartCategoryId })
-                .IsUnique()
                 .HasDatabaseName("UX_ServicePartCategory_ServiceId_PartCategoryId");
 
             // VehicleModel-PartCategory relationship
@@ -914,12 +913,11 @@ namespace DataAccessLayer
                 entity.HasOne(pi => pi.Branch)
                       .WithMany(b => b.PartInventories)
                       .HasForeignKey(pi => pi.BranchId)
-                      .OnDelete(DeleteBehavior.Restrict);
+                      .OnDelete(DeleteBehavior.Cascade);
 
-                // Unique constraint on (PartId, BranchId)
+                // Removed unique constraint to allow multiple inventory records per part-branch combination
                 entity.HasIndex(pi => new { pi.PartId, pi.BranchId })
-                      .IsUnique()
-                      .HasDatabaseName("UX_PartInventory_PartId_BranchId");
+                      .HasDatabaseName("IX_PartInventory_PartId_BranchId");
             });
 
             // Inspection-RepairOrder relationship

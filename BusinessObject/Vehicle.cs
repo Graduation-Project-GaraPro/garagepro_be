@@ -1,4 +1,5 @@
 ﻿using BusinessObject.Authentication;
+using BusinessObject.Customers;
 using BusinessObject.Vehicles;
 using System;
 using System.Collections.Generic;
@@ -63,6 +64,7 @@ namespace BusinessObject
         //modelCOlỏId
         [ForeignKey("ColorId")]
         public virtual VehicleColor Color { get; set; }
+        public virtual ICollection<RepairRequest> RepairRequests { get; set; } = new List<RepairRequest>();
 
         public virtual ICollection<RepairOrder> RepairOrders { get; set; } = new List<RepairOrder>();
         public virtual ApplicationUser User { get; set; } = null!;

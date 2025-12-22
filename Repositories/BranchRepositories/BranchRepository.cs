@@ -1,19 +1,20 @@
-﻿using System;
+﻿using BusinessObject.Branches;
+using BusinessObject.Customers;
+using DataAccessLayer;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Branches;
-using DataAccessLayer;
-using Microsoft.EntityFrameworkCore;
 
 namespace Repositories.BranchRepositories
 {
     public class BranchRepository : IBranchRepository
     {
         private readonly MyAppDbContext _context;
-
+        public record BranchBlockInfo(Guid BranchId, bool HasActiveRequests, bool HasActiveOrders);
         public BranchRepository(MyAppDbContext context)
         {
             _context = context;
@@ -99,6 +100,47 @@ namespace Repositories.BranchRepositories
             }
         }
 
+        public async Task<(List<BranchBlockInfo> blocked, List<Guid> allowed)>
+    CheckBranchesCanChangeActiveAsync(IEnumerable<Guid> branchIds)
+        {
+            var ids = branchIds.Distinct().ToList();
+
+            // RepairRequest hoạt động
+            var activeRequestBranchIds = await _context.RepairRequests
+                .AsNoTracking()
+                .Where(r => ids.Contains(r.BranchId)
+                    && (r.Status == RepairRequestStatus.Pending
+                        || r.Status == RepairRequestStatus.Accept
+                        || r.Status == RepairRequestStatus.Arrived))
+                .Select(r => r.BranchId)
+                .Distinct()
+                .ToListAsync();
+
+            // RepairOrder hoạt động
+            var activeOrderBranchIds = await _context.RepairOrders
+                .AsNoTracking()
+                .Where(o => ids.Contains(o.BranchId)
+                    
+                    && !o.IsArchived)
+                .Select(o => o.BranchId)
+                .Distinct()
+                .ToListAsync();
+
+            var blockedSet = activeRequestBranchIds.Concat(activeOrderBranchIds).ToHashSet();
+
+            var blocked = ids
+                .Where(id => blockedSet.Contains(id))
+                .Select(id => new BranchBlockInfo(
+                    id,
+                    HasActiveRequests: activeRequestBranchIds.Contains(id),
+                    HasActiveOrders: activeOrderBranchIds.Contains(id)
+                ))
+                .ToList();
+
+            var allowed = ids.Where(id => !blockedSet.Contains(id)).ToList();
+
+            return (blocked, allowed);
+        }
 
         public async Task RemoveBranchServicesAsync(Branch branch)
         {

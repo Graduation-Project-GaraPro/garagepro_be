@@ -2018,10 +2018,9 @@ namespace DataAccessLayer.Migrations
                 column: "BranchId");
 
             migrationBuilder.CreateIndex(
-                name: "UX_PartInventory_PartId_BranchId",
+                name: "IX_PartInventory_PartId_BranchId",
                 table: "PartInventories",
-                columns: new[] { "PartId", "BranchId" },
-                unique: true);
+                columns: new[] { "PartId", "BranchId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Part_BranchId",
@@ -2313,8 +2312,7 @@ namespace DataAccessLayer.Migrations
             migrationBuilder.CreateIndex(
                 name: "UX_ServicePartCategory_ServiceId_PartCategoryId",
                 table: "ServicePartCategories",
-                columns: new[] { "ServiceId", "PartCategoryId" },
-                unique: true);
+                columns: new[] { "ServiceId", "PartCategoryId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Services_ServiceCategoryId",

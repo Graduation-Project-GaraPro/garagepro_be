@@ -23,6 +23,7 @@ using System.Threading.Tasks;
 using System.Security.Authentication;
 using System.Globalization;
 using Microsoft.Extensions.Configuration;
+using Repositories.BranchRepositories;
 
 namespace Services.EmergencyRequestService
 {
@@ -38,7 +39,7 @@ namespace Services.EmergencyRequestService
         private readonly IMemoryCache _cache;
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _config;
-
+        private readonly IBranchRepository _branchRepository;
 
 
         public EmergencyRequestService(
@@ -51,7 +52,8 @@ namespace Services.EmergencyRequestService
             IVehicleRepository vehicleRepository,
             IMemoryCache cache,
             IUserRepository userRepository,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            IBranchRepository branchRepository)
         {
             _repository = repository;
             _mapper = mapper;
@@ -63,6 +65,7 @@ namespace Services.EmergencyRequestService
             _cache = cache;
             _userRepository = userRepository;
             _config = configuration;
+            _branchRepository = branchRepository;   
         }
 
         public async Task<EmergencyResponeDto> CreateEmergencyAsync(string userId, CreateEmergencyRequestDto dto, string? idempotencyKey = null)
@@ -188,7 +191,7 @@ namespace Services.EmergencyRequestService
         private EmergencyResponeDto MapToDto(RequestEmergency fr)
         {
             var addr = string.IsNullOrWhiteSpace(fr.Address) ? $"{fr.Latitude},{fr.Longitude}" : fr.Address;
-            var mapUrl = (fr.Latitude != 0 || fr.Longitude != 0) ? $"https://www.google.com/maps?q={fr.Latitude},{fr.Longitude}" : null;
+           // var mapUrl = (fr.Latitude != 0 || fr.Longitude != 0) ? $"https://www.google.com/maps?q={fr.Latitude},{fr.Longitude}" : null;
             int? etaMinutes = null;
             if (fr.DistanceToGarageKm.HasValue)
             {
@@ -209,7 +212,7 @@ namespace Services.EmergencyRequestService
                 Latitude = fr.Latitude,
                 Longitude = fr.Longitude,
                 Address = addr,
-                MapUrl = mapUrl,
+               // MapUrl = mapUrl,
                 ResponseDeadline = fr.ResponseDeadline,
                 RespondedAt = fr.RespondedAt,
                 AutoCanceledAt = fr.AutoCanceledAt,
@@ -217,6 +220,12 @@ namespace Services.EmergencyRequestService
                 CustomerPhone = fr.Customer?.PhoneNumber ?? "",
                 DistanceToGarageKm = fr.DistanceToGarageKm,
                 EstimatedArrivalMinutes = etaMinutes,
+                AssginedTecinicianPhone = fr.Technician?.PhoneNumber ?? "",
+                AssignedTechnicianName =
+                 $"{fr.Technician?.FirstName} {fr.Technician?.LastName}".Trim(),
+                BranchName = fr.Branch?.BranchName ?? "",
+                BranchAddress = $"{fr.Branch?.Street} {fr.Branch?.Province}".Trim(),
+                BranchPhone =fr.Branch?.PhoneNumber??"",
                 EmergencyFee = fr.EstimatedCost
             };
         }
@@ -698,12 +707,14 @@ namespace Services.EmergencyRequestService
         {
             var emergency = await _repository.GetByIdAsync(location.EmergencyRequestId);
             if (emergency == null) throw new ArgumentException("Emergency not found");
-            if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress)
+            if (emergency.Status != RequestEmergency.EmergencyStatus.Accepted && emergency.Status != RequestEmergency.EmergencyStatus.InProgress && emergency.Status!= RequestEmergency.EmergencyStatus.Towing)
                 throw new InvalidOperationException("Emergency must be accepted or in-progress to update location.");
             if (string.IsNullOrEmpty(emergency.TechnicianId) || !string.Equals(emergency.TechnicianId, technicianUserId, StringComparison.Ordinal))
                 throw new InvalidOperationException("Only the assigned technician can update location for this emergency.");
 
             RouteDto? route = null;
+            string destinationType = "Customer";
+
             if (location.RecomputeRoute)
             {
                 try
@@ -714,6 +725,7 @@ namespace Services.EmergencyRequestService
                 {
                     Console.WriteLine($"Route compute failed: {ex.Message}");
                 }
+            
             }
 
             var payload = new
@@ -729,9 +741,13 @@ namespace Services.EmergencyRequestService
                 Steps = route?.Steps,
                 DistanceKm = route?.DistanceKm,
                 Timestamp = DateTime.UtcNow,
-                TechnicianName = emergency.Technician.LastName,
-                PhoneNumberTecnician = emergency.Technician.PhoneNumber
+                TechnicianName = emergency.Technician?.LastName ?? "Technician",
+                PhoneNumberTecnician = emergency.Technician?.PhoneNumber,
+                Status = emergency.Status.ToString(),       
+                DestinationType = destinationType           
             };
+
+           
 
             await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianLocationUpdated", payload);
             Console.WriteLine($"RT sent: TechnicianLocationUpdated → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
@@ -743,7 +759,28 @@ namespace Services.EmergencyRequestService
 
         public async Task<bool> AssignTechnicianToEmergencyAsync(Guid emergencyId, Guid technicianUserId)
         {
+            // Lấy thông tin Emergency để biết CustomerId
+            var emergency = await _repository.GetByIdAsync(emergencyId);
+
+            // Lấy thông tin Technician để hiển thị Tên/SĐT
+            var techUser = await _userRepository.GetByTechnicianId(technicianUserId.ToString());
+
+            var payload = new
+            {
+                EmergencyRequestId = emergency.EmergencyRequestId,
+                Status = "Assigned",
+                TechnicianId = techUser.Id,
+                TechnicianName = techUser.FirstName + techUser.FullName, // Hoặc trường tên tương ứng
+                TechnicianPhone = techUser.PhoneNumber,
+               // TechnicianAvatar = techUser.AvatarUrl,
+                Message = "A technician has been assigned to your request."
+            };
+
+            // Gửi cho Khách hàng
+            await _hubContext.Clients.Group($"customer-{emergency.CustomerId}").SendAsync("TechnicianAssigned", payload);
+            Console.WriteLine($"RT backend sent: Asigned → customer-{emergency.CustomerId}, id={emergency.EmergencyRequestId}");
             return await _repository.AssignTechnicianAsync(emergencyId, technicianUserId);
+
         }
     }
 }

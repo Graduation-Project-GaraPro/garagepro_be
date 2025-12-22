@@ -20,6 +20,10 @@ namespace Services.VehicleServices
         Task<VehicleDto> UpdateVehicleAsync(Guid vehicleId, UpdateVehicleDto updateVehicleDto);
         Task<bool> DeleteVehicleAsync(Guid vehicleId);
         Task<bool> VehicleExistsAsync(Guid vehicleId);
+
+      
+            Task<List<VehicleSelectableDto>> GetUserVehiclesSelectableAsync(string userId);
+        
         Task<VehicleWithCustomerDto?> GetVehicleWithCustomerAsync(Guid vehicleId);
         Task<bool> UpdateWarrantyStatusAsync(Guid vehicleId, string warrantyStatus);
         Task<bool> UpdateServiceScheduleAsync(Guid vehicleId, DateTime? nextServiceDate);

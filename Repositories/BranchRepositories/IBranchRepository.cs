@@ -1,10 +1,11 @@
-﻿using System;
+﻿using BusinessObject.Branches;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
-using BusinessObject.Branches;
+using static Repositories.BranchRepositories.BranchRepository;
 
 namespace Repositories.BranchRepositories
 {
@@ -20,7 +21,7 @@ namespace Repositories.BranchRepositories
         Task UpdateAsync(Branch branch);
         Task UpdateIsActiveForManyAsync(IEnumerable<Guid> branchIds, bool isActive);
         Task DeleteAsync(Branch branch);
-
+        Task<(List<BranchBlockInfo> blocked, List<Guid> allowed)>CheckBranchesCanChangeActiveAsync(IEnumerable<Guid> branchIds);
         Task DeleteManyAsync(IEnumerable<Guid> branchIds);
         Task RemoveBranchServicesAsync(Branch branch);
         Task RemoveOperatingHoursAsync(Branch branch);

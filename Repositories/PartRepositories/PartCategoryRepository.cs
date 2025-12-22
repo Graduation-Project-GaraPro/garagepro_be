@@ -21,12 +21,16 @@ namespace Repositories.PartRepositories
         public async Task<PartCategory> GetByIdAsync(Guid id)
         {
             return await _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
                 .FirstOrDefaultAsync(pc => pc.LaborCategoryId == id);
         }
 
         public async Task<IEnumerable<PartCategory>> GetAllAsync()
         {
             return await _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
                 .OrderBy(pc => pc.CategoryName)
                 .ToListAsync();
         }
@@ -48,7 +52,10 @@ namespace Repositories.PartRepositories
 
         public async Task<(IEnumerable<PartCategory> items, int totalCount)> GetPagedAsync(int page, int pageSize)
         {
-            var query = _context.PartCategories.AsQueryable();
+            var query = _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
+                .AsQueryable();
 
             var totalCount = await query.CountAsync();
 
@@ -62,9 +69,12 @@ namespace Repositories.PartRepositories
         }
 
         public async Task<(IEnumerable<PartCategory> items, int totalCount)> SearchPartCategoriesAsync(
-            string searchTerm, string sortBy, string sortOrder, int page, int pageSize)
+            string searchTerm, Guid? modelId, string modelName, Guid? brandId, string brandName, string sortBy, string sortOrder, int page, int pageSize)
         {
-            var query = _context.PartCategories.AsQueryable();
+            var query = _context.PartCategories
+                .Include(pc => pc.VehicleModel)
+                .ThenInclude(vm => vm.Brand)
+                .AsQueryable();
 
             // Apply search filter
             if (!string.IsNullOrEmpty(searchTerm))
@@ -72,6 +82,30 @@ namespace Repositories.PartRepositories
                 query = query.Where(pc => 
                     pc.CategoryName.Contains(searchTerm) || 
                     pc.Description.Contains(searchTerm));
+            }
+
+            // Filter by vehicle model ID (exact match)
+            if (modelId.HasValue)
+            {
+                query = query.Where(pc => pc.ModelId == modelId.Value);
+            }
+
+            // Filter by vehicle model name (partial match)
+            if (!string.IsNullOrEmpty(modelName))
+            {
+                query = query.Where(pc => pc.VehicleModel.ModelName.Contains(modelName));
+            }
+
+            // Filter by vehicle brand ID (exact match)
+            if (brandId.HasValue)
+            {
+                query = query.Where(pc => pc.VehicleModel.BrandID == brandId.Value);
+            }
+
+            // Filter by vehicle brand name (partial match)
+            if (!string.IsNullOrEmpty(brandName))
+            {
+                query = query.Where(pc => pc.VehicleModel.Brand.BrandName.Contains(brandName));
             }
 
             // Apply sorting
@@ -86,6 +120,12 @@ namespace Repositories.PartRepositories
                 "createdat" => sortOrder.ToLower() == "desc" 
                     ? query.OrderByDescending(pc => pc.CreatedAt)
                     : query.OrderBy(pc => pc.CreatedAt),
+                "modelname" => sortOrder.ToLower() == "desc" 
+                    ? query.OrderByDescending(pc => pc.VehicleModel.ModelName)
+                    : query.OrderBy(pc => pc.VehicleModel.ModelName),
+                "brandname" => sortOrder.ToLower() == "desc" 
+                    ? query.OrderByDescending(pc => pc.VehicleModel.Brand.BrandName)
+                    : query.OrderBy(pc => pc.VehicleModel.Brand.BrandName),
                 _ => query.OrderBy(pc => pc.CategoryName)
             };
 

@@ -550,7 +550,7 @@ namespace Services.PaymentServices
                 Amount = amountToPay,
                 Method = PaymentMethod.PayOs,
                 Status = PaymentStatus.Unpaid,
-                PaymentDate = DateTime.MinValue,
+                PaymentDate = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
 

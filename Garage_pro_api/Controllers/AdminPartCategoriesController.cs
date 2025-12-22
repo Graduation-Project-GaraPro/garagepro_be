@@ -132,40 +132,46 @@ namespace Garage_pro_api.Controllers
         }
 
 
+        
         [HttpGet("part-categories/{id}")]
         public async Task<IActionResult> GetPartCategoryDetail(
-             Guid id,
-             Guid branchId,
-             StockFilter stockFilter = StockFilter.All)
+        Guid id,
+        Guid branchId,
+        Guid? modelId,
+        StockFilter stockFilter = StockFilter.All)
         {
             var data = await _context.PartCategories
-                .Where(pc => pc.LaborCategoryId == id)
-                .Select(pc => new
-                {
-                    pc.LaborCategoryId,
-                    pc.CategoryName,
-                    pc.Description,
-                    ModelName = pc.VehicleModel.ModelName,
-                    BrandName = pc.VehicleModel.Brand.BrandName,
+                        .Where(pc =>
+                            pc.LaborCategoryId == id &&
+                            (!modelId.HasValue || pc.ModelId == modelId)
+                        )
+                        .Select(pc => new
+                        {
+                            pc.LaborCategoryId,
+                            pc.CategoryName,
+                            pc.Description,
 
-                    Parts = pc.Parts.Select(p => new
-                    {
-                        p.PartId,
-                        p.Name,
-                        p.Price,
-                        p.WarrantyMonths,
-                        Stock = p.PartInventories
-                            .Where(pi => pi.BranchId == branchId)
-                            .Select(pi => pi.Stock)
-                            .FirstOrDefault()
-                    }).ToList()
-                })
-                .FirstOrDefaultAsync();
+                            ModelName = pc.VehicleModel.ModelName,
+                            BrandName = pc.VehicleModel.Brand.BrandName,
+
+                            Parts = pc.Parts.Select(p => new
+                            {
+                                p.PartId,
+                                p.Name,
+                                p.Price,
+                                p.WarrantyMonths,
+
+                                Stock = p.PartInventories
+                                    .Where(pi => pi.BranchId == branchId)
+                                    .Select(pi => pi.Stock)
+                                    .FirstOrDefault()
+                            }).ToList()
+                        })
+                        .FirstOrDefaultAsync();
 
             if (data == null)
                 return NotFound();
 
-            
             var parts = data.Parts.Where(p =>
                 stockFilter == StockFilter.All ||
                 (stockFilter == StockFilter.InStock && p.Stock > 0) ||

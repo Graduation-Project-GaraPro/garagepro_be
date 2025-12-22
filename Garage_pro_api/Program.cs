@@ -842,23 +842,23 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("No applied migrations found. Applying migrations and seeding (if needed).");
 
-            // Apply migrations (will create DB if needed)
-            try
-            {
-                dbContext.Database.Migrate();
-                logger.LogInformation("Database migrations applied successfully.");
-            }
-            catch (Microsoft.Data.SqlClient.SqlException sqlEx)
-            {
-                logger.LogError(sqlEx, "SQL exception while applying migrations. Number={Number}, Procedure={Procedure}, Line={LineNumber}",
-                    sqlEx.Number, sqlEx.Procedure, sqlEx.LineNumber);
-                throw;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unhandled exception while applying migrations.");
-                throw;
-            }
+           // Apply migrations(will create DB if needed)
+                try
+                {
+                    dbContext.Database.Migrate();
+                    logger.LogInformation("Database migrations applied successfully.");
+                }
+                catch (Microsoft.Data.SqlClient.SqlException sqlEx)
+                {
+                    logger.LogError(sqlEx, "SQL exception while applying migrations. Number={Number}, Procedure={Procedure}, Line={LineNumber}",
+                        sqlEx.Number, sqlEx.Procedure, sqlEx.LineNumber);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Unhandled exception while applying migrations.");
+                    throw;
+                }
 
             // Seed minimal data only if table is empty (idempotent)
             try

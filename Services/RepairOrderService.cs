@@ -1395,6 +1395,21 @@ namespace Services
                 ? await _userService.GetUserByIdAsync(repairOrder.ArchivedByUserId) 
                 : null;
 
+            // Calculate warranty information from JobParts
+            var allJobParts = repairOrder.Jobs?.SelectMany(j => j.JobParts ?? new List<JobPart>()).ToList() ?? new List<JobPart>();
+            var partsWithWarranty = allJobParts.Where(jp => jp.WarrantyMonths.HasValue).ToList();
+            
+            int? warrantyMonths = null;
+            DateTime? warrantyStartAt = null;
+            DateTime? warrantyEndAt = null;
+            
+            if (partsWithWarranty.Any())
+            {
+                warrantyMonths = partsWithWarranty.Max(jp => jp.WarrantyMonths);
+                warrantyStartAt = partsWithWarranty.Min(jp => jp.WarrantyStartAt);
+                warrantyEndAt = partsWithWarranty.Max(jp => jp.WarrantyEndAt);
+            }
+
             // Map Vehicle manually
             var vehicleDto = repairOrder.Vehicle != null ? new Dtos.Vehicles.VehicleDto
             {
@@ -1431,6 +1446,12 @@ namespace Services
                 ArchivedAt = repairOrder.ArchivedAt,
                 ArchivedByUserId = repairOrder.ArchivedByUserId,
                 ArchivedByUserName = archivedByUser != null ? $"{archivedByUser.FirstName} {archivedByUser.LastName}".Trim() : "Unknown",
+                
+                // Warranty Info (calculated from JobParts)
+                WarrantyMonths = warrantyMonths,
+                WarrantyStartAt = warrantyStartAt,
+                WarrantyEndAt = warrantyEndAt,
+                
                 IsCancelled = repairOrder.IsCancelled,
                 CancelledAt = repairOrder.CancelledAt,
                 CancelReason = repairOrder.CancelReason,
@@ -1482,7 +1503,18 @@ namespace Services
                     StartTime = null,
                     EndTime = null,
                     Status = j.Status.ToString(),
-                    Notes = j.Note
+                    Notes = j.Note,
+                    JobParts = j.JobParts?.Select(jp => new ArchivedJobPartDto
+                    {
+                        JobPartId = jp.JobPartId,
+                        PartName = jp.Part?.Name ?? "Unknown",
+                        PartCode = jp.Part?.PartId.ToString().Substring(0, 8) ?? "N/A",
+                        UnitPrice = jp.UnitPrice,
+                        Quantity = jp.Quantity,
+                        WarrantyMonths = jp.WarrantyMonths,
+                        WarrantyStartAt = jp.WarrantyStartAt,
+                        WarrantyEndAt = jp.WarrantyEndAt
+                    }).ToList() ?? new List<ArchivedJobPartDto>()
                 }).ToList() ?? new List<ArchivedJobDto>(),
                 Payments = repairOrder.Payments?.Select(p => new ArchivedPaymentDto
                 {

@@ -16,9 +16,9 @@ namespace BusinessObject.Policies
         public bool RequireNumber { get; set; }
         public bool RequireUppercase { get; set; }
 
-        public int SessionTimeout { get; set; } // phút
+        public int SessionTimeout { get; set; } 
         public int MaxLoginAttempts { get; set; }
-        public int AccountLockoutTime { get; set; } // phút
+        public int AccountLockoutTime { get; set; } 
         
         public int PasswordExpiryDays { get; set; }
         public bool EnableBruteForceProtection { get; set; }
