@@ -93,38 +93,60 @@ namespace Garage_pro_api.Controllers
 
         [HttpGet("part-categories")]
         public async Task<IActionResult> GetPartCategories(
-            [FromQuery] Guid modelId,
-            [FromQuery] Guid branchId,
-            [FromQuery] string? search)
+    [FromQuery] Guid modelId,
+    [FromQuery] Guid branchId,
+    [FromQuery] string? search,
+    [FromQuery] StockFilter stockFilter = StockFilter.All)
         {
+            if (modelId == Guid.Empty) return BadRequest("modelId is required.");
+            if (branchId == Guid.Empty) return BadRequest("branchId is required.");
+
             var query = _context.PartCategories
-                .Where(pc => pc.ModelId == modelId)
-                .AsQueryable();
+                .AsNoTracking()
+                .Where(pc => pc.ModelId == modelId);
+
+            // ✅ LỌC PartCategory theo chi nhánh dựa trên PartInventory
+            // - All: có record inventory ở branch
+            // - InStock: stock > 0 ở branch
+            // - OutOfStock: không có stock > 0 ở branch (kể cả không có record -> Stock = 0)
+            query = query.Where(pc =>
+                stockFilter == StockFilter.All
+                    ? pc.Parts.Any(p => p.PartInventories.Any(pi => pi.BranchId == branchId))
+                    : stockFilter == StockFilter.InStock
+                        ? pc.Parts.Any(p => p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0))
+                        : pc.Parts.Any(p => !p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0))
+            );
 
             // 🔍 SEARCH
             if (!string.IsNullOrWhiteSpace(search))
             {
-                query = query.Where(pc =>
-                    pc.CategoryName.Contains(search) ||
-                    (pc.Description != null && pc.Description.Contains(search)) ||
+                var keyword = search.Trim();
+                var like = $"%{keyword}%";
 
-                    // search theo tên Part (rất hay dùng)
-                    pc.Parts.Any(p => p.Name.Contains(search))
+                query = query.Where(pc =>
+                    EF.Functions.Like(pc.CategoryName, like) ||
+                    (pc.Description != null && EF.Functions.Like(pc.Description, like)) ||
+                    pc.Parts.Any(p => EF.Functions.Like(p.Name, like))
                 );
             }
 
             var result = await query
+                .OrderBy(pc => pc.CategoryName)
                 .Select(pc => new PartCategoryListDto
                 {
-                    PartCategoryId = pc.LaborCategoryId,
+                    PartCategoryId = pc.LaborCategoryId,   // ✅ đúng PK
                     CategoryName = pc.CategoryName,
                     Description = pc.Description,
-
                     ModelName = pc.VehicleModel.ModelName,
                     BrandName = pc.VehicleModel.Brand.BrandName,
 
-                    TotalParts = pc.Parts.Count(p =>
-                        p.PartInventories.Any(pi => pi.BranchId == branchId))
+                    // ✅ TotalParts theo stockFilter
+                    TotalParts =
+                        stockFilter == StockFilter.All
+                            ? pc.Parts.Count(p => p.PartInventories.Any(pi => pi.BranchId == branchId))
+                            : stockFilter == StockFilter.InStock
+                                ? pc.Parts.Count(p => p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0))
+                                : pc.Parts.Count(p => !p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0))
                 })
                 .ToListAsync();
 
@@ -132,70 +154,58 @@ namespace Garage_pro_api.Controllers
         }
 
 
-        
+
+
         [HttpGet("part-categories/{id}")]
         public async Task<IActionResult> GetPartCategoryDetail(
-        Guid id,
-        Guid branchId,
-        Guid? modelId,
-        StockFilter stockFilter = StockFilter.All)
+            [FromRoute] Guid id,
+            [FromQuery] Guid branchId,
+            [FromQuery] Guid? modelId,
+            [FromQuery] StockFilter stockFilter = StockFilter.All)
         {
-            var data = await _context.PartCategories
-                        .Where(pc =>
-                            pc.LaborCategoryId == id &&
-                            (!modelId.HasValue || pc.ModelId == modelId)
-                        )
-                        .Select(pc => new
-                        {
-                            pc.LaborCategoryId,
-                            pc.CategoryName,
-                            pc.Description,
+            if (id == Guid.Empty) return BadRequest("id is required.");
+            if (branchId == Guid.Empty) return BadRequest("branchId is required.");
 
-                            ModelName = pc.VehicleModel.ModelName,
-                            BrandName = pc.VehicleModel.Brand.BrandName,
-
-                            Parts = pc.Parts.Select(p => new
-                            {
-                                p.PartId,
-                                p.Name,
-                                p.Price,
-                                p.WarrantyMonths,
-
-                                Stock = p.PartInventories
-                                    .Where(pi => pi.BranchId == branchId)
-                                    .Select(pi => pi.Stock)
-                                    .FirstOrDefault()
-                            }).ToList()
-                        })
-                        .FirstOrDefaultAsync();
-
-            if (data == null)
-                return NotFound();
-
-            var parts = data.Parts.Where(p =>
-                stockFilter == StockFilter.All ||
-                (stockFilter == StockFilter.InStock && p.Stock > 0) ||
-                (stockFilter == StockFilter.OutOfStock && p.Stock == 0)
-            );
-
-            var result = new PartCategoryDetailDto
-            {
-                PartCategoryId = data.LaborCategoryId,
-                CategoryName = data.CategoryName,
-                Description = data.Description,
-                ModelName = data.ModelName,
-                BrandName = data.BrandName,
-
-                Parts = parts.Select(p => new PartInventoryDto
+            var result = await _context.PartCategories
+                .AsNoTracking()
+                .Where(pc =>
+                    pc.LaborCategoryId == id &&
+                    (!modelId.HasValue || pc.ModelId == modelId.Value)
+                )
+                .Select(pc => new PartCategoryDetailDto
                 {
-                    PartId = p.PartId,
-                    PartName = p.Name,
-                    Price = p.Price,
-                    WarrantyMonths = p.WarrantyMonths,
-                    Stock = p.Stock
-                }).ToList()
-            };
+                    PartCategoryId = pc.LaborCategoryId,
+                    CategoryName = pc.CategoryName,
+                    Description = pc.Description,
+                    ModelName = pc.VehicleModel.ModelName,
+                    BrandName = pc.VehicleModel.Brand.BrandName,
 
+                    Parts = pc.Parts
+                        .Where(p =>
+                            stockFilter == StockFilter.All
+                                ? p.PartInventories.Any(pi => pi.BranchId == branchId)
+                                : stockFilter == StockFilter.InStock
+                                    ? p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0)
+                                    : !p.PartInventories.Any(pi => pi.BranchId == branchId && pi.Stock > 0)
+                        )
+                        .OrderBy(p => p.Name)
+                        .Select(p => new PartInventoryDto
+                        {
+                            PartId = p.PartId,
+                            PartName = p.Name,
+                            Price = p.Price,
+                            WarrantyMonths = p.WarrantyMonths,
+
+                            Stock = p.PartInventories
+                                .Where(pi => pi.BranchId == branchId)
+                                .Select(pi => pi.Stock)
+                                .FirstOrDefault()   // không có record => 0
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (result == null) return NotFound();
             return Ok(result);
         }
 

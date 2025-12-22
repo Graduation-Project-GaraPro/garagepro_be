@@ -135,7 +135,7 @@ namespace Services.EmergencyRequestService
                 await _repository.UpdateAsync(fullRequest);
             }
 
-            _cache.Set(lastKey, DateTime.UtcNow, TimeSpan.FromMinutes(5));
+            _cache.Set(lastKey, DateTime.UtcNow, TimeSpan.FromMinutes(1));
             if (!string.IsNullOrWhiteSpace(idempotencyKey))
             {
                 var cacheKey = $"emg:idemp:{userId}:{idempotencyKey}";
@@ -316,7 +316,7 @@ namespace Services.EmergencyRequestService
             var manager = await _userRepository.GetByIdAsync(managerUserId);
             if (manager == null)
                 throw new InvalidOperationException("Manager user not found.");
-            if (!manager.BranchId.HasValue || manager.BranchId.Value != emergency.BranchId)
+                                                           if (!manager.BranchId.HasValue || manager.BranchId.Value != emergency.BranchId)
                 throw new InvalidOperationException("Manager not authorized to approve this branch.");
 
 

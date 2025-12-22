@@ -54,16 +54,19 @@ namespace Garage_pro_api.DbInit
             await SeedServiceCategoriesAsync();
             await SeedServicesAsync();
             //await SeedServicePartCategoriesAsync();
-            await UpdateAdvancedFlagFromPartCategoriesAsync();
             await SeedBranchesAsync();
             await SeedOrderStatusesAsync();
             await SeedLabelsAsync();
             //await SeedVehicleRelatedEntitiesAsync();
             await SeedVehicleRelatedEntitiesAsyncNew(); //new
-            //await SeedPartCategoriesAsync1();
-           
+                                                        //await SeedPartCategoriesAsync1();
+
             await SeedServicePartCategoriesAsyncNew(); // new
             await SeedPartInventoryAsync(); // new
+
+
+            await UpdateAdvancedFlagFromPartCategoriesAsync();
+
             await SeedVehiclesAsync();
             await SeedVehicleModelColorsAsync();
             await SeedPriceEmergenciesAsync();
@@ -104,7 +107,7 @@ namespace Garage_pro_api.DbInit
         // 2. Seed Users
         private async Task SeedUsersAsync()
         {
-           
+
             var defaultUsers = new List<(string Phone, string FirstName, string LastName, string Role)>
             {
                 ("0900000001", "System", "Admin", "Admin"),
@@ -497,22 +500,22 @@ namespace Garage_pro_api.DbInit
                                 "Customer", new[] { "BASIC_ACCESS" }
                             },
                             {
-                                "Technician", new[] 
-                                { 
+                                "Technician", new[]
+                                {
                                     "BOOKING_MANAGE",
 
-                                    "INSPECTION_TECHNICIAN_VIEW", 
-                                    "INSPECTION_TECHNICIAN_UPDATE", 
+                                    "INSPECTION_TECHNICIAN_VIEW",
+                                    "INSPECTION_TECHNICIAN_UPDATE",
                                     "INSPECTION_TECHNICIAN_DELETE",
                                     "INSPECTION_ADD_SERVICE",
 
-                                    "JOB_TECHNICIAN_VIEW", 
+                                    "JOB_TECHNICIAN_VIEW",
                                     "JOB_TECHNICIAN_UPDATE",
 
 
                                     "NOTIFICATION_VIEW", "NOTIFICATION_MARK", "NOTIFICATION_DELETE",
                                     "REPAIR_HISTORY_VIEW",
-                                    
+
                                     "REPAIR_UPDATE",
                                     "REPAIR_CREATE",
                                     "REPAIR_VIEW",
@@ -667,7 +670,7 @@ namespace Garage_pro_api.DbInit
         {
             // Get all vehicle models first
             var vehicleModels = await _context.VehicleModels.ToListAsync();
-            if (!vehicleModels.Any()) return; 
+            if (!vehicleModels.Any()) return;
 
             // Helper method to ensure part category exists for a specific model
             async Task EnsureAsync(Guid modelId, string name, string desc)
@@ -790,22 +793,22 @@ namespace Garage_pro_api.DbInit
                 ["Toyota"] = new List<string>
                 {
                     // Common maintenance items for Toyota
-                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
-                    "BrakeFluid", "SparkPlugs", "Battery", "CabinFilter", "FrontShocks", 
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad",
+                    "BrakeFluid", "SparkPlugs", "Battery", "CabinFilter", "FrontShocks",
                     "RearShocks", "TimingBelt", "FrontTires", "RearTires", "WheelBearings"
                 },
                 ["Ford"] = new List<string>
                 {
                     // Common maintenance items for Ford
-                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
-                    "FrontBrakeDisc", "SparkPlugs", "IgnitionCoils", "Battery", "CabinFilter", 
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad",
+                    "FrontBrakeDisc", "SparkPlugs", "IgnitionCoils", "Battery", "CabinFilter",
                     "FrontShocks", "ControlArms", "FrontTires", "RearTires", "Alternator"
                 },
                 ["Hyundai"] = new List<string>
                 {
                     // Common maintenance items for Hyundai
-                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad", 
-                    "BrakeCalipers", "SparkPlugs", "Battery", "StarterMotor", "CabinFilter", 
+                    "EngineOil", "OilFilter", "AirFilter", "FrontBrakePad", "RearBrakePad",
+                    "BrakeCalipers", "SparkPlugs", "Battery", "StarterMotor", "CabinFilter",
                     "ACCompressor", "FrontShocks", "FrontTires", "WaterPump", "Radiator"
                 }
             };
@@ -819,20 +822,20 @@ namespace Garage_pro_api.DbInit
             foreach (var brand in vehicleBrands)
             {
                 var categoriesForBrand = brandCategoryMapping[brand.BrandName];
-                
+
                 // Limit to ~10 models per brand for demo
                 var modelsToSeed = brand.VehicleModels.Take(10).ToList();
-                
+
                 foreach (var model in modelsToSeed)
                 {
                     foreach (var categoryKey in categoriesForBrand)
                     {
                         var categoryName = categoryDisplayNames[categoryKey];
-                        
+
                         // Check if category already exists for this model
                         var exists = await _context.PartCategories
                             .AnyAsync(pc => pc.ModelId == model.ModelID && pc.CategoryName == categoryName);
-                        
+
                         if (!exists)
                         {
                             _context.PartCategories.Add(new PartCategory
@@ -979,15 +982,15 @@ namespace Garage_pro_api.DbInit
         //        if (partDefinitions.ContainsKey(category.CategoryName))
         //        {
         //            var (partNames, prices, warrantyMonths) = partDefinitions[category.CategoryName];
-                    
+
         //            // Create 2-3 parts per category to keep it manageable
         //            var partsToCreate = Math.Min(3, partNames.Length);
-                    
+
         //            for (int i = 0; i < partsToCreate; i++)
         //            {
         //                var brandName = category.VehicleModel.Brand.BrandName;
         //                var modelName = category.VehicleModel.ModelName;
-                        
+
         //                parts.Add(new Part
         //                {
         //                    PartId = Guid.NewGuid(),
@@ -1008,14 +1011,14 @@ namespace Garage_pro_api.DbInit
         //    {
         //        _context.Parts.AddRange(parts);
         //        await _context.SaveChangesAsync();
-                
+
         //        Console.WriteLine($"Parts seeded successfully! Created {parts.Count} parts across {partCategories.Count} categories.");
         //    }
         //}
 
         private async Task SeedPartsAsyncNew()
         {
-           
+
 
             var partCategories = await _context.PartCategories
                 .Include(pc => pc.VehicleModel)
@@ -1030,7 +1033,7 @@ namespace Garage_pro_api.DbInit
             var random = new Random();
             var parts = new List<Part>();
 
-            
+
             var partDefinitions = new Dictionary<string, (string[] partNames, decimal[] prices, int[] warrantyMonths)>
             {
                 ["Engine Oil"] = (
@@ -1135,45 +1138,45 @@ namespace Garage_pro_api.DbInit
                 )
             };
 
-            
-                foreach (var category in partCategories)
+
+            foreach (var category in partCategories)
+            {
+                if (!partDefinitions.ContainsKey(category.CategoryName))
+                    continue;
+
+                var (partNames, prices, warrantyMonths) =
+                    partDefinitions[category.CategoryName];
+
+                var brandName = category.VehicleModel.Brand.BrandName;
+                var modelName = category.VehicleModel.ModelName;
+
+                // GIỮ LOGIC 2–3 PART / CATEGORY NHƯ BẠN
+                var partsToCreate = Math.Min(3, partNames.Length);
+
+                for (int i = 0; i < partsToCreate; i++)
                 {
-                    if (!partDefinitions.ContainsKey(category.CategoryName))
-                        continue;
-
-                    var (partNames, prices, warrantyMonths) =
-                        partDefinitions[category.CategoryName];
-
-                    var brandName = category.VehicleModel.Brand.BrandName;
-                    var modelName = category.VehicleModel.ModelName;
-
-                    // GIỮ LOGIC 2–3 PART / CATEGORY NHƯ BẠN
-                    var partsToCreate = Math.Min(3, partNames.Length);
-
-                    for (int i = 0; i < partsToCreate; i++)
+                    parts.Add(new Part
                     {
-                        parts.Add(new Part
-                        {
-                            PartId = Guid.NewGuid(),
-                            PartCategoryId = category.LaborCategoryId,
-                           
-                            Name = $"{partNames[i]} - {brandName} {modelName}",
-                            Price = prices[i],
-                            WarrantyMonths = warrantyMonths[i],
-                            Stock = 0,
-                            CreatedAt = DateTime.UtcNow
-                        });
-                    }
+                        PartId = Guid.NewGuid(),
+                        PartCategoryId = category.LaborCategoryId,
+
+                        Name = $"{partNames[i]} - {brandName} {modelName}",
+                        Price = prices[i],
+                        WarrantyMonths = warrantyMonths[i],
+                        Stock = 0,
+                        CreatedAt = DateTime.UtcNow
+                    });
                 }
-            
+            }
+
 
             _context.Parts.AddRange(parts);
             await _context.SaveChangesAsync();
 
             Console.WriteLine($"Seeded {parts.Count} Parts ");
         }
-        
-      
+
+
 
 
 
@@ -1321,7 +1324,7 @@ namespace Garage_pro_api.DbInit
 
         private async Task SeedServicesAsync()
         {
-            
+
 
             var categories = await _context.ServiceCategories.ToListAsync();
             Guid Cat(string name)
@@ -1839,20 +1842,32 @@ namespace Garage_pro_api.DbInit
 
         private async Task UpdateAdvancedFlagFromPartCategoriesAsync()
         {
-            // Service nào có > 1 PartCategory (distinct) => Advanced
+            // Service nào có > 1 PartCategory "khác tên" (sau khi normalize) => Advanced
             var advancedServiceIds = await _context.ServicePartCategories
+                .Select(x => new
+                {
+                    x.ServiceId,
+                    // normalize để tránh khác hoa/thường + khoảng trắng đầu/cuối
+                    CateName = (x.PartCategory.CategoryName ?? "").Trim().ToLower()
+                })
+                // Lấy unique theo (ServiceId, CateName)  => loại trùng tên
+                .GroupBy(x => new { x.ServiceId, x.CateName })
+                .Select(g => g.Key)
+                // Đếm số tên unique theo Service
                 .GroupBy(x => x.ServiceId)
-                .Where(g => g.Select(x => x.PartCategoryId).Distinct().Count() > 1)
+                .Where(g => g.Count() > 1)
                 .Select(g => g.Key)
                 .ToListAsync();
 
-            var allServices = await _context.Services.ToListAsync();
+            var advancedSet = advancedServiceIds.ToHashSet();
 
+            var allServices = await _context.Services.ToListAsync();
             foreach (var s in allServices)
-                s.IsAdvanced = advancedServiceIds.Contains(s.ServiceId);
+                s.IsAdvanced = advancedSet.Contains(s.ServiceId);
 
             await _context.SaveChangesAsync();
         }
+
 
 
 
@@ -1919,7 +1934,7 @@ namespace Garage_pro_api.DbInit
                             OpenTime = new TimeSpan(8, 0, 0),   // 08:00
                             CloseTime = new TimeSpan(17, 30, 0) // 17:30
                         });
-                   }
+                    }
 
                     // Gán staff
                     var managerUser = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == "0900000002");
@@ -1988,7 +2003,7 @@ namespace Garage_pro_api.DbInit
                 };
 
                 _context.InspectionTypes.AddRange(inspectionTypes);
-                await _context.SaveChangesAsync();            
+                await _context.SaveChangesAsync();
             }
         }
 
@@ -2012,25 +2027,25 @@ namespace Garage_pro_api.DbInit
                             {
                                 LabelName = "Pending",
                                 Description = "Order is waiting to be processed",
-                                OrderStatusId = pendingStatus.OrderStatusId, 
+                                OrderStatusId = pendingStatus.OrderStatusId,
                                 ColorName = "Red",
                                 HexCode = "#FF0000",
-                                IsDefault = true 
+                                IsDefault = true
                             },
                             new Label
                             {
                                 LabelName = "In Progress",
                                 Description = "Order is being worked on",
-                                OrderStatusId = inProgressStatus.OrderStatusId, 
+                                OrderStatusId = inProgressStatus.OrderStatusId,
                                 ColorName = "Yellow",
                                 HexCode = "#FFFF00",
-                                IsDefault = true 
+                                IsDefault = true
                             },
                             new Label
                             {
                                 LabelName = "Done",
                                 Description = "Order completed",
-                                OrderStatusId = completedStatus.OrderStatusId, 
+                                OrderStatusId = completedStatus.OrderStatusId,
                                 ColorName = "Green",
                                 HexCode = "#00FF00",
                                 IsDefault = true
@@ -2569,7 +2584,7 @@ namespace Garage_pro_api.DbInit
                 }
 
                 var technicianIds = technicians.Select(t => t.TechnicianId).ToList();
-               
+
 
                 // Truy vấn vehicleId từ database
                 var vehicle = await _context.Vehicles
@@ -2817,7 +2832,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[0].RepairOrderId,
                         ServiceId = basicOilChange.ServiceId,
-                        
+
                         CreatedAt = DateTime.UtcNow.AddDays(-5)
                     },
                     new RepairOrderService
@@ -2825,7 +2840,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[0].RepairOrderId,
                         ServiceId = tireRotation.ServiceId,
-                        
+
                         CreatedAt = DateTime.UtcNow.AddDays(-5)
                     },
 
@@ -2835,7 +2850,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[1].RepairOrderId,
                         ServiceId = brakePadReplacement.ServiceId,
-                        
+
                         CreatedAt = DateTime.UtcNow.AddDays(-2)
                     },
 
@@ -2845,7 +2860,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[2].RepairOrderId,
                         ServiceId = brakePadReplacement.ServiceId,
-                        
+
                         CreatedAt = DateTime.UtcNow.AddDays(-1)
                     },
                     new RepairOrderService
@@ -2853,7 +2868,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[2].RepairOrderId,
                         ServiceId = engineTuneUp.ServiceId,
-                       
+
                         CreatedAt = DateTime.UtcNow.AddDays(-1)
                     },
 
@@ -2863,7 +2878,7 @@ namespace Garage_pro_api.DbInit
                         RepairOrderServiceId = Guid.NewGuid(),
                         RepairOrderId = repairOrders[3].RepairOrderId,
                         ServiceId = tireRotation.ServiceId,
-                        
+
                         CreatedAt = DateTime.UtcNow
                     }
                 };
@@ -3242,7 +3257,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakePadCheap.PartId,
                 IsSelected = true,
-                
+
                 Price = brakePadCheap.Price,
                 Quantity = 2
             },
@@ -3252,7 +3267,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = brakeDiscMedium.PartId,
                 IsSelected = false,
-                
+
                 Price = brakeDiscMedium.Price,
                 Quantity = 2
             },
@@ -3262,7 +3277,7 @@ namespace Garage_pro_api.DbInit
                 QuotationServiceId = quotationServices[0].QuotationServiceId,
                 PartId = shockAbsorberCheap.PartId,
                 IsSelected = false,
-                
+
                 Price = shockAbsorberCheap.Price,
                 Quantity = 1
             }
@@ -3758,7 +3773,7 @@ namespace Garage_pro_api.DbInit
                 if (serviceMappings.ContainsKey(service.ServiceName))
                 {
                     var requiredPartCategories = serviceMappings[service.ServiceName];
-                    
+
                     foreach (var categoryName in requiredPartCategories)
                     {
                         // Find all part categories with this name (across different vehicle models)
@@ -3769,8 +3784,8 @@ namespace Garage_pro_api.DbInit
                         foreach (var partCategory in matchingCategories)
                         {
                             // Check if this service-partcategory link already exists
-                            var exists = servicePartCategories.Any(spc => 
-                                spc.ServiceId == service.ServiceId && 
+                            var exists = servicePartCategories.Any(spc =>
+                                spc.ServiceId == service.ServiceId &&
                                 spc.PartCategoryId == partCategory.LaborCategoryId);
 
                             if (!exists)

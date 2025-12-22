@@ -103,12 +103,13 @@ namespace Services.ExcelImportSerivces
 
                 //await ImportBranchesAsync(package);
                 //await ImportOperatingHoursAsync(package);
-                //await ImportStaffAsync(package, staffWelcomeEmails);
-                await ImportParentCategoriesAsync(package);
-                await ImportServiceCategoriesAsync(package);
-                await ImportServicesAsync(package);
-                await ImportPartCategoriesAsync(package);
+                //await ImportParentCategoriesAsync(package);
+                //await ImportServiceCategoriesAsync(package);
+                //await ImportServicesAsync(package);
+                //await ImportPartCategoriesAsync(package);
                 await ImportPartsAsync(package);
+                await ImportStaffAsync(package, staffWelcomeEmails);
+
                 //await ImportPartInventoryAsync(package);
 
                 if (_errors.Any())
@@ -134,35 +135,38 @@ namespace Services.ExcelImportSerivces
 
         private async Task InitCachesAsync()
         {
-            var serviceCategories = await _context.ServiceCategories.ToListAsync();
-            var services = await _context.Services.ToListAsync();
-            var branchServices = await _context.BranchServices.ToListAsync();
+            var serviceCategories = await _context.ServiceCategories.AsNoTracking().ToListAsync();
+            var services = await _context.Services.AsNoTracking().ToListAsync();
+            var branchServices = await _context.BranchServices.AsNoTracking().ToListAsync();
 
-            var partCategories = await _context.PartCategories.ToListAsync();
-            var parts = await _context.Parts.ToListAsync();
-            var servicePartCats = await _context.ServicePartCategories.ToListAsync();
-            var branches = await _context.Branches.ToListAsync();
-            var operatingHours = await _context.OperatingHours.ToListAsync();
-            var users = await _userManager.Users.ToListAsync();
+            var partCategories = await _context.PartCategories.AsNoTracking().ToListAsync();
+            var parts = await _context.Parts.AsNoTracking().ToListAsync();
+            var servicePartCats = await _context.ServicePartCategories.AsNoTracking().ToListAsync();
 
-            var brands = await _context.VehicleBrands.ToListAsync();
-            var models = await _context.VehicleModels.ToListAsync();
+            var branches = await _context.Branches.AsNoTracking().ToListAsync();
+            var operatingHours = await _context.OperatingHours.AsNoTracking().ToListAsync();
 
-            
-            var partInventories = await _context.PartInventories.ToListAsync();
+            // UserManager.Users là IQueryable -> thường vẫn dùng AsNoTracking() được (EF store)
+            var users = await _userManager.Users.AsNoTracking().ToListAsync();
 
+            var brands = await _context.VehicleBrands.AsNoTracking().ToListAsync();
+            var models = await _context.VehicleModels.AsNoTracking().ToListAsync();
+
+            // ❌ Bỏ cái này vì bạn đã load inventory bằng _inventoryCache bên dưới rồi.
+            // var partInventories = await _context.PartInventories.ToListAsync();
 
             _branchCache = branches
-            .GroupBy(b => Normalize(b.BranchName))
-            .ToDictionary(g => g.Key, g => g.First());
+                .GroupBy(b => Normalize(b.BranchName))
+                .ToDictionary(g => g.Key, g => g.First());
 
             _operatingHourCache = operatingHours
                 .GroupBy(o => GetOperatingHourKey(o.BranchId, o.DayOfWeek))
                 .ToDictionary(g => g.Key, g => g.First());
 
             _staffCache = users
-               .GroupBy(u => Normalize(u.UserName))
-               .ToDictionary(g => g.Key, g => g.First());
+                .GroupBy(u => Normalize(u.UserName))
+                .ToDictionary(g => g.Key, g => g.First());
+
             _categoryCache = serviceCategories
                 .GroupBy(c => GetCategoryKey(c.CategoryName, c.ParentServiceCategoryId))
                 .ToDictionary(g => g.Key, g => g.First());
@@ -170,10 +174,10 @@ namespace Services.ExcelImportSerivces
             _serviceCache = services
                 .GroupBy(s => Normalize(s.ServiceName))
                 .ToDictionary(g => g.Key, g => g.First());
+
             _branchServiceCache = branchServices
                 .GroupBy(bs => GetBranchServiceKey(bs.BranchId, bs.ServiceId))
                 .ToDictionary(g => g.Key, g => g.First());
-
 
             _brandCache = brands
                 .GroupBy(b => GetBrandKey(b.BrandName))
@@ -183,27 +187,23 @@ namespace Services.ExcelImportSerivces
                 .GroupBy(m => GetModelKey(m.BrandID, m.ModelName))
                 .ToDictionary(g => g.Key, g => g.First());
 
-
             _partCategoryCache = partCategories
                 .GroupBy(pc => GetPartCategoryKey(pc.ModelId, pc.CategoryName))
                 .ToDictionary(g => g.Key, g => g.First());
 
-            // lookup theo CategoryName để map vào Service theo tên
             _partCategoriesByNameCache = partCategories
                 .GroupBy(pc => Normalize(pc.CategoryName))
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // Part cache theo (PartCategoryId + PartCode/PartName)
             _partCache = parts
-                .GroupBy(p => GetPartKey(p.PartCategoryId,  p.Name))
+                .GroupBy(p => GetPartKey(p.PartCategoryId, p.Name))
                 .ToDictionary(g => g.Key, g => g.First());
 
-            // PartInventory cache theo (PartId + BranchId)
+            // ✅ Inventory cache theo (PartId + BranchId) - NoTracking
             _inventoryCache = await _context.PartInventories
                 .AsNoTracking()
-                .Include(pi=>pi.Part)
                 .ToDictionaryAsync(
-                    i => $"{Normalize(i.Part.Name)}|{i.BranchId:N}",
+                    i => $"{i.PartId:N}|{i.BranchId:N}",
                     i => i
                 );
 
@@ -211,6 +211,7 @@ namespace Services.ExcelImportSerivces
                 .GroupBy(x => GetSpcKey(x.ServiceId, x.PartCategoryId))
                 .ToDictionary(g => g.Key, g => g.First());
         }
+
 
         #endregion
 
@@ -1380,10 +1381,12 @@ namespace Services.ExcelImportSerivces
             if (ws == null) return;
 
             int rowCount = ws.Dimension.Rows;
+            int colCount = ws.Dimension.Columns;
 
             for (int row = 2; row <= rowCount; row++)
             {
-                if (IsRowEmpty(ws, row, 7))
+                // Chỉ cần check 6 cột bắt buộc (branch là động/tuỳ chọn)
+                if (IsRowEmpty(ws, row, 6))
                     continue;
 
                 bool hasError = false;
@@ -1394,156 +1397,97 @@ namespace Services.ExcelImportSerivces
                 var priceText = ws.Cells[row, 4].Text?.Trim(); // D
                 var durationText = ws.Cells[row, 5].Text?.Trim(); // E
                 var isAdvText = ws.Cells[row, 6].Text?.Trim(); // F
-                var branchName = ws.Cells[row, 7].Text?.Trim(); // G
 
                 // ===== Required fields =====
                 if (string.IsNullOrWhiteSpace(categoryName))
                 {
-                    AddError(
-                        sheetName,
-                        "Service Category Name is required.",
-                        row,
-                        "A",
-                        "SERVICE_CATEGORY_REQUIRED"
-                    );
+                    AddError(sheetName, "Service Category Name is required.", row, "A", "SERVICE_CATEGORY_REQUIRED");
                     hasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(serviceName))
                 {
-                    AddError(
-                        sheetName,
-                        "Service Name is required.",
-                        row,
-                        "B",
-                        "SERVICE_NAME_REQUIRED"
-                    );
+                    AddError(sheetName, "Service Name is required.", row, "B", "SERVICE_NAME_REQUIRED");
                     hasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(description))
                 {
-                    AddError(
-                        sheetName,
-                        "Description is required.",
-                        row,
-                        "C",
-                        "SERVICE_DESCRIPTION_REQUIRED"
-                    );
+                    AddError(sheetName, "Description is required.", row, "C", "SERVICE_DESCRIPTION_REQUIRED");
                     hasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(priceText))
                 {
-                    AddError(
-                        sheetName,
-                        "Price is required.",
-                        row,
-                        "D",
-                        "SERVICE_PRICE_REQUIRED"
-                    );
+                    AddError(sheetName, "Price is required.", row, "D", "SERVICE_PRICE_REQUIRED");
                     hasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(durationText))
                 {
-                    AddError(
-                        sheetName,
-                        "Estimated Duration is required.",
-                        row,
-                        "E",
-                        "SERVICE_DURATION_REQUIRED"
-                    );
+                    AddError(sheetName, "Estimated Duration is required.", row, "E", "SERVICE_DURATION_REQUIRED");
                     hasError = true;
                 }
 
                 if (string.IsNullOrWhiteSpace(isAdvText))
                 {
-                    AddError(
-                        sheetName,
-                        "'Is Advanced' is required.",
-                        row,
-                        "F",
-                        "SERVICE_IS_ADVANCED_REQUIRED"
-                    );
+                    AddError(sheetName, "'Is Advanced' is required.", row, "F", "SERVICE_IS_ADVANCED_REQUIRED");
                     hasError = true;
                 }
 
-                if (hasError)
-                    continue;
+                if (hasError) continue;
 
                 // ===== Parse numeric & boolean =====
                 if (!decimal.TryParse(priceText, NumberStyles.Any, CultureInfo.InvariantCulture, out var price))
                 {
-                    AddError(
-                        sheetName,
-                        $"Invalid number format for 'Price': '{priceText}'.",
-                        row,
-                        "D",
-                        "SERVICE_INVALID_PRICE"
-                    );
-                    hasError = true;
+                    AddError(sheetName, $"Invalid number format for 'Price': '{priceText}'.", row, "D", "SERVICE_INVALID_PRICE");
+                    continue;
                 }
 
                 if (!decimal.TryParse(durationText, NumberStyles.Any, CultureInfo.InvariantCulture, out var duration))
                 {
-                    AddError(
-                        sheetName,
-                        $"Invalid number format for 'Estimated Duration': '{durationText}'.",
-                        row,
-                        "E",
-                        "SERVICE_INVALID_DURATION"
-                    );
-                    hasError = true;
+                    AddError(sheetName, $"Invalid number format for 'Estimated Duration': '{durationText}'.", row, "E", "SERVICE_INVALID_DURATION");
+                    continue;
                 }
 
-                bool isAdvanced = false;
-                if (!bool.TryParse(isAdvText, out isAdvanced))
+                if (!bool.TryParse(isAdvText, out var isAdvanced))
                 {
-                    AddError(
-                        sheetName,
-                        $"Invalid boolean value for 'Is Advanced': '{isAdvText}'. Expected 'true' or 'false'.",
-                        row,
-                        "F",
-                        "SERVICE_INVALID_IS_ADVANCED"
-                    );
-                    hasError = true;
+                    AddError(sheetName, $"Invalid boolean value for 'Is Advanced': '{isAdvText}'. Expected 'true' or 'false'.", row, "F", "SERVICE_INVALID_IS_ADVANCED");
+                    continue;
                 }
 
                 // ===== Check ServiceCategory exists in system =====
                 Guid serviceCategoryId = Guid.Empty;
-
-                if (!string.IsNullOrWhiteSpace(categoryName))
+                var normCatName = Normalize(categoryName);
+                var cat = _categoryCache.Values.FirstOrDefault(c => Normalize(c.CategoryName) == normCatName);
+                if (cat == null)
                 {
-                    var normCatName = Normalize(categoryName);
-                    var cat = _categoryCache.Values
-                        .FirstOrDefault(c => Normalize(c.CategoryName) == normCatName);
-
-                    if (cat == null)
-                    {
-                        AddError(
-                            sheetName,
-                            $"Service Category '{categoryName}' does not exist in the system.",
-                            row,
-                            "A",
-                            "SERVICE_CATEGORY_NOT_FOUND"
-                        );
-                        hasError = true;
-                    }
-                    else
-                    {
-                        serviceCategoryId = cat.ServiceCategoryId;
-                    }
+                    AddError(sheetName, $"Service Category '{categoryName}' does not exist in the system.", row, "A", "SERVICE_CATEGORY_NOT_FOUND");
+                    continue;
                 }
+                serviceCategoryId = cat.ServiceCategoryId;
 
-                // ===== Check Branch exists if provided =====
-                Guid? branchId = null;
-                if (!string.IsNullOrWhiteSpace(branchName))
+                // ===== Dynamic Branch columns: Branch_1, Branch_2, ... (từ cột 7 trở đi) =====
+                var branchIds = new HashSet<Guid>();
+
+                for (int col = 7; col <= colCount; col++)
                 {
+                    var header = ws.Cells[1, col].Text?.Trim();
+                    // Nếu cột nào không phải Branch_* thì bỏ qua (phòng trường hợp bạn thêm cột khác)
+                    if (string.IsNullOrWhiteSpace(header) ||
+                        !(header.StartsWith("Branch", StringComparison.OrdinalIgnoreCase) ||
+                          header.StartsWith("BranchName", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        continue;
+                    }
+
+                    var branchName = ws.Cells[row, col].Text?.Trim();
+                    if (string.IsNullOrWhiteSpace(branchName)) continue;
+
                     var bKey = Normalize(branchName);
                     if (_branchCache.TryGetValue(bKey, out var branch))
                     {
-                        branchId = branch.BranchId;
+                        branchIds.Add(branch.BranchId); // tự loại trùng
                     }
                     else
                     {
@@ -1551,18 +1495,17 @@ namespace Services.ExcelImportSerivces
                             sheetName,
                             $"Branch '{branchName}' does not exist in the system.",
                             row,
-                            "G",
+                            ws.Cells[1, col].Address, // cột nào sai thì báo đúng cột đó
                             "SERVICE_BRANCH_NOT_FOUND"
                         );
                         hasError = true;
                     }
                 }
 
-                if (hasError)
-                    continue;
+                if (hasError) continue;
 
                 // ===== Create / Update Service =====
-                var sKey = Normalize(serviceName!);
+                var sKey = Normalize(serviceName);
                 if (!_serviceCache.TryGetValue(sKey, out var service))
                 {
                     service = new Service
@@ -1593,26 +1536,26 @@ namespace Services.ExcelImportSerivces
                     _context.Services.Update(service);
                 }
 
-                // ===== Branch mapping (if branchId != null) =====
-                if (branchId.HasValue)
+                // ===== Map Service ↔ nhiều Branch =====
+                foreach (var branchId in branchIds)
                 {
-                    var bsKey = GetBranchServiceKey(branchId.Value, service.ServiceId);
+                    var bsKey = GetBranchServiceKey(branchId, service.ServiceId);
 
                     if (!_branchServiceCache.ContainsKey(bsKey))
                     {
                         var branchService = new BranchService
                         {
-                            BranchId = branchId.Value,
+                            BranchId = branchId,
                             ServiceId = service.ServiceId
                         };
 
                         _context.BranchServices.Add(branchService);
                         _branchServiceCache[bsKey] = branchService;
                     }
-                    
                 }
             }
         }
+
 
 
         private async Task ImportPartCategoriesAsync(ExcelPackage package)
@@ -1851,11 +1794,10 @@ namespace Services.ExcelImportSerivces
                         continue;
                     }
 
-                    var invKey = $"{Normalize(partName)}|{branch.BranchId:N}";
+                    var invKey = $"{part.PartId:N}|{branch.BranchId:N}";
 
                     if (!_inventoryCache.TryGetValue(invKey, out var inventory))
                     {
-                        
                         inventory = new PartInventory
                         {
                             PartInventoryId = Guid.NewGuid(),
@@ -1870,16 +1812,14 @@ namespace Services.ExcelImportSerivces
                     }
                     else
                     {
-                        
                         inventory.Stock = stock;
                         inventory.UpdatedAt = DateTime.UtcNow;
-
                         _context.PartInventories.Update(inventory);
                     }
 
 
 
-                   
+
                 }
             }
         }
@@ -1922,7 +1862,7 @@ namespace Services.ExcelImportSerivces
                 ["Service"] = new[]
                             {
                         "CategoryName","ServiceName","Description","Price",
-                        "EstimatedDuration","IsAdvanced","BranchName"
+                        "EstimatedDuration","IsAdvanced"
                     },
                 ["PartCategory"] = new[]
                 {
@@ -1951,6 +1891,31 @@ namespace Services.ExcelImportSerivces
                         "MissingSheet"));
                     continue;
                 }
+
+                if (string.Equals(sheetName, "Service", StringComparison.OrdinalIgnoreCase))
+                {
+                    for (int col = expectedHeaders.Length + 1; col <= ws.Dimension.Columns; col++)
+                    {
+                        var header = ws.Cells[1, col].Text?.Trim();
+                        if (string.IsNullOrWhiteSpace(header)) continue;
+
+                        
+                        var ok =
+                            Regex.IsMatch(header, @"^Branch(_\d+)?$", RegexOptions.IgnoreCase) ||
+                            Regex.IsMatch(header, @"^BranchName(_\d+)?$", RegexOptions.IgnoreCase);
+
+                        if (!ok)
+                        {
+                            errors.Add(new ImportErrorDetail(
+                                sheetName,
+                                $"Invalid header '{header}'. Dynamic branch columns must be 'Branch_1', 'Branch_2', ... (or 'BranchName_1', ...).",
+                                1,
+                                $"Column {col}",
+                                "InvalidHeader"));
+                        }
+                    }
+                }
+
 
                 if (ws.Dimension == null || ws.Dimension.Columns < expectedHeaders.Length)
                 {

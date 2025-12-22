@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace DataAccessLayer.Migrations
 {
     /// <inheritdoc />
-    public partial class addnewLogicCategory : Migration
+    public partial class addCascadecCategory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -1097,7 +1097,7 @@ namespace DataAccessLayer.Migrations
                         column: x => x.BranchId,
                         principalTable: "Branches",
                         principalColumn: "BranchId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_PartInventories_Parts_PartId",
                         column: x => x.PartId,

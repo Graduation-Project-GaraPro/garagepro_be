@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251221171244_addnewLogicCategory")]
-    partial class addnewLogicCategory
+    [Migration("20251222083618_addCascadecCategory")]
+    partial class addCascadecCategory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2743,7 +2743,7 @@ namespace DataAccessLayer.Migrations
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Vehicle", "Vehicle")
-                        .WithMany()
+                        .WithMany("RepairRequests")
                         .HasForeignKey("VehicleID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3028,7 +3028,7 @@ namespace DataAccessLayer.Migrations
                     b.HasOne("BusinessObject.Branches.Branch", "Branch")
                         .WithMany("PartInventories")
                         .HasForeignKey("BranchId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("BusinessObject.Part", "Part")
@@ -3780,6 +3780,8 @@ namespace DataAccessLayer.Migrations
             modelBuilder.Entity("BusinessObject.Vehicle", b =>
                 {
                     b.Navigation("RepairOrders");
+
+                    b.Navigation("RepairRequests");
                 });
 
             modelBuilder.Entity("BusinessObject.Vehicles.VehicleBrand", b =>

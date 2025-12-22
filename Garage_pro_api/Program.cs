@@ -838,7 +838,7 @@ using (var scope = app.Services.CreateScope())
         var appliedMigrations = dbContext.Database.GetAppliedMigrations();
         bool hasAppliedMigrations = appliedMigrations != null && appliedMigrations.Any();
 
-        if (!hasAppliedMigrations)
+        if (hasAppliedMigrations)
         {
             logger.LogInformation("No applied migrations found. Applying migrations and seeding (if needed).");
 
