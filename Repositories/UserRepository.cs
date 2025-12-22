@@ -264,5 +264,23 @@ namespace Repositories
 
         public Task AddUserToRoleAsync(ApplicationUser user, string role)
             => _userManager.AddToRoleAsync(user, role);
+
+        
+           public async Task<ApplicationUser?> GetByTechnicianId(string technicianId)
+        {
+            var technicianRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.Name == "Technician");
+
+            if (technicianRole == null) return null;
+
+            var isTechnician = await _context.UserRoles
+                .AnyAsync(ur => ur.RoleId == technicianRole.Id && ur.UserId == technicianId);
+
+            if (!isTechnician) return null;
+
+            return await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == technicianId);
+        }
+
     }
 }

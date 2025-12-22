@@ -26,9 +26,13 @@ namespace Dtos.Emergency
             public DateTime? AutoCanceledAt { get; set; }
             public double? DistanceToGarageKm { get; set; }
             public int? EstimatedArrivalMinutes { get; set; }
+        // thong tin gara
+            public string BranchName { get; set; }
+        public string BranchAddress { get; set; }
+        public string BranchPhone { get; set; }
 
-            // Thông tin khách hàng
-            public string CustomerName { get; set; }
+        // Thông tin khách hàng
+        public string CustomerName { get; set; }
             public string CustomerPhone { get; set; }
 
             // Tùy chọn thêm nếu muốn hiển thị tiến độ

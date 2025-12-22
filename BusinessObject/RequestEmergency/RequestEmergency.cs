@@ -41,7 +41,9 @@ namespace BusinessObject.RequestEmergency
             InProgress, // Đang xử lý cứu hộ
             Towing,
             Completed,  // Hoàn thành
-            Canceled    // Khách hủy
+            Canceled,// Khách hủy
+            
+
         }
 
         public enum EmergencyType

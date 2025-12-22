@@ -719,6 +719,11 @@ namespace Services.BranchServices
                 }
             }
         }
-
+        //emeer
+        public async Task<Branch> GetBranchByEmergencyAsync(Guid id)
+        {
+            var branch = await _branchRepo.GetByIdAsync(id);
+            return branch;
+        }
     }
 }

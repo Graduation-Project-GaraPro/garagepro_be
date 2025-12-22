@@ -228,7 +228,9 @@ namespace Repositories.EmergencyRequestRepositories
                     BranchName = branch.BranchName,
                     PhoneNumber = branch.PhoneNumber,
                     Address = string.Join(", ", new[] { branch.Street, branch.Commune, branch.Province }.Where(s => !string.IsNullOrWhiteSpace(s))),
-                    DistanceKm = GetDistance(userLat, userLon, branch.Latitude, branch.Longitude)
+                    DistanceKm = GetDistance(userLat, userLon, branch.Latitude, branch.Longitude),
+                    latitude = branch.Latitude,
+                    longitude = branch.Longitude
                 })
                 .OrderBy(x => x.DistanceKm)
                 .Take(count)
