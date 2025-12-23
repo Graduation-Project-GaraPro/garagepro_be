@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject.PayOsModels;
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿using BusinessObject.PayOsModels;
 using BusinessObject;
 using BussinessObject;
 using DataAccessLayer;
@@ -54,9 +54,7 @@ namespace Services.PaymentServices
 
             var request = _httpContextAccessor.HttpContext?.Request;
 
-            _baseUrl = request is null
-                ? config["App:BaseUrl"]                               
-                : $"{request.Scheme}://{request.Host}";              
+            _baseUrl = config["SV:BaseUrl"] ?? $"{request.Scheme}://{request.Host}";
         }
         #region CRUD cơ bản
         public Task<Payment?> GetByIdAsync(long paymentId) => _repo.GetByIdAsync(paymentId);
