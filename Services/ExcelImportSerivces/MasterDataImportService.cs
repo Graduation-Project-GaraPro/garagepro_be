@@ -78,58 +78,57 @@ namespace Services.ExcelImportSerivces
         public async Task<ImportResult> ImportFromExcelAsync(IFormFile file)
         {
             if (file == null || file.Length == 0)
-                return ImportResult.Fail("File không hợp lệ.");
+                return ImportResult.Fail("File Not valid.");
+
+            ExcelPackage.License.SetNonCommercialPersonal("Garage Pro");
+            await InitCachesAsync();
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+
+            using var package = new ExcelPackage(stream);
+
+            var templateErrors = ValidateTemplate(package);
+            if (templateErrors.Any())
+                return ImportResult.Fail("Excel template is invalid. Please fix the template and try again.", templateErrors);
+
+            var staffWelcomeEmails = new List<StaffWelcomeEmailInfo>();
+
+            await using var tx = await _context.Database.BeginTransactionAsync(); 
 
             try
             {
-                //ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-                ExcelPackage.License.SetNonCommercialPersonal("Garage Pro");
-                await InitCachesAsync();
-
-                using var stream = new MemoryStream();
-                await file.CopyToAsync(stream);
-                stream.Position = 0;
-
-                using var package = new ExcelPackage(stream);
-
-                var templateErrors = ValidateTemplate(package);
-                if (templateErrors.Any())
-                {
-                    return ImportResult.Fail(
-                        "Excel template is invalid. Please fix the template and try again.",
-                        templateErrors);
-                }
-                var staffWelcomeEmails = new List<StaffWelcomeEmailInfo>();
-
-                //await ImportBranchesAsync(package);
-                //await ImportOperatingHoursAsync(package);
-                //await ImportParentCategoriesAsync(package);
-                //await ImportServiceCategoriesAsync(package);
-                //await ImportServicesAsync(package);
-                //await ImportPartCategoriesAsync(package);
+                await ImportBranchesAsync(package);
+                await ImportOperatingHoursAsync(package);
+                await ImportParentCategoriesAsync(package);
+                await ImportServiceCategoriesAsync(package);
+                await ImportServicesAsync(package);
+                await ImportPartCategoriesAsync(package);
                 await ImportPartsAsync(package);
                 await ImportStaffAsync(package, staffWelcomeEmails);
 
-                //await ImportPartInventoryAsync(package);
-
                 if (_errors.Any())
                 {
+                    await tx.RollbackAsync(); 
                     return ImportResult.Fail(
                         "Import failed because one or more errors were found. No data has been saved.",
                         _errors);
                 }
+
                 await _context.SaveChangesAsync();
-
+                await tx.CommitAsync(); 
                 await SendStaffWelcomeEmailsAsync(staffWelcomeEmails);
-
                 return ImportResult.Ok("Import master data Success.");
             }
             catch (Exception ex)
             {
+                await tx.RollbackAsync();
                 _logger.LogError(ex, "Error When import Excel master data");
                 return ImportResult.Fail($"Import Excel Fail: {ex.Message}");
             }
         }
+
 
         #region Init Caches
 
@@ -146,14 +145,13 @@ namespace Services.ExcelImportSerivces
             var branches = await _context.Branches.AsNoTracking().ToListAsync();
             var operatingHours = await _context.OperatingHours.AsNoTracking().ToListAsync();
 
-            // UserManager.Users là IQueryable -> thường vẫn dùng AsNoTracking() được (EF store)
+            
             var users = await _userManager.Users.AsNoTracking().ToListAsync();
 
             var brands = await _context.VehicleBrands.AsNoTracking().ToListAsync();
             var models = await _context.VehicleModels.AsNoTracking().ToListAsync();
 
-            // ❌ Bỏ cái này vì bạn đã load inventory bằng _inventoryCache bên dưới rồi.
-            // var partInventories = await _context.PartInventories.ToListAsync();
+            
 
             _branchCache = branches
                 .GroupBy(b => Normalize(b.BranchName))
@@ -506,11 +504,9 @@ namespace Services.ExcelImportSerivces
 
             int rowCount = ws.Dimension.Rows;
 
-            // Pre-scan duplicate usernames (normalized)
-            // Count username occurrences
+           
             var userNameCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
-            // Count email occurrences
             var emailCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             for (int row = 2; row <= rowCount; row++)
@@ -566,7 +562,7 @@ namespace Services.ExcelImportSerivces
                 var branchName = ws.Cells[row, 6].Text?.Trim();
                 var isActiveTx = ws.Cells[row, 7].Text?.Trim();
 
-                // ===== Required fields (no field can be empty) =====
+                
 
                 
                 if (string.IsNullOrWhiteSpace(userName))
@@ -633,7 +629,7 @@ namespace Services.ExcelImportSerivces
                     hasError = true;
                 }
 
-                // Branch required
+              
                 if (string.IsNullOrWhiteSpace(branchName))
                 {
                     AddError(
@@ -646,7 +642,7 @@ namespace Services.ExcelImportSerivces
                     hasError = true;
                 }
 
-                // IsActive required
+                
                 if (string.IsNullOrWhiteSpace(isActiveTx))
                 {
                     AddError(
@@ -659,7 +655,7 @@ namespace Services.ExcelImportSerivces
                     hasError = true;
                 }
 
-                // Role must be Manager or Technician
+               
                 if (!string.IsNullOrWhiteSpace(roleName) &&
                     !string.Equals(roleName, "Manager", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(roleName, "Technician", StringComparison.OrdinalIgnoreCase))
@@ -679,7 +675,7 @@ namespace Services.ExcelImportSerivces
                 {
                     uKey = Normalize(userName);
 
-                    // Duplicate username in sheet (pre-calculated)
+                   
                     if (duplicateUserNames.Contains(uKey))
                     {
                         AddError(
@@ -734,7 +730,7 @@ namespace Services.ExcelImportSerivces
                     hasError = true;
                 }
 
-                // Parse IsActive
+                
                 bool isActive = true;
                 if (!string.IsNullOrWhiteSpace(isActiveTx))
                 {
@@ -751,7 +747,7 @@ namespace Services.ExcelImportSerivces
                     }
                 }
 
-                // Resolve Branch (branchName is required, already checked above)
+                
                 Guid? branchId = null;
                 if (!string.IsNullOrWhiteSpace(branchName))
                 {
@@ -798,7 +794,7 @@ namespace Services.ExcelImportSerivces
                         CreatedAt = DateTime.UtcNow
                     };
 
-                    var createResult = await _userManager.CreateAsync(user, "Password123!");
+                    var createResult = await _userManager.CreateAsync(user, "Admin123!");
 
                     if (!createResult.Succeeded)
                     {
@@ -1456,7 +1452,7 @@ namespace Services.ExcelImportSerivces
                     continue;
                 }
 
-                // ===== Check ServiceCategory exists in system =====
+               
                 Guid serviceCategoryId = Guid.Empty;
                 var normCatName = Normalize(categoryName);
                 var cat = _categoryCache.Values.FirstOrDefault(c => Normalize(c.CategoryName) == normCatName);
@@ -1467,13 +1463,13 @@ namespace Services.ExcelImportSerivces
                 }
                 serviceCategoryId = cat.ServiceCategoryId;
 
-                // ===== Dynamic Branch columns: Branch_1, Branch_2, ... (từ cột 7 trở đi) =====
+             
                 var branchIds = new HashSet<Guid>();
 
                 for (int col = 7; col <= colCount; col++)
                 {
                     var header = ws.Cells[1, col].Text?.Trim();
-                    // Nếu cột nào không phải Branch_* thì bỏ qua (phòng trường hợp bạn thêm cột khác)
+                    
                     if (string.IsNullOrWhiteSpace(header) ||
                         !(header.StartsWith("Branch", StringComparison.OrdinalIgnoreCase) ||
                           header.StartsWith("BranchName", StringComparison.OrdinalIgnoreCase)))
@@ -1495,7 +1491,7 @@ namespace Services.ExcelImportSerivces
                             sheetName,
                             $"Branch '{branchName}' does not exist in the system.",
                             row,
-                            ws.Cells[1, col].Address, // cột nào sai thì báo đúng cột đó
+                            ws.Cells[1, col].Address, 
                             "SERVICE_BRANCH_NOT_FOUND"
                         );
                         hasError = true;
@@ -1504,7 +1500,7 @@ namespace Services.ExcelImportSerivces
 
                 if (hasError) continue;
 
-                // ===== Create / Update Service =====
+               
                 var sKey = Normalize(serviceName);
                 if (!_serviceCache.TryGetValue(sKey, out var service))
                 {
@@ -1777,6 +1773,17 @@ namespace Services.ExcelImportSerivces
                 // ===== Inventory (dynamic BranchName_X + Stock_X) =====
                 for (int col = 7; col <= colCount; col += 2)
                 {
+
+                    if (col + 1 > colCount)
+                    {
+                        AddError(sheetName,
+                            "Missing Stock column for the last Branch column (expected Stock_n right after BranchName_n).",
+                            1, ws.Cells[1, col].Address, "MISSING_STOCK_HEADER");
+
+                        hasError = true;
+                        break;
+                    }
+
                     var branchName = ws.Cells[row, col].Text?.Trim();
                     if (string.IsNullOrWhiteSpace(branchName)) continue;
 
@@ -1873,6 +1880,11 @@ namespace Services.ExcelImportSerivces
                 {
                     "BrandName","ModelName","PartCategoryName","PartName","Price","WarrantyMonths"
                 }
+                ,
+                ["Part"] = new[]
+                {
+                    "BrandName","ModelName","PartCategoryName","PartName","Price","WarrantyMonths"
+                }
             };
 
             foreach (var kv in requiredSheets)
@@ -1894,27 +1906,194 @@ namespace Services.ExcelImportSerivces
 
                 if (string.Equals(sheetName, "Service", StringComparison.OrdinalIgnoreCase))
                 {
+                    var branchCols = new Dictionary<int, int>(); 
+
                     for (int col = expectedHeaders.Length + 1; col <= ws.Dimension.Columns; col++)
                     {
                         var header = ws.Cells[1, col].Text?.Trim();
                         if (string.IsNullOrWhiteSpace(header)) continue;
 
-                        
-                        var ok =
-                            Regex.IsMatch(header, @"^Branch(_\d+)?$", RegexOptions.IgnoreCase) ||
-                            Regex.IsMatch(header, @"^BranchName(_\d+)?$", RegexOptions.IgnoreCase);
-
-                        if (!ok)
+                       
+                        var m = Regex.Match(header, @"^(Branch)_(?<idx>\d+)$", RegexOptions.IgnoreCase);
+                        if (!m.Success)
                         {
                             errors.Add(new ImportErrorDetail(
                                 sheetName,
-                                $"Invalid header '{header}'. Dynamic branch columns must be 'Branch_1', 'Branch_2', ... (or 'BranchName_1', ...).",
+                                $"Invalid header '{header}'. Branch columns must be 'Branch_1','Branch_2',...).",
                                 1,
                                 $"Column {col}",
                                 "InvalidHeader"));
+                            continue;
+                        }
+
+                        var idx = int.Parse(m.Groups["idx"].Value, CultureInfo.InvariantCulture);
+                        if (idx <= 0)
+                        {
+                            errors.Add(new ImportErrorDetail(
+                                sheetName,
+                                $"Invalid header '{header}'. Index must be >= 1.",
+                                1,
+                                $"Column {col}",
+                                "InvalidHeader"));
+                            continue;
+                        }
+
+                        
+                        if (branchCols.ContainsKey(idx))
+                        {
+                            errors.Add(new ImportErrorDetail(
+                                sheetName,
+                                $"Duplicate branch header for index {idx}. Use only one of 'Branch_{idx}'.",
+                                1,
+                                $"Column {col}",
+                                "DuplicateHeader"));
+                            continue;
+                        }
+
+                        branchCols[idx] = col;
+                    }
+
+                   
+                    if (branchCols.Count > 0)
+                    {
+                        var ordered = branchCols.Keys.OrderBy(x => x).ToList();
+                        for (int expected = 1; expected <= ordered.Count; expected++)
+                        {
+                            if (!branchCols.ContainsKey(expected))
+                            {
+                                errors.Add(new ImportErrorDetail(
+                                    sheetName,
+                                    $"Missing branch header for index {expected}. Expected 'Branch_{expected}' or 'BranchName_{expected}'.",
+                                    1,
+                                    null,
+                                    "MissingHeader"));
+                            }
                         }
                     }
                 }
+
+
+                if (string.Equals(sheetName, "Part", StringComparison.OrdinalIgnoreCase))
+                {
+                    
+                    var branchCols = new Dictionary<int, int>(); // idx -> col
+                    var stockCols = new Dictionary<int, int>(); // idx -> col
+
+                    for (int col = expectedHeaders.Length + 1; col <= ws.Dimension.Columns; col++)
+                    {
+                        var header = ws.Cells[1, col].Text?.Trim();
+                        if (string.IsNullOrWhiteSpace(header)) continue;
+
+                        var mBranch = Regex.Match(header, @"^Branch(Name)?_(?<idx>\d+)$", RegexOptions.IgnoreCase);
+                        var mStock = Regex.Match(header, @"^Stock_(?<idx>\d+)$", RegexOptions.IgnoreCase);
+
+                        if (mBranch.Success)
+                        {
+                            var idx = int.Parse(mBranch.Groups["idx"].Value, CultureInfo.InvariantCulture);
+                            if (idx <= 0)
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Invalid header '{header}'. Index must be >= 1 (e.g., BranchName_1).",
+                                    1, $"Column {col}", "InvalidHeader"));
+                                continue;
+                            }
+
+                            if (branchCols.ContainsKey(idx))
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Duplicate branch header for index {idx}.",
+                                    1, $"Column {col}", "DuplicateHeader"));
+                                continue;
+                            }
+
+                            branchCols[idx] = col;
+                            continue;
+                        }
+
+                        if (mStock.Success)
+                        {
+                            var idx = int.Parse(mStock.Groups["idx"].Value, CultureInfo.InvariantCulture);
+                            if (idx <= 0)
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Invalid header '{header}'. Index must be >= 1 (e.g., Stock_1).",
+                                    1, $"Column {col}", "InvalidHeader"));
+                                continue;
+                            }
+
+                            if (stockCols.ContainsKey(idx))
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Duplicate stock header for index {idx}.",
+                                    1, $"Column {col}", "DuplicateHeader"));
+                                continue;
+                            }
+
+                            stockCols[idx] = col;
+                            continue;
+                        }
+
+                        
+                        errors.Add(new ImportErrorDetail(
+                            sheetName,
+                            $"Invalid header '{header}'. Columns must be 'BranchName_1'/'Branch_1' and 'Stock_1', 'BranchName_2'/'Branch_2' and 'Stock_2', ...",
+                            1,
+                            $"Column {col}",
+                            "InvalidHeader"));
+                    }
+
+                    
+                    if (branchCols.Count > 0 || stockCols.Count > 0)
+                    {
+                        var allIdx = branchCols.Keys.Union(stockCols.Keys).OrderBy(x => x).ToList();
+
+                       
+                        int expectedIdx = 1;
+                        foreach (var idx in allIdx)
+                        {
+                            if (idx != expectedIdx)
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Missing index {expectedIdx}. Expected 'BranchName_{expectedIdx}'/'Branch_{expectedIdx}' and 'Stock_{expectedIdx}'.",
+                                    1, null, "MissingHeader"));
+                              
+                                expectedIdx = idx; 
+                            }
+                            expectedIdx++;
+                        }
+
+                        
+                        foreach (var idx in allIdx)
+                        {
+                            if (!branchCols.ContainsKey(idx))
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Missing header 'BranchName_{idx}' (or 'Branch_{idx}') for 'Stock_{idx}'.",
+                                    1, null, "MissingHeader"));
+                                continue;
+                            }
+                            if (!stockCols.ContainsKey(idx))
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Missing header 'Stock_{idx}' for 'BranchName_{idx}' (or 'Branch_{idx}').",
+                                    1, null, "MissingHeader"));
+                                continue;
+                            }
+
+                            
+                            var bCol = branchCols[idx];
+                            var sCol = stockCols[idx];
+
+                            if (sCol != bCol + 1)
+                            {
+                                errors.Add(new ImportErrorDetail(sheetName,
+                                    $"Invalid pair order. 'BranchName_{idx} must be immediately followed by 'Stock_{idx}'.",
+                                    1, $"Columns {bCol}-{sCol}", "InvalidHeaderOrder"));
+                            }
+                        }
+                    }
+                }
+
 
 
                 if (ws.Dimension == null || ws.Dimension.Columns < expectedHeaders.Length)
