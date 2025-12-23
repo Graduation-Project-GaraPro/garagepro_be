@@ -687,7 +687,8 @@ builder.Services.AddHttpClient<IPayOsClient, PayOsClient>();
 builder.Services.AddHostedService<CampaignExpirationService>();
 builder.Services.AddHostedService<PayOsWebhookProcessor>();
 builder.Services.AddHostedService<EmergencySlaService>();
-
+builder.Services.AddScoped<ICompletedRepairOrderNotifier, CompletedRepairOrderNotifier>();
+builder.Services.AddHostedService<CompletedRepairOrderDailyWorker>();
 // VNPAY config
 builder.Services.AddSingleton<IVnpay>(sp =>
 {
@@ -789,6 +790,8 @@ app.MapHub<Services.Hubs.RepairOrderHub>("/hubs/repairorder");
 app.MapHub<Garage_pro_api.Hubs.OnlineUserHub>("/api/onlineuserhub");
 app.MapHub<Services.Hubs.EmergencyRequestHub>("/api/emergencyrequesthub");
 app.MapHub<Services.Hubs.TechnicianAssignmentHub>("/api/technicianassignmenthub");
+
+
 
 // Initialize database
 // Initialize database (idempotent: create+apply+seed only when DB is absent / not applied)
