@@ -62,6 +62,7 @@ namespace Garage_pro_api.DbInit
                                                         //await SeedPartCategoriesAsync1();
 
             await SeedServicePartCategoriesAsyncNew(); // new
+            await SeedPartsAsyncNew();
             await SeedPartInventoryAsync(); // new
 
 

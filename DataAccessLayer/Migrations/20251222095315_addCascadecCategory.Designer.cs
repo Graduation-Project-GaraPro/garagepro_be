@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DataAccessLayer.Migrations
 {
     [DbContext(typeof(MyAppDbContext))]
-    [Migration("20251222083618_addCascadecCategory")]
+    [Migration("20251222095315_addCascadecCategory")]
     partial class addCascadecCategory
     {
         /// <inheritdoc />
