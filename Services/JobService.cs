@@ -100,9 +100,10 @@ namespace Services
             var job = await _jobRepository.GetByIdAsync(jobId);
             if (job == null) return false;
 
-            // Business rule: Can only delete jobs that are not in progress or completed
-            if (job.Status == JobStatus.InProgress || job.Status == JobStatus.Completed)
-                throw new InvalidOperationException("Cannot delete jobs that are in progress or completed");
+            // Business rule: Can only delete jobs that are not completed
+            // Allow deletion of jobs in any status except Completed
+            if (job.Status == JobStatus.Completed)
+                throw new InvalidOperationException("Cannot delete completed jobs. Completed jobs should be kept for historical records.");
 
             return await _jobRepository.DeleteAsync(jobId);
         }
